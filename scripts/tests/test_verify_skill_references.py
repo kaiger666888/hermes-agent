@@ -25,6 +25,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 # succeeding, so the whole file fails to collect in the RED phase.
 from verify_skill_references import (  # noqa: E402
     Finding,
+    _walk_plugin_yamls,
     build_allowlist,
     format_report,
     scan_skill_file,
@@ -141,6 +142,53 @@ class TestBuildAllowlist:
             assert "wan22_video" not in allowlist
             assert "sora" not in allowlist
             assert "kling" not in allowlist
+
+
+class TestWalkPluginYamls:
+    """WR-07: walker accepts both plugin.yaml and plugin.yml."""
+
+    def test_walk_plugin_yamls_accepts_plugin_yml(self) -> None:
+        """A plugin dir shipping plugin.yml (not .yaml) is still yielded.
+
+        CLAUDE.md documents that plugin manifests may use either
+        extension; the walker must accept both so a future image_gen or
+        video_gen plugin that ships as plugin.yml is not silently
+        excluded from the allowlist.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            plugins_root = tmp_root / "plugins"
+            plugin_dir = plugins_root / "video_gen" / "zvid"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            manifest_yml = plugin_dir / "plugin.yml"
+            manifest_yml.write_text(
+                "name: zvid\n"
+                'description: "Zvid video backend (kling v3)"\n',
+                encoding="utf-8",
+            )
+
+            yielded = list(_walk_plugin_yamls(plugins_root))
+            assert manifest_yml in yielded, (
+                f"plugin.yml not yielded; got: {yielded}"
+            )
+
+    def test_walk_plugin_yamls_prefers_yaml_when_both_exist(self) -> None:
+        """If both plugin.yaml and plugin.yml exist, .yaml wins (first hit)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            plugins_root = tmp_root / "plugins"
+            plugin_dir = plugins_root / "image_gen" / "dual"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            yaml_path = plugin_dir / "plugin.yaml"
+            yml_path = plugin_dir / "plugin.yml"
+            yaml_path.write_text("name: dual-yaml\n", encoding="utf-8")
+            yml_path.write_text("name: dual-yml\n", encoding="utf-8")
+
+            yielded = list(_walk_plugin_yamls(plugins_root))
+            assert yaml_path in yielded
+            assert yml_path not in yielded, (
+                f".yml should not be yielded when .yaml exists; got: {yielded}"
+            )
 
 
 # ---------------------------------------------------------------------------
