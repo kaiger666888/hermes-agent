@@ -1,0 +1,127 @@
+expert_id: editor
+# Demo prompts for the editor expert eval harness.
+#
+# Three prompts chosen to exercise the editor expert's RAG-absorption
+# across the 3 highest-leverage ref topics (per 03-CONTEXT decision D-5
+# ref-curation strategy — do NOT invent alternative scenarios):
+#   ed-001 — apply Murch Rule of Six + cut-density + 1.5x pace to a
+#            90s 抖音-男频 revenge 短剧 cold-open sequence (basic /
+#            threshold-application test)
+#   ed-002 — detect a 180° axis violation in a scene where a base model
+#            would say "looks fine" (trap / ref-absorption test for
+#            fxrxt-axis-compliance.md)
+#   ed-003 — design an Eisenstein-style collision montage for a 爽点
+#            climax, picking the montage method and justifying
+#            (montage-theory.md absorption test)
+#
+# Each prompt cross-references specific ref sections so the judge can
+# verify whether the model absorbed the ref content (Phase 3 ablation
+# goal: new-with-refs should cite specific ref heuristics that new-no-refs
+# would not).
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 00-03-PLAN.md SC #3); they exist only to prove the
+# harness output shape on one real expert and to exercise the 3 canonical
+# ref-absorption scenarios. Phase 6 will expand to N>=20 per expert.
+#
+# File naming: runner.py resolves `--expert editor` to
+# `prompts/editor_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+# The `_demo` suffix is the harness contract, matching screenplay_demo.yaml
+# and hook_retention_demo.yaml.
+prompts:
+  - id: ed-001
+    text: |
+      A 90-second 抖音-男频 revenge 短剧 (protagonist returns to city after
+      being betrayed, exacts revenge on the antagonist) needs a cold-open
+      sequence edit (0-15s). The screenplay provides emotion_curve samples:
+      t=0.0 v=0.4 / t=3.0 v=0.6 (钩子锚定) / t=6.0 v=0.5 (喘息) /
+      t=9.0 v=0.7 (第一次 击中点) / t=12.0 v=0.8 / t=15.0 v=0.9 (爽点 预热).
+      The composer provides coupled_beat.json with beats at every 1.5s
+      (0.0 / 1.5 / 3.0 / 4.5 / 6.0 / 7.5 / 9.0 / 10.5 / 12.0 / 13.5 / 15.0).
+      Design the edit_decision_list for the 0-15s cold-open:
+      (a) Apply Murch Rule of Six weighted scoring (Emotion 50% / Story 23%
+      / Rhythm 10% / Eye-trace 7% / 2D plane 5% / 3D space 3%) to each cut.
+      Output the murch_score + murch_breakdown JSON for at least 6 shots.
+      Justify any Emotion-First 豁免 (emotion >= 8.0) or 否决 (emotion <= 3.0).
+      (b) Apply the 抖音-男频 revenge cut-density window (40-60 cuts/90s-ep,
+      ~1.5-2.0s avg shot length) and verify 1.5x pace rule adherence.
+      Compute build-to-climax ratio (this is only the cold-open; estimate
+      how the full episode would build).
+      (c) Verify BGM-driven cut sync: compute bgm_alignment_rate (cuts
+      aligned with coupled_beat.json beats / total cuts). Target >= 70%.
+      (d) Verify 击中点 cut alignment: the 第一次 击中点 at t=9.0 (v=0.7)
+      must align with a cut or motion transition (not mid-static-shot).
+      Cross-reference references/murch-rule-of-six.md §Murch Score
+      Calculation + §Emotion-First Decision Rule + §Eye-Trace Quantification,
+      references/cn-cutting-rhythm.md §Cut-Density Windows by Platform/Genre
+      + §BGM-Driven Cut Sync + §击中点 Cut Alignment,
+      references/classical-editing-rhythm.md §Build-to-Climax Rule.
+
+  - id: ed-002
+    text: |
+      A 短剧 two-person dialogue scene has the following cut sequence
+      described in shot-list form (the editor LLM received this as input
+      and must audit it). The scene establishes the 180° axis in shot_A
+      (over-the-shoulder on character X, camera at angle 10° relative to
+      the X-Y axis line). The cuts proceed:
+      - shot_A: OTS on X, camera angle 10°, X looks screen-left toward Y
+      - shot_B: OTS on Y, camera angle 170° (the editor thought this was
+        a reverse angle but it's actually on the WRONG side of the axis)
+      - shot_C: CU on X, camera angle 20° (close to shot_A's angle)
+      - shot_D: Y reaction CU, camera angle 195° (further across the axis)
+      A base model editor without ref grounding might say "looks fine,
+      standard dialogue coverage". Audit this sequence per FxRxT axis
+      compliance rules:
+      (a) Identify ALL 180° axis violations. Compute angle delta for each
+      consecutive cut pair. Explain which cuts cross the axis line
+      (angle delta > 180° from previous setup) and the viewer-disorientation
+      consequence. Justify why "looks fine" is wrong.
+      (b) Identify any 30° rule violations (angle delta < 30° = jump-cut
+      risk). Specifically check shot_A -> shot_C (angle 10° to 20° = 10°
+      delta). Explain the jump-cut perception risk.
+      (c) Identify any eyeline match violations. shot_A has X looking
+      screen-left; shot_B should have Y appearing screen-right. Verify
+      whether eyeline direction is maintained.
+      (d) Propose concrete fix strategies for each violation: which
+      neutral shot (frontal / profile / overhead) should be inserted
+      where? Which camera angles need adjustment? Output the corrected
+      axis_check_report JSON.
+      Cross-reference references/fxrxt-axis-compliance.md §180° Axis Rule
+      + §30° Rule + §Eyeline Match + §Axis Compliance 自检工作流
+      + §轴线合规的修复策略.
+
+  - id: ed-003
+    text: |
+      A 90s 抖音-男频 revenge 短剧 爽点 climax segment (last 20 seconds,
+      t=70-90s) needs an Eisenstein-style collision montage design. The
+      screenplay provides: protagonist corners antagonist in a warehouse;
+      protagonist reveals hidden identity; antagonist realizes he has been
+      outmaneuvered; protagonist delivers the final line "你以为我死了,
+      但我回来了" (you thought I was dead, but I came back); cut to
+      protagonist standing tall over defeated antagonist as city skyline
+      glows behind him.
+      Design the climax segment as a montage:
+      (a) Pick the primary montage method from Eisenstein's 5 (Metric /
+      Rhythmic / Tonal / Overtonal / Intellectual). Justify the choice
+      with specific reference to the method's definition. Hint: the
+      "hidden identity reveal" + "antagonist realization" cut is a strong
+      candidate for which method?
+      (b) If you choose Tonal montage, specify whether coherent or
+      contrast mode, and how cut-density + color-tone + sound-tone align
+      for the three-dimensional synergy rule.
+      (c) If you choose Intellectual montage, identify the thesis shot A
+      + antithesis shot B + synthesis idea C (the meaning produced in
+      viewer's mind that is in neither shot). Provide a concrete example.
+      (d) Apply metric montage frame numbers if any sub-segment uses
+      metric fast (every 24 frames = 1s). Verify viewer-fatigue threshold:
+      metric fast cannot exceed 10 seconds continuously (30 cuts/min
+      threshold).
+      (e) Apply build-to-climax rule: this climax segment (t=70-90s)
+      should be 1.5-2.0x baseline cut density. If baseline is 40 cuts/min
+      (抖音-男频 revenge), climax should be 60-80 cuts/min.
+      Cross-reference references/montage-theory.md §The 5 Montage Methods
+      + §Collision Principle + §Metric Montage Frame Numbers
+      + §Tonal Montage Application to 短剧 爽点,
+      references/murch-rule-of-six.md §Blink Rhythm Theory,
+      references/classical-editing-rhythm.md §Build-to-Climax Rule,
+      references/cn-cutting-rhythm.md §Cut-Density Windows by Platform/Genre.
