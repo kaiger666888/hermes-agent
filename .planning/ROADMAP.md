@@ -11,7 +11,7 @@ Derived from `.planning/research/SUMMARY.md` Recommended Build Order. Seven phas
 ## Phases
 
 - [x] **Phase 0: AUDIT + Eval Skeleton (BLOCKER GATE)** — Eliminate phantom refs; snapshot baseline; build eval harness skeleton (completed 2026-06-15)
-- [ ] **Phase 1: EXPERT-COMPLI (Legal Gate)** — Build compliance_marketing expert end-to-end
+- [x] **Phase 1: EXPERT-COMPLI (Legal Gate)** — Build compliance_marketing expert end-to-end (completed 2026-06-15)
 - [ ] **Phase 2: EXPERT-HOOK (Commercial Engine)** — Build hook_retention expert end-to-end
 - [ ] **Phase 3: Top-4 Existing Experts RAG** — Deep-refactor screenplay/editor/colorist/style_genome with RAG refs
 - [ ] **Phase 4: EXPERT-CINE (Camera Language)** — Build cinematographer expert end-to-end
@@ -48,11 +48,11 @@ Derived from `.planning/research/SUMMARY.md` Recommended Build Order. Seven phas
   3. All COMPLI refs carry `verified_date: YYYY-MM` stamp with quarterly refresh cadence documented
   4. Expert integrated into related_skills graph with bidirectional edges to/from screenplay, editor, hook_retention, style_genome, drawer
   5. 5 eval prompts covering diverse compliance scenarios runnable through `_eval/runner.py`
-**Plans:** 3 plans
+**Plans:** 4/3 plans complete
 Plans:
-- [ ] 01-01-PLAN.md — cn-content-rules.md (AI 标识办法 + 漫剧 备案 + 8-category 红线) + viral-element-catalog.md (5-type × 5+ entries × risk badges × 降级方案)
-- [ ] 01-02-PLAN.md — 3 platform-spec refs (douyin/kuaishou/miniprogram, identical 5 H2 sections) + _shared/platform-comparison.md matrix
-- [ ] 01-03-PLAN.md — compliance_marketing/SKILL.md (bilingual, per-platform branching) + related_skills edges (4 existing + self) + 5 eval prompts + scanner verify
+- [x] 01-01-PLAN.md — cn-content-rules.md (AI 标识办法 + 漫剧 备案 + 8-category 红线) + viral-element-catalog.md (5-type × 5+ entries × risk badges × 降级方案)
+- [x] 01-02-PLAN.md — 3 platform-spec refs (douyin/kuaishou/miniprogram, identical 5 H2 sections) + _shared/platform-comparison.md matrix
+- [x] 01-03-PLAN.md — compliance_marketing/SKILL.md (bilingual, per-platform branching) + related_skills edges (4 existing + self) + 5 eval prompts + scanner verify
 **Research flag:** `/gsd:plan-phase --research-phase 1` to verify 2026-Q2 抖音/快手/视频号 guideline versions and exact AI 漫剧 备案 threshold triggers against current 广电总局 notices.
 
 ### Phase 2: EXPERT-HOOK (Commercial Engine)
@@ -128,7 +128,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. AUDIT + Eval Skeleton | 5/4 | Complete    | 2026-06-15 |
-| 1. EXPERT-COMPLI | 0/3 | Not started | - |
+| 1. EXPERT-COMPLI | 4/3 | Complete    | 2026-06-15 |
 | 2. EXPERT-HOOK | 0/? | Not started | - |
 | 3. Top-4 Existing Experts RAG | 0/? | Not started | - |
 | 4. EXPERT-CINE | 0/? | Not started | - |
