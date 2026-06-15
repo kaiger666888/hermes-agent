@@ -15,7 +15,7 @@ Derived from `.planning/research/SUMMARY.md` Recommended Build Order. Seven phas
 - [x] **Phase 2: EXPERT-HOOK (Commercial Engine)** — Build hook_retention expert end-to-end (completed 2026-06-15)
 - [x] **Phase 3: Top-4 Existing Experts RAG** — Deep-refactor screenplay/editor/colorist/style_genome with RAG refs
 - [x] **Phase 4: EXPERT-CINE (Camera Language)** — Build cinematographer expert end-to-end
-- [ ] **Phase 5: Remaining 10 Experts RAG + EXPERT-PROD (v1.5)** — Refactor remaining 10 experts + production expert
+- [x] **Phase 5: Remaining 10 Experts RAG + EXPERT-PROD (v1.5)** — Refactor remaining 10 experts + production expert (completed 2026-06-15)
 - [x] **Phase 6: Full Eval + Bilingual Pass + README** — Complete eval, bilingual consistency, documentation
 
 ## Phase Details
@@ -142,7 +142,7 @@ Plans:
 | 2. EXPERT-HOOK | 4/3 | Complete    | 2026-06-15 |
 | 3. Top-4 Existing Experts RAG | 5/5 | Complete | 2026-06-15 |
 | 4. EXPERT-CINE | 1/1 | Complete | 2026-06-15 |
-| 5. Remaining 10 + EXPERT-PROD (v1.5) | 0/? | Not started | - |
+| 5. Remaining 10 + EXPERT-PROD (v1.5) | 11/11 | Complete | 2026-06-15 |
 | 6. Full Eval + Bilingual + README | 1/1 | Documentation pass complete | 2026-06-15 |
 
 ---
