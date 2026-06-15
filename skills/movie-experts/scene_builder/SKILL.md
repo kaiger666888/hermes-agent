@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design]
-    related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity, cinematographer]
+    related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
 ---
