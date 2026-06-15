@@ -80,10 +80,13 @@ metadata:
 
 ### 备案 (Filing) 触发阈值
 
+> 全局阈值以 `references/cn-content-rules.md §备案触发矩阵` 为权威源(本节为简化摘要,完整 5-factor 矩阵见该 ref);各平台可应用更严格的触发条件,详见 `references/platform-specs-{douyin,kuaishou,miniprogram}.md §备案要求`。
+
 - **拟人化动画 漫剧**:商业意图 + 任意付费机制 → 触发广电 备案(2026-04-01)
-- **真人 + AIG 混合短剧**:集数 ≥ 8 或总时长 ≥ 24 分钟 + 商业意图 → 触发
+- **真人 + AIG 混合短剧**:*estimated* 10 集 / *estimated* 60 分钟 总时长(全局阈值,cn-content-rules.md)+ 商业意图 → 触发
 - **全 AIG 短剧**:任意商业意图即触发(阈值最低)
 - **小程序剧 加成**:除广电 备案 外,触发 微信小程序 内容 备案(双重)
+- **付费机制**:付费解锁任何 1 集(真人+AIG)/ 平台分账即触发(拟人化)/ 任何形式分发(全 AIG)—— 完整 5-factor 矩阵见 cn-content-rules.md §备案触发矩阵
 
 ### 红线 扫描密度
 
@@ -105,7 +108,7 @@ metadata:
 
 - **爆款公式 1-liner**:男频 公式「逆袭 + 装穷 + 打脸」与女频 公式「闪婚 + 萌宝 + 隐藏身份」双主流(详见 `references/platform-specs-douyin.md` §爆款公式)
 - **平台专属 红线**:私域导流(微信号 / 二维码 不可出现在视频画面)、诱导分享话术、AI 标识 必须与抖音水印视觉可区分(详见 `references/platform-specs-douyin.md` §内容红线 + cn-content-rules.md §AI 标识办法)
-- **备案 触发**:短剧 集数 ≥ 8 或总时长 ≥ 24 分钟 即触发(详见 `references/platform-specs-douyin.md` §备案要求)
+- **备案 触发**:全局阈值 *estimated* 10 集 / *estimated* 60 分钟(详见 `references/platform-specs-douyin.md` §备案要求 + cn-content-rules.md §备案触发矩阵)
 - **30 集 master cut 示例**:第 1-5 集免费引流 → 第 6 集设付费门槛 → 备案号 落在 视频角标 + 简介;AIGC 标识 与抖音水印分置右下、左下;爆款公式 选 男频 公式(若题材匹配)并保留 冲突钩 在 🟡 以下
 
 ### 快手
@@ -183,7 +186,7 @@ tags="expert:compliance_marketing,domain:platform-specs-<platform>"
 ## What NOT to do
 
 - **不要硬编码 provider 专属工具名。** 严禁在 SKILL.md body 中出现 `fact_store` / `mem0_search` / `cosyvoice_api` 等具体调用;一律用 `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(参考 `_shared/RAG-INVOCATION-PATTERN.md` 与 `verify_skill_references.py` allowlist)
-- **不要跳过 备案 触发检查。** 即使本集未触发 备案 阈值,也必须明示「未触发,理由:集数 < 8 + 总时长 < 24 分钟 + 非商业意图」—— 沉默等于未检查
+- **不要跳过 备案 触发检查。** 即使本集未触发 备案 阈值,也必须明示「未触发,理由:集数 < *estimated* 10 集 + 总时长 < *estimated* 60 分钟 + 非商业意图」—— 沉默等于未检查(全局阈值以 cn-content-rules.md §备案触发矩阵 为准;平台专属触发条件以 platform-specs-{N}.md §备案要求 为准)
 - **不要在未尝试 降级方案 的情况下接受 🟡 元素。** Workflow §4 强制要求尝试 降级方案 并复扫;直接接受 🟡 视为不合规
 - **不要编造 红线 §N 文号。** cn-content-rules.md 中带 `*estimated*` 的阈值必须保留该标记 —— 不允许为了显得权威而删除标记或编造具体文号
 - **不要在 body 中引入新模型名。** 若需引用具体模型,必须先加入 `_shared/known-external-models.yaml` allowlist;否则一律用占位符(防止 `verify_skill_references.py` 误报)
