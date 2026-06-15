@@ -25,9 +25,39 @@ The user needs to design color grading, apply color intent to scenes, create LUT
 
 ## References
 
+本专家所有数值阈值由下列 5 个 refs 独占定义;SKILL.md body 仅作摘要 + 跨链,不重新给出数字原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) single-source-of-truth 教训)。
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) | 选 CxSxZ 组合的 C(色相)维度前 | Bellantoni 8-color 词汇表(Purple / Red / Yellow / Blue / Green / Orange / White / Black)+ 每色 ≥3 个 canonical director×film triplet(Kurosawa / Villeneuve / Spielberg / Almodóvar 等 n≈100 部 1960-2003 电影语料)+ "color as character" doctrine(单一主色必须驱动情绪节拍,非装饰) |
+| [`references/hurkman-color-pipeline.md`](./references/hurkman-color-pipeline.md) | 设计 LUT 参数或 lift/gamma/gain 阈值前 | Hurkman *The Art and Technique of Digital Color Correction* (2012, 2nd ed) 数字调色管线 — primary/secondary grading 三层流程 + lift/gamma/gain 操作语义 + qualifier + power window + node-based 流水线 |
+| [`references/color-cross-cultural.md`](./references/color-cross-cultural.md) | 设计跨文化或海外发行色盘前 | 学术 cross-cultural 研究 — Schirillo 1200-film sample 色温-情绪映射 + Adams & Osgood 23-culture color-emotion 跨文化 survey + Ekman basic-emotion 色彩关联(meta-analysis) |
+| [`references/cn-audience-color.md`](./references/cn-audience-color.md) | 设计 短剧 / 微电影 CN 受众色盘前 | CN 受众色彩偏好(抖音 100K+ 视频色温统计 + 短剧 男频/女频 色温分野 + 国风 色盘 + 年节/双 11 节庆色卡)+ per-platform divergence(抖音高饱和 / 快手暖色偏低饱和 / 小程序剧重 deep teal+orange) |
+| [`references/digital-color-science.md`](./references/digital-color-science.md) | 验证色精度或设计 ablation 实验前 | 数字色彩科学 — Rec.709 / Rec.2020 / DCI-P3 色域 + ΔE2000 色差公式(production ≤3 / preview ≤6)+ACES IDT/ODT 流水线 + LUT bit-depth 误差累积模型(8-bit banding 临界点 0.03 S delta)|
+
+## Knowledge Retrieval
+
+在生成任何 `color_intent.json` / LUT 参数 / 28-combination 选择输出前,按以下顺序检索上下文(5 个检索主题):
+
+- **Bellantoni 8-color 词汇表 + "color as character" doctrine**(8 主色 × 3+ canonical director×film triplet × 情绪负载)—— 详见 [`references/bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md)
+- **Hurkman 数字调色管线**(primary/secondary/qualifier 三层 + lift/gamma/gain 语义 + node-based 流水线)—— 详见 [`references/hurkman-color-pipeline.md`](./references/hurkman-color-pipeline.md)
+- **Cross-cultural 色彩-情绪学术研究**(Schirillo 1200-film + Adams & Osgood 23-culture + Ekman meta)—— 详见 [`references/color-cross-cultural.md`](./references/color-cross-cultural.md)
+- **CN 受众色彩偏好与 per-platform divergence**(抖音 / 快手 / 小程序剧 色温饱和度分野 + 国风 / 节庆色盘)—— 详见 [`references/cn-audience-color.md`](./references/cn-audience-color.md)
+- **数字色彩科学与色精度**(Rec.709/2020/DCI-P3 + ΔE2000 + ACES + LUT bit-depth 误差)—— 详见 [`references/digital-color-science.md`](./references/digital-color-science.md)
+
+**若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
+
+```
+tags="expert:colorist,domain:bellantoni-color-psychology"
+tags="expert:colorist,domain:hurkman-color-pipeline"
+tags="expert:colorist,domain:color-cross-cultural"
+tags="expert:colorist,domain:cn-audience-color"
+tags="expert:colorist,domain:digital-color-science"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件(以 `## References` 表为准)。静态 refs 是权威源,memory 插件只是更大语料的优化。provider-agnostic 检索是 ablation eval 与多 provider 部署的硬约束。
+
+> **NOTE:** 本 SKILL.md body 不引用任何具体外部模型名。涉及具体模型时使用 `<llm_primary>` / `<llm_fallback>` 占位符(见 [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) placeholder 表)。模型名只出现在 `references/*.md` 与 [`../_shared/known-external-models.yaml`](../_shared/known-external-models.yaml) allowlist 中。
 
 ## Role & Philosophy
 
@@ -75,14 +105,18 @@ The user needs to design color grading, apply color intent to scenes, create LUT
 
 ## 28 Core Color Combinations (Selection)
 
-| ID | Emotion/Scene | C (°) | S | Z |
-|----|--------------|-------|---|---|
-| C01 | Warm morning / Hope | 35-45 | 0.65 | 0.78 |
-| C05 | Melancholy dusk / Loss | 220-240 | 0.45 | 0.52 |
-| C09 | Cold thriller / Fear | 195-210 | 0.30 | 0.38 |
-| C14 | Romantic soft light | 330-350 | 0.55 | 0.68 |
-| C21 | Action climax / Tension | 0-10 | 0.75 | 0.55 |
-| C28 | Post-apocalyptic despair | 30-50 | 0.20 | 0.30 |
+完整 28 组 CxSxZ 配方的创意侧权威源(每项情绪-色映射的 8-color 归属与 canonical deployment)详见 [`references/bellantoni-color-psychology.md`](./references/bellantani-color-psychology.md) §The 8-Color Vocabulary;CN 受众偏好覆盖详见 [`references/cn-audience-color.md`](./references/cn-audience-color.md);技术侧 LUT 实现参数详见 [`references/hurkman-color-pipeline.md`](./references/hurkman-color-pipeline.md) §Lift/Gamma/Gain Semantics。
+
+| ID | Emotion/Scene | C (°) | S | Z | Bellantoni 8-color |
+|----|--------------|-------|---|---|--------------------|
+| C01 | Warm morning / Hope | 35-45 | 0.65 | 0.78 | Yellow (warm/safe) |
+| C05 | Melancholy dusk / Loss | 220-240 | 0.45 | 0.52 | Blue (loss/grief) |
+| C09 | Cold thriller / Fear | 195-210 | 0.30 | 0.38 | Blue (alienation) |
+| C14 | Romantic soft light | 330-350 | 0.55 | 0.68 | Red (passion) |
+| C21 | Action climax / Tension | 0-10 | 0.75 | 0.55 | Red (danger) |
+| C28 | Post-apocalyptic despair | 30-50 | 0.20 | 0.30 | Yellow (decay/sickness) |
+
+完整 28 组 CxSxZ 配方的创意侧权威源(每项情绪-色映射的 8-color 归属与 canonical deployment)详见 [`references/bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) §The 8-Color Vocabulary;CN 受众偏好覆盖详见 [`references/cn-audience-color.md`](./references/cn-audience-color.md);技术侧 LUT 实现参数详见 [`references/hurkman-color-pipeline.md`](./references/hurkman-color-pipeline.md) §Lift/Gamma/Gain Semantics。
 
 ## Style Rules
 
@@ -94,11 +128,12 @@ The user needs to design color grading, apply color intent to scenes, create LUT
 - High saturation only for climaxes or dream/hallucination
 
 ### Color Psychology
-- Warm (0-60°) -> intimacy, passion, danger
-- Cool (180-270°) -> alienation, melancholy, mystery
+- Warm (0-60°) -> intimacy, passion, danger — Bellantoni Red/Yellow/Orange triplet, see [`bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) §Red/Yellow/Orange Triplets
+- Cool (180-270°) -> alienation, melancholy, mystery — Bellantoni Blue/Green triplet, see [`bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) §Blue/Green Triplets
 - Low saturation (S < 0.25) -> repression, void, professional
-- High brightness (Z > 0.75) -> hope, freedom, lightness
-- Low brightness (Z < 0.35) -> fear, despair, oppression
+- High brightness (Z > 0.75) -> hope, freedom, lightness — Bellantoni White, see [`bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) §White Triplet
+- Low brightness (Z < 0.35) -> fear, despair, oppression — Bellantoni Black, see [`bellantoni-color-psychology.md`](./references/bellantoni-color-psychology.md) §Black Triplet
+- **CN divergence:** 抖音 男频 偏好高饱和暖色(Z ≥ 0.65, S ≥ 0.70);女频 偏好中等饱和暖色 + 高亮度;快手 偏好低饱和暖色(S 0.45-0.60);小程序剧 偏好 deep teal + orange duo-tone — see [`cn-audience-color.md`](./references/cn-audience-color.md) §Per-Platform Divergence
 
 ### Prohibited
 - Random color changes without emotional motivation
@@ -118,12 +153,16 @@ The user needs to design color grading, apply color intent to scenes, create LUT
 
 ## Quality Thresholds
 
-| Metric | Production Minimum |
-|--------|-------------------|
-| color_intent_match | >= 0.85 |
-| color_cross_shot_consistency | >= 0.80 |
-| style_fidelity | >= 0.82 |
-| color_temp_precision | ±150K (production), ±300K (preview) |
+色精度阈值(ΔE2000)与 LUT bit-depth 误差累积模型的权威源: [`references/digital-color-science.md`](./references/digital-color-science.md) §ΔE2000 Tolerance Bands + §LUT Bit-Depth Error Accumulation。
+
+| Metric | Production Minimum | Source |
+|--------|-------------------|--------|
+| color_intent_match | >= 0.85 | (operational) |
+| color_cross_shot_consistency | >= 0.80 | (operational) |
+| style_fidelity | >= 0.82 | (operational) |
+| color_temp_precision | ±150K (production), ±300K (preview) | [`digital-color-science.md`](./references/digital-color-science.md) §Color Temperature Precision |
+| ΔE2000 (shot-to-shot) | ≤ 3.0 (production), ≤ 6.0 (preview) | [`digital-color-science.md`](./references/digital-color-science.md) §ΔE2000 Tolerance Bands |
+| 8-bit banding threshold | S delta ≥ 0.03 triggers visible banding | [`digital-color-science.md`](./references/digital-color-science.md) §LUT Bit-Depth Error Accumulation |
 
 ## Collaboration
 
