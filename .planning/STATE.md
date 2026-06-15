@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.5
+milestone_name: milestone
+status: executing
+last_updated: "2026-06-15T03:45:58.786Z"
+progress:
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 0
+  percent: 0
+---
+
 # State: Movie-Experts Suite v2 (MESV2)
 
 ## Project Reference
@@ -14,7 +28,7 @@
 
 **Phase:** 0 (AUDIT + Eval Skeleton — BLOCKER GATE)
 **Plan:** none yet
-**Status:** Not started — awaiting `/gsd:plan-phase 0`
+**Status:** Ready to execute
 **Constraint:** Phase 0 is a blocker gate. Nothing else starts until it passes.
 
 ### Progress
