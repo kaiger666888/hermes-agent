@@ -45,7 +45,7 @@ metadata:
 - **爆款与红线不是二元对立。** 降级方案 的存在意义是:在不放弃 70% 钩子强度的前提下,把 🟡 边界元素降到 🟢 安全区(参考 viral-element-catalog.md 「降级方案 strength preservation heuristic」)
 - **备案 与 标识 是合规双件套。** 备案 决定能否上架,标识 决定上架后不被 2025-09-01 后的执法处罚 —— 两者必须同步执行,任何一件缺失即视为不合规
 - **平台差异化,而非平台复制。** 同一 master cut 在 抖音 / 快手 / 小程序剧 三平台需要差异化的剪辑节奏、付费门槛 位置、备案号 展示位(参考 platform-comparison.md matrix)
-- **provider-agnostic,不绑死任何具体模型 / 工具。** 本专家不假设客户端一定有 `fact_store` 或 `mem0_search`,所有 RAG 指令都给「有 memory 插件」与「无 memory 插件」两条路径
+- **provider-agnostic,不绑死任何具体模型 / 工具。** 本专家不假设客户端一定有 `<memory_plugin>` 或 `<rag_search>` 工具,所有 RAG 指令都给「有 memory 插件」与「无 memory 插件」两条路径
 
 ## Core Capabilities
 
@@ -154,7 +154,7 @@ metadata:
 - 目标平台的 分发规则 + 内容红线 + 付费机制 + 备案要求 + 爆款公式(platform-specs-{douyin,kuaishou,miniprogram}.md)
 - 多平台对比矩阵(platform-comparison.md)
 
-**若当前 runtime 中有 memory / RAG 工具**(例如 `fact_store` / `mem0_search` 或类似检索工具),使用以下查询范围:
+**若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
 ```
 tags="expert:compliance_marketing,domain:cn-content-rules"
 tags="expert:compliance_marketing,domain:viral-element-catalog"
@@ -185,7 +185,7 @@ tags="expert:compliance_marketing,domain:platform-specs-<platform>"
 
 ## What NOT to do
 
-- **不要硬编码 provider 专属工具名。** 严禁在 SKILL.md body 中出现 `fact_store` / `mem0_search` / `cosyvoice_api` 等具体调用;一律用 `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(参考 `_shared/RAG-INVOCATION-PATTERN.md` 与 `verify_skill_references.py` allowlist)
+- **不要硬编码 provider 专属工具名。** 严禁在 SKILL.md body 中出现具体 provider 专属工具名作为直接调用(以本 SKILL.md 历史出现过的 `fact_store` / `mem0_search` / `cosyvoice_api` 为反例 —— 这些只是历史警示,不允许在 body 其它任何位置复用);一律用 `<memory_plugin>` / `<rag_search>` / `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(参考 `_shared/RAG-INVOCATION-PATTERN.md` 与 `verify_skill_references.py` allowlist)
 - **不要跳过 备案 触发检查。** 即使本集未触发 备案 阈值,也必须明示「未触发,理由:集数 < *estimated* 10 集 + 总时长 < *estimated* 60 分钟 + 非商业意图」—— 沉默等于未检查(全局阈值以 cn-content-rules.md §备案触发矩阵 为准;平台专属触发条件以 platform-specs-{N}.md §备案要求 为准)
 - **不要在未尝试 降级方案 的情况下接受 🟡 元素。** Workflow §4 强制要求尝试 降级方案 并复扫;直接接受 🟡 视为不合规
 - **不要编造 红线 §N 文号。** cn-content-rules.md 中带 `*estimated*` 的阈值必须保留该标记 —— 不允许为了显得权威而删除标记或编造具体文号
