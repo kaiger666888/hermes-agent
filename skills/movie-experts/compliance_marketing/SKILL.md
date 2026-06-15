@@ -129,7 +129,7 @@ metadata:
 
 依据 `references/cn-content-rules.md` §AI 标识办法 (2025-09-01)。所有由 AI 生成或显著修改的、拟在中国大陆分发的内容(含文本、图像、音频、视频、交互式节目)必须执行以下五步:
 
-1. **检测 AIGC 内容类型** — 判定本作品属于:拟人化动画 漫剧 / 真人 + AIG 混合 / 全 AIG 三类中的哪一类。类型决定 备案 触发阈值(详见 cn-content-rules.md §AI 漫剧 备案 regime 触发矩阵)
+1. **检测 AIGC 内容类型** — 判定本作品属于:拟人化动画 漫剧 / 真人 + AIG 混合 / 全 AIG 三类中的哪一类。类型决定 备案 触发阈值(详见 cn-content-rules.md §备案触发矩阵 under `## AI 漫剧 备案 Regime`)
 2. **应用 显式标识 规格** — 按 §Key Parameters 中 显式标识 参数组生成规格(尺寸 ≥ 5% / 位置 / 时长全程 / 不透明度 ≥ 70%);位置必须避开平台水印区与字幕条区
 3. **嵌入 隐式标识 metadata** — 在文件元数据中写入 C2PA 风格字段(`dc:creator` / `digi:source` / `digi:provenance` / `digi:ai_disclosure_present` 等);字段示例见 cn-content-rules.md §隐式标识
 4. **插入 文本披露 台词** — 第 1 集开场 3 秒内必念「本作品由 AI 生成 / 含 AI 生成内容」类台词,后续集每集 ≤ 5 秒闪现;台词模板见 cn-content-rules.md §文本披露
