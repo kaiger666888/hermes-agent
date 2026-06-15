@@ -287,6 +287,52 @@ def verify_baselines(
             )
             continue
 
+        # WR-08: schema validation. A tampered or stale PROVENANCE.json
+        # could otherwise pass verification silently. Check that all
+        # required keys are present and that the ``tag`` field matches
+        # BASELINE_TAG (so a baseline from a previous eval cycle like
+        # ``eval-baseline-v0`` cannot masquerade as the current cycle's
+        # anchor).
+        if not isinstance(provenance, dict):
+            drifts.append(
+                {
+                    "expert_id": expert_id,
+                    "expected": "<corrupt baseline: not a dict>",
+                    "actual": "<no baseline>",
+                    "source_path": str(
+                        skills_dir / expert_id / "SKILL.md"
+                    ),
+                }
+            )
+            continue
+        missing_keys = _REQUIRED_PROVENANCE_KEYS - set(provenance.keys())
+        if missing_keys:
+            drifts.append(
+                {
+                    "expert_id": expert_id,
+                    "expected": (
+                        f"<corrupt baseline: missing keys {sorted(missing_keys)}>"
+                    ),
+                    "actual": "<no baseline>",
+                    "source_path": str(
+                        skills_dir / expert_id / "SKILL.md"
+                    ),
+                }
+            )
+            continue
+        if provenance.get("tag") != BASELINE_TAG:
+            drifts.append(
+                {
+                    "expert_id": expert_id,
+                    "expected": f"<wrong tag: {provenance.get('tag')!r}>",
+                    "actual": "<no baseline>",
+                    "source_path": str(
+                        skills_dir / expert_id / "SKILL.md"
+                    ),
+                }
+            )
+            continue
+
         expected_sha = provenance["sha256"]
 
         source_path = skills_dir / expert_id / "SKILL.md"
