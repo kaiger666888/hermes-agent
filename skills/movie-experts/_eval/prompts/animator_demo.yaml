@@ -1,0 +1,7 @@
+expert_id: animator
+prompts:
+  - id: anim-001
+    text: |
+      Design a 3-second camera-move specification (camera_type, speed, ease)
+      for a 短剧 opening shot where the protagonist enters a neon-lit alley
+      at night. Justify the choice for vertical-screen framing.

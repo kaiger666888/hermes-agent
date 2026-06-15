@@ -1,0 +1,46 @@
+# Runner configuration for the MT-Bench position-swap LLM-as-judge harness.
+#
+# This is an EXAMPLE. Copy to config.yaml and edit before running.
+#
+# Judge panel: 2+ open-weight models via OpenRouter (free tier).
+# Cross-vendor diversity per EVAL-06: Qwen (Alibaba) + DeepSeek.
+# Temperature is HARD-PINNED at 0.0 in runner.py (EVAL-03) — setting it
+# here has no effect.
+#
+# To run:
+#   export OPENROUTER_API_KEY=sk-or-v1-...
+#   python skills/movie-experts/_eval/runner.py \
+#       --config skills/movie-experts/_eval/config.yaml.example \
+#       --expert animator \
+#       --output-json reports/animator.json \
+#       --output-md reports/animator.md
+#
+# Dry-run (no API key needed, proves output shape only):
+#   python skills/movie-experts/_eval/runner.py --expert animator --dry-run ...
+
+judge:
+  base_url: https://openrouter.ai/api/v1
+  # First model in this list is the default judge used by `main()`.
+  # Add more for multi-judge ensemble runs in Phase 6.
+  models:
+    - qwen/qwen3-235b-a22b:free      # Alibaba Qwen3 235B (open weight)
+    - deepseek/deepseek-chat-v3:free # DeepSeek V3 (open weight)
+
+# Test model (the SKILL being evaluated). Phase 0 skeleton uses stub
+# answers; Phase 6 will wire this to a real provider from cli-config.yaml.
+test_model:
+  provider: openai-compatible
+  model: gpt-4o-mini
+  # Optional: pull from env to avoid hardcoding.
+  api_key_env: OPENAI_API_KEY
+
+# Ablation conditions (EVAL-04: N>=2, pairwise comparison).
+# Phase 0 demo uses 2 conditions. Phase 3 will use 3:
+#   ["old_no_refs", "new_no_refs", "new_with_refs"]
+conditions:
+  - baseline
+  - candidate
+
+# Prompt file resolution: _eval/prompts/<expert>_demo.yaml
+# Each file declares `expert_id` and a `prompts:` list.
+prompts_dir: skills/movie-experts/_eval/prompts
