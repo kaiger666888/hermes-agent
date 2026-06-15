@@ -1,0 +1,9 @@
+{
+  "byte_size": 4638,
+  "captured_at": "2026-06-15T04:16:10.592634+00:00",
+  "expert_id": "continuity",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "ca353076a7b2c2137d82e8f8514c8345bccf3cf3f5e0a0ba4361285446a58ce5",
+  "source_path": "skills/movie-experts/continuity/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

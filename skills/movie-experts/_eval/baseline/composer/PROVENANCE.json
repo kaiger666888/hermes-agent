@@ -1,0 +1,9 @@
+{
+  "byte_size": 5122,
+  "captured_at": "2026-06-15T04:16:10.591767+00:00",
+  "expert_id": "composer",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "40b374d441ccb4c90ca0f1e7fb6545e1f737e0fdc10d2e471b07be69a202e7f4",
+  "source_path": "skills/movie-experts/composer/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

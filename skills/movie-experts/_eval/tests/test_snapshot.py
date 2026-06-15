@@ -118,7 +118,10 @@ class TestCaptureBaselines:
         skills_dir, _ = _build_synthetic_skills_tree(tmp_path)
         baseline_dir = tmp_path / "baseline"
 
-        created = capture_baselines(skills_dir, baseline_dir, git_sha="deadbeef")
+        # 40-char hex git sha matches real format.
+        created = capture_baselines(
+            skills_dir, baseline_dir, git_sha="deadbeef" * 5
+        )
 
         assert len(created) == 14
         assert len(EXPERT_DIRS) == 14
@@ -138,7 +141,9 @@ class TestCaptureBaselines:
         skills_dir, contents = _build_synthetic_skills_tree(tmp_path)
         baseline_dir = tmp_path / "baseline"
 
-        capture_baselines(skills_dir, baseline_dir, git_sha="sha" * 6)
+        capture_baselines(
+            skills_dir, baseline_dir, git_sha="0123456789abcdef" * 4
+        )
 
         for expert_id, expected_body in contents.items():
             captured_bytes = (

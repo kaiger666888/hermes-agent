@@ -1,0 +1,9 @@
+{
+  "byte_size": 4992,
+  "captured_at": "2026-06-15T04:16:10.598683+00:00",
+  "expert_id": "screenplay",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "a99852f18a252709e78e8036d3d67c514172dfe750a2734138b7236fb1b6cbdb",
+  "source_path": "skills/movie-experts/screenplay/SKILL.md",
+  "tag": "eval-baseline-v1"
+}
