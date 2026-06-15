@@ -25,21 +25,38 @@ Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 1
 <!-- 当前 scope,均为 hypothesis 直到交付验证 -->
 
 **A. 现有 14 个专家的深度重构 + refs**
-- [ ] **AUDIT-01**: 对 14 个现有专家逐一审计,输出 GAP-REPORT.md(每个专家的知识盲点、prompt 改进点、metric 修订建议、应增 refs 主题)
-- [ ] **REFACTOR-A**: 对 14 个 SKILL.md 深度重构(注入 RAG 查询指令、修订 quality thresholds、补充 metric、按需精简/扩展 prompt)
-- [ ] **REFS-A**: 为 14 个专家各建 `references/` 子目录,装人工整理的 markdown 专业资料
+- [x] **AUDIT-01**: 对 14 个现有专家逐一审计,输出 GAP-REPORT.md(Phase 0 完成 2026-06-15)
+- [x] **REFACTOR-A**: 对 14 个 SKILL.md 深度重构(Phase 3 完成 4 个深度重构 + Phase 5 完成 10 个 light uplift)
+- [x] **REFS-A**: 为 14 个专家各建 `references/` 子目录(Phase 3 + Phase 5 完成,共 30 个 refs across 14 experts)
 
 **B. 4 个新增专家**
-- [ ] **EXPERT-CINE**: Cinematographer(运镜/摄影指导)—— 镜头语言体系、景别/视角/构图、轴线规则、match cut、与 scene_builder(机位规划)和 animator(动态执行)的协作边界
-- [ ] **EXPERT-HOOK**: Hook & Retention(钩子与留存)—— 短剧特有:3 秒开场钩子、冲突升级节奏、击中点设计、付费卡点(cliffhanger)、付费频次优化、竖屏节奏
-- [ ] **EXPERT-PROD**: Production(制作管理)—— 选角(performer 尚未覆盖)、服化道、灯光、拍摄计划、资源调度、统筹
-- [ ] **EXPERT-COMPLI**: 合规与宣发 —— 中国短剧场景刚性需求:内容合规检、脚本护航、爆款元素识别、平台差异版(抖音/快手/小程序剧)裁剪、海报/trailer 生成
+- [x] **EXPERT-CINE**: Cinematographer(运镜/摄影指导)—— Phase 4 完成,4 refs + SKILL.md + 3 prompts + 7 peer edges
+- [x] **EXPERT-HOOK**: Hook & Retention(钩子与留存)—— Phase 2 完成,4 refs + SKILL.md + 5 prompts
+- [x] **EXPERT-PROD**: Production(制作管理)—— Phase 5 完成,AI-relevant subset only(per PROD-07 live-action exclusion),5 refs + SKILL.md + 3 prompts + 8 peer edges
+- [x] **EXPERT-COMPLI**: 合规与宣发 —— Phase 1 完成,5 refs + SKILL.md + 5 prompts
 
 **C. 跨专家工作**
-- [ ] **CORPUS-01**: 从 4 个语料来源策展(专业书籍/论文、现有短剧/微电影样本、平台指南与爆款公式、AI 生成工具实践经验);每条 ref 标注来源与版权状态
-- [ ] **BILINGUAL-01**: SKILL.md 双语格式(英文结构保留 + 中文描述与示例),refs 以中文为主
-- [ ] **EVAL-01**: 轻量级 LLM-as-judge 双盲评分 harness(prompts/ 装基准任务、scripts/ 跑双盲、输出对比报告)
-- [ ] **DOC-01**: 更新 `skills/movie-experts/README.md`(或新增顶层 DOC)说明 18 专家协作图与 RAG 调用方式
+- [x] **CORPUS-01**: 从 4 个语料来源策展 — Phase 0-5 完成,共 58 个 refs(~1.2MB),全部 fair-use 引用 + Last-verified 时间戳
+- [x] **BILINGUAL-01**: SKILL.md 双语格式 — Phase 0-5 完成所有 18 个 SKILL.md
+- [x] **EVAL-01**: 轻量级 LLM-as-judge 双盲评分 harness — Phase 0 完成 runner.py + judge_prompt.md,Phase 3 + Phase 5 完成 11 个 expert × 3-condition dry-run 共 135 verdicts
+- [x] **DOC-01**: 顶层 README — Phase 6 完成,18 专家 collaboration DAG + RAG usage guide + Phase 6 live-run procedure
+
+### v1.5 Release Status (2026-06-15)
+
+**完整 18-expert collaboration graph v1.5 release ready:**
+
+- **14 original experts:** all RAG-aware(Phase 3 deep × 4 + Phase 5 light × 10)
+- **4 new experts:** compliance_marketing + hook_retention + cinematographer + production
+- **总 ref corpus:** 58 个 markdown refs(~1.2MB)
+- **Eval harness:** MT-Bench position-swap runner + 3-condition ablation + 135 dry-run verdicts
+- **Phantom strip:** 5 phantom refs 清理(animator wan2 / performer 168K / drawer FLUX 1.x / foley AudioLDM-2 / voicer CosyVoice)
+- **Model allowlist:** 33 entries in `_shared/known-external-models.yaml`
+
+**Deferred items (operator / live-run):**
+- Phase 6 live run execution(需 OPENROUTER_API_KEY + budget)
+- N ≥ 20 prompt 扩展 per expert
+- Multi-judge ensemble 调用
+- Live-run statistical GO/NO-GO verdict(per CONTEXT D-9 criteria)
 
 ### Out of Scope
 
