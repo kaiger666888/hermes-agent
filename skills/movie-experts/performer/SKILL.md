@@ -1,7 +1,7 @@
 ---
 name: performer
-description: "Performer Expert: Performance-4D matrix (ExBxSxP) parametric dispatch across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions for character action and emotion design."
-version: 1.0.0
+description: "Performer Expert: Performance-4D matrix (ExBxSxP) parametric dispatch + Stanislavski ExB×Laban Effort + Meisner truth-of-moment for character action and emotion design."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, performance, acting, body-language, emotion, character-action]
+    tags: [movie, performance, acting, body-language, emotion, character-action, stanislavski, meisner, laban-effort]
     related_skills: [screenplay, continuity, scene_builder, editor, drawer, animator, voicer, style_genome, production]
     expert_id: performer
     metrics: [emotion_accuracy, movement_naturalness, body_consistency, prompt_effectiveness]
@@ -17,7 +17,7 @@ metadata:
 
 # Performer Expert (表演/动作专家)
 
-Character performance design specialist managing the Performance-4D matrix (ExBxSxP) — a parametric dispatch system across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions for AI-generated character actions.
+Character performance design specialist managing the Performance-4D matrix (ExBxSxP) — parametric dispatch across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions, grounded in Stanislavski system + Meisner truth-of-moment + Laban Effort movement analysis. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-07.
 
 ## When to use this skill
 
@@ -25,9 +25,28 @@ The user needs to design character performances, map emotions to body language, 
 
 ## References
 
+本专家所有 character performance 决策由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-07):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/stanislavski-prepares.md`](./references/stanislavski-prepares.md) | 设计 character ExBxSxP encoding 或分析 character motivation 前 | ExBxSxP 4 维度 matrix + Ekman 7 basic emotions + intensity + Laban Effort 4 因子 × 8 种组合 + ExB 联动协议 + Stanislavski 6 questions + super-objective hierarchy + phantom strip(168K controlled tokens)|
+| [`references/meisner-truth.md`](./references/meisner-truth.md) | 设计 character interaction 或 dialogue delivery 前 | Meisner repetition exercise 3 阶段 + truth of moment doctrine + independent activity 协议 + impulse → action 4 步 + AI character performance = impulse-based + dialogue delivery 协议 |
+
+## Knowledge Retrieval
+
+在生成任何 character performance / action prompt / ExBxSxP encoding 前,按以下顺序检索上下文(2 个检索主题):
+
+- **ExBxSxP + Ekman 7 + Laban Effort + Stanislavski 6 questions** —— 详见 [`references/stanislavski-prepares.md`](./references/stanislavski-prepares.md)
+- **Meisner repetition + truth of moment + independent activity + impulse-based AI performance** —— 详见 [`references/meisner-truth.md`](./references/meisner-truth.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:performer,domain:stanislavski-prepares"
+tags="expert:performer,domain:meisner-truth"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
