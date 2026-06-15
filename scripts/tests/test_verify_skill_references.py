@@ -83,12 +83,22 @@ class TestBuildAllowlist:
             assert "xplug" in allowlist, f"xplug missing: {sorted(allowlist)}"
             assert "ypaint" in allowlist, f"ypaint missing: {sorted(allowlist)}"
 
-            # Description tokens: split on non-alphanumeric, lowercase, len>=3.
-            # From "Xplug video gen backend (veo 3.1, kling v3)" we get: veo,
-            # kling, etc. From "Ypaint image gen (flux-2-pro)" we get: flux,
-            # pro, etc.
+            # Description tokens: split on non-alphanumeric (excluding
+            # ``-`` and ``_``), lowercase, len>=3.
+            # From "Xplug video gen backend (veo 3.1, kling v3)" we get:
+            #   veo, kling, backend, xplug, image, ...
+            # From "Ypaint image gen (flux-2-pro)" we get the SINGLE
+            # token ``flux-2-pro`` (hyphen is preserved as an in-token
+            # character — see _tokenize_description docstring). The
+            # scanner's candidate regexes do not match hyphens
+            # internally, so this entry is effectively a "dead" allowlist
+            # entry for scanner suppression — but it is still recorded.
             assert "veo" in allowlist, f"veo missing: {sorted(allowlist)}"
             assert "kling" in allowlist, f"kling missing: {sorted(allowlist)}"
+            # Hyphenated description tokens are preserved as one entry.
+            assert "flux-2-pro" in allowlist, (
+                f"flux-2-pro missing: {sorted(allowlist)}"
+            )
 
     def test_build_allowlist_merges_manual_overrides(self) -> None:
         """Override YAML `models:` entries are merged with plugin tokens."""
