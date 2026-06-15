@@ -1,0 +1,265 @@
+expert_id: character_designer
+# Demo prompts for the character_designer expert eval harness.
+#
+# Three prompts chosen to exercise character_designer's unique capabilities
+# (per Phase 7B-1 plan):
+#   cd-001 — basic: design a primary character from screenplay+style_genome
+#            inputs; produce full CharacterBible 2.0. Tests 4D anchor
+#            generation + STYLE_PREFIX layering + stress-test design +
+#            negative-trait selection.
+#   cd-002 — trap: ask to lock a character that FAILED the consistency
+#            stress test (1 scene CLIP-I < 0.80). A base model would
+#            comply and lock anyway. A properly-configured character_
+#            designer should REFUSE and route back to Step 2 (variant
+#            regeneration).
+#   cd-003 — audit: given a suspected drift case (3 images of "same"
+#            character that look subtly different), diagnose which
+#            dimension drifted and recommend fix. Tests identity-drift
+#            diagnosis capability.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 7+ eval; they exist to prove the harness output shape on the
+# character_designer expert.
+prompts:
+  - id: cd-001
+    text: |
+      Design the primary character for a 30-episode 抖音-男频 revenge
+      短剧 (vertical 9:16, cyberpunk aesthetic, 2026 release).
+
+      **Upstream inputs:**
+
+      From style_genome expert:
+      ```json
+      {
+        "genre": "cyberpunk-revenge",
+        "era": "near-future (2040s)",
+        "mood": "noir, melancholic, neon-lit",
+        "lighting_style": "low-key with neon accents",
+        "color_palette": ["#0a0e27", "#ff006e", "#3a86ff", "#ffbe0b"]
+      }
+      ```
+
+      From screenplay expert:
+      ```
+      Character: 林川 / Lin Chuan
+      Role: protagonist (视角中心)
+      Background: 25岁,5年前被合伙人赵恒背叛,从天台坠下大难不死,
+                  现以新身份回归复仇。
+      Personality: 冷静、隐忍、为复仇而生;对敌人冷酷,对无辜者保留底线
+      Key relationships:
+        - 赵恒 (antagonist,前合伙人,5年前的背叛者)
+        - 苏雨 (love interest,医生,5年前救了他)
+      Signature look: 脸上有刀疤(天台坠落留下),黑色风衣,红色领巾
+      ```
+
+      From production expert:
+      ```
+      Casting spec: 25yo male, Asian, lean build (height ~178cm)
+      Wardrobe budget: cyberpunk-style technical wear, ~¥3000/episode
+      ```
+
+      Generate a complete `CharacterBible 2.0` JSON (per SKILL.md
+      §Output Format) with:
+
+      (a) **4D anchor specifications** — for each of front / three_quarter
+          / side / back, generate the prompt that will be used to create
+          the anchor source image. Use the format from
+          references/4d-anchor-system.md §Anchor generation prompt
+          template. Each prompt should compose STYLE_CORE +
+          STYLE_IDENTITY + view-specific keywords.
+
+      (b) **Layered STYLE_PREFIX** — construct the 3-layer architecture
+          per references/layered-style-prefix.md:
+          - STYLE_CORE (from style_genome input, 20-50 tokens)
+          - STYLE_IDENTITY (per-character, 50-150 tokens, must include
+            ≥ 5 physical features)
+          - STYLE_VARIANCE template (with {lighting}/{weather}/{mood}
+            placeholders)
+
+      (c) **Negative traits** — per references/character-bible-schema.md
+          §negative_traits, list ≥ 5 negative traits that cover drift
+          vectors for this character's demographic. Examples for this
+          cyberpunk Asian male: blonde hair, beard, glasses, blue eyes,
+          etc. Justify each trait's inclusion.
+
+      (d) **Reference library plan** — list the 8 standard reference
+          images per references/character-bible-schema.md §reference_
+          images, with each image's strength (per the 0.30-0.55 range)
+          and purpose.
+
+      (e) **Stress test plan** — per references/consistency-stress-test.md
+          §The 3 canonical test scenes, list the 3 test scenes adapted
+          to this character's genre (street night neon should adapt to
+          cyberpunk setting). For each scene, predict whether the
+          character is likely to pass the CLIP-I ≥ 0.80 threshold
+          based on STYLE_IDENTITY specificity.
+
+      (f) **Consistency lock plan** — describe the lock state machine
+          path this character will follow: unlocked → stress_testing →
+          locked(passed) OR return to variant selection. List which
+          fields will be in frozen_fields.
+
+      Cross-reference all 4 reference files when justifying decisions.
+
+  - id: cd-002
+    text: |
+      The character_designer has just run a consistency stress test on
+      a candidate character "char_mei" with the following results:
+
+      ```json
+      {
+        "stress_test_results": {
+          "tests": [
+            {
+              "scene": "street night neon",
+              "strength": 0.40,
+              "clip_i_score": 0.84,
+              "dino_i_score": 0.81,
+              "verdict": "pass"
+            },
+            {
+              "scene": "indoor close-up crying",
+              "strength": 0.55,
+              "clip_i_score": 0.73,
+              "dino_i_score": 0.79,
+              "verdict": "fail"
+            },
+            {
+              "scene": "running side view",
+              "strength": 0.35,
+              "clip_i_score": 0.82,
+              "dino_i_score": 0.80,
+              "verdict": "pass"
+            }
+          ],
+          "aggregate_clip_i_mean": 0.80,
+          "aggregate_dino_i_mean": 0.80
+        }
+      }
+      ```
+
+      The user, frustrated with iteration cost, requests: "Just lock
+      it. The aggregate mean passes 0.80, the failing scene is just
+      close-up which we can fix later in drawer. The other 2 scenes
+      pass, that's good enough."
+
+      This is a TRAP prompt. A base LLM without stress-test-discipline
+      would comply ("OK, locking it") because 2 of 3 scenes pass and
+      the aggregate is borderline. A properly-configured character_
+      designer should REFUSE and explain WHY, citing:
+
+      (a) **Per-scene failure handling rule** — per references/
+          consistency-stress-test.md §Pass / fail decision matrix:
+          "1 scene fails → Investigate; try 1 regeneration; if still
+          fails, return to variant selection". Locking with a known
+          failure violates this rule.
+
+      (b) **Aggregate mean mask problem** — the aggregate CLIP-I mean
+          is exactly 0.80 (borderline), but this hides that the indoor
+          close-up is 0.73 (clearly failing). The close-up scene tests
+          FACE consistency, which is the highest-stakes test — failing
+          here means drawer's portrait shots WILL drift.
+
+      (c) **CLIP-I vs DINO-I pattern diagnosis** — per references/
+          consistency-stress-test.md §Why both CLIP-I and DINO-I,
+          the failing scene has CLIP-I = 0.73 but DINO-I = 0.79.
+          Per the failure-pattern table:
+          - CLIP-I low + DINO-I pass = STYLE drift (semantic/style)
+          - This means the character's STYLE (likely outfit or color
+            palette) is drifting under close-up lighting, not the
+            facial structure itself.
+
+      (d) **Recommended fix** — based on (c), the fix is NOT to lock
+          and hope drawer fixes it later. The fix is:
+          - Add more outfit-specific tokens to STYLE_IDENTITY (e.g.,
+            specify outfit color under various lighting conditions)
+          - OR strengthen the indoor-lighting tokens in
+            STYLE_VARIANCE template
+          - OR add lighting-related negative traits
+          After fix, re-run the stress test.
+
+      (e) **Cost of locking with failure** — explain that locking
+          with a known failure cascades: drawer will inherit the
+          drift, animator's video samples will drift, lip_sync's
+          identity preservation will fail ArcFace check, continuity
+          will reject cross-shot consistency. Cost of one more
+          iteration now (cheap) << cost of fixing downstream drift
+          (expensive).
+
+      (f) **The correct response demonstrates stress-test-discipline**
+          by refusing to lock a character with known consistency
+          failure, diagnosing the specific drift dimension via CLIP-I
+          vs DINO-I pattern, and routing to a targeted fix rather
+          than "lock and hope".
+
+      The expected output is a structured REJECT response with
+      diagnosis + targeted fix recommendation, NOT a "locked = true"
+      CharacterBible.
+
+  - id: cd-003
+    text: |
+      The continuity expert flags a potential identity drift case.
+      Three images of "char_wuji" from different scenes look subtly
+      different — same character on inspection, but something is off.
+      The user asks the character_designer expert to diagnose.
+
+      **Image metadata:**
+
+      | Image | Scene context | Observed issue |
+      |-------|--------------|----------------|
+      | img_A.jpg | Night outdoor running scene | Looks correct: black hair, red eyes, scar visible, black trench coat |
+      | img_B.jpg | Indoor dialogue close-up | Hair appears shorter, scar less prominent, coat darker |
+      | img_C.jpg | Daytime street walking | Eyes appear slightly more orange than red, hair slightly wavier |
+
+      **CharacterBible 2.0 frozen spec for char_wuji:**
+      ```
+      STYLE_IDENTITY:
+      - Hair: black, shoulder-length, slight wave
+      - Eyes: red
+      - Scar: left cheek, ~3cm
+      - Outfit: black trench coat, gray turtleneck, black boots
+      negative_traits: ["blonde hair", "beard", "glasses",
+                        "short hair", "blue eyes", "smile (default)"]
+      ```
+
+      Generate a structured identity-drift diagnosis that:
+
+      (a) **Identifies which images drift** — for each of img_A, img_B,
+          img_C, state whether it complies with the frozen
+          STYLE_IDENTITY and negative_traits, or which specific
+          dimension(s) drifted.
+
+      (b) **Diagnoses root cause per drift** — for each drift,
+          identify likely cause:
+          - STYLE_VARIANCE scope violation (scene-specific token
+            contradicts IDENTITY)
+          - Negative trait enforcement failure (drawer didn't
+            properly inject negative prompt)
+          - sample_strength too low (insufficient identity lock)
+          - Anchor reference selection wrong (used side when should
+            have used 3Q)
+          - STYLE_IDENTITY under-specified (e.g., "red eyes" too
+            vague; should be "deep red, almost burgundy")
+
+      (c) **Recommends fix per drift** — concrete action to resolve:
+          - Which drawer prompt to regenerate
+          - Which anchor to use as reference
+          - Which sample_strength to apply
+          - Which negative_traits token to add/strengthen
+          - Whether STYLE_IDENTITY needs revision (requires
+            lock_version bump per the revision workflow)
+
+      (d) **Cross-references the schema** — for each recommended fix,
+          cite the specific field in references/character-bible-
+          schema.md that governs the relevant dimension (e.g., "per
+          §frozen_fields, STYLE_IDENTITY changes require
+          consistency_lock.lock_version bump + re-running stress
+          test").
+
+      (e) **Outputs an audit report** — structured JSON with per-image
+          verdict, root cause, fix recommendation, and downstream
+          consumer notification list.
+
+      This tests the character_designer's identity-drift diagnosis
+      capability, which is the inverse of its primary design function
+      but critical for production debugging.

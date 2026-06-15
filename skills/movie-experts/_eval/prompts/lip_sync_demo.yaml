@@ -1,0 +1,197 @@
+expert_id: lip_sync
+# Demo prompts for the lip_sync expert eval harness.
+#
+# Three prompts chosen to exercise lip_sync's unique capabilities
+# (per Phase 7A-2 plan):
+#   lip-001 — basic: given a (video, audio) pair, output a full
+#            LipSyncResult JSON with deployment parameters chosen
+#            for the user's hardware profile. Tests engine selection
+#            logic + parameter presets + quality self-check output.
+#   lip-002 — trap: given a Tier D input (profile shot, multi-person
+#            background), ask to process it. A base model would
+#            attempt and produce garbage. A properly-configured
+#            lip_sync should REFUSE citing audio-video-input-spec.md
+#            §Tier D rejection rules + route to animator.
+#   lip-003 — validation: ask how to validate this expert's quality
+#            claim against industry SOTA. Tests the expert's awareness
+#            of LRS2/LRS3 international benchmark + LSE/LSE-C objective
+#            metrics (the "no LLM-as-judge required" core value).
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 7+ eval; they exist to prove the harness output shape on the
+# lip_sync expert and exercise the 3 canonical shapes (basic / trap /
+# validation).
+#
+# File naming: runner.py resolves `--expert lip_sync` to
+# `prompts/lip_sync_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+prompts:
+  - id: lip-001
+    text: |
+      The user has the following setup and wants to lip-sync a 短剧
+      character dialogue:
+
+      **Hardware:** RTX 3090 (24 GB VRAM), Linux, CUDA 12.1
+      **Input video:** `shot_04_take_02.mp4`
+        - 12.5 seconds, 25fps, 1920×1080, H.264
+        - Single character, frontal face (yaw ~10°), good lighting
+        - Mouth clear, no occlusion
+      **Input audio:** `wuji_dialogue_s1e04.wav`
+        - 12.3 seconds, mono, currently 44100 Hz WAV
+        - Chinese dialogue, studio-quality (SNR ~35 dB)
+        - Slight silence padding at start (~80ms)
+      **Use case:** Final delivery for 抖音 release — quality is critical,
+        speed is not.
+      **Continuity context:** This is shot 4 of a 12-shot scene featuring
+        character "wuji". Continuity expert will audit after lip_sync.
+
+      Generate a complete `LipSyncResult` JSON (per SKILL.md §Output Format)
+      that includes:
+
+      (a) Engine selection rationale — given 24 GB VRAM + quality-priority
+          use case, choose the appropriate engine version and justify
+          per references/latentsync-deployment.md §Version selection.
+      (b) Input tier rating — apply the 4-tier rating system from
+          references/audio-video-input-spec.md to the input video.
+          Flag any preprocessing required (e.g., audio resample to
+          16000Hz).
+      (c) Parameter selection — choose inference_steps, guidance_scale,
+          deepcache, mask_dilation appropriate for final-delivery use
+          case. Justify per references/latentsync-deployment.md
+          §Best-practice presets.
+      (d) Quality self-check expectations — predict the expected LSE,
+          LSE-C, SyncNet confidence, identity cosine sim, and jitter p95
+          range for this input+engine combination, citing the per-version
+          expected ranges from references/sync-quality-metrics.md
+          §Industry SOTA benchmarks and references/identity-preservation.md
+          §Identity preservation across model versions.
+      (e) Continuity handoff block — emit the handoff data structure for
+          the continuity expert to consume.
+
+      Cross-reference references/latentsync-deployment.md §Version
+      selection + references/sync-quality-metrics.md §Quality grade
+      thresholds + references/identity-preservation.md §Continuity
+      handoff protocol when justifying decisions.
+
+  - id: lip-002
+    text: |
+      The user provides the following input and asks for lip-sync:
+
+      **Input video:** `interview_take_bad.mp4`
+        - 8.2 seconds, 30fps (NOT 25fps)
+        - 1280×720, but character face is profile shot (yaw ~50°)
+        - Two people in frame, both visible, similar size
+        - One person's mouth partially occluded by microphone boom
+        - Harsh backlight, shadow on character's face
+        - Character face ROI estimated at ~75 pixels
+      **Input audio:** `dialogue.wav`
+        - 8.0 seconds, mono, 44100 Hz WAV
+        - Voice clearly belongs to the LEFT person in frame
+        - Moderate background noise (SNR ~12 dB)
+      **User request:** "Sync the LEFT character's lips to this audio
+        for a 短剧 insert shot. Use the fastest preset."
+
+      This is a TRAP prompt. A base LLM without input-quality-decoupling
+      would comply and attempt processing — producing garbage output
+      with LSE > 12, SyncNet confidence < 0.5, and identity cosine sim
+      < 0.7. A properly-configured lip_sync expert should REFUSE this
+      input and explain WHY, citing:
+
+      (a) Input tier D rating — per references/audio-video-input-spec.md
+          §4-tier input quality rating, this input hits multiple Tier D
+          criteria:
+          - Profile shot (yaw > 45°)
+          - Multiple speakers with similar size (indistinguishable)
+          - Heavy occlusion (> 40% of mouth by mic boom)
+          - Face ROI < 80px
+          - Audio SNR < 20 dB (Tier C-D boundary)
+          Tier D = "do NOT attempt" per the spec.
+
+      (b) Specific failure modes — per references/audio-video-input-spec.md
+          §Failure mode catalog, this input would trigger:
+          - "Wrong face synced" (face detector would pick larger face,
+            not the speaker)
+          - "Mouth deforms" (occlusion > 40%, mouth detector < 50%
+            confidence)
+          - "Blurry output" (face ROI < 100px)
+          - "No face detected" possible (extreme angle)
+
+      (c) Predicted output quality if attempted — citing
+          references/sync-quality-metrics.md §Quality grade thresholds,
+          predicted grade = D (LSE > 8.5, LSE-C < 5.5, SyncNet conf <
+          0.65). Per SKILL.md §Quality grade scale, "Reject; re-examine
+          input".
+
+      (d) Routing recommendations — per references/audio-video-input-spec.md
+          §Preprocessing recommendations for Tier D inputs:
+          - Do NOT preprocess (info loss too severe)
+          - Route to [`animator`](../../animator/SKILL.md) for synthetic
+            footage generation
+          - OR ask user for reshoot with Tier A/B requirements
+
+      (e) The correct response demonstrates input-quality-decoupling by
+          refusing the input and routing to upstream experts, rather
+          than attempting processing on input that will produce garbage.
+
+      The expected output is a structured REJECT response with specific
+      tier-D evidence, NOT a LipSyncResult JSON.
+
+  - id: lip-003
+    text: |
+      A user asks: "How do I know if your lip_sync expert is actually
+      any good? Other AI video tools claim 'SOTA' or 'production-ready'
+      without proof."
+
+      Provide a complete validation protocol answer that demonstrates
+      the lip_sync expert's UNIQUE value: international-standard
+      objective benchmark + no LLM-as-judge required. The answer must
+      include:
+
+      (a) **International-standard benchmark identification** — name
+          LRS2 and LRS3 datasets, cite their source URLs and original
+          publishers. Explain why these are the global standard
+          (research-community adoption + reproducibility).
+
+      (b) **Objective metric definitions** — define LSE (Lip Sync Error
+          — Distance), LSE-C (Lip Sync Error — Confidence), and SyncNet
+          confidence. Provide the formulas per references/sync-quality-
+          metrics.md §Metric definitions. Explain why LSE / LSE-C are
+          objective (computed by SyncNet model, not human or LLM judge).
+
+      (c) **Industry SOTA comparison table** — provide the comparison
+          table from references/sync-quality-metrics.md §Industry SOTA
+          benchmarks showing Wav2Lip / MuseTalk / SyncTalk / LatentSync
+          v1.5 / LatentSync v1.6 / HeyGen LSE values on LRS2 and LRS3.
+
+      (d) **This expert's target** — state that the expert's target is
+          to match or exceed LatentSync v1.6 (LSE ≤ 5.5 on LRS2, LSE-C
+          ≥ 8.0 on LRS2). Explain that this is achievable because the
+          expert deploys LatentSync v1.6 as primary engine (per
+          references/latentsync-deployment.md).
+
+      (e) **Why LLM-judge is invalid for this metric** — per references/
+          sync-quality-metrics.md §Why these metrics (and not LLM-judge):
+          - LLMs tokenize frames losing sub-frame motion precision
+          - SyncNet is specifically trained on audio-visual correspondence;
+            LLMs are not
+          - Inter-rater agreement LLM-judge on lip-sync = ~0.3 Pearson
+            (vs human)
+          - SyncNet + LSE vs human = ~0.85 Pearson
+
+      (f) **Independent validation protocol** — provide the 5-step
+          protocol from SKILL.md §Validation protocol:
+          1. Download LRS2/LRS3 test split
+          2. Run lip_sync on each test sample
+          3. Compute LSE / LSE-C / SyncNet confidence
+          4. Compare against SOTA baselines
+          5. Iteration signal: refs/param updates must not regress LSE
+
+      (g) **Per-language variance honesty** — note that for Chinese 短剧
+          content, expected grade is A-B (not necessarily SOTA) due to
+          less Chinese training data, per references/sync-quality-metrics.md
+          §Per-language variance. Honesty about limitations is itself a
+          quality signal.
+
+      The correct response demonstrates that this expert is the ONLY
+      movie-expert that can be independently validated against a global
+      standard benchmark without LLM-judge — and explains the protocol
+      for doing so.

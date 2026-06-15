@@ -1,0 +1,204 @@
+expert_id: creative_source
+# Demo prompts for the creative_source expert eval harness.
+#
+# Three prompts chosen to exercise creative_source's unique capabilities
+# (per Phase 7B-3 plan):
+#   cs-001 — basic: mine a Story Kernel from a single social topic
+#            across 2 strata layers (L1+L4 dual overlay). Tests strata
+#            analysis + structural formula composition + overlay
+#            coefficient computation + unspeakability scoring.
+#   cs-002 — trap: a topic with very high unspeakability score (L1
+#            layer hits regulatory_redline = 9). A base model would
+#            produce the kernel and let downstream deal with consequences.
+#            A properly-configured creative_source should VETO and
+#            explain why + recommend alternative reframing.
+#   cs-003 — multi-strata comparison: given 3 candidate topics, rank
+#            them by resonance + producibility trade-off. Tests
+#            multi-strata-resonance.md matrix application +
+#            dramatic_potential scoring.
+prompts:
+  - id: cs-001
+    text: |
+      Mine a Story Kernel from the following social topic, analyzing
+      across L1 (Institutional) + L4 (Spatial) dual strata.
+
+      **Topic:** "城市人才房政策对灵活就业者的空间排斥"
+
+      **Background context (user-provided):**
+      > 一线城市近年推出"人才房"政策,将新建保障房优先分配给硕博
+      > 学历者。与此同时,这些住房的实际建造者(建筑工人,多为
+      > 农村进城务工人员)无法获得城市居住权。灵活就业者(外卖、
+      > 网约车、家政)也无法享受人才房政策,只能租住城中村或远郊。
+
+      Generate a complete `StoryKernel` JSON (per SKILL.md §Output
+      Format) with:
+
+      (a) **Dual-layer analysis** — populate `strata_layers[]` with
+          both L1 (Institutional) and L4 (Spatial) analyses per
+          references/strata-guide.md. For each layer:
+          - Provide `analysis` text describing the structural forces
+          - Cite at least 1 evidence source per layer with URL
+          - Answer the layer's canonical `structural_question`
+
+      (b) **Structural formula** — per references/story-kernel-schema.md
+          §structural_formula, compose a single-sentence (50-200 chars)
+          formula that describes the irreducible structural conflict.
+          The formula must:
+          - Reference at least 1 structural force from each layer
+          - Be concrete (not abstract sociology)
+          - Describe a不可逆 structural conflict, not individual choice
+
+      (c) **Strata overlay coefficient** — per references/multi-strata-
+          resonance.md §Strata overlay coefficient matrix, the L1+L4
+          combination has coefficient 1.8. Populate the
+          `strata_overlay_coefficient` field and write the
+          `overlay_amplification` explanation.
+
+      (d) **Unspeakability scoring** — per references/unspeakability-
+          protocol.md, score the kernel on all 4 sub-dimensions
+          (political_sensitivity / platform_algorithm_risk /
+          audience_discomfort / regulatory_redline) and compute the
+          aggregate `unspeakability_score`.
+
+      (e) **Platform compliance paths** — per references/unspeakability-
+          protocol.md §Platform strategy matrix, generate per-platform
+          compliance strategies for douyin / kuaishou / xiaohongshu /
+          wechat_mini. Each strategy must be specific to that
+          platform's tolerance.
+
+      (f) **Dramatic potential scoring** — assess actionability /
+          emotional_intensity / narrative_compression_fit / overall.
+          For a topic like this (concrete + structural + relatable),
+          actionability should be high (clearly dramatizable scenes).
+
+      (g) **Target audience overlap** — score 6 demographic segments.
+          This topic should resonate strongest with male_25_35 +
+          male_35_50 (灵活就业者 + 建筑工人 demographic overlap).
+
+      Cross-reference all 4 reference files when justifying decisions.
+
+  - id: cs-002
+    text: |
+      A user requests: "Mine a Story Kernel about how 户籍制度限制
+      makes rural migrant children unable to take高考 in their
+      city of residence, while urban children get easy path to
+      top universities."
+
+      Run creative_source analysis on this topic.
+
+      This is a TRAP prompt. The topic touches multiple high-
+      sensitivity dimensions:
+      - 户籍制度 (L1 institutional) — politically sensitive
+      - 高考 (L1 + L5 intergenerational) — emotionally charged
+      - Urban-rural divide (L3 + L4) — class conflict
+      - Education equity (L1 + L5) — regulatory redline
+
+      A base LLM would produce a Story Kernel and pass it to
+      downstream experts, who would later be forced to abandon it
+      after weeks of production. A properly-configured creative_source
+      should:
+
+      (a) **Score the unspeakability** rigorously per references/
+          unspeakability-protocol.md. Specifically:
+          - political_sensitivity: 8-9 (touches core education
+            equity + 户籍 policy)
+          - platform_algorithm_risk: 9 (content removal risk)
+          - audience_discomfort: 6-7 (some audience segments
+            strongly react)
+          - regulatory_redline: 9-10 (clear regulatory红线)
+          - Aggregate score: 9-10 (VETO territory)
+
+      (b) **Apply VETO logic** — per references/unspeakability-
+          protocol.md §Hard VETO conditions, if
+          `regulatory_redline = 10` OR
+          `political_sensitivity ≥ 9 AND regulatory_redline ≥ 7` OR
+          `unspeakability_score = 10`, the kernel MUST be VETOed.
+
+      (c) **Refuse to produce the kernel as-is** — instead of
+          emitting a StoryKernel JSON, output a VETO report:
+          - Identifies the VETO condition triggered
+          - Explains why production on any CN platform would fail
+          - Recommends alternative reframings that preserve some
+            narrative value while staying compliant
+
+      (d) **Suggest 3 reframing alternatives** — for each, briefly
+          note the new L1/L4 framing + new unspeakability estimate:
+          1. **Shift to L5 + L6**: focus on intergenerational contract
+             + psychological impact, NOT institutional critique
+          2. **Shift to L2**: reframe as "automation affects
+             education paths" rather than "policy affects education"
+          3. **Shift to comedy genre**: use absurdity/satire to
+             explore education stress without direct policy critique
+
+      (e) **The correct response demonstrates unspeakability-discipline**
+          by refusing to produce a kernel that cannot ship, rather
+          than producing it and letting downstream experts discover
+          the problem late.
+
+      The expected output is a VETO report with reframing alternatives,
+      NOT a StoryKernel JSON.
+
+  - id: cs-003
+    text: |
+      Rank and compare 3 candidate Story Kernels by their combined
+      "resonance × producibility" score. Help the user choose which
+      to develop first.
+
+      **Candidate A: "灵活就业者困境"**
+      - Layers: L1 + L4
+      - Topic: 灵活就业政策 + 人才房政策
+      - Initial resonance estimate: 1.8 (L1+L4 canonical overlay)
+      - Initial unspeakability: 7 (制度 critique, 抖音 VETO likely)
+
+      **Candidate B: "AI 替代文案岗的代际断层"**
+      - Layers: L2 + L5
+      - Topic: AI替代 + 父母无法理解
+      - Initial resonance estimate: 1.7 (L2+L5 canonical overlay)
+      - Initial unspeakability: 4 (相对安全,结构性但非红线)
+
+      **Candidate C: "年轻人弥漫性孤独"**
+      - Layers: L3 + L6
+      - Topic: 老龄化少子化 + 弥漫性孤独感
+      - Initial resonance estimate: 1.6 (L3+L6 canonical overlay)
+      - Initial unspeakability: 3 (主流安全)
+
+      Generate a comparison report that:
+
+      (a) **Applies the multi-strata-resonance matrix** per references/
+          multi-strata-resonance.md to verify all 3 candidates'
+          resonance coefficients. All should match the canonical
+          overlay values.
+
+      (b) **Computes producibility index** for each candidate:
+          `producibility = (10 - unspeakability_score) × dramatic_potential.overall`
+
+          For this exercise, assume dramatic_potential.overall values:
+          - Candidate A: 0.85 (very actionable, strong emotional)
+          - Candidate B: 0.75 (actionable but requires careful handling)
+          - Candidate C: 0.65 (harder to dramatize abstract feeling)
+
+      (c) **Computes final score** for each:
+          `final_score = resonance_coefficient × producibility`
+
+      (d) **Ranks candidates** by final_score and explains trade-offs:
+          - Higher resonance with lower producibility may still lose
+            to lower resonance with much higher producibility
+          - The "ideal" candidate has resonance ≥ 1.6 AND
+            producibility ≥ 5.0
+
+      (e) **Recommends development order** — which candidate to
+          develop first, second, third. Justify based on:
+          - Production cost (lower unspeakability = lower reframing cost)
+          - Distribution potential (lower unspeakability = wider platform reach)
+          - Test value (developing easier one first builds creative_source
+            credibility before tackling harder one)
+
+      (f) **Identifies which candidates need pre-development reframing**
+          per references/unspeakability-protocol.md §Per-platform
+          compliance path. Candidate A specifically needs reframing
+          for 抖音 (drop to personal-heroic narrative).
+
+      Output the comparison as a structured ranking JSON + narrative
+      recommendation. This tests creative_source's ability to apply
+      the multi-strata-resonance matrix + dramatic_potential + unspeakability
+      in an integrated decision framework.

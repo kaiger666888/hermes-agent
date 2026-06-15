@@ -2,14 +2,14 @@
 
 **Project:** RAG-augmented movie-expert skill suite for AI 短剧 / 微电影 production.
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Status:** v1.5 complete — 18 experts (14 original + 4 new — COMPLI / HOOK / CINE / PROD). All RAG-aware.
-**Last updated:** 2026-06-15
+**Status:** v2 complete — 23 experts (14 original + 4 Phase 1-5 + 5 Phase 7 — SCRIPT_AUDIT / LIP_SYNC / CHARACTER / STORYBOARD / CREATIVE). All RAG-aware. 5 new experts have independent validation protocols (no LLM-judge required).
+**Last updated:** 2026-06-16
 
 ---
 
 ## Suite Overview
 
-18 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from style definition through final mix. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges. Total ref corpus: 58 files (~1.2MB cited fair-use content).
+23 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from creative-source mining through final mix + lip-sync. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges. Total ref corpus: ~80 files (~1.8MB cited fair-use content).
 
 ### 14 Original Experts (Phase 0 baselined; 4 deep-refactored Phase 3, 10 light-uplifted Phase 5)
 
@@ -39,6 +39,16 @@
 | [`cinematographer`](./cinematographer/SKILL.md) | 镜头专家 | Shot intent layer (shot scale + composition + axis + camera move) + vertical 9:16 framing + 2026 video gen model prompt-token mapping | Phase 4 | 4 |
 | [`production`](./production/SKILL.md) | 制作管理专家 | AI-relevant subset: character LoRA spec / per-scene wardrobe / lighting intent / GPU budget / asset reuse (NOT live-action per PROD-07) | Phase 5 | 5 |
 
+### 5 New Experts (Phase 7 — independent validation, no LLM-judge required)
+
+| Expert | Chinese Name | Role | Validation Protocol | Refs |
+|--------|--------------|------|---------------------|------|
+| [`script_auditor`](./script_auditor/SKILL.md) | 剧本审计专家 | 5-dimension quantitative script audit (narrative / emotion / hook / character / completion-forecast) BEFORE production. Decoupled from screenplay (screenplay writes, script_auditor audits) | Pearson correlation between predicted & actual 完播率 ≥ 0.65 on 100-script labeled corpus | 5 |
+| [`lip_sync`](./lip_sync/SKILL.md) | 唇形同步专家 | Audio-driven lip sync (LatentSync v1.5/v1.6) producing synced video from (footage + audio) pair. Decoupled from voicer (voicer synthesizes audio, lip_sync aligns audio to footage) | LSE / LSE-C / SyncNet confidence on **LRS2 / LRS3 international-standard benchmark** (SOTA target LSE ≤ 5.5) | 4 |
+| [`character_designer`](./character_designer/SKILL.md) | 角色设计专家 | Character Bible 2.0 authoring with 4D-Anchor (front/3-quarter/side/back) + layered STYLE_PREFIX (CORE/IDENTITY/VARIANCE) + consistency stress test. Decoupled from drawer (drawer generates images, character_designer defines identity contract) | CLIP-I / DINO-I cross-scene similarity ≥ 0.80 on 30-character × 7-image corpus | 4 |
+| [`storyboard_designer`](./storyboard_designer/SKILL.md) | 分镜设计专家 | Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring (depth/identity/lighting/temporal) + extension-chain end_frames. Decoupled from cinematographer (cinematographer defines rules, storyboard_designer applies them) | Shot count accuracy / shot size distribution KL / rhythm curve DTW vs professional ground truth on 50-script corpus | 4 |
+| [`creative_source`](./creative_source/SKILL.md) | 创意源头专家 | Story Kernel mining from 6 social strata (institutional / technological / demographic / spatial / intergenerational / psychosocial). DAG root — upstream of style_genome. Sources: Bourdieu / Foucault / Giddens + Lefebvre + Han Byung-Chul | Strata resonance Pearson / Bourdieu field accuracy / unspeakability AUC on 100-topic labeled corpus | 4 |
+
 ---
 
 ## Production DAG (Collaboration Graph)
@@ -46,12 +56,18 @@
 ```text
                                   ┌─────────────────────┐
                                   │   USER INTENT       │
-                                  │ (director / genre)  │
+                                  │ (topic / social issue) │
                                   └──────────┬──────────┘
                                              │
                                              ▼
                                   ┌─────────────────────┐
-                                  │   style_genome      │   (root expert)
+                                  │  creative_source    │   (Phase 7 root — mines Story Kernel)
+                                  │  创意源头 (6 strata)  │
+                                  └──────────┬──────────┘
+                                             │
+                                             ▼
+                                  ┌─────────────────────┐
+                                  │   style_genome      │   (root — defines 5D style vector)
                                   │   风格基因 (5D)      │
                                   └──────────┬──────────┘
                                              │
@@ -63,57 +79,88 @@
                 │   剧本           │  │ 钩子与留存       │  │ marketing 合规  │
                 └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
                          │                    │                    │
-                         ▼                    ▼                    ▼
-                ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-                │ cinematographer │  │   performer     │  │   scene_builder │
-                │   镜头           │  │   表演           │  │   三维场景建构   │
-                └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
-                         │                    │                    │
-                         └──────────┬─────────┴────────────────────┘
-                                    │
-                                    ▼
-                          ┌─────────────────┐
-                          │     drawer      │   (FLUX / LoRA stills)
-                          │     绘图         │
-                          └────────┬────────┘
-                                   │
-                                   ▼
-                          ┌─────────────────┐
-                          │    animator     │   (Runway / Kling / Veo / Sora 2)
-                          │     视频         │
-                          └────────┬────────┘
-                                   │
-                ┌──────────────────┼──────────────────┐
-                │                  │                  │
-                ▼                  ▼                  ▼
-       ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-       │   colorist    │   │    editor     │   │  composer /   │
-       │   色彩         │   │    剪辑       │   │  foley /      │
-       └───────┬───────┘   └───────┬───────┘   │  spatial_audio│
-               │                   │           │  / voicer     │
-               └───────────────────┴───────────┴───────┬───────┘
-                                   │                   │
-                                   ▼                   ▼
-                          ┌─────────────────┐ ┌───────────────┐
-                          │     mixer       │ │  continuity   │
-                          │     混音         │ │  连续性审计    │
-                          └────────┬────────┘ └───────┬───────┘
-                                   │                  │
-                                   └──────────┬───────┘
-                                              │
-                                              ▼
-                                   ┌─────────────────┐
-                                   │   FINAL OUTPUT  │
-                                   │  (短剧 / 微电影)  │
-                                   └─────────────────┘
+                         ▼                    │                    ▼
+                ┌─────────────────┐            │           ┌─────────────────┐
+                │ script_auditor  │ ◄──────────┴────────── │  character_     │
+                │ 剧本审计 (5-dim) │            (loop)      │  designer       │
+                └────────┬────────┘                        │  角色设计 (4D)   │
+                         │                                 └────────┬────────┘
+                         ▼                                          │
+                ┌─────────────────┐                                 │
+                │ cinematographer │                                 │
+                │   镜头           │                                 │
+                └────────┬────────┘                                 │
+                         │                                          │
+                         ▼                                          │
+                ┌─────────────────┐                                 │
+                │ storyboard_     │ ◄───────────────────────────────┘
+                │ designer 分镜    │
+                │ (Storyboard JSON)│
+                └────────┬────────┘
+                         │
+                ┌────────┴────────┬──────────────────┐
+                │                 │                  │
+                ▼                 ▼                  ▼
+       ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+       │ scene_builder │  │   performer   │  │  production   │
+       │ 三维场景建构   │  │   表演         │  │  制作管理      │
+       └───────┬───────┘  └───────┬───────┘  └───────┬───────┘
+               │                  │                  │
+               └──────────┬───────┴──────────────────┘
+                          │
+                          ▼
+                ┌─────────────────┐
+                │     drawer      │   (FLUX / LoRA stills)
+                │     绘图         │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │    animator     │   (Runway / Kling / Veo / Sora 2)
+                │     视频         │
+                └────────┬────────┘
+                         │
+                ┌────────┴────────┐
+                │                 │
+                ▼                 ▼
+       ┌───────────────┐  ┌───────────────┐
+       │   lip_sync    │  │  voicer       │
+       │   唇形同步     │  │  配音 (TTS)    │
+       │ (LSE/LSE-C)   │  │               │
+       └───────┬───────┘  └───────┬───────┘
+               │                  │
+               └──────────┬───────┘
+                          │
+                          ▼
+                ┌──────────────────┐
+                │  colorist /      │
+                │  editor /        │
+                │  composer / foley│
+                │  / spatial_audio │
+                └────────┬─────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │     mixer       │ ◄──── continuity (parallel audit)
+                │     混音         │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │   FINAL OUTPUT  │
+                │  (短剧 / 微电影)  │
+                └─────────────────┘
 ```
 
-**Key DAG properties:**
-- **Root:** `style_genome` (no upstream; defines 5D style vector)
-- **Bottleneck nodes:** `screenplay` (after style) / `drawer` (after intent) / `mixer` (after all audio)
-- **Audit nodes:** `continuity` (parallel to mixer) verifies cross-shot consistency
-- **Compliance gate:** `compliance_marketing` runs early + late (pre-production + pre-distribution)
-- **Bidirectional edges:** most experts declare both upstream + downstream related_skills
+**Key DAG properties (v2 with Phase 7):**
+- **New root:** `creative_source` (no upstream; mines Story Kernel from social strata) — replaces style_genome as DAG root
+- **Quality loop:** `screenplay` ↔ `script_auditor` iterate until target audit band
+- **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by drawer / animator / lip_sync / continuity
+- **Bridge nodes:** `storyboard_designer` fills cinematographer → drawer gap with concrete Storyboard JSON
+- **Audio-visual lock:** `voicer` produces audio → `lip_sync` aligns to footage (decoupled, composable)
+- **Bottleneck nodes:** `screenplay` (after style) / `drawer` (after intent) / `lip_sync` (after audio + footage) / `mixer` (after all audio)
+- **Audit nodes:** `continuity` (parallel to mixer) + `script_auditor` (pre-production) verify consistency
+- **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
 
 ---
 
@@ -224,15 +271,15 @@ Manual review performed Phase 6:
 ```text
 skills/movie-experts/
 ├── README.md                                    (this file)
-├── animator/           SKILL.md + references/{video-gen-model-matrix,temporal-consistency}.md + LICENSE.md (Phase 5)
+├── animator/           SKILL.md + references/{video-gen-model-matrix,temporal-consistency,camera-execution-and-degradation}.md + LICENSE.md (Phase 5 + Phase 7C increment)
 ├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md (Phase 4)
 ├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md (Phase 3 deep)
 ├── compliance_marketing/ SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
-├── composer/           SKILL.md + references/{musicgen-workflow,chion-audio-vision}.md + LICENSE.md (Phase 5)
+├── composer/           SKILL.md + references/{musicgen-workflow,chion-audio-vision,bgm-and-song-creation}.md + LICENSE.md (Phase 5 + Phase 7C increment)
 ├── continuity/         SKILL.md + references/{cross-shot-auditing,eyeline-match-protocol}.md + LICENSE.md (Phase 5)
 ├── drawer/             SKILL.md + references/{flux2-parameter-surface,character-consistency-lora}.md + LICENSE.md (Phase 5)
 ├── editor/             SKILL.md + references/{murch,classical,montage,fxrxt,cn-cutting}.md + LICENSE.md (Phase 3 deep)
-├── foley/              SKILL.md + references/{stable-audio-open,sound-effect-taxonomy}.md + LICENSE.md (Phase 5)
+├── foley/              SKILL.md + references/{stable-audio-open,sound-effect-taxonomy,sound-effects-prompt-engineering}.md + LICENSE.md (Phase 5 + Phase 7C increment)
 ├── hook_retention/     SKILL.md + references/{three-second-hooks,conflict-escalation,paywall-design,vertical-pacing}.md + LICENSE.md (Phase 2)
 ├── mixer/              SKILL.md + references/{mixing-secrets-small-studio,lufs-standards}.md + LICENSE.md (Phase 5)
 ├── performer/          SKILL.md + references/{stanislavski-prepares,meisner-truth}.md + LICENSE.md (Phase 5)
@@ -240,8 +287,13 @@ skills/movie-experts/
 ├── scene_builder/      SKILL.md + references/{blender-previz-workflow,architectural-storytelling}.md + LICENSE.md (Phase 5)
 ├── screenplay/         SKILL.md + references/{save-the-cat,mckee,cn-shortdrama,emotion-curve-academic,dialogue-craft}.md + LICENSE.md (Phase 3 deep)
 ├── spatial_audio/      SKILL.md + references/{dolby-atmos-workflow,immersive-sound-design}.md + LICENSE.md (Phase 5)
-├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis}.md + LICENSE.md (Phase 3 deep)
-├── voicer/             SKILL.md + references/{cn-tts-model-matrix,character-voice-consistency}.md + LICENSE.md (Phase 5)
+├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis,art-direction-methodology}.md + LICENSE.md (Phase 3 deep + Phase 7C increment)
+├── voicer/             SKILL.md + references/{cn-tts-model-matrix,character-voice-consistency,tts-emotion-prosody-control}.md + LICENSE.md (Phase 5 + Phase 7C increment)
+├── script_auditor/     SKILL.md + references/{narrative-structure-audit,emotion-arc-audit,hook-strength-audit,character-network-audit,completion-rate-forecast}.md + LICENSE.md (Phase 7A-1 NEW)
+├── lip_sync/           SKILL.md + references/{sync-quality-metrics,latentsync-deployment,audio-video-input-spec,identity-preservation}.md + LICENSE.md (Phase 7A-2 NEW)
+├── character_designer/ SKILL.md + references/{4d-anchor-system,layered-style-prefix,consistency-stress-test,character-bible-schema}.md + LICENSE.md (Phase 7B-1 NEW)
+├── storyboard_designer/ SKILL.md + references/{shot-decomposition-rules,camera-params-dictionary,4d-anchoring-params,storyboard-schema}.md + LICENSE.md (Phase 7B-2 NEW)
+├── creative_source/    SKILL.md + references/{strata-guide,story-kernel-schema,multi-strata-resonance,unspeakability-protocol}.md + LICENSE.md (Phase 7B-3 NEW)
 ├── _eval/
 │   ├── runner.py                                 (MT-Bench position-swap harness)
 │   ├── config.yaml.example                       (3-condition ablation template)
@@ -255,15 +307,22 @@ skills/movie-experts/
 │   │   ├── hook_retention_demo.yaml
 │   │   ├── production_demo.yaml
 │   │   ├── screenplay_demo.yaml
-│   │   └── style_genome_demo.yaml
+│   │   ├── style_genome_demo.yaml
+│   │   ├── script_auditor_demo.yaml             (Phase 7A-1 NEW)
+│   │   ├── lip_sync_demo.yaml                   (Phase 7A-2 NEW)
+│   │   ├── character_designer_demo.yaml         (Phase 7B-1 NEW)
+│   │   ├── storyboard_designer_demo.yaml        (Phase 7B-2 NEW)
+│   │   └── creative_source_demo.yaml            (Phase 7B-3 NEW)
 │   ├── baseline/                                 (Phase 0 pre-refactor snapshots × 14)
 │   └── reports/                                  (dry-run + Phase 3 GO/NO-GO reports)
 └── _shared/
-    ├── glossary.md                               (EN↔CN term dictionary)
-    ├── known-external-models.yaml                (model name allowlist)
+    ├── glossary.md                               (EN↔CN term dictionary — Phase 7 expanded)
+    ├── known-external-models.yaml                (model name allowlist — Phase 7 expanded)
     ├── platform-comparison.md
     ├── RAG-INVOCATION-PATTERN.md
-    └── SKILL-LAYOUT.md                           (reference anatomy spec)
+    ├── SKILL-LAYOUT.md                           (reference anatomy spec)
+    ├── cognitive-resonance-metrics.md            (Phase 7C-1 NEW — 4-scale evaluation rubric)
+    └── quality-rubric.md                         (Phase 7C-2 NEW — 6-dim publish-gate rubric)
 ```
 
 ---
@@ -291,7 +350,30 @@ If you build on this suite, please cite:
 
 ---
 
-*Movie-Experts Suite v2 — built 2026-06-15 across 7 phases (0-6).*
-*v1.5 = 18 experts (14 original + 4 new), all RAG-aware, all phantom refs stripped.*
-*Total ref corpus: 58 files (~1.2MB cited fair-use content).*
+*Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7).*
+*v2 = 23 experts (14 original + 4 Phase 1-5 + 5 Phase 7), all RAG-aware, all phantom refs stripped.*
+*Total ref corpus: ~80 files (~1.8MB cited fair-use content).*
+*5 Phase 7 experts carry independent validation protocols (no LLM-judge required).*
 *Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
+
+---
+
+## Phase 7 additions summary (2026-06-16)
+
+**5 new experts** with independent validation protocols:
+- `script_auditor` — 5-dim quantitative script audit (Pearson vs actual 完播率)
+- `lip_sync` — audio-driven lip sync (LRS2/LRS3 international benchmark, LSE/LSE-C objective metrics)
+- `character_designer` — CharacterBible 2.0 authoring (CLIP-I/DINO-I cross-scene consistency)
+- `storyboard_designer` — Scene → Storyboard JSON decomposition (shot count accuracy / rhythm DTW)
+- `creative_source` — Story Kernel mining from 6 social strata (Bourdieu field accuracy / unspeakability AUC)
+
+**7 reference increments** in existing experts:
+- `_shared/cognitive-resonance-metrics.md` (NEW) — 4-scale evaluation rubric from 1st-director doctrine
+- `_shared/quality-rubric.md` (NEW) — 6-dim publish-gate rubric from movie-gate doctrine
+- `style_genome/references/art-direction-methodology.md` (NEW) — from kais-art-direction
+- `composer/references/bgm-and-song-creation.md` (NEW) — from kais-bgm + kais-song-agent
+- `foley/references/sound-effects-prompt-engineering.md` (NEW) — from kais-sound-effects-agent
+- `voicer/references/tts-emotion-prosody-control.md` (NEW) — from kais-TTS-agent
+- `animator/references/camera-execution-and-degradation.md` (NEW) — from kais-camera + kais-shooting-script + kais-evolink
+
+**Decoupling principle:** All Phase 7 experts are pure nodes (no orchestration). Each owns a vertical capability with clear I/O schema + benchmark + objective metrics. The 5 new experts follow the project constraint: "每个专家 skill 专精自己的方向,目标是在每个专精方向的产出做到可迭代进步,可独立评估,有数据集可验证自己是否有提升."
