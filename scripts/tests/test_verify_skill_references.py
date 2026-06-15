@@ -21,11 +21,6 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-# Real skill files — these are the known-phantom carriers. Phantom detection
-# cases read the live files so we exercise the actual production content.
-_ANIMATOR_SKILL = _REPO_ROOT / "skills" / "movie-experts" / "animator" / "SKILL.md"
-_PERFORMER_SKILL = _REPO_ROOT / "skills" / "movie-experts" / "performer" / "SKILL.md"
-
 # Import target — currently MISSING. Every test below depends on this import
 # succeeding, so the whole file fails to collect in the RED phase.
 from verify_skill_references import (  # noqa: E402
@@ -147,35 +142,54 @@ class TestScanSkillFile:
     """Verify scanner flags known phantom references in real skill files."""
 
     def test_scan_flags_wan22_video_phantom(self) -> None:
-        """Real animator/SKILL.md surfaces a finding for `wan22_video`."""
-        assert _ANIMATOR_SKILL.exists(), (
-            f"Expected animator SKILL.md at {_ANIMATOR_SKILL}"
-        )
-        # Empty allowlist ensures every model-name token is flagged.
-        findings = scan_skill_file(_ANIMATOR_SKILL, allowlist=set())
-        tokens = {f.matched_token for f in findings}
-        assert "wan22_video" in tokens, (
-            f"wan22_video not flagged; got tokens: {sorted(tokens)}"
-        )
-        # Finding carries the line number where the match occurred.
-        wan = next(f for f in findings if f.matched_token == "wan22_video")
-        assert wan.line >= 1
-        assert str(_ANIMATOR_SKILL) == wan.path or wan.path.endswith("SKILL.md")
+        """Synthetic SKILL.md with `wan22_video` surfaces a finding.
+
+        Originally asserted against the live animator/SKILL.md, but Phase 0
+        plan 00-04 strips that phantom from production — so a synthetic
+        fixture is the correct contract (detection capability, not current
+        file state).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            phantom_skill = Path(tmp) / "SKILL.md"
+            phantom_skill.write_text(
+                "---\nname: animator\ndescription: test\n---\n\n"
+                "# Animator Expert\n\n"
+                "### Wan2.2 Generation\n\n"
+                "- **model**: `wan22_video` (primary), `wan22_video_turbo` (preview)\n",
+                encoding="utf-8",
+            )
+            findings = scan_skill_file(phantom_skill, allowlist=set())
+            tokens = {f.matched_token for f in findings}
+            assert "wan22_video" in tokens, (
+                f"wan22_video not flagged; got tokens: {sorted(tokens)}"
+            )
+            wan = next(f for f in findings if f.matched_token == "wan22_video")
+            assert wan.line >= 1
+            assert wan.path.endswith("SKILL.md")
 
     def test_scan_flags_168k_tokens_phantom(self) -> None:
-        """Real performer/SKILL.md surfaces a finding for the 168K fabrication."""
-        assert _PERFORMER_SKILL.exists(), (
-            f"Expected performer SKILL.md at {_PERFORMER_SKILL}"
-        )
-        findings = scan_skill_file(_PERFORMER_SKILL, allowlist=set())
-        contexts = {f.matched_token.lower() for f in findings}
-        # The performer fabrication is "168K controlled tokens" — case-insensitive.
-        # Scanner should flag it via the dedicated pattern AND surface it in
-        # context.
-        joined = " ".join(f.context_line for f in findings).lower()
-        assert "168k" in joined.lower() or "168k" in contexts, (
-            f"168K fabrication not flagged; findings={findings[:3]}"
-        )
+        """Synthetic SKILL.md with the 168K fabrication surfaces a finding.
+
+        Originally asserted against the live performer/SKILL.md, but Phase 0
+        plan 00-04 strips that fabrication from production — synthetic
+        fixture is the correct contract.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            phantom_skill = Path(tmp) / "SKILL.md"
+            phantom_skill.write_text(
+                "---\nname: performer\n"
+                'description: "Performer Expert: matrix with 168K controlled tokens."'
+                "\n---\n\n"
+                "# Performer Expert\n\n"
+                "Performance matrix with 168K controlled tokens for action design.\n",
+                encoding="utf-8",
+            )
+            findings = scan_skill_file(phantom_skill, allowlist=set())
+            contexts = {f.matched_token.lower() for f in findings}
+            joined = " ".join(f.context_line for f in findings).lower()
+            assert "168k" in joined.lower() or "168k" in contexts, (
+                f"168K fabrication not flagged; findings={findings[:3]}"
+            )
 
     def test_scan_passes_clean_file(self) -> None:
         """A SKILL.md containing only allowlisted tokens yields zero findings."""
