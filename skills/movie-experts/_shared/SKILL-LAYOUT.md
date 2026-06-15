@@ -109,5 +109,27 @@ skills/movie-experts/<expert_id>/
 
 - **Provider-agnostic RAG:** SKILL.md body MUST use the provider-agnostic invocation pattern documented in `_shared/RAG-INVOCATION-PATTERN.md`. Never hardcode `fact_store` / `mem0_search` / `cosyvoice_api` tool names in prompt body.
 - **Bilingual format:** EN YAML structure (keys, metadata) + CN prose where 短剧 cultural context warrants. See `_shared/glossary.md` for canonical EN↔CN term mapping.
-- **Copyright:** Every ref MUST carry a `Source:` + `Copyright:` + `Last-verified:` header. See Phase 3 reference anatomy doc (TBD).
+- **Copyright:** Every ref MUST carry a `Source:` + `Copyright:` + `Last-verified:` header. Reference anatomy (Source / Copyright / Last-verified / Summary / Heuristics columns) is defined in this document's "Reference file anatomy" section below.
+
+## Reference file anatomy
+
+Each `references/<topic>.md` file MUST start with this header block:
+
+```markdown
+# <Topic Title>
+
+**Source:** <book title / paper / URL / interview>
+**Copyright:** <© Year Holder | Public Domain | Fair Use | Licensed>
+**Last-verified:** YYYY-MM-DD
+
+## Summary
+
+<2-3 sentence overview of what this ref covers>
+
+## Heuristics
+
+<Concrete numbers / rules / thresholds — NOT Wikipedia summaries. Each heuristic must contain at least one specific value a base LLM would not produce from training data alone.>
+```
+
+Refresh cadence: every `references/*.md` is re-verified quarterly. Stale refs (Last-verified > 90 days) are flagged in audit reports via `scripts/verify_skill_references.py`.
 - **No phantom model names:** Use `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` placeholders in SKILL.md body; specific model names appear only in `references/*.md` (which are versioned and can be refreshed). See `_shared/known-external-models.yaml` for the allowlist.
