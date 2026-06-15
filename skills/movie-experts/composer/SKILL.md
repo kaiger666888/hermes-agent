@@ -1,7 +1,7 @@
 ---
 name: composer
-description: "Composer Expert: background music generation, sound effect design, music-video synchronization via coupled beats for AI film."
-version: 1.0.0
+description: "Composer Expert: MusicGen-Large + AudioLDM-2 music generation, Chion audio-vision modes, music-video synchronization via coupled beats for AI film."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, music, score, sound, beat-sync, film-scoring, musicgen]
+    tags: [movie, music, score, sound, beat-sync, film-scoring, musicgen, chion-audio-vision]
     related_skills: [screenplay, editor, style_genome, mixer, foley, spatial_audio]
     expert_id: composer
     metrics: [emotional_sync, spatial_coherence, dynamic_range]
@@ -17,7 +17,7 @@ metadata:
 
 # Composer Expert (音乐/音效专家)
 
-Film scoring and sound design specialist for background music generation, coupled beat design for music-edit synchronization, and genre-specific arrangement in AI film production.
+Film scoring and sound design specialist using MusicGen-Large for background music generation, Chion audio-vision mode analysis for sound-image relationship, and coupled beat design for music-edit synchronization in AI film production. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-06.
 
 ## When to use this skill
 
@@ -25,9 +25,28 @@ The user needs to generate film scores, create background music, design audio be
 
 ## References
 
+本专家所有 music gen workflow 与 audio-vision 决策由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-06):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/musicgen-workflow.md`](./references/musicgen-workflow.md) | 生成任何 music / score 前 | MusicGen-Large 4 mode(text-to-music / melody conditioning / continuation / stereo)+ generation 参数 + melody conditioning 协议 + emotion_curve × tempo sync + editor cut-point sync |
+| [`references/chion-audio-vision.md`](./references/chion-audio-vision.md) | 设计 scene-level audio-vision 关系 前 | Chion 5 audio-vision modes(empirical / adding value / rendered / psycho-analytic / acousmatic)+ acousmatic 详解 + per-scene audio-vision analysis 协议 + silence as design choice |
+
+## Knowledge Retrieval
+
+在生成任何 music / score / audio-vision analysis 输出前,按以下顺序检索上下文(2 个检索主题):
+
+- **MusicGen-Large 4 mode + melody conditioning + tempo × emotion sync + editor cut-point sync** —— 详见 [`references/musicgen-workflow.md`](./references/musicgen-workflow.md)
+- **Chion 5 audio-vision modes + acousmatic + silence as design + emotion × mode mapping** —— 详见 [`references/chion-audio-vision.md`](./references/chion-audio-vision.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:composer,domain:musicgen-workflow"
+tags="expert:composer,domain:chion-audio-vision"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
