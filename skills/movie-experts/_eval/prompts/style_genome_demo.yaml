@@ -1,0 +1,232 @@
+expert_id: style_genome
+# Demo prompts for the style_genome expert eval harness.
+#
+# Three prompts chosen to exercise the style_genome expert's ref absorption
+# (per Phase 3 03-04-PLAN.md):
+#   sg-001 — basic: encode a director + blend with genre for a 短剧-男频-revenge
+#            project. Tests director-dna-archive.md 5D vector retrieval +
+#            genre-dna-taxonomy.md 5D range intersection + single-culture
+#            blend protocol (0.7/0.3) + signature element distribution to
+#            downstream modules (drawer/colorist/editor/composer/etc).
+#   sg-002 — trap: ask for a 50/50 director blend (e.g., "half Nolan,
+#            half Wes Anderson"). Base model would comply; a refactored
+#            style_genome should REFUSE per SKILL.md §What NOT to do +
+#            references/director-dna-archive.md §Style Blending Heuristics
+#            (50/50 produces stylistic incoherence).
+#   sg-003 — cross-cultural + tier: encode a 短剧 第一代 director (not in
+#            archive) → Operator Convention tier. Tests auteur-theory.md
+#            §Sarris 3-Criteria Rubric (the new director fails ≥2 criteria)
+#            + cn-director-analysis.md §short_drama director tiering +
+#            cross-cultural-style.md §Bilingual dual-track encoding.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 03-CONTEXT.md deferred section); they exist only to
+# prove the harness output shape on the style_genome expert and to exercise
+# the 3 canonical scenario shapes (basic / trap / tier-classification).
+prompts:
+  - id: sg-001
+    text: |
+      A 30-episode 抖音-男频-revenge 短剧 is in pre-production. The creative
+      director specifies the visual style as "Wong Kar-wai × action-thriller
+      genre" — Wong Kar-wai provides the auteur signature (asymmetric
+      composition + warm high-sat color + step-printing rhythm), the
+      action-thriller genre provides the genre convention (fast cuts +
+      cool palette + chiaroscuro). The blending rule: Wong Kar-wai is
+      DOMINANT (his signature must remain recognizable), action-thriller
+      is RECESSIVE.
+
+      (a) Retrieve the canonical Wong Kar-wai 5D vector from
+      references/director-dna-archive.md §Showcase (5 位 — 向后兼容):
+      composition=0.7, color=0.8, rhythm=0.4, light_shadow=0.3, sound=0.7.
+      Confirm this matches SKILL.md §Director Style Archive (向后兼容
+      硬约束 T-03-18 — these vectors must NOT drift between SKILL.md
+      and the ref).
+
+      (b) Retrieve the action-thriller genre 5D range from
+      references/genre-dna-taxonomy.md §12-Genre Taxonomy. The genre range
+      should be (composition 0.5-0.7, color 0.30-0.50 cool, rhythm
+      0.70-0.90 fast-cut, light_shadow 0.60-0.80 chiaroscuro, sound
+      0.70-0.90 rich). Identify the genre's "typical" 5D vector (use the
+      midpoint of each range).
+
+      (c) Apply the single-culture blend formula per SKILL.md §Style
+      Blending Protocol: result = dominant × 0.7 + recessive × 0.3.
+      Compute the blended 5D vector. For each dimension, also identify
+      whether it is "conflict" (opposite directions) or "enhancement"
+      (same direction) per §Style Blending Protocol, and explain how
+      conflict resolution works (dominant overrides; e.g., Wong Kar-wai
+      warm × action-thriller cool is a color-dimension CONFLICT →
+      dominant wins, blended color = Wong Kar-wai × 0.7 + action × 0.3
+      but clipped to Wong Kar-wai ±0.20 if it would invert the polarity).
+
+      (d) Distribute the blended 5D vector to downstream modules per
+      SKILL.md §Cross-Module Signals. Output the per-module signal table:
+      - drawer: composition + color + light_shadow (3D signal)
+      - colorist: color + light_shadow (2D signal)
+      - editor: rhythm (1D signal — action-thriller fast-cut blends with
+        Wong Kar-wai slow step-printing)
+      - composer: sound (1D signal)
+      - scene_builder: composition + light_shadow (2D signal)
+      - performer: rhythm + sound (2D signal)
+
+      For each module, identify any DEVIATION_WARNING (deviation > ±0.10
+      from director reference) or DEVIATION_VIOLATION (> ±0.20, force
+      correction). The editor rhythm signal is particularly tricky —
+      Wong Kar-wai × action-thriller rhythm blend may push rhythm past
+      Wong Kar-wai's tolerance band.
+
+      (e) List the 3-5 signature elements Wong Kar-wai contributes to
+      the project per references/director-dna-archive.md §Signature
+      Elements. These elements are non-negotiable and must appear in
+      the final 短剧 output:
+      - Step-printing (慢快门 + 跳印)
+      - Teal+orange duo-tone color grading
+      - Asymmetric composition + claustrophobic framing
+      - Diegetic pop music as score
+      - Voice-over interior monologue
+
+      Output the complete style_genome.json with blended 5D vector +
+      per-module signal distribution + deviation report + signature
+      elements list.
+
+  - id: sg-002
+    text: |
+      A creative director requests a "perfectly balanced" style blend:
+      "I want exactly 50% Christopher Nolan and 50% Wes Anderson. Both
+      directors are visual masters — combine them equally for a unique
+      aesthetic. The result should feel like Dunkirk meets Grand Budapest
+      Hotel."
+
+      This is a TRAP prompt. A base LLM without ref absorption would
+      comply and produce a 50/50 average 5D vector. A properly RAG-enhanced
+      style_genome should REFUSE this request and explain WHY, citing:
+
+      (a) The 50/50 anti-pattern: SKILL.md §What NOT to do explicitly
+      prohibits 50/50 style blending. The rule: must always specify
+      dominant, minimum 60/40 ratio. Cite references/director-dna-archive.md
+      §Style Blending Heuristics §dominant/recessive.
+
+      (b) The "stylistic incoherence" consequence: Nolan 5D vector
+      [composition=0.4, color=0.5, rhythm=0.6, light_shadow=0.7, sound=0.8]
+      vs Wes Anderson 5D vector [composition=0.15, color=0.8, rhythm=0.5,
+      light_shadow=0.3, sound=0.7] (per references/director-dna-archive.md
+      §Worked Examples). The two vectors are in CONFLICT on 4 dimensions:
+      - composition: Nolan asymmetric (0.4) vs Anderson extreme symmetric (0.15)
+      - color: Nolan neutral (0.5) vs Anderson high-sat (0.8)
+      - light_shadow: Nolan chiaroscuro (0.7) vs Anderson flat high-key (0.3)
+      - sound: Nolan LF rumble (0.8) vs Anderson pop+score (0.7)
+
+      A 50/50 average would produce [0.275, 0.65, 0.55, 0.5, 0.75] — which
+      is NOT a coherent auteur signature. It is the visual equivalent of
+      "Frankenstein's monster": neither Nolan nor Anderson recognizable.
+
+      (c) The Style Coherence Doctrine: per references/auteur-theory.md
+      §Style Coherence Doctrine (Wood 1965), auteur signature requires
+      cross-work consistency. A 50/50 blend has style_coherence_score = 0
+      (the blend has no historical precedent; audience cannot anchor to
+      a known directorial personality). Cite the doctrine and the
+      threshold (style_coherence_score >= 0.70 required for auteur-level
+      output).
+
+      (d) Propose an ALTERNATIVE: choose ONE director as dominant (70%)
+      and the other as recessive (30%). If the user wants "Nolan gravitas
+      with Anderson whimsy", recommend Nolan dominant (gravitas carries
+      the narrative) + Anderson recessive (whimsy accents the production
+      design). Compute the resulting 5D vector and identify which
+      signature elements survive the blend (Nolan LF rumble sound +
+      chiaroscuro lighting are dominant; Anderson pastel color + flat
+      composition are recessive accents).
+
+      The correct response demonstrates ref absorption by refusing the
+      50/50 request and proposing a coherent dominant/recessive blend
+      citing specific heuristics from the refs.
+
+  - id: sg-003
+    text: |
+      A 短剧 production studio introduces a new director "李明" who has
+      directed 8 短剧 projects in 2024-2026 across multiple genres
+      (revenge 短剧 / romance 短剧 / dominance 短剧). The studio wants
+      to encode 李明's style DNA into style_genome for their next project.
+      李明 is NOT in the director-dna-archive.md §Director Archive (35
+      directors). The studio provides 3 reference 短剧 samples:
+
+      - Sample 1: 抖音-男频-revenge 短剧 (composition subjective POV,
+        color high-sat warm, rhythm extremely fast ASL 1.5s)
+      - Sample 2: 抖音-女频-romance 短剧 (composition rule-of-thirds,
+        color mid-sat warm + soft, rhythm mid-tempo ASL 3s)
+      - Sample 3: 快手-草根-生活 短剧 (composition handheld documentary,
+        color low-sat naturalistic, rhythm slow ASL 5s)
+
+      (a) Apply the Sarris 3-criteria rubric per references/auteur-theory.md
+      §Sarris 3-Criteria Rubric. For each criterion, evaluate whether
+      李明 passes:
+
+      - Criterion 1 (Technical competence): The 3 samples show
+        market-grade execution (lighting, framing, sound are professional).
+        PASS.
+
+      - Criterion 2 (Distinguishable personality): The 3 samples have
+        very different 5D vectors (the director adapted to genre / platform
+        requirements). Compute the cross-sample standard deviation:
+        σ_composition ≈ 0.20, σ_color ≈ 0.25, σ_rhythm ≈ 0.30 — all
+        > 0.10 threshold. FAIL (no stable personality signature).
+
+      - Criterion 3 (Interior meaning): The 3 samples are pure genre
+        executions without thematic preoccupation. FAIL.
+
+      Conclusion: 1/3 criteria pass → Operator Convention tier per
+      references/auteur-theory.md §Auteur vs Operator Convention Doctrine.
+
+      (b) Apply the Operator Convention Flag protocol per
+      references/auteur-theory.md §Operator Convention Flag (T-03-23
+      mitigate). Output the style_genome.json with:
+      - tier: "Operator Convention"
+      - operator_convention: true
+      - 5D vector precision: ±0.10 (relaxed from ±0.05)
+      - style_coherence_score: 0.55 (below auteur threshold)
+      - interior_meaning: "TM-XX: uncategorized"
+      - A warning banner at top: "Director 李明 encoding is operator
+        convention (1/3 Sarris criteria). Subjectivity acknowledged.
+        User review required before distribution."
+
+      (c) Apply the 短剧 director tiering rules per references/cn-director-analysis.md
+      §CN Director Tiering Crosswalk + §短剧 Director Tiering 特殊规则.
+      李明 is a 短剧 第一代 (2020s-) director → default tier is Operator
+      Convention (per heuristic 6 of that ref). The cn_generation field
+      must be set to "short_drama".
+
+      (d) Choose the appropriate 5D vector from the 短剧 genre preference
+      ranges per references/cn-director-analysis.md §短剧 导演签名元素
+      + references/genre-dna-taxonomy.md §短剧 Genre Divergence. Since
+      李明's next project is a 抖音-男频-revenge 短剧, the appropriate
+      range is:
+      - composition: 0.55-0.70 (subjective POV + Dutch angle)
+      - color: 0.65-0.80 (high-sat warm + red/blue contrast)
+      - rhythm: 0.80-0.95 (极快剪辑 ASL 1.2-1.8s)
+      - light_shadow: 0.55-0.70 (mid-key + dramatic chiaroscuro)
+      - sound: 0.65-0.80 (rich score + drops + BGM 持续)
+
+      Take the midpoint of each range as 李明's encoded 5D vector for
+      this project. Mark precision ±0.10.
+
+      (e) Set up the dual-track encoding IF the studio plans 出海
+      distribution. Per references/cross-cultural-style.md §Bilingual
+      短剧 出海特殊规则, if the project will be distributed on TikTok /
+      YouTube Shorts / Reels in addition to 抖音, output TWO 5D vectors:
+      - original_5d: the CN 抖音 vector computed above
+      - adapted_5d: hybrid encoding for Western audience (0.65 × original
+        + 0.35 × Western audience preference)
+
+      Compute the adapted_5d and flag dual_track: true in the metadata.
+
+      The correct response demonstrates tier classification competence
+      (correctly identifying Operator Convention tier for a 短剧 director
+      with unstable personality signature), precision discipline (±0.10
+      not ±0.05), and dual-track encoding awareness for 出海 distribution.
+
+      Cross-reference references/auteur-theory.md §Sarris 3-Criteria
+      Rubric + §Operator Convention Flag, references/cn-director-analysis.md
+      §CN Director Tiering Crosswalk + §短剧 Director Tiering 特殊规则 +
+      §短剧 导演签名元素, references/cross-cultural-style.md §Hybrid
+      Encoding Protocol + §Bilingual 短剧 出海特殊规则, references/genre-dna-taxonomy.md
+      §短剧 Genre Divergence.
