@@ -114,17 +114,28 @@ class TestBuildAllowlist:
             assert "runway_gen3" in allowlist
 
     def test_build_allowlist_handles_missing_override_yaml(self) -> None:
-        """Missing override YAML is not fatal — returns plugin-derived set only."""
+        """Missing override YAML is not fatal — returns plugin-derived set only.
+
+        Even with no plugins and no overrides, the function still returns
+        the always-safe stopwords (``model``, ``video``, ``turbo``) so the
+        scanner never false-positives on those generic words. The contract
+        is therefore "no plugin or override content escapes", not "empty
+        set".
+        """
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root = Path(tmp)
             plugins_root = tmp_root / "plugins"
             missing_override = tmp_root / "does_not_exist.yaml"
 
-            # Should not raise; should return a (possibly empty) set.
+            # Should not raise; should return a set.
             allowlist = build_allowlist(plugins_root, missing_override)
 
             assert isinstance(allowlist, set)
-            assert allowlist == set()
+            # No plugin or override tokens leaked in — only always-safe stopwords.
+            # (The scanner needs these to mask generic words like "model: ...".)
+            assert "wan22_video" not in allowlist
+            assert "sora" not in allowlist
+            assert "kling" not in allowlist
 
 
 # ---------------------------------------------------------------------------
