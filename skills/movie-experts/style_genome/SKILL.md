@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity]
+    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity, compliance_marketing]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
