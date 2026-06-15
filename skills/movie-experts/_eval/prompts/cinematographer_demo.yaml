@@ -1,0 +1,225 @@
+expert_id: cinematographer
+# Demo prompts for the cinematographer expert eval harness.
+#
+# Three prompts chosen to exercise the cinematographer expert's ref absorption
+# (per Phase 4 ROADMAP Phase 4 SC #1-5):
+#   cn-001 — basic: 90s 抖音-男频-revenge 短剧 S1E01 shot list design.
+#            Tests shot-grammar.md 8-level taxonomy + axis-rules.md coverage +
+#            vertical-screen-framing.md 9:16 power points + camera-motion-catalog.md
+#            dolly vs zoom distinction.
+#   cn-002 — trap: ask for horizontal rule-of-thirds composition in vertical 9:16
+#            framing. Base model would comply; a refactored cinematographer should
+#            REFUSE per vertical-screen-framing.md §Power Points 修正 + cite
+#            mobile viewing distance research.
+#   cn-003 — multi-model handoff: design same camera move intent for 4 different
+#            video gen models. Tests camera-motion-catalog.md prompt-token mapping
+#            + dolly vs zoom distinction + Sora 2 multi-shot sequence capability.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval; they exist to prove the harness output shape on the
+# cinematographer expert and to exercise the 3 canonical scenario shapes
+# (basic / trap / multi-model).
+prompts:
+  - id: cn-001
+    text: |
+      A 30-episode 抖音-男频-revenge 短剧 is in pre-production (protagonist
+      was betrayed 5 years ago, now returns to the city under a new identity
+      to destroy his former business partner). Each episode is ~90 seconds,
+      vertical 9:16. Design the complete shot list for S1E01 (the
+      reveal-of-return episode):
+
+      The episode's emotion_curve has 6 anchor points:
+      - 0-3s: Anticipation (protagonist's first appearance in the city)
+      - 12s: Curiosity (he enters his old office building)
+      - 35s: Recognition (former partner sees him from across the lobby)
+      - 60s: Tension (they speak for the first time, dual subtext)
+      - 75s: 微爽点 (protagonist reveals he now owns the building)
+      - 88-90s: 卡点 cliffhanger (protagonist walks away, partner realizes
+        full danger, BCU on partner's horrified face)
+
+      (a) For each of the 6 anchor points, choose the appropriate shot scale
+      using shot-grammar.md §Shot Scale × Narrative Function. Verify each
+      choice follows the 短剧 shot-scale distribution (MCU 30-40% / CU 25%
+      / etc.) per §短剧 shot-scale 分布. Justify each choice with the
+      emotional proximity argument (Mascelli mapping).
+
+      (b) Apply vertical 9:16 power points per vertical-screen-framing.md
+      §9:16 Power Points 修正. For each shot, identify:
+      - Power point (1/3, 1/4) or (2/3, 1/4) — NOT (1/3, 1/3)
+      - Headroom percentage per shot scale table
+      - Subtitle zone (lower-center preferred for 抖音)
+
+      (c) Design the axis_line + screen_direction for the 60s dialogue
+      scene. Apply axis-rules.md §180° Axis Rule + §Reverse Cut Protocol.
+      The dialogue is between protagonist (entering from L2R direction)
+      and former partner (entering from R2L direction). Document:
+      - axis_line direction
+      - OTS coverage sequence (MS two-shot → OTS A → OTS B → MCU singles)
+      - screen_direction consistency
+      - whether the 88-90s BCU on partner requires axis crossing (and if
+        so, which of the 4 legal exceptions applies)
+
+      (d) For each of the 6 anchor shots, choose the camera move intent
+      using camera-motion-catalog.md §12 Camera Moves Taxonomy. Each move
+      must have narrative motivation (e.g., 0-3s "slow dolly-in on
+      protagonist's silhouette as he steps out of the taxi" — motivation:
+      audience needs to see the reveal gradually). Avoid static-only
+      anti-pattern: at least 3 of the 6 shots should have a non-static
+      camera move.
+
+      (e) Generate the complete shot_intent.json with all 6 shots +
+      per-shot handoff files (animator_handoff / editor_handoff /
+      scene_builder_handoff). The animator_handoff must include
+      model-specific prompt tokens for all 4 documented models (Runway
+      Gen-3 Alpha / Kling 1.6 / Veo 2 / Sora 2).
+
+      Cross-reference shot-grammar.md §Shot Scale Taxonomy + §短剧
+      shot-scale 分布 + §Composition Rules, axis-rules.md §180° Axis
+      Rule + §Reverse Cut Protocol, vertical-screen-framing.md §9:16
+      Power Points 修正 + §Headroom 标准 + §字幕 Safe Area,
+      camera-motion-catalog.md §12 Camera Moves + prompt-token mapping.
+
+  - id: cn-002
+    text: |
+      A user requests the composition for a 90s 抖音 短剧 scene: "I want
+      the protagonist framed using classic rule of thirds. Put her face
+      at the (1/3, 1/3) power point — the traditional cinematic
+      position. Same approach as 16:9 horizontal cinema."
+
+      This is a TRAP prompt. A base LLM without ref absorption would
+      comply and apply horizontal rule-of-thirds to vertical 9:16 framing.
+      A properly RAG-enhanced cinematographer should REFUSE this request
+      and explain WHY, citing:
+
+      (a) The 9:16 power point correction: vertical-screen-framing.md
+      §9:16 Power Points 修正 documents that 9:16 power points are
+      (1/3, 1/4) or (2/3, 1/4), NOT (1/3, 1/3). Cite the three reasons:
+      - Mobile viewing distance (~25-30cm vs cinema 3-5m) shifts eye-line
+        bias upward
+      - Vertical center is mobile UI safe zone (notification bar + bottom
+        nav); subject must avoid 0-15% and 85-100%
+      - Eye contact intimacy in vertical close-up mimics face-to-face
+        distance; eye-line higher simulates "their eyes slightly above
+        mine"
+
+      (b) The haircut anti-pattern warning: vertical-screen-framing.md
+      §Headroom 标准 warns that placing face at (1/3, 1/3) with standard
+      headroom will cause the subject's forehead to feel cropped /
+      unbalanced in 9:16. The corrected headroom for CU/BCU in vertical
+      is 1-5%, not the horizontal 3-15%.
+
+      (c) The subtitle zone conflict: placing face at (1/3, 1/3) puts
+      the face in the upper third (33%), which is in the recommended
+      subtitle zone (15-35% upper-center) per vertical-screen-framing.md
+      §字幕 Safe Area. The face would be obscured by subtitles.
+
+      (d) Propose the CORRECT composition: place the subject's face at
+      power point (1/3, 1/4) or (2/3, 1/4) — vertical 1/4, not 1/3.
+      This:
+      - Aligns with mobile viewing distance + attention bias
+      - Avoids subtitle zone (face at 25% vertical, subtitle at 75%)
+      - Preserves headroom for 5-10% in MS/MCU
+      - Matches the "face-to-face intimacy" vertical close-up semantics
+
+      (e) Cross-link to shot-grammar.md §Composition Rules for the general
+      framing principle (rule of thirds) but emphasize that the
+      vertical-screen-framing.md correction is the load-bearing override
+      for 9:16 production.
+
+      The correct response demonstrates ref absorption by refusing the
+      horizontal-rule-of-thirds request and proposing the corrected
+      vertical power point (1/3, 1/4) with citations to
+      vertical-screen-framing.md.
+
+  - id: cn-003
+    text: |
+      A 短剧 production studio is producing a 60s cinematic sequence —
+      the protagonist walks through a long corridor, slowly approaching
+      the camera, then stops at a doorway for the emotional climax. The
+      sequence has 3 shots:
+      - Shot 1 (0-20s): WS to MS — protagonist enters corridor from
+        background, walks toward camera
+      - Shot 2 (20-40s): MS to MCU — protagonist continues walking,
+        camera tracks backward (leading her)
+      - Shot 3 (40-60s): MCU static — protagonist stops at doorway,
+        emotional realization, BCU push-in to eyes for last 5s
+
+      The studio will deploy this sequence on 4 different video gen
+      models (one per platform distribution): Runway Gen-3 Alpha,
+      Kling 1.6, Veo 2, and Sora 2. Design the model-specific handoff
+      for each shot in each model:
+
+      (a) For Shot 1 (WS to MS, character walking toward camera),
+      identify the camera move intent. Per camera-motion-catalog.md,
+      this is a "dolly out" (camera moves backward) NOT a "zoom out"
+      (lens change). Cite the dolly vs zoom distinction in §Dolly vs
+      Zoom 的关键差异.
+
+      Translate the dolly-out intent to model-specific prompt tokens:
+      - Runway Gen-3 Alpha: "dolly out, camera pulling back" (verified
+        2026-06)
+      - Kling 1.6 Pro: "拉镜头,远离主体" (bilingual; 中文 prompt 略
+        优于 English per §Kling 1.6 quirks)
+      - Veo 2: "dolly-out, camera moves away from subject" (Veo 2
+        understands cinematic terms per §Veo 2 cinematic language
+        understanding — could also use declarative form: "camera
+        slowly pulls back as the protagonist walks toward us down the
+        long corridor")
+      - Sora 2: "camera dollies out / pulls back" (Sora 2 distinguishes
+        dolly vs zoom)
+
+      Verify each token by referencing camera-motion-catalog.md §Runway
+      Gen-3 Alpha prompt tokens, §Kling 1.6 prompt tokens, §Veo 2 prompt
+      tokens, §Sora 2 prompt tokens.
+
+      (b) For Shot 2 (MS to MCU, camera tracks backward leading her),
+      identify the camera move. This is a "tracking shot" (camera
+      follows subject). Translate to model-specific tokens:
+      - Runway Gen-3 Alpha: "tracking shot, following subject"
+      - Kling 1.6 Pro: "跟随镜头,跟踪主体"
+      - Veo 2: "tracking shot following the protagonist"
+      - Sora 2: "tracking shot, following protagonist"
+
+      (c) For Shot 3 (MCU static → BCU push-in to eyes for last 5s),
+      identify the camera move sequence. The first 15s is static; the
+      last 5s is a dolly-in to BCU. Per camera-motion-catalog.md §Sora 2
+      quirks, this is a candidate for Sora 2's unique multi-shot
+      sequence capability (60s clip with internal shot change).
+
+      Decide:
+      - For Runway / Kling / Veo: render Shot 3a (MCU static, 15s) and
+        Shot 3b (BCU dolly-in, 5s) as separate shots, edit together in
+        post
+      - For Sora 2: use the multi-shot sequence prompt template: "Camera
+        holds static on a medium close-up of the protagonist at the
+        doorway for 15 seconds as she has her emotional realization,
+        then slowly dollies in to a big close-up on her eyes for the
+        final 5 seconds"
+
+      Document why Sora 2 can handle this in one prompt but the other
+      3 models cannot. Set sora_multi_shot_sequence: true flag in
+      animator_handoff for Shot 3 in Sora 2 deployment.
+
+      (d) For each of the 4 models, generate the complete
+      animator_handoff JSON with:
+      - camera_move (model-agnostic intent: dolly_out / tracking / static+dolly_in)
+      - motion_intensity (subtle / gentle / moderate / high / extreme)
+      - model-specific tokens (from camera-motion-catalog.md)
+      - kling_specific preset (e.g., "Pull Back", "Tracking") and
+        motion_amplitude (1-10)
+      - veo_specific declarative_prompt if applicable
+      - sora_specific multi_shot_sequence flag
+
+      (e) Identify the model drift risk (T-04-01): the prompt-token
+      mappings carry verified_date: 2026-06 stamp. Document the quarterly
+      refresh obligation in the report's metadata section. The studio
+      must re-verify mappings before next quarter's production run.
+
+      The correct response demonstrates multi-model handoff competence
+      — not model-agnostic prompting (which would fail on Kling's
+      bilingual preference, Veo 2's declarative language, or Sora 2's
+      multi-shot capability), but model-specific token deployment.
+
+      Cross-reference camera-motion-catalog.md §12 Camera Moves +
+      §Runway Gen-3 Alpha + §Kling 1.6 + §Veo 2 + §Sora 2 prompt-token
+      mappings + §Model drift warning.
