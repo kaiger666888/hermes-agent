@@ -30,8 +30,8 @@ prompts:
       the 网信办 AI 标识办法 (effective 2025-09-01):
       (a) 显式标识 spec — pixel size for a 1080x1920 frame, position
       avoiding the 抖音 watermark zone, minimum opacity, duration;
-      (b) 隐式标识 metadata fields (C2PA-style: dc:creator, dcterms:created,
-      aigc:generated, aigc:method);
+      (b) 隐式标识 metadata fields (C2PA-style: dc:creator, digi:source,
+      digi:provenance, digi:ai_disclosure_present);
       (c) a 文本披露 script-line for the cold-open (≤ 3 seconds, mandarin).
       Reference cn-content-rules.md §AI 标识办法 for the exact thresholds.
 
