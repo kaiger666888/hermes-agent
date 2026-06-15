@@ -23,6 +23,12 @@ FLUX/LoRA parameter optimization specialist for cinematic visual quality, charac
 
 The user needs to generate cinematic still frames, key frames for animation reference, character reference shots, or scene imagery for AI film production. Requires `hermes_llm_vision` for visual quality assessment.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Real cinema aesthetic over stylized/2D looks

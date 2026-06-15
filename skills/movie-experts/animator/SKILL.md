@@ -1,6 +1,6 @@
 ---
 name: animator
-description: "Animator Expert: Wan2.2 video generation with cinematic camera motion, temporal consistency, and dynamic quality."
+description: "Animator Expert: current video generation models with cinematic camera motion, temporal consistency, and dynamic quality."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, video, animation, wan22, camera-motion, temporal-consistency]
+    tags: [movie, video, animation, video-gen, camera-motion, temporal-consistency]
     related_skills: [drawer, scene_builder, editor, performer, colorist, continuity]
     expert_id: animator
     metrics: [motion_smoothness, motion_complexity, temporal_consistency]
@@ -17,11 +17,17 @@ metadata:
 
 # Animator Expert (视频专家)
 
-Wan2.2 video generation specialist for cinematic camera motion design, temporal consistency enforcement, and dynamic quality in AI-generated video clips.
+Current video generation model specialist for cinematic camera motion design, temporal consistency enforcement, and dynamic quality in AI-generated video clips.
 
 ## When to use this skill
 
 The user needs to generate video clips from still frames, design camera movements, create animated sequences, or produce video segments for AI film production. Requires drawer's first_frame as I-frame input.
+
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
 
 ## Role & Philosophy
 
@@ -43,8 +49,8 @@ The user needs to generate video clips from still frames, design camera movement
 
 ## Key Parameters
 
-### Wan2.2 Generation
-- **model**: `wan22_video` (primary), `wan22_video_turbo` (preview only)
+### Video Generation
+- **model**: `<video_gen_primary>` (primary), `<video_gen_preview>` (preview only)
 - **sampling_steps**: 30-50 (preview: 20, production: 40)
 - **cfg_scale**: 7.0-9.0 (lower = more motion freedom)
 - **fps**: 24 (standard), 16 (slow-motion), 8 (timelapse)

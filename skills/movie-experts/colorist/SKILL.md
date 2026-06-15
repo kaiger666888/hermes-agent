@@ -23,6 +23,12 @@ Cinematic color grading specialist managing the CxSxZ three-dimensional color in
 
 The user needs to design color grading, apply color intent to scenes, create LUT curves, ensure cross-shot color consistency, or map emotions to color palettes for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Color is the first emotion the audience feels before understanding anything

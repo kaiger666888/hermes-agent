@@ -23,6 +23,12 @@ Film editing grammar specialist managing the FxRxT three-dimensional editing mat
 
 The user needs to plan shot sequences, design editing rhythm, create edit decision lists, manage transitions, verify 180° axis compliance, or assemble final cuts for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Editing is invisible when done right — the audience should feel, not see cuts
