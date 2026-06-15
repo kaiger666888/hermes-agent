@@ -10,7 +10,12 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, compliance, marketing, cn-content-rules, aigc-labeling, platform-rules, risk-review, viral-element]
-    related_skills: [screenplay, editor, hook_retention, style_genome, drawer]
+    related_skills:
+      - screenplay
+      - editor
+      - hook_retention  # Phase 2 — pending (directory does not yet exist; edge documented at line 183)
+      - style_genome
+      - drawer
     expert_id: compliance_marketing
     metrics: [compliance_coverage, labeling_completeness, risk_detection_recall, platform_fit]
 ---
