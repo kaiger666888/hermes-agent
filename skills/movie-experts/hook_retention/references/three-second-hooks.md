@@ -9,13 +9,13 @@ verified_date: 2026-06
 
 本 ref 是 `hook_retention` 专家设计的 3 秒钩子结构化词汇表 —— 定义 5 类钩子(情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩),每类 3 个具体示例(共 15 个),每个示例给出 0-1s / 1-2s / 2-3s 帧级拆解。配套 5 级强度评分(🎯 / ✅ / ⚠️ / ❌ / 💀)用于评判候选钩子的商业可分发性。
 
-本 ref 与 Phase 1 [`viral-element-catalog.md`](../../compliance_marketing/references/viral-element-catalog.md) 在 3 个类型上重叠(情感 / 冲突 / 反差),但 HOOK 新增 2 个类型(悬念 / 情绪爆点)。本 ref **不复制** 🟢/🟡/🔴 风险徽章 —— 风险评估请跨链到 compliance_marketing catalog。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([钩子](../../_shared/glossary.md#钩子--hook) / [完播率](../../_shared/glossary.md#完播率--completion-rate) / [男频](../../_shared/glossary.md#男频--male-oriented-channel) / [女频](../../_shared/glossary.md#女频--female-oriented-channel) / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat))。
+本 ref 与 Phase 1 [`viral-element-catalog.md`](../../compliance_marketing/references/viral-element-catalog.md) 在 3 个类型上重叠(情感 / 冲突 / 反差),但 HOOK 新增 2 个类型(悬念 / 情绪爆点)。本 ref **不复制** 🟢/🟡/🔴 风险徽章 —— 风险评估请跨链到 compliance_marketing catalog。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([钩子](../../_shared/glossary.md#钩子-hook) / [完播率](../../_shared/glossary.md#完播率-completion-rate) / [男频](../../_shared/glossary.md#男频-male-oriented-channel) / [女频](../../_shared/glossary.md#女频-female-oriented-channel) / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat))。
 
 ---
 
 ## Taxonomy
 
-下表列出 5 类固定钩子(固定 —— 不允许凭空新增类别)。每个类型给出 一句定义 + [男频](../../_shared/glossary.md#男频--male-oriented-channel)典型应用 + [女频](../../_shared/glossary.md#女频--female-oriented-channel)典型应用。最后一列标注该类型是否与 Phase 1 catalog 重叠。
+下表列出 5 类固定钩子(固定 —— 不允许凭空新增类别)。每个类型给出 一句定义 + [男频](../../_shared/glossary.md#男频-male-oriented-channel)典型应用 + [女频](../../_shared/glossary.md#女频-female-oriented-channel)典型应用。最后一列标注该类型是否与 Phase 1 catalog 重叠。
 
 | 类型 | 定义(一句) | 男频典型应用 | 女频典型应用 | 与 COMPLI catalog 关系 |
 |------|-------------|--------------|--------------|------------------------|
@@ -35,7 +35,7 @@ verified_date: 2026-06
 
 ### 0-1s Attention-Grab
 
-**目的:** 在第一秒制造视觉 / 听觉 / 信息冲击,阻止观众上滑。这一秒的成功率直接决定 [完播率](../../_shared/glossary.md#完播率--completion-rate) 上限。
+**目的:** 在第一秒制造视觉 / 听觉 / 信息冲击,阻止观众上滑。这一秒的成功率直接决定 [完播率](../../_shared/glossary.md#完播率-completion-rate) 上限。
 
 可用模式(选其一,不可叠加 —— 叠加会信息过载):
 
@@ -65,7 +65,7 @@ verified_date: 2026-06
 
 可用模式:
 
-- **明确承诺后续 [爽点](../../_shared/glossary.md#爽点--satisfaction-beat):** "三天后,她让他们全部跪下" / "下一秒,总裁跪在了她面前"。
+- **明确承诺后续 [爽点](../../_shared/glossary.md#爽点-satisfaction-beat):** "三天后,她让他们全部跪下" / "下一秒,总裁跪在了她面前"。
 - **抛出未解之谜:** "但她不知道,真正的危险才刚刚开始" / "而那个电话,来自一个已经死了三年的人"。
 - **倒计时感:** "距离她失去一切,还有 24 小时" / "三天后,所有人都将后悔"。
 - **反差承诺:** "而当他们发现真相时,已经太晚了" —— 暗示后续会有重大反转。
@@ -78,7 +78,7 @@ verified_date: 2026-06
 
 以下 15 个示例覆盖 5 类钩子 × 3 示例,且分布于 romance / revenge / family / mystery / comedy 五种题材(每种至少 2 次,单类型内不重复同题材)。每个示例给出固定 5 字段:`示例` / `题材` / `0-1s` / `1-2s` / `2-3s` / `完播率 预期影响`。
 
-所有 [完播率](../../_shared/glossary.md#完播率--completion-rate) 数值均为 `*estimated*`(基于公开 MCN 报告与创作者访谈的聚合观察,不是平台实测数据)。
+所有 [完播率](../../_shared/glossary.md#完播率-completion-rate) 数值均为 `*estimated*`(基于公开 MCN 报告与创作者访谈的聚合观察,不是平台实测数据)。
 
 ### 情感钩 (emotional hook)
 
@@ -96,7 +96,7 @@ verified_date: 2026-06
 - **0-1s:** 女主整理男主衣柜时,一张与本人几乎一模一样的旧照片从西装内袋飘落(震撼画面 + 慢镜头)。
 - **1-2s:** 镜头切到床头柜合照 —— 那张脸不是她,但和她九成像。一句字幕:"原来我不是他爱的人,我只是一个影子。"
 - **2-3s:** 男主脚步声在门外响起,女主把照片塞回原位,转身装作无事 —— 承诺后续揭穿 / 对决爆发。
-- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(女频虐恋核心 [爽点](../../_shared/glossary.md#爽点--satisfaction-beat)前置触发器)。
+- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(女频虐恋核心 [爽点](../../_shared/glossary.md#爽点-satisfaction-beat)前置触发器)。
 
 **示例 3:兄弟酒馆挡刀**
 
@@ -144,7 +144,7 @@ verified_date: 2026-06
 - **0-1s:** 董事会会议桌,主角站在尽头,十几个董事同时把辞职信推到他面前(突发动作:同步推信)。
 - **1-2s:** 字幕:"他们以为逼他下台,公司就是他们的了。" —— 一句话锚定利害。
 - **2-3s:** 主角笑了一下,把手机投影到会议室大屏 —— 屏幕上显示所有人的资金流水 —— 承诺后续打脸 / 翻盘。
-- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(男频慕强核心钩子,与 [慕强](../../_shared/glossary.md#慕强--power-fantasy) 爽点直接对接)。
+- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(男频慕强核心钩子,与 [慕强](../../_shared/glossary.md#慕强-power-fantasy) 爽点直接对接)。
 
 **示例 8:婆媳饭桌掀桌**
 
@@ -172,7 +172,7 @@ verified_date: 2026-06
 - **0-1s:** 烟火气十足的街边煎饼摊,西装革履的男人熟练地摊煎饼、刷酱、卷薄脆(反常规切入:角色与场景强烈错位)。
 - **1-2s:** 字幕:"千亿总裁装穷三个月,只为测试她是否爱的是他这个人。" —— 一句话锚定反差与利害。
 - **2-3s:** 女主路过,递给他一张皱巴巴的十块钱,说"老板,加个蛋" —— 男主眼神闪烁 —— 承诺后续身份暴露 / 真情考验。
-- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(女频反差 + 浪漫双触发,小程序剧核心 [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) 转换器)。
+- **完播率 预期影响:** 提升前 3 秒留存 ~25-35% *estimated*(女频反差 + 浪漫双触发,小程序剧核心 [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) 转换器)。
 
 **示例 11:千金落难 · 后厨洗碗**
 
@@ -199,7 +199,7 @@ verified_date: 2026-06
 - **题材:** revenge
 - **0-1s:** 黑屏。一声低沉的男声:"五年了,我回来了。" 紧接着是机场跑道上私人飞机降落的轰鸣(强音效 + 反常规切入)。
 - **1-2s:** 字幕:"五年前他被陷害入狱;五年后,他带着整个帝国的资源回来。" —— 一句话锚定利害。
-- **2-3s:** 接机大厅,曾经陷害他的人如今是行业龙头 —— 两人目光相遇,对方脸色骤变 —— 承诺后续碾压式 [爽点](../../_shared/glossary.md#爽点--satisfaction-beat)。
+- **2-3s:** 接机大厅,曾经陷害他的人如今是行业龙头 —— 两人目光相遇,对方脸色骤变 —— 承诺后续碾压式 [爽点](../../_shared/glossary.md#爽点-satisfaction-beat)。
 - **完播率 预期影响:** 提升前 3 秒留存 ~30-40% *estimated*(男频战神归来核心钩子,小程序剧付费转换最强触发器之一)。
 
 **示例 14:母亲最后的语音**
@@ -224,7 +224,7 @@ verified_date: 2026-06
 
 下表定义 5 级钩子强度评分(符号固定,不允许替换)。每个候选钩子必须用此表评估后才可投入生产。
 
-| 符号 | 名称 | 预测 [完播率](../../_shared/glossary.md#完播率--completion-rate) 持有区间 | 典型特征 | 修复建议 |
+| 符号 | 名称 | 预测 [完播率](../../_shared/glossary.md#完播率-completion-rate) 持有区间 | 典型特征 | 修复建议 |
 |------|------|--------------------------------------|----------|----------|
 | 🎯 | **bullseye** (一击命中) | ≥ 85% 持有 *estimated* | 0-1s 即给观众明确冲击;1-2s 一句话锚定利害;2-3s 承诺具体可感的后续回报。观众生理上无法上滑。 | 无需修复。可作为同题材其他短剧的开场模板。 |
 | ✅ | **strong** (强力) | 60-85% 持有 *estimated* | 三段式结构完整,但其中一段稍弱(如 0-1s 冲击到位但 2-3s 承诺略模糊)。能钩住大多数观众,但敏感观众会在 5-8s 流失。 | 定位"最弱的一帧",针对性补强(通常是 2-3s 承诺过于抽象)。 |
@@ -234,7 +234,7 @@ verified_date: 2026-06
 
 ### 如何应用本评分表
 
-5 级评分本质上是一个**主观代理指标**(subjective proxy metric)—— [完播率](../../_shared/glossary.md#完播率--completion-rate) 的真实实测需要平台 A/B 测试,超出本 ref 的纯文档范围。但以下结构化流程可让评分尽可能可复现:
+5 级评分本质上是一个**主观代理指标**(subjective proxy metric)—— [完播率](../../_shared/glossary.md#完播率-completion-rate) 的真实实测需要平台 A/B 测试,超出本 ref 的纯文档范围。但以下结构化流程可让评分尽可能可复现:
 
 1. **逐帧评估:** 把候选钩子的 0-1s / 1-2s / 2-3s 三段分别打分(每段:到位 / 部分到位 / 失效)。
 2. **短板原则:** 总分 = 三段中**最低**的一段分数。不允许"0-1s 极强 + 2-3s 失效"被评为 ✅ strong —— 这种钩子实际表现为"瞬间吸引但秒级流失",应评 ⚠️ weak。
@@ -277,7 +277,7 @@ verified_date: 2026-06
 - **复审动作:**
   1. 跟踪 抖音 / 快手 / 微信小程序剧 短剧榜 top 10,识别新兴 3 秒钩子模式。
   2. 复核 15 个示例的题材分布是否仍覆盖主流题材(若 market 题材结构变化,如新题材崛起,需补示例)。
-  3. 复核 5 级评分的 [完播率](../../_shared/glossary.md#完播率--completion-rate) 持有区间是否仍准确(平台算法权重变化会影响这些区间)。
+  3. 复核 5 级评分的 [完播率](../../_shared/glossary.md#完播率-completion-rate) 持有区间是否仍准确(平台算法权重变化会影响这些区间)。
   4. 更新 `Last-verified` + `verified_date` 时间戳。
 - **过期处理:** `scripts/verify_skill_references.py` 在 Last-verified > 90 天时标记本 ref 为 stale。
 
@@ -293,4 +293,4 @@ verified_date: 2026-06
 - **题材结构反转:** 男频 / 女频 / 中老年向 受众占比发生显著反转,导致现有 15 示例的题材分布不再代表主流(例如:中老年向 family 题材占比从 30% 降至 10%,需减少 family 示例、增加其他题材)。
 - **跨平台互通:** 若 抖音 / 快手 / 微信小程序剧 的短剧互通(分发机制统一),则平台校准逻辑需重写。
 
-> 本 ref 所有 [完播率](../../_shared/glossary.md#完播率--completion-rate) 数值与"题材粘性"判断均为基于公开观察的主观估算(`*estimated*`)。实际效果需通过平台 A/B 测试验证,超出本 ref 的纯文档范围。
+> 本 ref 所有 [完播率](../../_shared/glossary.md#完播率-completion-rate) 数值与"题材粘性"判断均为基于公开观察的主观估算(`*estimated*`)。实际效果需通过平台 A/B 测试验证,超出本 ref 的纯文档范围。
