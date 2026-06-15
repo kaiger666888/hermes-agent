@@ -60,7 +60,7 @@ verified_date: 2026-06
 | **中景 (medium shot)** | 1.5-2.5s | 对话 / 日常动作 / 角色互动 |
 | **全景 (wide shot)** | 2-3s | 场景建立 / 空间关系 / 环境交代 |
 
-> **注意:** 这些是**推荐值**而非硬限制。特写 可短至 0.5s(快速反应镜头),全景 可长至 4s(场景建立)。但任何镜头超过 3s 必须满足 [`paywall-design.md`](./paywall-design.md#≤3s-dead-air-rule) §≤3s Dead Air Rule 的例外条件(情感特写 + BGM swell)。
+> **注意:** 这些是**推荐值**而非硬限制。特写 可短至 0.5s(快速反应镜头),全景 可长至 4s(场景建立)。但任何镜头超过 3s 必须满足 [`paywall-design.md`](./paywall-design.md#3-second-dead-air-rule) §3-Second Dead Air Rule 的例外条件(情感特写 + BGM swell)。
 
 ### 具体示例:90s Romance 短剧 Cold-Open 帧级 Cut List
 
@@ -114,16 +114,16 @@ verified_date: 2026-06
 
 1. **composer 输出 `coupled_beat.json`:** composer 专家根据 [screenplay](../../composer/SKILL.md#collaboration) 的 `emotion_curve` 与 `sound_mood`,生成 BGM stem + `coupled_beat.json`(beat timestamps + energy curve + emotional annotations)。输出格式见 [composer/SKILL.md §Output Format](../../composer/SKILL.md#output-format)。
 2. **editor 导入为 cut-grid:** editor 专家将 `coupled_beat.json` 导入剪辑软件,作为镜头切换的对齐参考(cut-grid)。editor 的 cut 决策应优先落在 beat 上。
-3. **hook_retention 验证 pacing alignment:** 本专家(hook_retention)**验证** cut 是否落在 beat 上,以及 beat 之间的 dead air 是否 ≤ 3s(见 [`paywall-design.md`](./paywall-design.md#≤3s-dead-air-rule) §≤3s Dead Air Rule)。验证方式:比对 editor 的 cut list 与 composer 的 beat grid,标记偏差 > ±100ms 的普通 cut 或未对齐的重大 cut。
+3. **hook_retention 验证 pacing alignment:** 本专家(hook_retention)**验证** cut 是否落在 beat 上,以及 beat 之间的 dead air 是否 ≤ 3s(见 [`paywall-design.md`](./paywall-design.md#3-second-dead-air-rule) §3-Second Dead Air Rule)。验证方式:比对 editor 的 cut list 与 composer 的 beat grid,标记偏差 > ±100ms 的普通 cut 或未对齐的重大 cut。
 4. **editor 调整未对齐的 cut:** editor 根据验证结果调整 cut,或在必要时请求 composer 微调 beat grid(例如:若 cut 必须落在某个特定帧,但 beat 不在那,composer 可调整 BGM 节奏)。
 
 ### BGM Swell Exceptions
 
-BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`](./paywall-design.md#≤3s-dead-air-rule) §≤3s Dead Air Rule 例外):
+BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`](./paywall-design.md#3-second-dead-air-rule) §3-Second Dead Air Rule 例外):
 
 | 场景 | 最长允许 | 触发条件 | 来源 |
 |------|----------|----------|------|
-| **BGM swell** | **4-5s** | (1) BGM 进入音乐性高潮;(2) 镜头同步呈现视觉冲击;(3) swell 时长 ≤ 5s | [`paywall-design.md`](./paywall-design.md#≤3s-dead-air-rule) §例外 |
+| **BGM swell** | **4-5s** | (1) BGM 进入音乐性高潮;(2) 镜头同步呈现视觉冲击;(3) swell 时长 ≤ 5s | [`paywall-design.md`](./paywall-design.md#3-second-dead-air-rule) §例外 |
 
 **Swell 时长建议(`*estimated*`):**
 
