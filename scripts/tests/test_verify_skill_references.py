@@ -224,6 +224,53 @@ class TestScanSkillFile:
             assert isinstance(f.context_line, str)
             assert "wan22_video" in f.context_line
 
+    def test_phantom_denylist_cannot_be_overridden(self) -> None:
+        """CR-01: even with wan22_video in the allowlist, it must still flag.
+
+        The phantom denylist is a hard-block: no operator override (via
+        override YAML or plugin.yaml tokens) can suppress detection of a
+        known phantom. This is the credibility anchor the scanner is
+        built on.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            phantom_skill = Path(tmp) / "SKILL.md"
+            phantom_skill.write_text(
+                "---\nname: animator\ndescription: test\n---\n\n"
+                "# Animator Expert\n\n"
+                "- **model**: `wan22_video` (primary)\n",
+                encoding="utf-8",
+            )
+            # Allowlist explicitly contains the phantom token — operator
+            # attempt to suppress via override YAML. Must still flag.
+            allowlist = {"wan22_video", "wan22_video_turbo", "wan22"}
+            findings = scan_skill_file(phantom_skill, allowlist=allowlist)
+            tokens = {f.matched_token for f in findings}
+            assert "wan22_video" in tokens, (
+                f"denylist failed; wan22_video not flagged despite allowlist "
+                f"override attempt. tokens={sorted(tokens)}"
+            )
+
+    def test_phantom_denylist_includes_bare_wan22(self) -> None:
+        """CR-01: bare ``wan22`` (no suffix) in a SKILL.md is flagged.
+
+        The ``wan\\d*`` alternation in the candidate regex matches
+        ``wan22``, and the denylist then forces a Finding regardless of
+        allowlist state.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            phantom_skill = Path(tmp) / "SKILL.md"
+            phantom_skill.write_text(
+                "---\nname: animator\ndescription: test\n---\n\n"
+                "# Animator Expert\n\n"
+                "Uses wan22 for the main video pipeline.\n",
+                encoding="utf-8",
+            )
+            findings = scan_skill_file(phantom_skill, allowlist={"wan22"})
+            tokens = {f.matched_token for f in findings}
+            assert "wan22" in tokens, (
+                f"bare 'wan22' not flagged by denylist. tokens={sorted(tokens)}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Reporter

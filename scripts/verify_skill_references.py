@@ -59,10 +59,26 @@ _MODEL_SUFFIX_TOKEN_RE = re.compile(
     r"\b[a-z][a-z0-9]+_(?:video|turbo|tts|lora|model|gen3|v3|v2|pro|nano|klein|banana|imagine)\b",
     re.IGNORECASE,
 )
-_VENDOR_TOKEN_RE = re.compile(
+# Detection regex — yields CANDIDATE tokens that are then checked against
+# the allowlist (build_allowlist). This regex does NOT itself whitelist
+# anything; its only role is to surface tokens worth flagging. Without a
+# matching allowlist entry, every token it matches becomes a Finding.
+_VENDOR_CANDIDATE_RE = re.compile(
     r"\b(?:sora|veo|kling|runway|flux|minimax|glm|qwen|deepseek|yi|wan\d*|pixverse|stable[_-]?audio|cosyvoice|recraft|grok|gpt-image)\b",
     re.IGNORECASE,
 )
+# Tokens that must ALWAYS be flagged regardless of allowlist state.
+# These are known phantom references; no operator override (via the
+# override YAML or a plugin.yaml) can suppress them. This is the
+# hard-block that protects the scanner's credibility anchor: if the
+# allowlist were ever extended to include one of these, the scan would
+# still flag it. (CR-01: guard against accidental allowlist pollution.)
+_PHANTOM_DENYLIST = frozenset({
+    "wan22_video",
+    "wan22_video_turbo",
+    "wan22",  # bare vendor-number variant; no real model exists.
+    "168k controlled tokens",  # fabricated concept; matched as a phrase.
+})
 # Special fabrication pattern: "168K controlled tokens" — case-insensitive,
 # whitespace-flexible. Survives single-digit (``8K``) or multi-digit variants.
 _CONTROLLED_TOKENS_RE = re.compile(
@@ -220,7 +236,7 @@ def build_allowlist(plugins_root: Path, override_yaml_path: Path) -> set[str]:
 
 def _iter_regex_matches(line: str) -> Iterable[tuple[str, re.Pattern[str]]]:
     """Yield (matched_token_lowercased, pattern) for every regex that fires."""
-    for pattern in (_MODEL_SUFFIX_TOKEN_RE, _VENDOR_TOKEN_RE):
+    for pattern in (_MODEL_SUFFIX_TOKEN_RE, _VENDOR_CANDIDATE_RE):
         for m in pattern.finditer(line):
             yield m.group(0).lower(), pattern
     for m in _CONTROLLED_TOKENS_RE.finditer(line):
@@ -254,6 +270,20 @@ def scan_skill_file(skill_path: Path, allowlist: set[str]) -> list[Finding]:
             if key in seen:
                 continue
             seen.add(key)
+            # CR-01: Hard denylist. These tokens are ALWAYS flagged,
+            # regardless of allowlist state. The allowlist cannot
+            # override this — an operator who accidentally adds
+            # ``wan22_video`` to the override YAML still gets a Finding.
+            if token in _PHANTOM_DENYLIST:
+                findings.append(
+                    Finding(
+                        path=str(skill_path),
+                        line=idx,
+                        matched_token=token,
+                        context_line=stripped,
+                    )
+                )
+                continue
             if token in allowlist:
                 continue
             findings.append(
