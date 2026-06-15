@@ -8,7 +8,10 @@ ablation comparisons across Phase 3/5/6 refactors (RESEARCH.md
 PITFALLS #8, Phase 3 REFACTOR-06/07).
 
 Design notes:
-- stdlib only (no new packages).
+- stdlib only (no third-party packages). Uses ``subprocess`` to invoke
+  ``git rev-parse`` for provenance; degrades gracefully to the literal
+  string ``"uncommitted"`` if git is unavailable or the cwd is not a
+  git repo (T-00-06 accept disposition).
 - Hardcoded EXPERT_DIRS list prevents synthetic-injection spoofing
   (T-00-08 in the threat model).
 - All `open()` calls pass `encoding="utf-8"` (CLAUDE.md PLW1514).
