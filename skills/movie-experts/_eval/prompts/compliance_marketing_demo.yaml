@@ -1,0 +1,88 @@
+expert_id: compliance_marketing
+# Demo prompts for the compliance_marketing expert eval harness.
+#
+# Five prompts chosen to exercise the compliance expert's distinct craft axes
+# (per CONTEXT decision D-6 — do NOT invent alternative scenarios):
+#   compli-001 — AIGC 标识 + disclosure package for a finished 短剧 episode
+#   compli-002 — 备案 material compilation for AI 漫剧 with 小程序剧 distribution
+#   compli-003 — Platform cut comparison (抖音 vs 快手 vs 小程序剧) for one master cut
+#   compli-004 — Borderline-violence 红线 review (🟡 level, 冲突钩 type)
+#   compli-005 — 未成年人保护 §4 校园 setting check
+#
+# At least 2 of 5 prompts exercise 🟡 risk-level elements (compli-004 explicit;
+# compli-005 has 校园 context — borderline per CONTEXT specifics).
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 00-03-PLAN.md SC #3); they exist only to prove the harness
+# output shape on one real expert and to exercise the 5 canonical scenario
+# shapes documented in 01-CONTEXT.md decision D-6.
+#
+# File naming: runner.py resolves `--expert compliance_marketing` to
+# `prompts/compliance_marketing_demo.yaml` (line 571: f"{args.expert}_demo.yaml").
+# The `_demo` suffix is the harness contract, matching animator_demo.yaml.
+prompts:
+  - id: compli-001
+    text: |
+      A finished 90-second 竖屏 短剧 episode was generated using AI tools
+      (script via LLM, visuals via <video_gen_primary>, voice via
+      <tts_primary>). It will be distributed commercially on 抖音 starting
+      2025-10-01. Produce the complete AIGC labeling package required by
+      the 网信办 AI 标识办法 (effective 2025-09-01):
+      (a) 显式标识 spec — pixel size for a 1080x1920 frame, position
+      avoiding the 抖音 watermark zone, minimum opacity, duration;
+      (b) 隐式标识 metadata fields (C2PA-style: dc:creator, dcterms:created,
+      aigc:generated, aigc:method);
+      (c) a 文本披露 script-line for the cold-open (≤ 3 seconds, mandarin).
+      Reference cn-content-rules.md §AI 标识办法 for the exact thresholds.
+
+  - id: compli-002
+    text: |
+      A 12-episode 拟人化动画 漫剧 series (AI-generated animation, ~3 minutes
+      per episode, total runtime ~36 minutes) will be distributed via a
+      微信小程序剧 channel with a 付费 unlock mechanism (单集 ¥1-3, 季票 ¥18).
+      Determine: (a) which 备案 triggers fire (content category, episode
+      count threshold, total runtime threshold, commercial intent, payment
+      mechanism); (b) the complete enumerate list of 备案 materials
+      required; (c) whether 双重 备案 (广电 + 微信小程序) applies and what
+      the second 备案 adds beyond the first. Cross-reference
+      cn-content-rules.md §AI 漫剧 备案 regime and
+      platform-specs-miniprogram.md §双重备案.
+
+  - id: compli-003
+    text: |
+      A single 30-episode 短剧 master cut (each episode ~120 seconds) has
+      been produced. The distributor wants to ship three platform-specific
+      cuts: 抖音, 快手, and 微信小程序剧. Produce a comparison table with
+      one row per platform and columns for: 推荐时长 per episode, 付费门槛
+      placement (which episode number unlocks), 爆款公式 emphasis (which
+      of the platform's formulas to lean into), 备案号 display position,
+      and any platform-specific 红线 to avoid. Cross-reference
+      _shared/platform-comparison.md matrix and the three platform-specs-*.md
+      refs. Note at least one concrete numeric threshold per cell.
+
+  - id: compli-004
+    text: |
+      A scene depicts the protagonist confronting the antagonist in a
+      warehouse; the script implies violence (raised voice, a shove, a
+      gun visible on a table) but shows no actual injury or bloodshed.
+      The 冲突钩 intensity is intentionally high to drive episode-3
+      cliffhanger. Assess: (a) which 红线 category this risks (§2 暴力血腥
+      or others); (b) the risk badge (🟢 / 🟡 / 🔴) per
+      viral-element-catalog.md 冲突钩 type entries; (c) if 🟡, propose a
+      降级方案 that preserves ≥ 70% of the original hook strength (per
+      the strength-preservation heuristic); (d) verify the 降级方案 does
+      not introduce a new 红线 trigger. Show your hook-strength math.
+
+  - id: compli-005
+    text: |
+      A 短剧 setup places the protagonist and several supporting characters
+      in a 校园 (school) setting, with implied teen characters (uniforms,
+      backpacks, classroom scenes). The intended audience is 18-35 (adult).
+      Run the §4 未成年人保护 红线 checklist from cn-content-rules.md:
+      (a) identify specific 触发关键词 and 画面信号 that would trip §4;
+      (b) determine whether the 校园 setting alone is disqualifying or
+      context-dependent; (c) produce either a clearance certificate
+      (with stated conditions) OR a rewrite recommendation that shifts
+      the setting above the 18+ threshold (e.g., 大学, 培训机构, 职场
+      flashback) while preserving ≥ 70% of the original 题材钩 strength.
+      Cross-reference viral-element-catalog.md 题材钩 type entries.
