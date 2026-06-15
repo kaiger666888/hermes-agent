@@ -224,6 +224,59 @@ class TestVerifyBaselines:
         assert _SHA256_HEX_RE.match(drift["actual"])
         assert "source_path" in drift
 
+    def test_verify_flags_missing_provenance_keys(self, tmp_path: Path) -> None:
+        """WR-08: a PROVENANCE.json missing required keys is flagged as drift.
+
+        Without this guard, a tampered baseline (e.g. an attacker
+        replaced PROVENANCE.json with ``{"sha256": "<current source hash>"}``
+        to mask drift) would pass verification silently.
+        """
+        skills_dir, _ = _build_synthetic_skills_tree(tmp_path)
+        baseline_dir = tmp_path / "baseline"
+        capture_baselines(skills_dir, baseline_dir, git_sha="x")
+
+        # Tamper: drop the captured_at key from one expert's provenance.
+        prov_path = baseline_dir / "editor" / "PROVENANCE.json"
+        prov = json.loads(prov_path.read_text(encoding="utf-8"))
+        del prov["captured_at"]
+        prov_path.write_text(
+            json.dumps(prov, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        ok, drifts = verify_baselines(skills_dir, baseline_dir)
+        assert ok is False
+        drift = next(d for d in drifts if d["expert_id"] == "editor")
+        assert "missing keys" in drift["expected"]
+        assert "captured_at" in drift["expected"]
+
+    def test_verify_flags_wrong_tag(self, tmp_path: Path) -> None:
+        """WR-08: a PROVENANCE.json with a stale tag is flagged as drift.
+
+        A baseline captured under ``eval-baseline-v0`` must not silently
+        pass verification when the current cycle expects
+        ``eval-baseline-v1`` — otherwise drift across cycles would be
+        masked.
+        """
+        skills_dir, _ = _build_synthetic_skills_tree(tmp_path)
+        baseline_dir = tmp_path / "baseline"
+        capture_baselines(skills_dir, baseline_dir, git_sha="x")
+
+        # Tamper: change tag on one expert.
+        prov_path = baseline_dir / "foley" / "PROVENANCE.json"
+        prov = json.loads(prov_path.read_text(encoding="utf-8"))
+        prov["tag"] = "eval-baseline-v0"
+        prov_path.write_text(
+            json.dumps(prov, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        ok, drifts = verify_baselines(skills_dir, baseline_dir)
+        assert ok is False
+        drift = next(d for d in drifts if d["expert_id"] == "foley")
+        assert "wrong tag" in drift["expected"]
+        assert "eval-baseline-v0" in drift["expected"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-x", "--tb=short"])
