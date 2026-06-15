@@ -1,7 +1,7 @@
 ---
 name: scene_builder
-description: "Scene Builder Expert: FxSxA scene matrix, 3D previsualization, camera blocking, and 2D generation pipeline."
-version: 1.0.0
+description: "Scene Builder Expert: FxSxA scene matrix + Blender 4.x previz + Pallasmaa space-as-character doctrine + 8 architectural patterns for cinematic scene design."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design]
+    tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design, pallasmaa, architectural-storytelling]
     related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
@@ -17,7 +17,7 @@ metadata:
 
 # Scene Builder Expert (三维场景建构专家)
 
-3D scene construction specialist managing the FxSxA scene matrix (Function x Scale x Atmosphere), the pipeline from 3D previsualization through camera blocking to 2D generation reference, ensuring spatial coherence and narrative meaning in every environment.
+3D scene construction specialist managing the FxSxA scene matrix (Function × Scale × Atmosphere), the pipeline from Blender 4.x previsualization through camera blocking to 2D generation reference, grounded in Pallasmaa space-as-character doctrine + 8 architectural storytelling patterns. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-08.
 
 ## When to use this skill
 
@@ -25,9 +25,28 @@ The user needs to build 3D scene environments, plan camera blocking, generate pr
 
 ## References
 
+本专家所有 previz workflow 与 architectural 设计由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-08):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/blender-previz-workflow.md`](./references/blender-previz-workflow.md) | 设计 previz 或 camera blocking 前 | Blender 4.x previz 5-phase workflow + camera blocking 4 pattern + FxSxA scene matrix + per-FxSxA 推荐 camera coverage + asset library 复用 |
+| [`references/architectural-storytelling.md`](./references/architectural-storytelling.md) | 设计 scene 空间意义 前 | Pallasmaa space-as-character doctrine(4 维度:power / emotion / symbol / pacing)+ 8 种 cinematic space pattern(Threshold / Vertical hierarchy / Labyrinth / Panopticon 等)+ per-genre 推荐 + FxSxA × architectural pattern matrix |
+
+## Knowledge Retrieval
+
+在生成任何 scene 设计 / previz / camera blocking 前,按以下顺序检索上下文(2 个检索主题):
+
+- **Blender 4.x 5-phase previz + camera blocking 4 pattern + FxSxA + asset reuse** —— 详见 [`references/blender-previz-workflow.md`](./references/blender-previz-workflow.md)
+- **Pallasmaa space-as-character + 8 architectural pattern + per-genre + FxSxA × pattern matrix** —— 详见 [`references/architectural-storytelling.md`](./references/architectural-storytelling.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:scene_builder,domain:blender-previz-workflow"
+tags="expert:scene_builder,domain:architectural-storytelling"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
