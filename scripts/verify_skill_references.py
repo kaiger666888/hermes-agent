@@ -176,7 +176,13 @@ def _load_plugin_yaml(path: Path) -> dict | None:
 
 
 def _walk_plugin_yamls(plugins_root: Path) -> Iterable[Path]:
-    """Deterministically yield ``plugins/{image_gen,video_gen}/*/plugin.yaml."""
+    """Deterministically yield ``plugins/{image_gen,video_gen}/*/plugin.{yaml,yml}.
+
+    CLAUDE.md documents that plugin manifests may be either
+    ``plugin.yaml`` OR ``plugin.yml``. The walker checks both names and
+    yields the first one that exists (if a plugin dir somehow contains
+    both, ``.yaml`` wins per the iteration order).
+    """
     if not plugins_root.exists():
         return
     for category in ("image_gen", "video_gen"):
@@ -186,9 +192,12 @@ def _walk_plugin_yamls(plugins_root: Path) -> Iterable[Path]:
         for plugin_dir in sorted(cat_dir.iterdir()):
             if not plugin_dir.is_dir():
                 continue
-            manifest = plugin_dir / "plugin.yaml"
-            if manifest.exists():
-                yield manifest
+            # WR-07: accept both .yaml and .yml extensions.
+            for manifest_name in ("plugin.yaml", "plugin.yml"):
+                manifest = plugin_dir / manifest_name
+                if manifest.exists():
+                    yield manifest
+                    break  # don't yield both if both exist
 
 
 def _load_override_yaml(path: Path) -> set[str]:
