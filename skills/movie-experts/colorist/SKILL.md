@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, color, grading, color-intent, lut, cinematic, color-science]
-    related_skills: [screenplay, style_genome, drawer, continuity, animator]
+    related_skills: [screenplay, style_genome, drawer, continuity, animator, production]
     expert_id: colorist
     metrics: [color_intent_match, color_cross_shot_consistency, style_fidelity]
 ---

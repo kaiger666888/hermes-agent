@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, video, animation, video-gen, camera-motion, temporal-consistency]
-    related_skills: [drawer, scene_builder, editor, performer, colorist, continuity, cinematographer]
+    related_skills: [drawer, scene_builder, editor, performer, colorist, continuity, cinematographer, production]
     expert_id: animator
     metrics: [motion_smoothness, motion_complexity, temporal_consistency]
 ---

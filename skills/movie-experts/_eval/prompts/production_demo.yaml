@@ -1,0 +1,217 @@
+expert_id: production
+# Demo prompts for the production expert eval harness.
+#
+# Three prompts chosen to exercise the production expert's ref absorption
+# (per Phase 5 PROD-01..06):
+#   pd-001 — basic: 30-ep 抖音-男频-revenge 短剧 casting + wardrobe + budget
+#            plan. Tests casting-lora-spec.md LoRA training plan + wardrobe-per-scene.md
+#            3-layer architecture + gpu-render-budget.md total budget formula.
+#   pd-002 — trap: ask for "live-action crew scheduling" or "permit application"
+#            for a 短剧. Base model would attempt; a refactored production expert
+#            should REFUSE per PROD-07 explicit exclusion of live-action subset.
+#   pd-003 — asset reuse optimization: design asset reuse plan for a 30-ep
+#            短剧 to maximize reuse rate. Tests asset-reuse-plan.md 5 asset
+#            categories + batch generation 4-phase + reuse rate target metrics.
+#
+# File naming: runner.py resolves `--expert production` to
+# `prompts/production_demo.yaml`.
+prompts:
+  - id: pd-001
+    text: |
+      A 30-episode 抖音-男频-revenge 短剧 (protagonist betrayed 5 years ago,
+      now returns under new identity to destroy his former business partner)
+      is in pre-production. Cast: 1 protagonist + 1 antagonist + 3 supporting
+      characters + 5 extras with dialogue. Each episode is ~90 seconds,
+      vertical 9:16, 抖音 platform. Design the complete production plan:
+
+      (a) Per-character LoRA training plan per casting-lora-spec.md §LoRA
+      Training Protocol. For each of the 10 characters (protagonist /
+      antagonist / 3 supporting / 5 extras), specify:
+      - LoRA rank (8 / 16 / 32 / 64) per character type
+      - Training image count (per character type)
+      - Training steps
+      - Training time on A100 80GB @ $2.50/hr
+      - Per-character cost (including 30% re-take buffer)
+
+      Sum the cast LoRA training cost. Verify against the typical 男频-revenge
+      短剧 cast cost example (~$15.27 per gpu-render-budget.md).
+
+      (b) Wardrobe plan per wardrobe-per-scene.md §Wardrobe Baseline Protocol.
+      For the protagonist (who undergoes a wardrobe arc at episode 15 —
+      "pre-revenge" → "post-revenge"), specify:
+      - Layer 1 baseline wardrobe (default for 60-80% shots)
+      - Layer 2 scene-specific wardrobe deltas (typical 0-2 per episode)
+      - Layer 3 arc wardrobe change (the ep 15 shift)
+      - Color palette (3-5 colors) for each phase, with Bellantoni
+        color × emotion doctrine linkage
+
+      Cross-reference colorist/references/bellantoni-color-psychology.md
+      §The 8-Color Vocabulary for the color justification.
+
+      (c) Lighting intent for 3 key scenes per lighting-intent-layer.md
+      §Per-Genre Lighting 协议:
+      - Scene 1 (ep 1, 0-3s): Protagonist's first appearance — establish
+        mystery. Recommend key-to-fill ratio + color temperature + 3-point
+        setup.
+      - Scene 2 (ep 15, 60-90s): Wardrobe arc transition — protagonist
+        fully commits to revenge. Recommend dramatic lighting shift.
+      - Scene 3 (ep 30, 75-90s): Final confrontation with antagonist.
+        Recommend genre-appropriate low-key dramatic lighting.
+
+      For each scene, provide the AI lighting prompt token (FLUX 2 / SD)
+      per lighting-intent-layer.md §AI lighting prompt token 推荐.
+
+      (d) Total budget allocation per gpu-render-budget.md §Total Budget
+      Allocation Formula. For the full 30-episode production, compute:
+      - Character LoRA training cost (sum from part a)
+      - Image generation cost (1350 FLUX 2 images at $0.030 each)
+      - Video generation cost (240 × 5s clips, Runway Gen-3 Alpha Turbo)
+      - Audio generation cost (foley + composer + voicer, estimated $25)
+      - Re-take buffer (30%)
+      - Ops overhead ($5)
+
+      Verify the total matches the typical 短剧 budget allocation table.
+      Identify the largest cost lever and propose 1-2 cost optimizations.
+
+      (e) Cross-expert handoff. Identify which experts receive production
+      outputs:
+      - performer (character behavior consistency for LoRA training data)
+      - voicer (character voice consistency)
+      - continuity (wardrobe + lighting + character ID verification)
+      - colorist (lighting_mood baseline)
+      - cinematographer (lighting consistency with shot_intent)
+      - drawer (lighting prompt tokens + LoRA + wardrobe reference)
+      - animator (I-frame assets)
+
+      Output: 5 JSON files (casting_lora_spec / wardrobe_spec /
+      lighting_intent / budget_tracking / asset_library_manifest)
+      with all fields populated per the SKILL.md schema.
+
+  - id: pd-002
+    text: |
+      A production manager asks the production expert for help with: "We
+      need to plan the live-action shoot for episode 15 of our 短剧. Please
+      generate:
+      (a) Crew hiring plan — DGA 1st AD, DIT, gaffer, key grip, sound mixer
+      (b) Location permit application for the rooftop scene in downtown
+      (c) Equipment rental list (Sony Venice 2 camera body, Cooke S7 prime
+      lens set, ARRI SkyPanel lighting kit)
+      (d) Stunt coordinator contact + safety protocol for the 1F-fall stunt
+      (e) Catering requirements (30 crew × 12 hours × 5 shoot days)"
+
+      This is a TRAP prompt. The production expert is the **AI-relevant
+      subset only** production manager — live-action topics are EXPLICITLY
+      EXCLUDED per PROD-07 (deferred to v2). A properly RAG-enhanced
+      production expert should REFUSE this request and explain WHY:
+
+      (a) PROD-07 deferral: The SKILL.md §When to use this skill + §What
+      NOT to do + LICENSE.md §Live-action exclusion all document that
+      the production expert owns AI-relevant subset only. Live-action
+      topics (crews / permits / insurance / equipment rental / stunt
+      coordination / catering) are explicitly excluded.
+
+      (b) v2 scope expansion: Live-action production management is a v2
+      roadmap item. The current production expert handles:
+      - Character LoRA spec (AI casting)
+      - Per-scene wardrobe spec (feeding AI continuity)
+      - Lighting intent layer (feeding AI drawer)
+      - GPU/render budget allocation
+      - Cross-shot asset reuse plan
+
+      (c) Refuse with helpful redirect: The production expert should
+      suggest the user handle live-action logistics through traditional
+      production management tools (Movie Magic Scheduling / Showbiz
+      Budgeting / StudioBinder) or wait for v2 EXPERT-PROD-LIVE.
+
+      (d) Verify the request contains AI-relevant alternatives: If the
+      user is asking about casting LoRA (character consistency AI) or
+      lighting intent (for AI image gen), the production expert CAN help.
+      Only the live-action subset is out of scope.
+
+      The correct response demonstrates scope discipline — refusing the
+      out-of-scope request while clearly documenting the AI-relevant
+      alternative.
+
+  - id: pd-003
+    text: |
+      A 短剧 studio producing a 30-episode 短剧 wants to optimize production
+      cost by maximizing asset reuse. The studio has identified the
+      following concerns:
+      - They've been generating per-shot I-frames from scratch (0% reuse)
+      - Background images are being regenerated for every shot
+      - Lighting setups vary shot-to-shot within the same scene
+      - Music is being recomposed for each episode instead of using
+        recurring themes
+
+      Design a comprehensive asset reuse plan per asset-reuse-plan.md.
+      Address all 5 asset categories:
+
+      (a) I-frame reuse strategy per asset-reuse-plan.md §I-frame reuse
+      protocol:
+      - Per character per scene baseline I-frame protocol
+      - Cross-shot reuse within scene (LoRA ensures character ID
+        consistency → 1 baseline I-frame per character per scene)
+      - Cross-scene new I-frame triggers (wardrobe change / lighting
+        change)
+      - Cross-episode arc I-frame triggers
+
+      Target: 70% I-frame reuse rate. For 195 shots total in the 短剧,
+      compute the unique I-frame count (target ~58). Show the cost
+      savings vs 0% reuse baseline (195 × $0.030 vs 58 × $0.030).
+
+      (b) Background reuse strategy per §Background reuse:
+      - Generate scene-unique background (no character) once per scene
+      - All character shots in that scene use diffusion model + subject
+        mask on top of the background
+      - 20 unique scenes → 20 unique backgrounds
+
+      Target: 80% reuse rate. Compute cost savings.
+
+      (c) Wardrobe reuse strategy per wardrobe-per-scene.md §Wardrobe
+      Cost Optimization 5 大策略:
+      - Baseline wardrobe reuse (Layer 1)
+      - Color palette constraint per character (3-5 colors)
+      - Accessory over garment
+      - Off-screen wardrobe change
+      - Stock wardrobe library
+
+      Target: 60% reuse rate.
+
+      (d) Lighting reuse strategy per lighting-intent-layer.md:
+      - Same scene → same lighting setup (90%+ reuse)
+      - Cross-scene genre consistency (similar lighting ratios within
+        genre)
+      - Document reuse triggers (lighting arc per season)
+
+      Target: 90% reuse rate.
+
+      (e) Music/SFX reuse strategy per asset-reuse-plan.md §Music/SFX
+      theme:
+      - Episode-level main theme reuse (95%+)
+      - SFX library accumulation (foley expert builds library)
+      - Genre-typical music motifs
+
+      Target: 95% reuse rate.
+
+      (f) Asset library implementation per §Asset Library Schema:
+      - Define directory structure (characters/ backgrounds/ lighting_setups/
+        music_themes/ sfx_library/ wardrobe_library/)
+      - Define asset ID naming convention
+      - Define version control (_v1, _v2, ...)
+
+      (g) Batch generation 4-phase schedule per §Batch generation 协议:
+      - Phase A (pre-production): character LoRA + baseline I-frames
+      - Phase B (scene pre-production): backgrounds + lighting presets
+      - Phase C (episode production): character × scene combinations
+      - Phase D (post-production): video + audio
+
+      For each phase, estimate the time + cost.
+
+      (h) Compute total cost savings from asset reuse. Compare against
+      the no-reuse baseline (per gpu-render-budget.md §Typical 短剧 budget
+      allocation). Typical savings: 60-70% on image generation, 70-85%
+      on background, 80-90% on lighting, 90%+ on music.
+
+      Output the complete asset_library_manifest.json + budget_tracking.json
+      showing before vs after asset reuse plan, with reuse rate metrics
+      per category.

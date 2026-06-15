@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, performance, acting, body-language, emotion, character-action]
-    related_skills: [screenplay, continuity, scene_builder, editor, drawer, animator, voicer, style_genome]
+    related_skills: [screenplay, continuity, scene_builder, editor, drawer, animator, voicer, style_genome, production]
     expert_id: performer
     metrics: [emotion_accuracy, movement_naturalness, body_consistency, prompt_effectiveness]
 ---

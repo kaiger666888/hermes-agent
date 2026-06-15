@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, continuity, consistency, face-matching, color-check, cross-shot]
-    related_skills: [drawer, animator, colorist, style_genome, screenplay, cinematographer]
+    related_skills: [drawer, animator, colorist, style_genome, screenplay, cinematographer, production]
     expert_id: continuity
     metrics: [face_similarity, color_consistency, style_uniformity]
 ---
