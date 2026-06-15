@@ -122,7 +122,6 @@ Plans:
 
 ### Phase 6: Full Eval + Bilingual Pass + README
 **Goal:** Run the full evaluation across all v1 experts to produce the credibility anchor for the suite; complete bilingual consistency; publish the top-level README documenting the 18-expert collaboration graph.
-**Mode:** mvp
 **Depends on:** Phase 4 (all v1 experts in scope: 14 refactored + 4 new)
 **Requirements:** EVAL-04 (full run), EVAL-05, EVAL-06, EVAL-07, DOC-01, DOC-02, DOC-03, DOC-04
 **Success Criteria** (what must be TRUE):
