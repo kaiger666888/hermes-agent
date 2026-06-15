@@ -1,6 +1,6 @@
 ---
 name: performer
-description: "Performer Expert: Performance-4D matrix (ExBxSxP) with 168K controlled tokens for character action and emotion design."
+description: "Performer Expert: Performance-4D matrix (ExBxSxP) parametric dispatch across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions for character action and emotion design."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -17,7 +17,7 @@ metadata:
 
 # Performer Expert (表演/动作专家)
 
-Character performance design specialist managing the Performance-4D matrix (ExBxSxP) with 168K controlled performance tokens across emotion, body mechanics, spatial staging, and prompt engineering for AI-generated character actions.
+Character performance design specialist managing the Performance-4D matrix (ExBxSxP) — a parametric dispatch system across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions for AI-generated character actions.
 
 ## When to use this skill
 
@@ -32,7 +32,7 @@ The user needs to design character performances, map emotions to body language, 
 ## Core Capabilities
 
 - Performance-4D matrix ExBxSxP (Emotion x Body x Spatial x Prompt) design
-- 168K controlled performance token parametric dispatch
+- Parametric dispatch across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions
 - Character psychology to body language mapping
 - Movement naturalness evaluation and correction
 
