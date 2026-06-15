@@ -33,6 +33,7 @@ TOOL_KIND_MAP: Dict[str, ToolKind] = {
     "skill_view": "read",
     "skills_list": "read",
     "skill_manage": "edit",
+    "skill_invoke": "execute",
     # Web / fetch
     "web_search": "fetch",
     "web_extract": "fetch",
@@ -62,7 +63,7 @@ _POLISHED_TOOLS = {
     # Files / execution
     "read_file", "write_file", "patch", "search_files", "terminal", "process", "execute_code",
     # Skills / web / browser / media
-    "skill_view", "skills_list", "skill_manage", "web_search", "web_extract",
+    "skill_view", "skills_list", "skill_manage", "skill_invoke", "web_search", "web_extract",
     "browser_navigate", "browser_click", "browser_type", "browser_press", "browser_scroll",
     "browser_back", "browser_snapshot", "browser_console", "browser_get_images", "browser_vision",
     "vision_analyze", "image_generate", "text_to_speech",
@@ -160,6 +161,12 @@ def build_tool_title(tool_name: str, args: Dict[str, Any]) -> str:
         if len(target) > 64:
             target = target[:61] + "..."
         return f"skill {action}: {target}"
+    if tool_name == "skill_invoke":
+        expert_id = str(args.get("expert_id") or "?").strip() or "?"
+        preview = str(args.get("input") or "").strip()
+        if preview and len(preview) > 50:
+            preview = preview[:47] + "..."
+        return f"invoke {expert_id}" + (f": {preview}" if preview else "")
     if tool_name == "browser_navigate":
         return f"navigate: {args.get('url', '?')}"
     if tool_name == "browser_snapshot":

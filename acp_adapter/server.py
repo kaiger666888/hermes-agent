@@ -75,6 +75,11 @@ from acp_adapter.provenance import session_provenance_meta
 from acp_adapter.session import SessionManager, SessionState, _expand_acp_enabled_toolsets
 from acp_adapter.tools import build_tool_complete, build_tool_start
 
+# Side-effect import: registers the ``skill_invoke`` tool + ``movie-experts``
+# toolset with the global tool registry so ACP sessions can dispatch inputs
+# to a movie-expert by expert_id. See acp_adapter/skill_invoke.py.
+from acp_adapter import skill_invoke as _skill_invoke  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 try:

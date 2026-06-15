@@ -141,7 +141,14 @@ def _expand_acp_enabled_toolsets(
     toolsets: List[str] | None = None,
     mcp_server_names: List[str] | None = None,
 ) -> List[str]:
-    """Return ACP toolsets plus explicit MCP server toolsets for this session."""
+    """Return ACP toolsets plus explicit MCP server toolsets for this session.
+
+    The ``movie-experts`` toolset (which exposes ``skill_invoke`` via
+    ``acp_adapter.skill_invoke``) is always appended so ACP clients can
+    dispatch tasks to a specific movie-expert without a separate
+    skill_view round-trip. The toolset is created at import time when
+    ``acp_adapter.server`` loads, so it is guaranteed to resolve here.
+    """
     expanded: List[str] = []
     for name in list(toolsets or ["hermes-acp"]):
         if name and name not in expanded:
@@ -151,6 +158,9 @@ def _expand_acp_enabled_toolsets(
         toolset_name = f"mcp-{server_name}"
         if server_name and toolset_name not in expanded:
             expanded.append(toolset_name)
+
+    if "movie-experts" not in expanded:
+        expanded.append("movie-experts")
 
     return expanded
 
