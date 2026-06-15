@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, hook, retention, 3-second-hooks, paywall-cliffhanger, viral-formula, vertical-pacing, marker-schema]
-    related_skills: [screenplay, editor, compliance_marketing, composer]
+    related_skills: [screenplay, editor, compliance_marketing, composer]  # composer is one-directional (HOOK→composer for BGM sync); composer does not reciprocate by design (CONTEXT D-7)
     expert_id: hook_retention
     metrics: [hook_strength, 完播率_proxy, 卡点_density, 转发_trigger_coverage]
 ---
