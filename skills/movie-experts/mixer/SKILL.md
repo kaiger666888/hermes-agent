@@ -23,6 +23,12 @@ Multi-track audio mixing and mastering specialist for level balancing, frequency
 
 The user needs to mix multiple audio stems, balance dialogue/music/effects levels, apply ducking, manage frequency conflicts, master the final audio, or produce the finished soundtrack for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Mixing is about hierarchy — dialogue is king, music serves, effects support

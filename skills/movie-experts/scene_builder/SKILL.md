@@ -23,6 +23,12 @@ metadata:
 
 The user needs to build 3D scene environments, plan camera blocking, generate previsualization, validate shot feasibility, create material annotations, or produce spatial references for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Space tells story — environment is an active character, not just backdrop

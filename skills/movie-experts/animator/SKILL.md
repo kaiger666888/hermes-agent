@@ -23,6 +23,12 @@ Current video generation model specialist for cinematic camera motion design, te
 
 The user needs to generate video clips from still frames, design camera movements, create animated sequences, or produce video segments for AI film production. Requires drawer's first_frame as I-frame input.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Cinematic camera language over random motion

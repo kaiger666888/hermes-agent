@@ -23,6 +23,12 @@ Spatial acoustics and design sound specialist for 6-dimensional spatial encoding
 
 The user needs to design 3D sound fields, place audio sources in space, create environmental ambience, model room acoustics, detect acoustic voids, or generate spatial audio data for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Sound has position — where it comes from tells the audience as much as what it is

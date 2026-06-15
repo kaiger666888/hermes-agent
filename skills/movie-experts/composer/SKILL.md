@@ -23,6 +23,12 @@ Film scoring and sound design specialist for background music generation, couple
 
 The user needs to generate film scores, create background music, design audio beats synchronized with video editing, or produce music stems for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Music amplifies emotion without dictating it

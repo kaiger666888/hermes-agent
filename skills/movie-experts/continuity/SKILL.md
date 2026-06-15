@@ -23,6 +23,12 @@ Cross-shot consistency auditor for AI-generated films, ensuring character appear
 
 The user needs to verify visual consistency across shots, detect character face mismatches, audit color grading continuity, or validate style uniformity. Uses `hermes_llm_vision` for image comparison.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Consistency is the invisible backbone of cinematic immersion

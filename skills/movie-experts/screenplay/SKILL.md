@@ -23,6 +23,12 @@ Narrative structure specialist for scene-level script generation, dialogue desig
 
 The user needs to write a script, design dialogue, plan emotional arcs, generate scene structures, or create `script.json` for AI film production. Typically the first expert invoked after `style_genome`.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Cinematic storytelling within 60-180 second constraints

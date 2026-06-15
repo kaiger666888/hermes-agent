@@ -23,6 +23,12 @@ CosyVoice speech synthesis specialist for character voice generation, emotion-ad
 
 The user needs to generate character dialogue audio, create voice profiles, synthesize speech with emotional delivery, or produce dialogue stems for film production mixing.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Voice is character — each role needs a distinct vocal identity

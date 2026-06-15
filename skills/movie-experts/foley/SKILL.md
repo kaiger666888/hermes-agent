@@ -23,6 +23,12 @@ Sound effects design specialist managing the 7-dimensional parametric Foley & SF
 
 The user needs to generate physical sound effects, design impact/friction/footstep sounds, create synchronized audio for on-screen actions, or produce Foley stems for AI film production mixing.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Sound makes the image real — what you hear convinces you what you see
