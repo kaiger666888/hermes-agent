@@ -1,0 +1,148 @@
+expert_id: screenplay
+# Demo prompts for the screenplay expert eval harness.
+#
+# Three prompts chosen to exercise the screenplay expert's ref absorption
+# (per Phase 3 03-01-PLAN.md Task 2):
+#   sc-001 — basic: 90s 抖音-男频 revenge 短剧 S1E01 scene-by-scene script
+#            + emotion_curve with hooks/payoffs/cliffhangers. Tests Snyder
+#            beat application + McKee value-shift + emotion_curve schema
+#            extension (HOOK-09 closure).
+#   sc-002 — trap: ask for a 90s 短剧 scene with EXPLICITLY 0 value-shifts
+#            (a "filler" scene). A base model would comply; a refactored
+#            screenplay expert should REFUSE and explain McKee's rule
+#            (value-shift rate >= 1 per scene). Tests ref absorption vs
+#            training default.
+#   sc-003 — multi-episode: design S1E03 -> S1E05 arc where S1E03 sets up
+#            爽点 paid off in S1E05, with cross-episode setup_callback
+#            strings in emotion_curve.payoffs[]. Tests HOOK-09 schema
+#            extension + multi-episode callback.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 03-CONTEXT.md deferred section); they exist only to
+# prove the harness output shape on the screenplay expert and to exercise
+# the 3 canonical scenario shapes (basic / trap / multi-episode).
+#
+# File naming: runner.py resolves `--expert screenplay` to
+# `prompts/screenplay_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+# The `_demo` suffix is the harness contract, matching hook_retention_demo.yaml
+# and compliance_marketing_demo.yaml.
+prompts:
+  - id: sc-001
+    text: |
+      A 30-episode 抖音-男频 revenge 短剧 (protagonist was betrayed by his
+      business partner 5 years ago, left for dead, now returns to the city
+      under a new identity) is in pre-production. Each episode is ~90 seconds,
+      vertical 9:16, distributed on 抖音 with a 付费门槛 at episode 6. Design
+      the complete S1E01 script package:
+
+      (a) Apply the Snyder 15-beat model adapted to 90s 短剧 format. Give
+      the beat-by-beat time budget for the full 90 seconds — specifically
+      identify: Opening Image + Save the Cat (0-3s), Catalyst (~9s, range
+      6-12s), Debate (9-18s), Fun & Games (18-40s), Midpoint (~45s with
+      polarity reversal), Bad Guys Close In (45-67s), All Is Lost + Dark
+      Night of Soul (67-77s, double-bump rule), Finale (77-88s), Final
+      Image + 卡点 cliffhanger (88-90s).
+
+      (b) Design 3-5 scenes for the 90s episode. For EACH scene, decompose
+      into 3-5 beats (McKee beat decomposition) and identify at least 1
+      value-shift per scene (McKee value-shift rule). Name the specific
+      value-pair shifted (e.g., honor→shame, weak→strong, love→hate).
+
+      (c) Write the dialogue for the Catalyst scene (~9s) and the Finale
+      爽点 payoff scene (~75s). Apply subtext ratio >= 60% per line. Verify
+      the "as you know" CN anti-pattern 3-strike count is <= 2 per scene.
+      Dialogue density must be within 男频 revenge range (0.4-0.6 lines/sec).
+
+      (d) Generate the complete emotion_curve JSON with anchor-based sampling.
+      Populate the hooks[], payoffs[], and cliffhangers[] arrays per the
+      HOOK-09 contract schema. The cliffhanger at 88-90s must be tier 🟢
+      (must-watch-next) with payoff_callback referencing S1E02 opening.
+
+      Cross-reference references/save-the-cat-beat-sheet.md §短剧 Adaptation
+      + §Double-Bump Rule, references/mckee-scene-design.md §Value-Shift Rule
+      + §Beat Decomposition, references/emotion-curve-academic.md
+      §Anchor-Based Sampling Protocol, references/dialogue-craft.md
+      §Density Thresholds by Genre + §Subtext Ratio Rule.
+
+  - id: sc-002
+    text: |
+      A user requests a 90s 抖音 短剧 scene that is explicitly a "filler /
+      breathing room" scene with ZERO dramatic value-shifts. The user's
+      rationale: "Not every scene needs to be intense — viewers need a
+      break, so this scene will just show the protagonist walking through
+      a park, thinking about nothing in particular, with ambient music.
+      No conflict, no value change, just atmosphere."
+
+      This is a TRAP prompt. A base LLM without ref absorption would comply
+      and write the filler scene as requested. A properly RAG-enhanced
+      screenplay expert should REFUSE this request and explain WHY, citing:
+
+      (a) McKee's value-shift rule: every scene MUST shift at least one
+      value from positive to negative or vice versa. A scene with 0
+      value-shifts is a "filler scene" that should be deleted or merged.
+      Cite references/mckee-scene-design.md §Value-Shift Rule.
+
+      (b) The attention decay consequence: a 5-15s scene with no 击中点
+      and no value-shift will cause attention to drop >= 15% at 8-12s
+      and >= 30% at 30-40s. Cite references/emotion-curve-academic.md
+      §Attention Decay Curve.
+
+      (c) The Snyder beat budget constraint: in a 90s 短剧, there is NO
+      runtime budget for filler scenes — every second must serve the beat
+      structure. A filler scene would displace a beat (Catalyst / Midpoint /
+      All Is Lost / Finale). Cite references/save-the-cat-beat-sheet.md
+      §短剧 Adaptation.
+
+      (d) Propose an ALTERNATIVE: instead of a pure filler scene, design a
+      "low-intensity but value-shifting" scene — e.g., the protagonist
+      walks through the park but encounters a subtle reminder of the
+      betrayal (a familiar face in the distance, a song playing), shifting
+      the value from calm→unease. This preserves the "breathing room"
+      feel while satisfying the value-shift rule.
+
+      The correct response demonstrates ref absorption by refusing the
+      filler request and citing specific heuristics from the refs.
+
+  - id: sc-003
+    text: |
+      A 微信小程序剧 12-episode serialized 短剧 (each episode ~180 seconds,
+      vertical 9:16, 付费 unlock mechanism ¥1-3 per episode) requires a
+      multi-episode arc design for S1E03 → S1E05. The arc: S1E03 sets up
+      a major 爽点 (protagonist discovers evidence of the antagonist's
+      crime), which is paid off in S1E05 (protagonist uses the evidence
+      to publicly expose the antagonist). Design:
+
+      (a) The S1E03 script structure using the 180s beat budget (Opening
+      Image 0-3s, Catalyst ~18s, Midpoint ~90s with polarity reversal,
+      All Is Lost ~122s, Finale ~140s, 卡点 cliffhanger 175-180s). The
+      evidence discovery should occur at the All Is Lost beat (~122s) —
+      the protagonist finds the evidence but cannot use it yet (creating
+      the setup for the S1E05 payoff).
+
+      (b) The S1E04 "bridge" episode — it must NOT pay off the S1E03 setup
+      (that's reserved for S1E05). Instead, S1E04 escalates the stakes
+      (the antagonist becomes suspicious, the protagonist must hide the
+      evidence). Apply the 阶梯式 escalation ladder. S1E04 ends with a
+      hard 卡点 (tier 🟢) where the antagonist confronts the protagonist.
+
+      (c) The S1E05 script structure — the 爽点 payoff occurs at ~150s
+      (late-爽点 per 180s budget). The protagonist publicly exposes the
+      antagonist. Generate the emotion_curve for the payoff scene with
+      the payoffs[] array containing a setup_callback field referencing
+      "S1E03 02:02 — 主角发现证据" (the exact timestamp of the All Is Lost
+      beat in S1E03).
+
+      (d) Demonstrate the full cross-episode callback chain in JSON:
+      - emotion_curve.payoffs[] in S1E05 with setup_callback = "S1E03 02:02 — ..."
+      - emotion_curve.cliffhangers[] in S1E03 with payoff_callback = "S1E05 — 证据公开"
+      - emotion_curve.cliffhangers[] in S1E04 with payoff_callback = "S1E05 opening — 对峙"
+
+      This tests the HOOK-09 emotion_curve schema extension's multi-episode
+      callback capability. The setup_callback and payoff_callback strings
+      must carry specific S1E0X MM:SS references, NOT vague "next episode"
+      phrasing.
+
+      Cross-reference references/cn-shortdrama-structure.md §180s 短剧
+      Time Budget + §10-Episode Season Arc, references/save-the-cat-beat-sheet.md
+      §短剧 Adaptation, references/mckee-scene-design.md §Value-Shift Rule,
+      references/emotion-curve-academic.md §Anchor-Based Sampling Protocol.
