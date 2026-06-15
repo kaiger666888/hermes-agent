@@ -1,0 +1,161 @@
+expert_id: hook_retention
+# Demo prompts for the hook_retention expert eval harness.
+#
+# Five prompts chosen to exercise the HOOK expert's 5 per-platform
+# 爆款公式 branches (per CONTEXT decision D-5 — do NOT invent alternative
+# scenarios):
+#   hook-001 — 抖音-男频 revenge 短剧 hook + 卡点 design
+#   hook-002 — 抖音-女频 romance with 🟡 替身的爱 爆款 element (risk exercise)
+#   hook-003 — 快手-草根 slice-of-life with 转发 trigger design
+#   hook-004 — 小程序剧 multi-episode serialized 卡点 strategy
+#   hook-005 — 通用 fallback with 🟡 borderline-violence element (risk exercise)
+#
+# At least 2 of 5 prompts exercise 🟡 risk-level 爆款 elements (hook-002
+# 替身的爱 borderline §3 色情低俗; hook-005 冲突钩 borderline §2 暴力血腥),
+# exercising HOOK's compliance-aware 降级方案 design — cross-link Phase 1
+# compliance_marketing/references/viral-element-catalog.md risk badges.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 00-03-PLAN.md SC #3); they exist only to prove the
+# harness output shape on one real expert and to exercise the 5 canonical
+# scenario shapes documented in 02-CONTEXT.md decision D-5 + D-6.
+#
+# File naming: runner.py resolves `--expert hook_retention` to
+# `prompts/hook_retention_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+# The `_demo` suffix is the harness contract, matching animator_demo.yaml
+# and compliance_marketing_demo.yaml. The 02-03-PLAN.md `files_modified`
+# field lists `hook_retention.yaml` — that path is incorrect; the runner's
+# load_prompts() contract requires the `_demo` suffix or --expert fails
+# with "prompts file not found".
+prompts:
+  - id: hook-001
+    text: |
+      A 30-episode 抖音-男频 revenge 短剧 (protagonist returns to city after
+      being betrayed and left for dead 5 years ago) is in pre-production.
+      Each episode is ~90 seconds, vertical 9:16, will be distributed on
+      抖音 with a 付费门槛 at episode 6. Design the complete hook + 卡点
+      package:
+      (a) Design the 3-second opening hook for S1E01 — pick a type from
+      the 5-type taxonomy (情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩),
+      give frame-by-frame breakdown for 0-1s / 1-2s / 2-3s (attention-grab
+      / context-establish / hook-pin), and score with the 5-tier rubric
+      (🎯 bullseye / ✅ strong / ⚠️ weak / ❌ broken / 💀 anti-hook).
+      (b) Place 卡点 across the first 10 episodes — apply the 3-5 卡点 / 10
+      episode density rule, hard 卡点 at end of every paid episode (≥ 6),
+      optional soft 卡点 mid-episode at ~40-60% runtime; score each with
+      the 3-tier strength (🟢 / 🟡 / 🔴). Apply 1.5x pace rule (≤ 1.5s avg
+      shot length) and ≤3s dead-air rule.
+      (c) Output 钩子 + 卡点 markers per the JSON schema (type / timestamp
+      MM:SS / intensity 1-5 / setup_callback / payoff_callback). For the
+      爽点 that pays off the revenge setup, demonstrate multi-episode
+      callback: setup_callback referencing S1E03, payoff_callback
+      referencing S1E07.
+      Cross-reference references/three-second-hooks.md §Taxonomy +
+      §5-Tier Strength Scoring, references/paywall-design.md §付费卡点
+      Density Rules + §3-Tier Strength, references/conflict-escalation.md
+      §The 阶梯式 Escalation Ladder.
+
+  - id: hook-002
+    text: |
+      A 抖音-女频 romance 短剧 uses the 替身的爱 (substitute-bride) trope:
+      female lead is forced to marry in her absent sister's place; the
+      groom gradually falls for her true self. The trope is 🟡 risk-level
+      per Phase 1 compliance_marketing/references/viral-element-catalog.md
+      (情感钩 type entry — 替身 / 肢体接触 implied may risk §3 色情低俗).
+      Design:
+      (a) A softer emotional 3-second hook (avoid high-intensity 冲突钩;
+      pick 情感钩 or 悬念钩 from taxonomy). Frame-by-frame 0-1s/1-2s/2-3s.
+      (b) Cross-reference viral-element-catalog.md for the 替身的爱 entry's
+      risk badge and apply the 降级方案 that preserves ≥ 70% of the
+      original hook strength (per the strength-preservation heuristic).
+      (c) Place a mid-episode soft 卡点 at ~50% runtime and a hard 卡点
+      at episode 6 end (付费门槛); both must preserve ≥ 70% of the
+      original hook strength post-降级. Score each with 3-tier rubric.
+      (d) Output the 爽点 marker demonstrating the payoff (groom realizes
+      he loves the substitute, not the original sister). Use the JSON
+      schema with setup_callback referencing S1E02 and payoff_callback
+      referencing S1E05.
+      Apply 1.5x pace rule and ≤3s dead-air rule. Cross-reference
+      references/three-second-hooks.md §Taxonomy + §5-Tier Strength,
+      references/paywall-design.md §3-Tier Strength + §降级方案,
+      ../../compliance_marketing/references/viral-element-catalog.md
+      §情感钩 entries.
+
+  - id: hook-003
+    text: |
+      A 快手-草根 slice-of-life 短剧 (24 episodes, ~120 seconds each)
+      portrays a migrant construction worker's 3-year journey to reunite
+      with his daughter in their rural hometown. 快手 platform emphasizes
+      草根共鸣 (grassroots resonance) over polished 抖音-style hooks.
+      Design:
+      (a) A grassroots-aesthetic 3-second hook for S1E01 — avoid polished
+      抖音 visual style (no neon, no cinematic color grading); lean into
+      情感钩 from taxonomy. Frame-by-frame 0-1s/1-2s/2-3s.
+      (b) Target at least 2 of the 5 转发 trigger categories per episode
+      (情感共鸣 / 反转冲击 / 共识认同 / 视觉震撼 / 实用价值) — explicitly name
+      which 2 and justify why they fit 快手's grassroots audience.
+      (c) Place soft 卡点 appropriate to 快手 audience (less aggressive
+      paywall than 抖音 — 付费门槛 at episode 6-10 per platform-spec);
+      accept 🟡 curious-but-skippable strength for soft 卡点 (快手 audience
+      has lower paywall tolerance).
+      (d) Explain the pacing difference from 抖音-男频: slightly slower
+      cut density (1.5-2.5s avg shot vs 抖音's 1.5s hard rule) per
+      references/vertical-pacing.md §Multi-Platform Pacing Variation.
+      Output 1 钩子 marker + 1 爽点 marker per JSON schema.
+      Cross-reference ../../compliance_marketing/references/platform-specs-kuaishou.md
+      §内容红线 (avoid 炫富画面信号) + §爆款公式.
+
+  - id: hook-004
+    text: |
+      A 微信小程序剧 12-episode 拟人化动画 漫剧 (anthropomorphic animated
+      series, ~3-5 minutes per episode, total runtime ~36-60 minutes)
+      uses a long-episode serialized format with a 付费 unlock mechanism
+      (单集 ¥1-3). Design:
+      (a) A serialized 卡点 strategy across all 12 episodes — every paid
+      episode end (≥ episode 3-5 per platform-spec-miniprogram.md) must
+      have a 🟢 hard 卡点; density rule 3-5 卡点 / 10 episodes applies.
+      (b) Demonstrate multi-episode callback explicitly: one marker must
+      have setup_callback referencing "S1E03 02:15" (e.g., protagonist
+      discovers a letter) and payoff_callback referencing "S1E07" (e.g.,
+      letter's author revealed). Use the JSON marker schema exactly.
+      (c) Trigger the 备案 cross-reference: 小程序剧 has 双重 备案 (广电 +
+      微信小程序) per platform-specs-miniprogram.md — note this as a
+      compliance_marketing collaboration edge (do NOT replicate the 备案
+      numbers; cross-link only).
+      (d) Handle the longer 3-5 min per-episode format: explain why
+      multi-peak 阶梯式 escalation (rather than single-peak) fits
+      long-episode pacing, per references/conflict-escalation.md.
+      Apply 2-3s avg shot length (slower than 抖音 1.5s due to longer
+      episode format — see references/vertical-pacing.md §Multi-Platform
+      Pacing Variation). Output 1 钩子 + 1 爽点 + 2 卡点 markers.
+
+  - id: hook-005
+    text: |
+      An unknown-platform 短剧 (platform not yet decided; will go through
+      通用 fallback 爆款公式 branch) depicts a borderline-violence
+      confrontation: the protagonist corners the antagonist in a warehouse,
+      there is a raised voice and a shove, a gun is visible on a table
+      but no blood or injury is shown. The 冲突钩 is intentionally intense
+      to drive episode-3 cliffhanger. 🟡 risk-level per Phase 1
+      compliance_marketing/references/viral-element-catalog.md 冲突钩 type
+      entry (may risk §2 暴力血腥 if intensity pushed higher). Design:
+      (a) Apply the 通用 fallback 爆款公式 branch (线性上升 + 阶梯式 1.5-2s
+      pace + 付费门槛 at episode 5-7) — do NOT specialize to a specific
+      platform since platform is unknown.
+      (b) Design a 3-second hook that activates the 反转冲击 转发 trigger
+      WITHOUT showing explicit violence — pick 反差钩 or 悬念钩 from
+      taxonomy (NOT 冲突钩 to avoid §2 暴力血辛 borderline). Frame-by-frame.
+      (c) Cross-reference viral-element-catalog.md 冲突钩 entry for the
+      risk badge + 降级方案 — apply the 降级方案 that preserves ≥ 70% of
+      original hook strength (e.g., 冲突钩 → 对峙 + 镜头切换 rather than
+      physical 肢体冲突).
+      (d) Place a hard 卡点 at episode 3 end (intended cliffhanger) that
+      preserves emotional stakes (the confrontation setup) without 红线
+      violation. Score with 3-tier rubric (target 🟢).
+      (e) Verify the compliance_marketing collaboration edge: the expert
+      MUST flag the 🟡 冲突钩 element for compliance_marketing review
+      (output a note in the marker JSON's setup_callback field, e.g.,
+      "FLAG-FOR-REVIEW: 冲突钩 🟡 per viral-element-catalog.md —
+      compliance_marketing 复审 required").
+      Apply 1.5x pace rule and ≤3s dead-air rule. Output 1 钩子 + 1 卡点
+      markers per JSON schema.

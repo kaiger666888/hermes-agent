@@ -13,7 +13,7 @@ metadata:
     related_skills:
       - screenplay
       - editor
-      - hook_retention  # Phase 2 — pending (directory does not yet exist; edge documented at line 183)
+      - hook_retention  # Phase 2 — bidirectional edge closed (HOOK now lists compliance_marketing)
       - style_genome
       - drawer
     expert_id: compliance_marketing
