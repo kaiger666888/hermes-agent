@@ -101,7 +101,7 @@ verified_date: 2026-06
 
 **具体示例:** 一个 90s 抖音男频 战神归来 短剧,按 1.5x 规则应至少 60 cuts。若实际只有 40 cuts(平均 2.25s/cut),完播率会显著低于同类型爆款。
 
-### ≤3s Dead Air Rule
+### 3-Second Dead Air Rule
 
 **规则:** 竖屏短剧中,不允许出现超过 **3 秒** 的"死寂镜头"(silent / static stretch)—— 即无对白、无动作、无 BGM 推进的纯静态镜头。
 
