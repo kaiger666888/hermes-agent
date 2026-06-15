@@ -41,7 +41,7 @@ verified_date: 2026-06
 **契约稳定性承诺(COMPLI → HOOK)**:
 
 - 矩阵 4 列(付费门槛 / 红线差异 / 备案触发 / 推荐时长)结构在 v1 内冻结;新增列(例如「AIGC 标识要求」「算法陷阱」)采用 **additive-only** 政策,不重命名 / 不删除现有列。
-- 列重命名 / 列删除需在 Phase 2 与 HOOK 团队同步后方可进行(威胁模型 T-01-09 缓解)。
+- 列重命名 / 列删除需在 Phase 2 与 HOOK 团队同步后方可进行(威胁模型 T-01-09 缓解:跨阶段 contract 漂移可能破坏下游 HOOK 消费者 —— 详见本文件 §Stable Contract for Phase 2 HOOK 节的 additive-only 政策)。
 - 数值更新(例如 抖音 分账比例从 30% 调整为 35%)在季度 Refresh Cadence 中统一更新,会同步通知 HOOK。
 
 ## Refresh Cadence
