@@ -1,0 +1,207 @@
+"""Pytest coverage for the MT-Bench position-swap LLM-as-judge harness.
+
+RED phase of TDD: these tests import the not-yet-implemented ``runner``
+module and therefore fail at collection time until Task 2 lands the
+implementation.
+
+The harness implements MT-Bench-style position-swap evaluation:
+  1. The judge sees two answers in BOTH orderings (A,B) and (B,A).
+  2. If the two orderings disagree, the final verdict is "tie"
+     (position-bias mitigation per EVAL-03 / CONTEXT.md decisions).
+  3. Judge temperature is hard-pinned at 0.0 (EVAL-03).
+
+The tests below use a ``MockJudgeClient`` that returns canned decisions
+keyed on the swap flag — NO real OpenRouter / OpenAI API calls are made
+in unit tests.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+# Module under test — must be importable as a top-level path.
+_EVAL_DIR = Path(__file__).resolve().parent.parent
+if str(_EVAL_DIR) not in sys.path:
+    sys.path.insert(0, str(_EVAL_DIR))
+
+import runner  # noqa: E402  — intended; RED until runner.py exists
+
+
+# --------------------------------------------------------------------------- #
+# Mock judge client
+# --------------------------------------------------------------------------- #
+
+
+class MockJudgeClient:
+    """Duck-typed stand-in for an OpenAI client.
+
+    ``decisions`` is a mapping from ``swap`` (bool) -> decision string
+    ("A" / "B" / "tie"). The mock records the swap flag seen in the
+    last call so tests can introspect ordering.
+
+    If ``decisions`` is missing a key, returns "tie" (safe default).
+    """
+
+    def __init__(self, decisions: dict[bool, str] | None = None) -> None:
+        self.decisions = decisions or {}
+        self.last_swap: bool | None = None
+        self.calls: list[dict] = []
+
+    def chat_completions_create(self, **kwargs: object) -> dict:
+        swap = bool(kwargs.get("extra_body", {}).get("swap", False))
+        self.last_swap = swap
+        self.calls.append(kwargs)
+        decision = self.decisions.get(swap, "tie")
+        return {
+            "choices": [
+                {"message": {"content": f"<decision>{decision}</decision>"}}
+            ]
+        }
+
+
+# --------------------------------------------------------------------------- #
+# Tests
+# --------------------------------------------------------------------------- #
+
+
+class TestParseJudgeDecision:
+    def test_extracts_tag_A(self) -> None:
+        assert runner.parse_judge_decision("...reasoning... <decision>A</decision>") == "A"
+
+    def test_extracts_tag_B(self) -> None:
+        assert runner.parse_judge_decision("blah <decision>B</decision> end") == "B"
+
+    def test_extracts_tag_tie(self) -> None:
+        assert runner.parse_judge_decision("<decision>tie</decision>") == "tie"
+
+    def test_case_insensitive_tag_value(self) -> None:
+        assert runner.parse_judge_decision("<decision>a</decision>") == "A"
+        assert runner.parse_judge_decision("<decision>TIE</decision>") == "tie"
+
+    def test_no_tag_defaults_to_tie(self) -> None:
+        # T-00-11 mitigation: malformed judge output fails safe.
+        assert runner.parse_judge_decision("the judge rambled with no tag") == "tie"
+
+
+class TestPositionSwap:
+    def test_runs_both_orderings_and_disagreement_resolves_to_tie(self) -> None:
+        # Judge says "A" when A is first (swap=False), "B" when B is first (swap=True).
+        # This is classic position bias — disagreement -> tie.
+        judge = MockJudgeClient(decisions={False: "A", True: "B"})
+        verdict = runner.run_position_swap(
+            prompt="design a camera move",
+            answer_a="answer A text",
+            answer_b="answer B text",
+            judge_client=judge,
+            judge_model="qwen/qwen3-235b-a22b:free",
+            prompt_id="p-001",
+        )
+        assert verdict["ordering_ab"] == "A"
+        assert verdict["ordering_ba"] == "B"
+        assert verdict["final"] == "tie"
+
+    def test_consistent_verdicts_yield_winner(self) -> None:
+        # Judge says "A" in both orderings — A wins decisively.
+        judge = MockJudgeClient(decisions={False: "A", True: "A"})
+        verdict = runner.run_position_swap(
+            prompt="design a camera move",
+            answer_a="better answer",
+            answer_b="weaker answer",
+            judge_client=judge,
+            judge_model="qwen/qwen3-235b-a22b:free",
+            prompt_id="p-002",
+        )
+        assert verdict["final"] == "A_wins"
+
+    def test_b_consistent_wins(self) -> None:
+        judge = MockJudgeClient(decisions={False: "B", True: "B"})
+        verdict = runner.run_position_swap(
+            prompt="x",
+            answer_a="a",
+            answer_b="b",
+            judge_client=judge,
+            judge_model="m",
+            prompt_id="p-003",
+        )
+        assert verdict["final"] == "B_wins"
+
+
+class TestRunAblation:
+    def test_pairwise_over_3_conditions(self) -> None:
+        # EVAL-04: runner must accept N>=2 conditions with pairwise comparison.
+        # 3 conditions => C(3,2) = 3 pairs. 2 prompts => 3 * 2 = 6 verdicts.
+        # Each verdict internally runs 2 orderings => 12 judge calls total.
+        conditions = {
+            "old": ["old-ans-p1", "old-ans-p2"],
+            "new_no_refs": ["new-nr-p1", "new-nr-p2"],
+            "new_with_refs": ["new-wr-p1", "new-wr-p2"],
+        }
+        prompts = [
+            {"id": "p1", "text": "prompt 1"},
+            {"id": "p2", "text": "prompt 2"},
+        ]
+        judge = MockJudgeClient(decisions={False: "A", True: "A"})
+        verdicts = runner.run_ablation(
+            conditions=conditions,
+            prompts=prompts,
+            judge_client=judge,
+            judge_model="qwen/qwen3-235b-a22b:free",
+        )
+        # 3 pairs * 2 prompts = 6 verdicts
+        assert len(verdicts) == 6
+        # Each verdict has the required fields
+        for v in verdicts:
+            assert {"prompt_id", "pair", "ordering_ab", "ordering_ba", "final"} <= set(v.keys())
+        # All pairs covered
+        pairs = {tuple(v["pair"]) for v in verdicts}
+        assert pairs == {
+            ("new_no_refs", "new_with_refs"),
+            ("new_no_refs", "old"),
+            ("new_with_refs", "old"),
+        }
+
+
+class TestFormatResults:
+    def test_returns_json_and_markdown(self) -> None:
+        # After a mock run, format_results returns a JSON-serializable dict
+        # and a Markdown table with columns: prompt_id, pair, winner, judge.
+        verdicts = [
+            {
+                "prompt_id": "p1",
+                "pair": ["baseline", "candidate"],
+                "ordering_ab": "A",
+                "ordering_ba": "A",
+                "final": "A_wins",
+                "judge": "qwen",
+            }
+        ]
+        json_out, md_out = runner.format_results(verdicts, judge_label="qwen")
+        assert json_out["total_comparisons"] == 1
+        assert json_out["verdicts"] == verdicts
+        # Markdown table has the required header row
+        assert "| prompt_id |" in md_out
+        assert "| pair |" in md_out
+        assert "| winner |" in md_out
+        assert "| judge |" in md_out
+
+
+class TestJudgeTemperature:
+    def test_build_judge_messages_marks_swap_flag(self) -> None:
+        # build_judge_messages must emit OpenAI chat format and tag swap.
+        msgs = runner.build_judge_messages(
+            prompt="x", answer_a="a", answer_b="b", swap=False
+        )
+        assert isinstance(msgs, list)
+        assert all(isinstance(m, dict) and "role" in m and "content" in m for m in msgs)
+
+    def test_build_judge_kwargs_pins_temperature_zero(self) -> None:
+        # EVAL-03 hard-pin: judge temperature MUST be 0.0 in every code path.
+        kwargs = runner.build_judge_kwargs(
+            messages=[{"role": "user", "content": "x"}],
+            model="qwen/qwen3-235b-a22b:free",
+        )
+        assert kwargs["temperature"] == 0.0
+        # No other temperature key anywhere
+        assert "temperature" in kwargs
