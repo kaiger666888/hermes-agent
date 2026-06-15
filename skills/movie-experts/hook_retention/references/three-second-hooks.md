@@ -266,7 +266,7 @@ verified_date: 2026-06
 | 反差钩 | 反差钩 | **完全重叠** —— 两份 catalog 定义一致。 |
 | 情绪爆点钩 | (无直接匹配) | **HOOK-only**。COMPLI 最近的是"题材钩"(因为情绪爆点常依托特定题材的强情绪预设,如战神归来的男频慕强爆点),但 HOOK 强调"单帧/单句直接击穿"的设计技巧,而非"题材本身的猎奇性"。下游 agent 评估合规风险时,将情绪爆点钩映射到题材钩的风险徽章。 |
 
-> **重要:** 本 ref **不复制** 🟢/🟡/🔴 风险徽章。任何 HOOK 钩子设计在投入生产前,必须跨链到 [`../../compliance_marketing/references/viral-element-catalog.md`](../../compliance_marketing/references/viral-element-catalog.md) 查阅对应 COMPLI 类型的风险等级与降级方案。这避免了徽章信息在两份 ref 间漂移(Phase 1 [CR-01](../../../..//.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训:单一真相源原则)。
+> **重要:** 本 ref **不复制** 🟢/🟡/🔴 风险徽章。任何 HOOK 钩子设计在投入生产前,必须跨链到 [`../../compliance_marketing/references/viral-element-catalog.md`](../../compliance_marketing/references/viral-element-catalog.md) 查阅对应 COMPLI 类型的风险等级与降级方案。这避免了徽章信息在两份 ref 间漂移(Phase 1 [CR-01](../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训:单一真相源原则)。
 
 ---
 
