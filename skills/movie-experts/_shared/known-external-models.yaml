@@ -40,6 +40,9 @@ models:
   - name: elevenlabs
     provenance: "ElevenLabs TTS — listed in research SUMMARY as production TTS option for voice cloning / character consistency."
 
+  - name: flux
+    provenance: "Black Forest Labs FLUX family shorthand (covers FLUX 1.x and FLUX 2). Hermes default is FLUX 2 (Klein 9B / Pro) via plugins/image_gen/fal. Bare 'flux' token is a legitimate family reference in skill prose; specific version goes in references/*.md (Phase 5)."
+
   - name: flux2
     provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal. Accessed via fal plugin; 'flux2' is a context-only shorthand."
 
@@ -90,6 +93,15 @@ models:
 
   - name: stable_audio_open
     provenance: "Stable Audio Open 1.0 — underscore variant; same model as `stable_audio` entry above."
+
+  - name: synthesis_model
+    provenance: "Generic suffix token for audio synthesis model field name in skill prose (e.g., foley/SKILL.md 'synthesis_model:' parameter). Real models referenced by name (AudioLDM-2, AudioGen, stable_audio); the field-name token itself is legitimate."
+
+  - name: audioldm-2
+    provenance: "AudioLDM-2 — real research-era text-to-audio model (research SUMMARY flags as superseded by Stable Audio Open). Legacy reference in foley/SKILL.md; Phase 5 will rewrite recommendation to stable_audio."
+
+  - name: audiogen
+    provenance: "AudioGen (Meta AudioCraft) — real text-to-audio model. Listed as fallback in foley/SKILL.md; legitimate model name (though Stable Audio Open is preferred default)."
 
   - name: veo
     provenance: "Google Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY)."
