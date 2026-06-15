@@ -67,10 +67,27 @@ metadata:
 
 本专家产出以下 JSON 工件(供下游分发 / 备案 工具消费):
 
-- `compliance_review.json` — 红线扫描结果 + 风险徽章 + 降级方案 清单
+- `compliance_review.json` — 红线扫描结果 + 风险徽章 + 降级方案 清单(schema 见下方,所有 8 个 §N 键必须存在,缺失任一 = 自动 fail,支撑 `compliance_coverage` metric)
 - `aigc_labeling.json` — 三件套标识规格(显式 / 隐式 / 文本披露)
 - `filing_decision.json` — 备案 触发判定 + 所需材料清单(广电 + 平台 双重)
 - `distribution_cuts.json` — 多平台 cut 差异化(每平台一条 entry,含推荐时长 / 付费门槛 / 备案号 展示位)
+
+**`compliance_review.json` schema(支撑 `compliance_coverage` metric 的机械可检结构):**
+
+```json
+{
+  "§1 政治敏感":      { "verdict": "🟢|🟡|🔴", "evidence": ["..."], "降级方案": "..." },
+  "§2 暴力血腥":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§3 色情低俗":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§4 未成年人保护":   { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§5 民族宗教":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§6 歧视侮辱":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§7 虚假宣传":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." },
+  "§8 版权侵权":      { "verdict": "...",       "evidence": [...],  "降级方案": "..." }
+}
+```
+
+8 个 §N 键必须全部存在(`compliance_coverage = 已检 §N 键数 / 8`);缺失任一 §N 键 = 自动 fail,不计入通过。`verdict` 取值:🟢 安全 / 🟡 上下文相关(需 降级方案)/ 🔴 一律拒。
 
 ## Key Parameters
 
@@ -174,7 +191,7 @@ tags="expert:compliance_marketing,domain:platform-specs-<platform>"
 
 | Metric | Target |
 |--------|--------|
-| `compliance_coverage` | ≥ 8/8 红线 categories 每集检查(不可跳过任一类) |
+| `compliance_coverage` | `compliance_review.json` 必须包含全部 8 个 §N 键(§1..§8),缺失任一 = 自动 fail(`coverage = 已检 §N 键数 / 8`,目标 ≥ 8/8) |
 | `labeling_completeness` | 3/3 AIGC 标识层应用(显式 + 隐式 metadata + 文本披露 台词) |
 | `risk_detection_recall` | ≥ 95% 的 🟡 + 🔴 元素被标记(漏报率 < 5%) |
 | `platform_fit` | 分发前 0 个未解决的 平台专属 红线 violation |
