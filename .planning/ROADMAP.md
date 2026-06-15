@@ -84,8 +84,14 @@ Plans:
   3. 3 eval prompts per expert (12 total) runnable through `_eval/runner.py`
   4. Ablation comparison produced per expert (old-no-refs vs new-no-refs vs new-with-refs)
   5. Post-refactor eval comparison vs Phase 0 baseline produced for all 4 experts
-**Plans:** TBD
-**Constraint:** ≤ 2 experts in flight at once (GLM cap). Sequential screenplay → editor → colorist → style_genome preferred.
+**Plans:** 0/5 plans complete
+Plans:
+- [ ] 03-01-PLAN.md — screenplay RAG (5 refs + SKILL.md refactor incl. emotion_curve hooks/payoffs/cliffhangers extension + 3 eval prompts)
+- [ ] 03-02-PLAN.md — editor RAG (5 refs + SKILL.md refactor + 3 eval prompts)
+- [ ] 03-03-PLAN.md — colorist RAG (5 refs + SKILL.md refactor incl. 28-combination table sourcing + 3 eval prompts)
+- [ ] 03-04-PLAN.md — style_genome RAG (5 refs incl. expanded 30-50 director archive + SKILL.md refactor + 3 eval prompts)
+- [ ] 03-05-PLAN.md — Ablation eval (3-condition × 4-expert dry-run) + GO/NO-GO report (formal gate decision deferred to Phase 4 per ROADMAP)
+**Constraint:** ≤ 2 experts in flight at once (GLM cap). Wave structure: Wave 1 = screenplay+editor (parallel); Wave 2 = colorist+style_genome (parallel); Wave 3 = ablation+GO/NO-GO (solo).
 
 ### Phase 4: EXPERT-CINE (Camera Language)
 **Goal:** Build the cinematographer expert end-to-end so the suite has a unified 镜头语言 expression layer integrating with scene_builder (feasibility), animator (execution), and editor (180° axis compliance).
@@ -134,7 +140,7 @@ Plans:
 | 0. AUDIT + Eval Skeleton | 5/4 | Complete    | 2026-06-15 |
 | 1. EXPERT-COMPLI | 4/3 | Complete    | 2026-06-15 |
 | 2. EXPERT-HOOK | 4/3 | Complete    | 2026-06-15 |
-| 3. Top-4 Existing Experts RAG | 0/? | Not started | - |
+| 3. Top-4 Existing Experts RAG | 0/5 | Not started | - |
 | 4. EXPERT-CINE | 0/? | Not started | - |
 | 5. Remaining 10 + EXPERT-PROD (v1.5) | 0/? | Not started | - |
 | 6. Full Eval + Bilingual + README | 0/? | Not started | - |
