@@ -238,3 +238,53 @@ class TestStubJudgeClient:
         b = runner._StubJudgeClient()
         assert a.chat is not b.chat
         assert a.chat.completions is not b.chat.completions
+
+
+class TestMainFailFast:
+    """WR-03 + WR-04: main() fails loud rather than silently degrading."""
+
+    def _write_minimal_config(self, tmp_path: Path) -> Path:
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            "judge:\n"
+            "  models:\n"
+            "    - qwen/qwen3-235b-a22b:free\n"
+            "conditions:\n"
+            "  - baseline\n"
+            "  - candidate\n",
+            encoding="utf-8",
+        )
+        return config_path
+
+    def test_main_rejects_live_mode_without_dry_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # WR-03: main() invoked without --dry-run must exit 2 with an
+        # error, NOT silently fall through to stub answers and write a
+        # report that looks like a real eval run.
+        config_path = self._write_minimal_config(tmp_path)
+        # Need a prompts file for the expert resolution step.
+        prompts_dir = Path(runner.__file__).resolve().parent / "prompts"
+        # animator_demo.yaml ships with the repo — guaranteed to exist.
+        rc = runner.main(
+            [
+                "--config",
+                str(config_path),
+                "--expert",
+                "animator",
+                # NO --dry-run
+            ]
+        )
+        assert rc == 2, (
+            f"main() without --dry-run must return 2 (WR-03), got {rc}"
+        )
+
+    def test_make_judge_client_raises_on_missing_api_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # WR-04: when OPENROUTER_API_KEY is unset/empty, make_judge_client
+        # must raise RuntimeError (fail-fast), NOT silently construct an
+        # OpenAI client with api_key="".
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+            runner.make_judge_client({})

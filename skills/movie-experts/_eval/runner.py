@@ -403,6 +403,12 @@ def make_judge_client(config: dict[str, Any]) -> Any:
     Reads ``OPENROUTER_API_KEY`` from the environment. Never logs the
     key (T-00-09). The key is passed directly to the OpenAI client
     constructor and not retained on this object.
+
+    WR-04: Fail-fast. A missing key is a configuration error, not a
+    runtime warning — the subsequent ``chat.completions.create`` call
+    would fail with an opaque 401 deep in the OpenAI SDK after the
+    harness has already enumerated conditions and started the ablation
+    loop. Better to surface the error at construction time.
     """
     from openai import OpenAI
 
@@ -415,10 +421,10 @@ def make_judge_client(config: dict[str, Any]) -> Any:
     )
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
-        # Do NOT print the key. Surface a redacted hint.
-        logger.warning(
-            "OPENROUTER_API_KEY is not set; judge calls will fail. "
-            "Set it in ~/.hermes/.env or your shell."
+        # Fail-fast (WR-04). Do NOT log the key value anywhere.
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is not set. Set it in ~/.hermes/.env "
+            "or your shell, or use --dry-run."
         )
     return OpenAI(base_url=base_url, api_key=api_key)
 
@@ -565,25 +571,23 @@ def main(argv: list[str] | None = None) -> int:
         logger.error("config must declare >=2 conditions for ablation")
         return 2
 
-    # Pick judge client.
+    # Pick judge client + generate per-condition answers in ONE branch.
+    # WR-03: live mode is NOT implemented in Phase 0 — fail fast BEFORE
+    # constructing any OpenAI client or burning any setup work. The
+    # previous flow silently fell through to _stub_answers in live mode
+    # and wrote a report file that looked real but contained
+    # stub-vs-stub verdicts ("garbage in, gospel out" failure mode).
     if args.dry_run:
         judge_client: Any = _StubJudgeClient()
         logger.info("dry-run: using stub judge client (no API calls)")
-    else:
-        judge_client = make_judge_client(config)
-
-    # Generate per-condition answers. In dry-run, use stubs. In live
-    # mode, the operator is expected to pre-populate these (Phase 0
-    # skeleton: live mode is out of scope; Phase 6 wires real generation).
-    if args.dry_run:
         conditions_map = _stub_answers(prompts, conditions_labels)
     else:
-        # Phase 0 live mode: we still need answers. For the skeleton we
-        # use stubs here too but make real judge calls — the judge call
-        # is the expensive part and that's what OPENROUTER_API_KEY gates.
-        # If the operator wants fully live answers, Phase 6 will replace
-        # this branch with actual test-model invocation.
-        conditions_map = _stub_answers(prompts, conditions_labels)
+        logger.error(
+            "Live answer generation is not implemented in Phase 0. "
+            "Use --dry-run, or pre-populate answers via a future "
+            "--answers flag."
+        )
+        return 2
 
     # Run ablation.
     verdicts = run_ablation(
