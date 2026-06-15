@@ -1,7 +1,7 @@
 ---
 name: mixer
-description: "Mixer Expert: multi-track mixing, dialogue ducking, frequency management, and mastering for cinematic soundscape."
-version: 1.0.0
+description: "Mixer Expert: multi-track mixing per Senior *Mixing Secrets*, dialogue ducking, EQ carving, LUFS-compliant mastering for cinematic soundscape."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, mixing, mastering, ducking, lufs, frequency, audio-balance, stems]
+    tags: [movie, mixing, mastering, ducking, lufs, frequency, audio-balance, stems, senior-mixing-secrets]
     related_skills: [voicer, composer, foley, spatial_audio, editor, continuity]
     expert_id: mixer
     metrics: [level_compliance, frequency_masking_score, dialogue_intelligibility, dynamic_range_appropriateness]
@@ -17,17 +17,36 @@ metadata:
 
 # Mixer Expert (混音专家)
 
-Multi-track audio mixing and mastering specialist for level balancing, frequency management, dialogue ducking, and final master processing that ensures all audio stems coexist as a unified cinematic soundscape.
+Multi-track audio mixing and mastering specialist using Senior *Mixing Secrets* heuristics for level balancing, frequency management, dialogue ducking, and LUFS-compliant final master processing per ITU-R BS.1770-4. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-04.
 
 ## When to use this skill
 
-The user needs to mix multiple audio stems, balance dialogue/music/effects levels, apply ducking, manage frequency conflicts, master the final audio, or produce the finished soundtrack for AI film production.
+The user needs to mix multiple audio stems, balance dialogue/music/effects levels, apply ducking, manage frequency conflicts, master the final audio to platform-compliant LUFS, or produce the finished soundtrack for AI film production.
 
 ## References
 
+本专家所有 mixing 与 LUFS compliance 阈值由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-04):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/mixing-secrets-small-studio.md`](./references/mixing-secrets-small-studio.md) | 设计 mix 或 dialogue ducking 前 | Per-platform LUFS targets(抖音/快手/小程序剧/视频号/TikTok/YouTube/Spotify/Apple/cinema)+ dialogue ducking 4 参数 + 5 大频段职责分配 + EQ carve protocol + mastering chain 4 步 |
+| [`references/lufs-standards.md`](./references/lufs-standards.md) | 验证 LUFS compliance 或 ffmpeg loudnorm 前 | ITU-R BS.1770-4 measurement spec(Integrated/Short-term/Momentary)+ K-weighting filter + ffmpeg two-pass loudnorm 命令 + per-platform compliance check protocol + 自动化 ebur128 verification |
+
+## Knowledge Retrieval
+
+在执行任何 mix / master / LUFS compliance check 前,按以下顺序检索上下文(2 个检索主题):
+
+- **Per-platform LUFS + dialogue ducking + EQ carve + mastering chain** —— 详见 [`references/mixing-secrets-small-studio.md`](./references/mixing-secrets-small-studio.md)
+- **ITU-R BS.1770-4 spec + ffmpeg loudnorm + ebur128 verification** —— 详见 [`references/lufs-standards.md`](./references/lufs-standards.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:mixer,domain:mixing-secrets-small-studio"
+tags="expert:mixer,domain:lufs-standards"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
