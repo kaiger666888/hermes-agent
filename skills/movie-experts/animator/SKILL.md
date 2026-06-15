@@ -1,7 +1,7 @@
 ---
 name: animator
-description: "Animator Expert: current video generation models with cinematic camera motion, temporal consistency, and dynamic quality."
-version: 1.0.0
+description: "Animator Expert: 2026 Hermes-catalog video gen models (veo3.1 / kling-v3-4k / pixverse-v6 / ltx-2.3 / seedance-2.0) with cinematic camera motion, temporal consistency, and dynamic quality."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, video, animation, video-gen, camera-motion, temporal-consistency]
+    tags: [movie, video, animation, video-gen, camera-motion, temporal-consistency, veo, kling, ltx, pixverse]
     related_skills: [drawer, scene_builder, editor, performer, colorist, continuity, cinematographer, production]
     expert_id: animator
     metrics: [motion_smoothness, motion_complexity, temporal_consistency]
@@ -17,7 +17,7 @@ metadata:
 
 # Animator Expert (视频专家)
 
-Current video generation model specialist for cinematic camera motion design, temporal consistency enforcement, and dynamic quality in AI-generated video clips.
+2026 Hermes-catalog video gen model specialist for cinematic camera motion design, temporal consistency enforcement, and dynamic quality in AI-generated video clips. **Phase 5 v1.5 RAG uplift:** Wan family phantom references (wan2 / wan22 / wan22_video) replaced with Hermes-catalog models per Phase 0 GAP-REPORT.
 
 ## When to use this skill
 
@@ -25,9 +25,28 @@ The user needs to generate video clips from still frames, design camera movement
 
 ## References
 
+本专家所有 video gen model 选择与 temporal consistency 阈值由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-10):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/video-gen-model-matrix.md`](./references/video-gen-model-matrix.md) | 选择 video gen model 或替换 Wan family phantom 前 | Hermes 6-model catalog(veo3.1 / kling-v3-4k / pixverse-v6 / ltx-2.3 / seedance-2.0 / happy-horse)+ per-scene complexity → model 选择 + Wan family phantom 替换 + 短剧 9:16 vertical generation 协议 + multi-clip concatenation |
+| [`references/temporal-consistency.md`](./references/temporal-consistency.md) | 验证跨 frame / 跨 clip 一致性 前 | CLIP-T + LPIPS + Face embedding + Object IoU 4 层 metric 阈值 + per-clip metric 抽样 + character ID drift detection + temporal flicker mitigation + object permanence 协议 |
+
+## Knowledge Retrieval
+
+在生成任何 video clip / motion metadata / temporal consistency report 输出前,按以下顺序检索上下文(2 个检索主题):
+
+- **Hermes video gen 6-model matrix + per-scene 选择 + Wan family phantom 替换 + multi-clip concatenation** —— 详见 [`references/video-gen-model-matrix.md`](./references/video-gen-model-matrix.md)
+- **CLIP-T + LPIPS + Face embedding + Object IoU 4 层 temporal consistency 验证 + flicker mitigation** —— 详见 [`references/temporal-consistency.md`](./references/temporal-consistency.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:animator,domain:video-gen-model-matrix"
+tags="expert:animator,domain:temporal-consistency"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
