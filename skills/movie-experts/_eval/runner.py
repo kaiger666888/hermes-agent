@@ -437,32 +437,43 @@ class _StubJudgeClient:
     produces ``final="tie"`` for every comparison — exactly what we
     want to demonstrate the position-swap output shape without burning
     real API quota.
+
+    Contract: ``chat.completions.create`` is a ``@staticmethod`` that
+    matches the OpenAI SDK's call signature (``client.chat.completions.
+    create(model=..., messages=..., ...)``). Each instance owns its own
+    ``_Chat`` / ``_Completions`` objects so two stub instances do not
+    share call state.
     """
 
-    class _chat:
+    def __init__(self) -> None:
+        # Per-instance chat object — two _StubJudgeClient instances do
+        # not share state (WR-02). ``_Completions.create`` remains a
+        # @staticmethod to match the OpenAI SDK's invocation contract
+        # (``judge_client.chat.completions.create(**kwargs)``).
+        self.chat = self._Chat()
+
+    class _Chat:
+        def __init__(self) -> None:
+            self.completions = _StubJudgeClient._Completions()
+
+    class _Completions:
         @staticmethod
-        class _completions:
-            @staticmethod
-            def create(**kwargs: Any) -> dict:
-                swap = bool(kwargs.get("extra_body", {}).get("swap", False))
-                decision = "B" if swap else "A"
-                return {
-                    "choices": [
-                        {
-                            "message": {
-                                "content": (
-                                    f"<reasoning>stub decision for "
-                                    f"swap={swap}</reasoning>\n"
-                                    f"<decision>{decision}</decision>"
-                                )
-                            }
+        def create(**kwargs: Any) -> dict:
+            swap = bool(kwargs.get("extra_body", {}).get("swap", False))
+            decision = "B" if swap else "A"
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                f"<reasoning>stub decision for "
+                                f"swap={swap}</reasoning>\n"
+                                f"<decision>{decision}</decision>"
+                            )
                         }
-                    ]
-                }
-
-        completions = _completions()
-
-    chat = _chat()
+                    }
+                ]
+            }
 
 
 def _stub_answers(prompts: list[dict[str, str]], conditions: list[str]) -> dict[str, list[str]]:

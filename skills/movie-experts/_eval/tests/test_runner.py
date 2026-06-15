@@ -205,3 +205,36 @@ class TestJudgeTemperature:
         assert kwargs["temperature"] == 0.0
         # No other temperature key anywhere
         assert "temperature" in kwargs
+
+
+class TestStubJudgeClient:
+    def test_stub_returns_position_bias_pattern(self) -> None:
+        # The stub's whole purpose is to demonstrate the classic
+        # position-bias pattern: A wins in AB ordering, B wins in BA
+        # ordering, collapsing to a "tie" final verdict.
+        stub = runner._StubJudgeClient()
+        resp_a = stub.chat.completions.create(
+            model="m",
+            temperature=0.0,
+            messages=[],
+            extra_body={"swap": False},
+        )
+        assert "<decision>A</decision>" in resp_a["choices"][0]["message"]["content"]
+        resp_b = stub.chat.completions.create(
+            model="m",
+            temperature=0.0,
+            messages=[],
+            extra_body={"swap": True},
+        )
+        assert "<decision>B</decision>" in resp_b["choices"][0]["message"]["content"]
+
+    def test_stub_judge_client_instances_independent(self) -> None:
+        # WR-02: two _StubJudgeClient instances must not share call
+        # state. Each instance's ``chat`` / ``chat.completions`` are
+        # independent objects so a future refactor that adds instance
+        # state (e.g. a call counter) does not silently leak across
+        # instances.
+        a = runner._StubJudgeClient()
+        b = runner._StubJudgeClient()
+        assert a.chat is not b.chat
+        assert a.chat.completions is not b.chat.completions
