@@ -25,9 +25,28 @@ The user needs to generate physical sound effects, design impact/friction/footst
 
 ## References
 
+本专家所有 SFX 生成与分类阈值由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-03):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/stable-audio-open.md`](./references/stable-audio-open.md) | 生成任何 SFX 前(替换 phantom AudioLDM-2)| Stable Audio Open 1.0 generation 参数 + 与 AudioLDM-2 对比(phantom 替换)+ 7D parametric sound design(Material / Action / Force / Environment / Distance / Layering / Emotional intent)+ 7D → Stable Audio prompt 编译公式 |
+| [`references/sound-effect-taxonomy.md`](./references/sound-effect-taxonomy.md) | 选择 SFX 类别或设计 scene-level SFX 协议前 | BBC 21-category SFX taxonomy + 短剧 高频使用统计 + per-platform SFX divergence + 3 类必备 SFX per scene 协议 + 卡点 SFX 设计 + 3-5 层 Layering 协议 + SFX library 累积策略 |
+
+## Knowledge Retrieval
+
+在生成任何 foley_stems / SFX / sync_map 输出前,按以下顺序检索上下文(2 个检索主题):
+
+- **Stable Audio Open 1.0 workflow + 7D parametric design + prompt 编译** —— 详见 [`references/stable-audio-open.md`](./references/stable-audio-open.md)
+- **BBC 21-category SFX taxonomy + 短剧 SFX 高频用法 + per-platform divergence + Layering 协议** —— 详见 [`references/sound-effect-taxonomy.md`](./references/sound-effect-taxonomy.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:foley,domain:stable-audio-open"
+tags="expert:foley,domain:sound-effect-taxonomy"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
@@ -51,9 +70,9 @@ The user needs to generate physical sound effects, design impact/friction/footst
 ## Key Parameters
 
 ### Sound Generation
-- **synthesis_model**: AudioLDM-2 (primary), AudioGen (fallback)
+- **synthesis_model**: Stable Audio Open 1.0 (primary, 2026-06 Hermes default), AudioGen (fallback) — per [`references/stable-audio-open.md`](./references/stable-audio-open.md) §Stable Audio Open 1.0 能力矩阵(phantom AudioLDM-2 已替换)
 - **guidance_scale**: 4.0-7.0 (higher = more precise)
-- **duration_max**: 2.0s per effect (concatenate for longer)
+- **duration_max**: 47s per generation (typical SFX ≤5s; per Stable Audio Open 1.0 spec)
 - **sample_rate**: 48000 Hz (production), 32000 Hz (preview)
 - **bit_depth**: 24-bit
 
@@ -84,7 +103,7 @@ The user needs to generate physical sound effects, design impact/friction/footst
 - **impact_sync**: visual contact point ±40ms
 
 ### GPU Budget
-- AudioLDM-2: ~5GB | 2s audio in 5-10s GPU time | Total: <= 6GB
+- Stable Audio Open 1.0: ~6GB | 5s audio in 5-10s GPU time | Total: <= 6GB
 
 ## 7D Parametric Matrix
 
@@ -123,7 +142,7 @@ The user needs to generate physical sound effects, design impact/friction/footst
 1. **Action Audit** — Frame-by-frame scan of all physical interactions in video
 2. **Material Identification** — Determine interaction materials from visual + scene_builder annotations
 3. **7D Encoding** — Generate Material x Action x Force x Duration x Resonance x Pitch x Texture per effect
-4. **Sound Synthesis** — Generate each independent stem via AudioLDM-2
+4. **Sound Synthesis** — Generate each independent stem via Stable Audio Open 1.0 (per [`references/stable-audio-open.md`](./references/stable-audio-open.md))
 5. **Force Calibration** — Adjust loudness to match performer's force parameters
 6. **Time Alignment** — Position effects precisely to video frames (±40ms)
 7. **Frequency Check** — Confirm no dialogue band conflict, EQ if needed
