@@ -186,6 +186,38 @@ class TestFormatResults:
         assert "| winner |" in md_out
         assert "| judge |" in md_out
 
+    def test_format_results_escapes_pipes(self) -> None:
+        # WR-09: any ``|`` in an interpolated value must be escaped to
+        # ``\\|`` so the Markdown table column count is preserved. Real
+        # risk: OpenRouter model slugs like ``qwen/qwen3-235b:free|preview``
+        # or a condition label containing a pipe.
+        verdicts = [
+            {
+                "prompt_id": "p|1",  # pipe in prompt_id
+                "pair": ["base|line", "candidate"],  # pipe in pair label
+                "ordering_ab": "A",
+                "ordering_ba": "A",
+                "final": "A_wins",
+                "judge": "qwen|preview",  # pipe in judge slug
+            }
+        ]
+        _, md_out = runner.format_results(verdicts)
+        # Header has exactly 4 columns; each data row must also have
+        # exactly 4 cells. Count unescaped pipes in the data row —
+        # there should be exactly 5 (the 4 column delimiters plus the
+        # trailing one), NOT more.
+        data_row = md_out.strip().splitlines()[-1]
+        # Unescaped pipe count: split on ``|`` but exclude ``\|``.
+        # Easier assertion: the row, after removing escaped ``\|``,
+        # should contain exactly 5 ``|`` characters (leading, 3 inner,
+        # trailing).
+        cleaned = data_row.replace("\\|", "")
+        assert cleaned.count("|") == 5, (
+            f"column count drift after escaping; cleaned row: {cleaned!r}"
+        )
+        # And the escaped forms are actually present.
+        assert "\\|" in data_row
+
 
 class TestJudgeTemperature:
     def test_build_judge_messages_marks_swap_flag(self) -> None:
