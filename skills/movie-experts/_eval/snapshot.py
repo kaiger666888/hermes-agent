@@ -192,6 +192,29 @@ def capture_baselines(
             f"missing SKILL.md for experts: {', '.join(missing)}"
         )
 
+    # CR-02: Symmetric check — detect live expert subdirectories under
+    # skills_dir that are NOT in EXPERT_DIRS. Without this, a contributor
+    # who adds ``skills/movie-experts/cinematographer/SKILL.md`` without
+    # extending EXPERT_DIRS would silently get their baseline skipped,
+    # and Phase 3/5/6 ablation comparisons would compare against a
+    # stale/absent baseline for that expert. Fail loud so the operator
+    # must extend EXPERT_DIRS explicitly.
+    live_experts = {
+        p.name
+        for p in skills_dir.iterdir()
+        if p.is_dir()
+        and (p / "SKILL.md").is_file()
+        and not p.name.startswith("_")
+    }
+    known = set(EXPERT_DIRS)
+    untracked = live_experts - known
+    if untracked:
+        raise RuntimeError(
+            f"Untracked expert directories found: {sorted(untracked)}. "
+            f"Add them to EXPERT_DIRS in snapshot.py before capturing, "
+            f"or prefix with '_' if they are not movie-expert skills."
+        )
+
     created: list[Path] = []
     for expert_id in EXPERT_DIRS:
         source = skills_dir / expert_id / "SKILL.md"

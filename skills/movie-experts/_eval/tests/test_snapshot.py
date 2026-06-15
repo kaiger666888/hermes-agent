@@ -153,6 +153,46 @@ class TestCaptureBaselines:
                 f"byte drift in {expert_id}"
             )
 
+    def test_capture_fails_on_untracked_expert_dir(self, tmp_path: Path) -> None:
+        """CR-02: a live expert dir NOT in EXPERT_DIRS raises RuntimeError.
+
+        Without this guard, a contributor who adds
+        ``skills/movie-experts/<new>/SKILL.md`` without extending
+        EXPERT_DIRS would silently have their baseline skipped, then
+        verify_baselines would silently pass — masking the drift in
+        Phase 3/5/6 ablation comparisons.
+        """
+        skills_dir, _ = _build_synthetic_skills_tree(tmp_path)
+        baseline_dir = tmp_path / "baseline"
+
+        # Add an untracked expert dir (not in EXPERT_DIRS).
+        extra = skills_dir / "cinematographer"
+        extra.mkdir(parents=True, exist_ok=True)
+        (extra / "SKILL.md").write_text(
+            "---\nname: cinematographer\n---\n# Cinematographer\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(RuntimeError, match="Untracked expert"):
+            capture_baselines(skills_dir, baseline_dir, git_sha="x")
+
+    def test_capture_ignores_underscore_prefixed_dirs(self, tmp_path: Path) -> None:
+        """CR-02: dirs prefixed with '_' (e.g. ``_eval``, ``_shared``) are
+        NOT treated as untracked experts — they are infrastructure.
+        """
+        skills_dir, _ = _build_synthetic_skills_tree(tmp_path)
+        baseline_dir = tmp_path / "baseline"
+
+        # _eval already exists in the synthetic tree, but add _shared too.
+        (skills_dir / "_shared").mkdir(parents=True, exist_ok=True)
+        (skills_dir / "_shared" / "SKILL.md").write_text(
+            "# shared infra — not an expert\n", encoding="utf-8"
+        )
+
+        # Must NOT raise — underscore-prefixed dirs are not experts.
+        created = capture_baselines(skills_dir, baseline_dir, git_sha="x")
+        assert len(created) == 14
+
 
 class TestVerifyBaselines:
     def test_returns_clean_when_unchanged(self, tmp_path: Path) -> None:
