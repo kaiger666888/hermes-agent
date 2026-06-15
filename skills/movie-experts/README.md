@@ -2,47 +2,42 @@
 
 **Project:** RAG-augmented movie-expert skill suite for AI 短剧 / 微电影 production.
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Status:** v1 complete (17 experts: 14 original + 3 new — COMPLI / HOOK / CINE). v1.5 will add production expert (PROD) → 18 total.
+**Status:** v1.5 complete — 18 experts (14 original + 4 new — COMPLI / HOOK / CINE / PROD). All RAG-aware.
 **Last updated:** 2026-06-15
 
 ---
 
 ## Suite Overview
 
-17 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from style definition through final mix. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges.
+18 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from style definition through final mix. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges. Total ref corpus: 58 files (~1.2MB cited fair-use content).
 
-### 14 Original Experts (Phase 0 baselined; 4 deep-refactored in Phase 3)
+### 14 Original Experts (Phase 0 baselined; 4 deep-refactored Phase 3, 10 light-uplifted Phase 5)
 
-| Expert | Chinese Name | Role |
-|--------|--------------|------|
-| [`style_genome`](./style_genome/SKILL.md) | 风格基因专家 | 5D director/genre style encoding + blend protocol + cross-module alignment (root expert) |
-| [`screenplay`](./screenplay/SKILL.md) | 剧本专家 | Scene-level script + dialogue + emotion_curve design (HOOK-09 marker schema integrated) |
-| [`scene_builder`](./scene_builder/SKILL.md) | 三维场景建构专家 | FxSxA scene matrix + 3D previsualization + camera blocking |
-| [`performer`](./performer/SKILL.md) | 表演专家 | Performance-4D matrix (ExBxSxP) for character action + emotion design |
-| [`drawer`](./drawer/SKILL.md) | 绘图专家 | FLUX/LoRA parameter optimization for cinematic visual quality |
-| [`animator`](./animator/SKILL.md) | 视频专家 | Current video gen model cinematic camera motion + temporal consistency |
-| [`colorist`](./colorist/SKILL.md) | 色彩专家 | CxSxZ 28-combination color intent + LUT design (Phase 3 deep-refactored) |
-| [`editor`](./editor/SKILL.md) | 剪辑专家 | FxRxT editing matrix + Murch Rule of Six + 180° axis compliance (Phase 3 deep-refactored) |
-| [`composer`](./composer/SKILL.md) | 配乐专家 | BGM generation + sound effect design + music-video beat sync |
-| [`foley`](./foley/SKILL.md) | 拟音专家 | 7D parametric sound effects (Material × Action × Force) |
-| [`spatial_audio`](./spatial_audio/SKILL.md) | 空间音频专家 | 6D spatial encoding + immersive 3D sound field |
-| [`mixer`](./mixer/SKILL.md) | 混音专家 | Multi-track mixing + dialogue ducking + mastering |
-| [`voicer`](./voicer/SKILL.md) | 配音专家 | CosyVoice speech synthesis + emotion-adaptive delivery |
-| [`continuity`](./continuity/SKILL.md) | 连续性专家 | Cross-shot consistency auditing (character / environment / color / style) |
+| Expert | Chinese Name | Role | Refs |
+|--------|--------------|------|------|
+| [`style_genome`](./style_genome/SKILL.md) | 风格基因专家 | 5D director/genre style encoding + blend protocol + cross-module alignment (root expert) | 5 (Phase 3 deep) |
+| [`screenplay`](./screenplay/SKILL.md) | 剧本专家 | Scene-level script + dialogue + emotion_curve design (HOOK-09 marker schema integrated) | 5 (Phase 3 deep) |
+| [`scene_builder`](./scene_builder/SKILL.md) | 三维场景建构专家 | FxSxA scene matrix + Blender 4.x previz + Pallasmaa space-as-character doctrine | 2 (Phase 5 light) |
+| [`performer`](./performer/SKILL.md) | 表演专家 | ExBxSxP matrix + Stanislavski + Laban Effort + Meisner truth-of-moment | 2 (Phase 5 light) |
+| [`drawer`](./drawer/SKILL.md) | 绘图专家 | FLUX 2 Klein 9B + LoRA + IP-Adapter + InstantID character consistency | 2 (Phase 5 light) |
+| [`animator`](./animator/SKILL.md) | 视频专家 | Hermes-catalog video gen (veo3.1 / kling-v3-4k / pixverse-v6 / ltx-2.3 / seedance-2.0) + temporal consistency | 2 (Phase 5 light) |
+| [`colorist`](./colorist/SKILL.md) | 色彩专家 | CxSxZ 28-combination color intent + LUT design + Bellantoni color psychology | 5 (Phase 3 deep) |
+| [`editor`](./editor/SKILL.md) | 剪辑专家 | FxRxT editing matrix + Murch Rule of Six + 180° axis compliance | 5 (Phase 3 deep) |
+| [`composer`](./composer/SKILL.md) | 配乐专家 | MusicGen-Large 4 mode + Chion audio-vision 5 modes + emotion_curve sync | 2 (Phase 5 light) |
+| [`foley`](./foley/SKILL.md) | 拟音专家 | Stable Audio Open 1.0 (replaces phantom AudioLDM-2) + 7D parametric + BBC 21-cat taxonomy | 2 (Phase 5 light) |
+| [`spatial_audio`](./spatial_audio/SKILL.md) | 空间音频专家 | Dolby Atmos Bed+Objects + 6D encoding + HRTF binaural + 5 immersive patterns | 2 (Phase 5 light) |
+| [`mixer`](./mixer/SKILL.md) | 混音专家 | Senior Mixing Secrets + LUFS per-platform + dialogue ducking + EQ carving | 2 (Phase 5 light) |
+| [`voicer`](./voicer/SKILL.md) | 配音专家 | Multi-provider TTS (MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS, replaces phantom CosyVoice) + speaker embedding | 2 (Phase 5 light) |
+| [`continuity`](./continuity/SKILL.md) | 连续性专家 | 4-dimension cross-shot audit (face/wardrobe/color/object) + eyeline match + 180° axis | 2 (Phase 5 light) |
 
-### 3 New Experts (Phase 1-4)
+### 4 New Experts (Phase 1-5)
 
-| Expert | Chinese Name | Role | Phase Built |
-|--------|--------------|------|-------------|
-| [`compliance_marketing`](./compliance_marketing/SKILL.md) | 合规与宣发专家 | CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review | Phase 1 |
-| [`hook_retention`](./hook_retention/SKILL.md) | 钩子与留存专家 | 3-second hook design + 付费卡点 placement + per-platform 爆款公式 + 钩子/爽点/卡点 marker schema | Phase 2 |
-| [`cinematographer`](./cinematographer/SKILL.md) | 镜头专家 | Shot intent layer (shot scale + composition + axis + camera move) with vertical 9:16 framing + 2026 video gen model prompt-token mapping | Phase 4 |
-
-### Phase 5 (v1.5) — DEFERRED
-
-| Expert | Chinese Name | Role |
-|--------|--------------|------|
-| `production` (planned) | 制作管理专家 | AI-relevant subset: casting LoRA / wardrobe / lighting intent / GPU budget / asset reuse (NOT live-action crews) |
+| Expert | Chinese Name | Role | Phase Built | Refs |
+|--------|--------------|------|-------------|------|
+| [`compliance_marketing`](./compliance_marketing/SKILL.md) | 合规与宣发专家 | CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review | Phase 1 | 5 |
+| [`hook_retention`](./hook_retention/SKILL.md) | 钩子与留存专家 | 3-second hook design + 付费卡点 placement + per-platform 爆款公式 + 钩子/爽点/卡点 marker schema | Phase 2 | 4 |
+| [`cinematographer`](./cinematographer/SKILL.md) | 镜头专家 | Shot intent layer (shot scale + composition + axis + camera move) + vertical 9:16 framing + 2026 video gen model prompt-token mapping | Phase 4 | 4 |
+| [`production`](./production/SKILL.md) | 制作管理专家 | AI-relevant subset: character LoRA spec / per-scene wardrobe / lighting intent / GPU budget / asset reuse (NOT live-action per PROD-07) | Phase 5 | 5 |
 
 ---
 
@@ -190,7 +185,7 @@ The Phase 6 live run is the statistically defensible evaluation. To execute:
 
 5. **Execute per expert:**
    ```bash
-   for EXP in screenplay editor colorist style_genome cinematographer compliance_marketing hook_retention; do
+   for EXP in screenplay editor colorist style_genome cinematographer compliance_marketing hook_retention production; do
      python3 _eval/runner.py \
          --config _eval/config.yaml \
          --expert "$EXP" \
@@ -229,23 +224,24 @@ Manual review performed Phase 6:
 ```text
 skills/movie-experts/
 ├── README.md                                    (this file)
-├── animator/           SKILL.md + (refs pending v1.5)
-├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md
-├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md
-├── compliance_marketing/ SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md
-├── composer/           SKILL.md + (refs pending v1.5)
-├── continuity/         SKILL.md + (refs pending v1.5)
-├── drawer/             SKILL.md + (refs pending v1.5)
-├── editor/             SKILL.md + references/{murch,classical,montage,fxrxt,cn-cutting}.md + LICENSE.md
-├── foley/              SKILL.md + (refs pending v1.5)
-├── hook_retention/     SKILL.md + references/{three-second-hooks,conflict-escalation,paywall-design,vertical-pacing}.md + LICENSE.md
-├── mixer/              SKILL.md + (refs pending v1.5)
-├── performer/          SKILL.md + (refs pending v1.5)
-├── scene_builder/      SKILL.md + (refs pending v1.5)
-├── screenplay/         SKILL.md + references/{save-the-cat,mckee,cn-shortdrama,emotion-curve-academic,dialogue-craft}.md + LICENSE.md
-├── spatial_audio/      SKILL.md + (refs pending v1.5)
-├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis}.md + LICENSE.md
-├── voicer/             SKILL.md + (refs pending v1.5)
+├── animator/           SKILL.md + references/{video-gen-model-matrix,temporal-consistency}.md + LICENSE.md (Phase 5)
+├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md (Phase 4)
+├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md (Phase 3 deep)
+├── compliance_marketing/ SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
+├── composer/           SKILL.md + references/{musicgen-workflow,chion-audio-vision}.md + LICENSE.md (Phase 5)
+├── continuity/         SKILL.md + references/{cross-shot-auditing,eyeline-match-protocol}.md + LICENSE.md (Phase 5)
+├── drawer/             SKILL.md + references/{flux2-parameter-surface,character-consistency-lora}.md + LICENSE.md (Phase 5)
+├── editor/             SKILL.md + references/{murch,classical,montage,fxrxt,cn-cutting}.md + LICENSE.md (Phase 3 deep)
+├── foley/              SKILL.md + references/{stable-audio-open,sound-effect-taxonomy}.md + LICENSE.md (Phase 5)
+├── hook_retention/     SKILL.md + references/{three-second-hooks,conflict-escalation,paywall-design,vertical-pacing}.md + LICENSE.md (Phase 2)
+├── mixer/              SKILL.md + references/{mixing-secrets-small-studio,lufs-standards}.md + LICENSE.md (Phase 5)
+├── performer/          SKILL.md + references/{stanislavski-prepares,meisner-truth}.md + LICENSE.md (Phase 5)
+├── production/         SKILL.md + references/{casting-lora-spec,wardrobe-per-scene,lighting-intent-layer,gpu-render-budget,asset-reuse-plan}.md + LICENSE.md (Phase 5)
+├── scene_builder/      SKILL.md + references/{blender-previz-workflow,architectural-storytelling}.md + LICENSE.md (Phase 5)
+├── screenplay/         SKILL.md + references/{save-the-cat,mckee,cn-shortdrama,emotion-curve-academic,dialogue-craft}.md + LICENSE.md (Phase 3 deep)
+├── spatial_audio/      SKILL.md + references/{dolby-atmos-workflow,immersive-sound-design}.md + LICENSE.md (Phase 5)
+├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis}.md + LICENSE.md (Phase 3 deep)
+├── voicer/             SKILL.md + references/{cn-tts-model-matrix,character-voice-consistency}.md + LICENSE.md (Phase 5)
 ├── _eval/
 │   ├── runner.py                                 (MT-Bench position-swap harness)
 │   ├── config.yaml.example                       (3-condition ablation template)
@@ -257,6 +253,7 @@ skills/movie-experts/
 │   │   ├── compliance_marketing_demo.yaml
 │   │   ├── editor_demo.yaml
 │   │   ├── hook_retention_demo.yaml
+│   │   ├── production_demo.yaml
 │   │   ├── screenplay_demo.yaml
 │   │   └── style_genome_demo.yaml
 │   ├── baseline/                                 (Phase 0 pre-refactor snapshots × 14)
@@ -274,8 +271,8 @@ skills/movie-experts/
 ## Project Planning Artifacts
 
 - [`.planning/PROJECT.md`](../../.planning/PROJECT.md) — project context + core value + constraints
-- [`.planning/REQUIREMENTS.md`](../../.planning/REQUIREMENTS.md) — 46 v1 requirements (FOUND ×9, COMPLI ×9, HOOK ×9, REFACTOR ×8, CINE ×9, EVAL ×9, DOC ×4)
-- [`.planning/ROADMAP.md`](../../.planning/ROADMAP.md) — 7-phase build order (Phases 0-4 + 6 = v1, Phase 5 = v1.5)
+- [`.planning/REQUIREMENTS.md`](../../.planning/REQUIREMENTS.md) — 62 v1.5 requirements (FOUND ×9, COMPLI ×9, HOOK ×9, REFACTOR ×8, REFACTOR-rest ×10, CINE ×9, PROD ×7, EVAL ×9, DOC ×4)
+- [`.planning/ROADMAP.md`](../../.planning/ROADMAP.md) — 7-phase build order (all phases 0-6 complete)
 - [`.planning/STATE.md`](../../.planning/STATE.md) — current execution state
 
 ---
@@ -290,8 +287,11 @@ If you build on this suite, please cite:
 - Phase 0 audit + eval skeleton: PROJECT.md §Core Value
 - Phase 3 deep refactor approach: 03-CONTEXT.md §Decisions
 - Phase 4 cinematographer: 04-CONTEXT.md §Phase Boundary
+- Phase 5 production + RAG uplift: 05-CONTEXT.md §Phase Boundary
 
 ---
 
-*Movie-Experts Suite v2 — built 2026-06-15 across 4 phases + this Phase 6 documentation pass.*
-*v1 = 17 experts (14 refactored-or-baselined + 3 new). v1.5 adds production → 18.*
+*Movie-Experts Suite v2 — built 2026-06-15 across 7 phases (0-6).*
+*v1.5 = 18 experts (14 original + 4 new), all RAG-aware, all phantom refs stripped.*
+*Total ref corpus: 58 files (~1.2MB cited fair-use content).*
+*Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
