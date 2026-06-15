@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, editing, rhythm, transition, montage, axis-rule, cut]
-    related_skills: [screenplay, animator, composer, voicer, continuity, mixer]
+    related_skills: [screenplay, animator, composer, voicer, continuity, mixer, compliance_marketing]
     expert_id: editor
     metrics: [rhythm_accuracy, continuity_match, axis_violation_count, transition_smoothness]
 ---
