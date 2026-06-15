@@ -346,6 +346,10 @@ def format_results(
 
     Markdown: pipe table with header
     ``| prompt_id | pair | winner | judge |``.
+
+    WR-09: all interpolated values are pipe-escaped via :func:`_md_escape`
+    so a model slug like ``qwen/qwen3-235b:free|preview`` or a condition
+    label containing ``|`` cannot break the table column count.
     """
     json_out = {
         "total_comparisons": len(verdicts),
@@ -362,10 +366,22 @@ def format_results(
         # Use the verdict's judge if present, else the override label.
         judge = v.get("judge", judge_label)
         lines.append(
-            f"| {v.get('prompt_id', '')} | {pair_str} | {winner} | {judge} |"
+            f"| {_md_escape(v.get('prompt_id', ''))} | "
+            f"{_md_escape(pair_str)} | {_md_escape(winner)} | "
+            f"{_md_escape(judge)} |"
         )
     md_out = "\n".join(lines) + "\n"
     return json_out, md_out
+
+
+def _md_escape(s: object) -> str:
+    """Escape pipe characters for safe interpolation into a Markdown table.
+
+    Markdown table cells are delimited by ``|``; any literal ``|`` in
+    the interpolated value would prematurely close the cell and shift
+    the column count. The fix is to backslash-escape every ``|``.
+    """
+    return str(s).replace("|", "\\|")
 
 
 # --------------------------------------------------------------------------- #
