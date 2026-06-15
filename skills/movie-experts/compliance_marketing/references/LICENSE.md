@@ -3,7 +3,7 @@
 **Source:** 网信办 / 广电总局 / 市场监管总局 公开法规、通知、办法
 **Copyright:** Public Regulations — Fair Use (compliance documentation)
 **Last-verified:** 2026-06-15
-**verified_date:** 2026-06
+verified_date: 2026-06
 
 ## Purpose
 
