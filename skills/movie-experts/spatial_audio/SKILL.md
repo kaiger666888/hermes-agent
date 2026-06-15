@@ -1,7 +1,7 @@
 ---
 name: spatial_audio
-description: "Spatial Audio Expert: 6D spatial encoding, reality anchoring, distance transitions, immersive 3D sound field design."
-version: 1.0.0
+description: "Spatial Audio Expert: Dolby Atmos workflow + 6D spatial encoding + HRTF binaural rendering + 5 immersive sound patterns for cinematic 3D sound field design."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,7 +9,7 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, spatial-audio, 3d-sound, ambience, reverb, immersive, dolby-atmos]
+    tags: [movie, spatial-audio, 3d-sound, ambience, reverb, immersive, dolby-atmos, hrtf, binaural]
     related_skills: [scene_builder, foley, voicer, composer, mixer, editor, continuity]
     expert_id: spatial_audio
     metrics: [spatial_coherence, reality_anchor_stability, distance_transition_smoothness, vacuum_detection_pass]
@@ -17,17 +17,36 @@ metadata:
 
 # Spatial Audio Expert (空间音效专家)
 
-Spatial acoustics and design sound specialist for 6-dimensional spatial encoding, reality anchoring, distance-based transitions, and immersive sound field design that gives AI-generated films convincing acoustic depth and spatial presence.
+Spatial acoustics and design sound specialist using Dolby Atmos bed+objects architecture, 6D spatial encoding, HRTF binaural rendering, and 5 immersive sound patterns for cinematic 3D sound field design. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-01.
 
 ## When to use this skill
 
-The user needs to design 3D sound fields, place audio sources in space, create environmental ambience, model room acoustics, detect acoustic voids, or generate spatial audio data for AI film production.
+The user needs to design 3D sound fields, place audio sources in space, create environmental ambience, model room acoustics, detect acoustic voids, encode Dolby Atmos objects, render binaural audio for headphones, or generate spatial audio data for AI film production.
 
 ## References
 
+本专家所有 Atmos workflow 与 spatial encoding 由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-01):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/dolby-atmos-workflow.md`](./references/dolby-atmos-workflow.md) | 设计 Atmos mix 或 6D object 前 | Dolby Atmos Bed + Objects 2 层架构 + Object metadata 7 fields + 6D encoding protocol(Position X/Y/Z + Size + Orientation + Motion)+ motion trajectory 协议 + 短剧 简化 Atmos + per-platform spatial audio 支持 |
+| [`references/immersive-sound-design.md`](./references/immersive-sound-design.md) | 设计 immersive sound field 或 binaural mix 前 | HRTF 4 因子(ITD / ILD / spectral shaping / reverberation)+ HRTF 个性化 vs 通用 + binaural rendering pipeline + binaural vs stereo for 短剧 + 5 种 spatial sound pattern + per-genre 推荐 |
+
+## Knowledge Retrieval
+
+在设计任何 spatial mix / 6D object / binaural rendering 前,按以下顺序检索上下文(2 个检索主题):
+
+- **Dolby Atmos Bed + Objects + 6D encoding + 短剧 简化 + per-platform 支持** —— 详见 [`references/dolby-atmos-workflow.md`](./references/dolby-atmos-workflow.md)
+- **HRTF + binaural + 5 spatial sound pattern + per-genre 推荐** —— 详见 [`references/immersive-sound-design.md`](./references/immersive-sound-design.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:spatial_audio,domain:dolby-atmos-workflow"
+tags="expert:spatial_audio,domain:immersive-sound-design"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
