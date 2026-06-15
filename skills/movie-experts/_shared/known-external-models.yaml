@@ -17,6 +17,15 @@
 #   - `flux_1_nsfw` / `flux_1_euler_a` etc. — superseded by FLUX 2 in Hermes,
 #     the v1 samplers should be flagged so the AUDIT phase can clean them up.
 #
+# Phase 5 v1.5 update (2026-06-15):
+#   - Production expert + 10 existing experts RAG-uplifted with refs that
+#     reference these models by name. Allowlist expanded accordingly.
+#   - Phantom strip completed: AudioLDM-2 → Stable Audio Open 1.0;
+#     CosyVoice hard-code → multi-provider Hermes catalog; euler_a/dpmpp_2m
+#     (FLUX 1.x) → FLUX 2 params; wan2/wan22/wan22_video → Hermes-catalog
+#     video gen models. Remaining text references are documentation of the
+#     phantom strip process (intentional, not phantom use).
+#
 # Format
 # ------
 # - Keep entries lowercase — the scanner normalizes both file content and
@@ -32,19 +41,19 @@
 
 models:
   - name: cosyvoice
-    provenance: "Alibaba CosyVoice 3.0 — SOTA CN emotional TTS; external (user-deployed, not a Hermes plugin). Documented in voicer/references/cosyvoice-deployment.md per research SUMMARY."
+    provenance: "Alibaba CosyVoice 3.0 — SOTA CN emotional TTS; external (NOT in Hermes catalog per Phase 0 GAP-REPORT + research SUMMARY). Phase 5 phantom strip: replaced with Hermes-catalog MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS. Residual SKILL.md mentions are documentation of the strip, not active use."
 
   - name: deepseek
     provenance: "DeepSeek LLM family — referenced as open-weight judge candidate in research SUMMARY (open-weight vs commercial panel discussion)."
 
   - name: elevenlabs
-    provenance: "ElevenLabs TTS — listed in research SUMMARY as production TTS option for voice cloning / character consistency."
+    provenance: "ElevenLabs Multilingual v2 TTS — Hermes-catalog TTS provider per Phase 5 voicer/cn-tts-model-matrix.md; emotional prosody + voice cloning for main characters."
 
   - name: flux
-    provenance: "Black Forest Labs FLUX family shorthand (covers FLUX 1.x and FLUX 2). Hermes default is FLUX 2 (Klein 9B / Pro) via plugins/image_gen/fal. Bare 'flux' token is a legitimate family reference in skill prose; specific version goes in references/*.md (Phase 5)."
+    provenance: "Black Forest Labs FLUX family shorthand. Hermes default is FLUX 2 (Klein 9B / Pro) via plugins/image_gen/fal. Bare 'flux' token is a legitimate family reference in skill prose."
 
   - name: flux2
-    provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal. Accessed via fal plugin; 'flux2' is a context-only shorthand."
+    provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal (line 372). 'flux2' is a context-only shorthand."
 
   - name: flux_2
     provenance: "Black Forest Labs FLUX 2 — underscore variant of the shorthand above. Used in skill prose; resolved via fal plugin."
@@ -61,50 +70,80 @@ models:
   - name: grok-imagine
     provenance: "xAI grok-imagine (image + video) — accessed via plugins/image_gen/xai and plugins/video_gen/xai."
 
+  - name: happy-horse
+    provenance: "happy-horse open-weight video gen — Hermes-catalog video gen model (cheap tier per animator/video-gen-model-matrix.md)."
+
+  - name: instantid
+    provenance: "InstantID (Wang et al. 2024) — face identity preservation method for character consistency per drawer/character-consistency-lora.md. Open research, not a Hermes plugin."
+
+  - name: ip-adapter
+    provenance: "IP-Adapter (Ye et al. 2023) — Image Prompt Adapter for character consistency per drawer/character-consistency-lora.md. Open research, not a Hermes plugin."
+
   - name: kling
-    provenance: "Kuaishou Kling v3 (incl. kling-v3-4k) — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY)."
+    provenance: "Kuaishou Kling v3 (incl. kling-v3-4k, kling 1.6 Pro/Standard) — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Bilingual prompt support."
+
+  - name: ltx
+    provenance: "Lightricks LTX Video 2.3 — Hermes-catalog video gen model (cheap tier per animator/video-gen-model-matrix.md). Open weight."
 
   - name: minimax
-    provenance: "MiniMax LLM + TTS — research SUMMARY lists MiniMax TTS as strong CN + emotion-control option; also a judge candidate."
+    provenance: "MiniMax T2A-01 TTS — Hermes-catalog CN TTS provider per Phase 5 voicer/cn-tts-model-matrix.md. CN 母语级 + emotional control, recommended for 短剧 main characters."
 
   - name: musicgen
-    provenance: "Meta MusicGen-large — open-source music generation default per research SUMMARY (composer/SKILL.md)."
+    provenance: "Meta MusicGen-large — open-source music generation default per research SUMMARY (composer/SKILL.md). 4 modes incl. melody conditioning."
 
   - name: nano-banana
     provenance: "Google Nano Banana Pro — accessed via plugins/image_gen/fal."
 
+  - name: neuttts
+    provenance: "NeuTTS — Hermes-catalog CN TTS provider per Phase 5 voicer/cn-tts-model-matrix.md. CN 本土 TTS, niche model."
+
   - name: pixverse
-    provenance: "Pixverse v6 — accessed via plugins/video_gen/fal. Cheap-tier option per research SUMMARY."
+    provenance: "Pixverse v6 — accessed via plugins/video_gen/fal. Cheap-tier option per research SUMMARY + Phase 5 animator/video-gen-model-matrix.md."
 
   - name: qwen
-    provenance: "Alibaba Qwen-Max LLM — referenced as open-weight judge candidate in research SUMMARY."
+    provenance: "Alibaba Qwen-Max LLM — referenced as open-weight judge candidate in research SUMMARY. Also a judge in _eval/config.yaml.example (qwen3-235b-a22b:free)."
 
   - name: recraft
     provenance: "Recraft v3 — accessed via plugins/image_gen/fal."
 
   - name: runway
-    provenance: "Runway Gen-3 Alpha — external (not a Hermes plugin); referenced as context for current video gen capabilities in research SUMMARY."
+    provenance: "Runway Gen-3 Alpha (Turbo + Lite) — external video gen model referenced in cinematographer/camera-motion-catalog.md + animator/video-gen-model-matrix.md. Not a Hermes plugin but commonly user-deployed."
+
+  - name: seedance
+    provenance: "ByteDance Seedance 2.0 — Hermes-catalog video gen model (per animator/video-gen-model-matrix.md). CN 母语 audience preference."
 
   - name: sora
-    provenance: "OpenAI Sora — external (closed beta); referenced as context only in research SUMMARY and EXPERT-CINE planning notes."
+    provenance: "OpenAI Sora 2 — external (limited production access as of 2026-06); referenced in cinematographer/camera-motion-catalog.md + animator/video-gen-model-matrix.md. Unique 60s multi-shot sequence capability."
 
   - name: stable_audio
-    provenance: "Stable Audio Open 1.0 — open-source foley / SFX default per research SUMMARY (foley/SKILL.md)."
+    provenance: "Stable Audio Open 1.0 — open-source foley / SFX default per research SUMMARY + Phase 5 foley/stable-audio-open.md. Replaces phantom AudioLDM-2."
 
   - name: stable_audio_open
     provenance: "Stable Audio Open 1.0 — underscore variant; same model as `stable_audio` entry above."
 
+  - name: voxtral
+    provenance: "Mistral Voxtral — Hermes-catalog TTS provider per Phase 5 voicer/cn-tts-model-matrix.md. Open source + self-deploy option."
+
   - name: synthesis_model
-    provenance: "Generic suffix token for audio synthesis model field name in skill prose (e.g., foley/SKILL.md 'synthesis_model:' parameter). Real models referenced by name (AudioLDM-2, AudioGen, stable_audio); the field-name token itself is legitimate."
+    provenance: "Generic suffix token for audio synthesis model field name in skill prose (e.g., foley/SKILL.md 'synthesis_model:' parameter). Real models referenced by name; the field-name token itself is legitimate."
 
   - name: audioldm-2
-    provenance: "AudioLDM-2 — real research-era text-to-audio model (research SUMMARY flags as superseded by Stable Audio Open). Legacy reference in foley/SKILL.md; Phase 5 will rewrite recommendation to stable_audio."
+    provenance: "AudioLDM-2 — historical text-to-audio model (research SUMMARY flags as superseded by Stable Audio Open 1.0). Phase 5 phantom strip: replaced with Stable Audio Open. Residual SKILL.md mentions document the strip."
 
   - name: audiogen
-    provenance: "AudioGen (Meta AudioCraft) — real text-to-audio model. Listed as fallback in foley/SKILL.md; legitimate model name (though Stable Audio Open is preferred default)."
+    provenance: "AudioGen (Meta AudioCraft) — text-to-audio model. Listed as fallback in foley/SKILL.md; legitimate model name (though Stable Audio Open is preferred default)."
 
   - name: veo
-    provenance: "Google Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY)."
+    provenance: "Google Veo 2 / Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Veo 2 referenced in cinematographer/camera-motion-catalog.md for declarative cinematic language."
+
+  - name: veo3
+    provenance: "Google Veo 3.1 — underscore-prefixed variant. Same as `veo` entry above."
+
+  - name: wan2
+    provenance: "Wan family video gen — NOT in Hermes catalog per Phase 0 GAP-REPORT + research SUMMARY. Phase 5 phantom strip: replaced with Hermes-catalog veo3.1/kling-v3-4k/ltx-2.3/pixverse-v6/seedance-2.0. Residual SKILL.md mentions document the strip."
+
+  - name: wan22
+    provenance: "Same as `wan2` — Wan 2.2 variant. NOT in Hermes catalog. Phase 5 phantom strip complete."
 
   - name: yi
     provenance: "01.AI Yi LLM — referenced as open-weight judge candidate in research SUMMARY."
