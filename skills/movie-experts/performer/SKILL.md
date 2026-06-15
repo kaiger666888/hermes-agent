@@ -23,6 +23,12 @@ Character performance design specialist managing the Performance-4D matrix (ExBx
 
 The user needs to design character performances, map emotions to body language, generate action prompts for drawer/animator, plan character staging, or create performance intent data for AI film production.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Performance is body language — what characters do matters more than what they say

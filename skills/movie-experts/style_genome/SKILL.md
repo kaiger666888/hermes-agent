@@ -23,6 +23,12 @@ Directorial and genre style deconstruction specialist for parametrically encodin
 
 The user needs to define a director/genre visual style, blend multiple director styles, extract style DNA from reference films, verify cross-module style consistency, or generate the foundational style parameters that govern all other experts. Typically the first expert invoked in any AI film production pipeline.
 
+## References
+
+| Ref | When to Read | Contents |
+|-----|--------------|----------|
+| _(Phase 3 will populate with curated refs)_ | — | — |
+
 ## Role & Philosophy
 
 - Style is not vague — it can be measured, encoded, and reproduced
