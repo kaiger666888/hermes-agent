@@ -1,0 +1,104 @@
+{
+  "total_comparisons": 9,
+  "verdicts": [
+    {
+      "prompt_id": "anim-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "anim-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    }
+  ]
+}
