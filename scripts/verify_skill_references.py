@@ -131,7 +131,26 @@ class Finding:
 
 
 def _tokenize_description(desc: str) -> set[str]:
-    """Split a plugin description into lowercase alphanumeric tokens."""
+    """Split a plugin description into lowercase alphanumeric tokens.
+
+    Hyphen behavior (WR-05): the split pattern ``[^A-Za-z0-9_-]+``
+    treats ``-`` and ``_`` as IN-token characters, so a description
+    like ``"flux-2-pro"`` yields the single token ``flux-2-pro`` (not
+    ``flux``, ``2``, ``pro`` separately). This is intentional: hyphenated
+    vendor/model ids are kept intact so an operator who adds
+    ``"flux-2-pro"`` to a plugin description can see it in the allowlist.
+
+    Implication: hyphenated tokens in a plugin description are "dead"
+    allowlist entries for the scanner — the scanner's candidate regexes
+    (``_MODEL_SUFFIX_TOKEN_RE``, ``_VENDOR_CANDIDATE_RE``) use ``\\b``
+    word boundaries and do not match hyphens internally, so they yield
+    ``flux``, ``2``, ``pro`` separately when scanning a SKILL.md that
+    mentions ``flux-2-pro``. Only non-hyphenated tokens (e.g. ``veo``,
+    ``kling``) extracted from the same description are effective
+    allowlist entries that suppress findings.
+
+    Minimum length filter (``_MIN_TOKEN_LEN`` = 3) drops short fragments.
+    """
     tokens: set[str] = set()
     for raw in re.split(r"[^A-Za-z0-9_-]+", desc):
         candidate = raw.lower().strip("_-")
