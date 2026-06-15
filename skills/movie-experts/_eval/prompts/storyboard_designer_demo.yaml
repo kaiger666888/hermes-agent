@@ -1,0 +1,280 @@
+expert_id: storyboard_designer
+# Demo prompts for the storyboard_designer expert eval harness.
+#
+# Three prompts chosen to exercise storyboard_designer's unique capabilities
+# (per Phase 7B-2 plan):
+#   sb-001 — basic: decompose a screenplay scene into full Storyboard
+#            JSON. Tests scene-type detection + shot count calibration +
+#            camera params assignment + 4D anchoring specification.
+#   sb-002 — trap: a shot list with intentional 180° axis violation.
+#            A base model would just emit the violating shot list. A
+#            properly-configured storyboard_designer should detect the
+#            violation via auto-audit, mark it (or refuse), and propose
+#            a corrected version.
+#   sb-003 — rhythm: design a rhythm curve for a 90s 短剧 with specific
+#            pacing requirements (escalating toward 70s climax, then
+#            resolution). Tests rhythm curve design + duration
+#            distribution planning.
+prompts:
+  - id: sb-001
+    text: |
+      Decompose the following screenplay scene into a complete
+      Storyboard JSON (per SKILL.md §Output Format).
+
+      **Scene input (from screenplay expert):**
+      ```json
+      {
+        "scene_id": "scene_004",
+        "episode_ref": "S1E01",
+        "duration_estimate_seconds": 14,
+        "location": "高端会所地下服务器机房",
+        "time": "深夜",
+        "characters": ["char_wuji", "char_zheng"],
+        "action_summary": "林川潜入赵恒的服务器机房窃取证据,
+                          被赵恒当场发现,两人对峙。",
+        "dialogue": [
+          "赵恒: 我早就知道你会来。",
+          "林川: 那你怎么不报警?",
+          "赵恒: 因为我要让你看看,什么叫做绝望。"
+        ],
+        "emotion_curve": {
+          "anchors": [
+            { "t": 0, "valence": 0.4, "arousal": 0.7, "label": "tense-sneaking" },
+            { "t": 4, "valence": -0.3, "arousal": 0.9, "label": "caught-shock" },
+            { "t": 8, "valence": -0.5, "arousal": 0.95, "label": "confrontation-peak" },
+            { "t": 12, "valence": -0.7, "arousal": 0.85, "label": "menace-delivered" }
+          ]
+        },
+        "value_shift": "strategic→trapped",
+        "beat": "Midpoint"
+      }
+      ```
+
+      **Upstream context:**
+      - CharacterBible array: [char_wuji (protagonist), char_zheng (antagonist)]
+      - ArtDirection (from style_genome): cyberpunk, low-key neon lighting,
+        cool blue + warm orange palette
+      - Cinematographer guidance: dialogue scenes use over-the-shoulder
+        alternating; emotional peaks use close-up + slow push-in
+      - Production tier target: Cinematic
+
+      Generate a `Storyboard` JSON with:
+
+      (a) **Shot count calibration** — for a 14-second dialogue scene
+          with emotional escalation, choose appropriate shot count per
+          references/shot-decomposition-rules.md §Scene type → shot
+          pattern mapping. Justify the choice.
+
+      (b) **Per-shot camera assignment** — for each shot, choose
+          `camera.angle` + `camera.movement` + `camera.lens` per
+          references/camera-params-dictionary.md. The dialogue scene
+          should use over-the-shoulder alternation per cinematographer
+          guidance; the emotional peak (confrontation-peak at t=8s)
+          should use close-up + slow push-in.
+
+      (c) **4D anchoring specification** — for each shot, populate the
+          `anchoring` block per references/4d-anchoring-params.md.
+          Cinematic tier requires depth + identity + lighting enabled.
+          Use cyberpunk low-key neon as lighting direction; specify
+          both characters' identity refs with appropriate weights.
+
+      (d) **Extension-chain end_frames** — for shots 1..N-1, specify
+          `end_frame` paths per references/storyboard-schema.md
+          §end_frame. The end_frame of shot N becomes the visual
+          reference for shot N+1's first frame.
+
+      (e) **Rhythm curve design** — populate `metadata.rhythm_curve`
+          per the emotion_curve anchors above. The duration
+          distribution should follow an escalating pattern (tension
+          builds toward t=8s confrontation, slight release after).
+
+      (f) **Axis compliance audit** — explicitly verify 180° rule
+          compliance for the over-the-shoulder dialogue shots. The
+          axis line runs between char_wuji and char_zheng; all shots
+          must stay on one side.
+
+      (g) **Action descriptions** — each shot's `action` field must
+          be 50-300 chars, describing character action + camera
+          action + setting in concrete terms.
+
+      Cross-reference all 4 reference files when justifying decisions.
+
+  - id: sb-002
+    text: |
+      You are auditing an existing Storyboard JSON that another
+      storyboard_designer run produced. Identify any violations of
+      the axis compliance rules and either confirm pass or propose
+      a corrected version.
+
+      **Storyboard under audit (excerpt of shots 3-6 from a dialogue
+      scene between char_wuji and char_zheng):**
+
+      ```json
+      {
+        "shots": [
+          {
+            "shot_id": "shot_003",
+            "scene_ref": "scene_004",
+            "character_refs": ["char_wuji", "char_zheng"],
+            "camera": {
+              "angle": "过肩 / Over-the-shoulder",
+              "movement": "固定 / Static",
+              "lens": "50mm"
+            },
+            "action": "Over-the-shoulder shot from behind char_wuji,
+                      looking at char_zheng. Camera position: left of
+                      axis line, 2m from char_wuji.",
+            "duration": 3.2,
+            "axis_position": "left"
+          },
+          {
+            "shot_id": "shot_004",
+            "scene_ref": "scene_004",
+            "character_refs": ["char_wuji", "char_zheng"],
+            "camera": {
+              "angle": "过肩 / Over-the-shoulder",
+              "movement": "固定 / Static",
+              "lens": "50mm"
+            },
+            "action": "Reverse over-the-shoulder from behind
+                      char_zheng, looking at char_wuji. Camera
+                      position: RIGHT of axis line (crossed!),
+                      2m from char_zheng.",
+            "duration": 2.8,
+            "axis_position": "right",
+            "intentional_axis_cross": false
+          },
+          {
+            "shot_id": "shot_005",
+            "scene_ref": "scene_004",
+            "character_refs": ["char_wuji"],
+            "camera": {
+              "angle": "近景 / Medium Close-up",
+              "movement": "缓慢推进 / Slow Push-in",
+              "lens": "85mm"
+            },
+            "action": "Close-up on char_wuji's face as he processes
+                      the threat. Camera position: head-on (neutral
+                      axis), 1.5m from char_wuji.",
+            "duration": 4.5,
+            "axis_position": "neutral"
+          },
+          {
+            "shot_id": "shot_006",
+            "scene_ref": "scene_004",
+            "character_refs": ["char_zheng"],
+            "camera": {
+              "angle": "近景 / Medium Close-up",
+              "movement": "固定 / Static",
+              "lens": "85mm"
+            },
+            "action": "Close-up on char_zheng smirking. Camera
+                      position: head-on, 1.5m from char_zheng.",
+            "duration": 3.5,
+            "axis_position": "neutral"
+          }
+        ]
+      }
+      ```
+
+      This is a TRAP-style audit prompt. A base LLM might not detect
+      the violation. A properly-configured storyboard_designer must:
+
+      (a) **Detect the 180° axis violation** — per references/
+          shot-decomposition-rules.md §The 180° rule, the cut from
+          shot_003 (axis_position: "left") to shot_004 (axis_position:
+          "right") crosses the axis line WITHOUT a neutralizing shot
+          in between. The `intentional_axis_cross` flag is false,
+          meaning this is an UNINTENTIONAL violation.
+
+      (b) **Identify the consequence** — per the rule, this causes
+          viewer disorientation: in shot_003, char_zheng faces right
+          (looking at char_wuji). In shot_004, char_wuji should face
+          left (reciprocating gaze). But because the camera crossed
+          the axis, char_wuji also faces right in shot_004. The
+          viewer perceives them as looking in the same direction,
+          not at each other.
+
+      (c) **Propose corrections** — provide 2 valid correction paths:
+          1. **Add neutralizing shot**: insert a head-on shot (axis
+             neutral) between shot_003 and shot_004 to reset viewer
+             orientation.
+          2. **Reposition shot_004 camera**: move shot_004 back to
+             the left side of the axis (mirror angle).
+
+      (d) **Audit 30° rule compliance** — also check shot_005 and
+          shot_006 (both close-ups on different characters). They
+          are different characters, so 30° rule does NOT apply
+          (rule is same-character at similar distance). Confirm
+          this is correctly handled.
+
+      (e) **Output audit report** — structured JSON with:
+          - overall_pass: bool
+          - violations: array of {shot_id, rule, severity, fix}
+          - recommendations: array of correction paths
+
+      The expected output is an audit report identifying the
+      axis violation, NOT silent acceptance of the Storyboard.
+
+  - id: sb-003
+    text: |
+      Design the rhythm curve for a 90-second 抖音 短剧 S1E01 with
+      the following structural requirements:
+
+      **Pacing requirements:**
+      - First 10s: establishing + hook (relatively long shots to
+        set scene, but a quick 1.5s hook shot at t=0-1.5s)
+      - 10s-30s: setup + first conflict escalation (medium pacing)
+      - 30s-60s: building tension (escalating, shorter shots)
+      - 60s-75s: CLIMAX (most rapid cuts, shortest shots)
+      - 75s-85s: resolution + 爽点 payoff (slight slowdown for
+        emotional resonance)
+      - 85s-90s: 卡点 cliffhanger (single sharp cut at end)
+
+      **Constraints:**
+      - Total runtime: 90s ± 2s
+      - Total shot count: target 12-16 (within range for 90s 短剧
+        per references/shot-decomposition-rules.md)
+      - Climax must have at least 3 shots in 60s-75s window
+      - Cliffhanger at 85-90s should be ONE shot (5s)
+
+      Generate a rhythm curve specification that includes:
+
+      (a) **Curve type selection** — based on the structural
+          requirements, identify which curve template (escalating /
+          wave / peak-valley / etc.) from references/shot-
+          decomposition-rules.md §Rhythm curve templates best fits.
+          Justify the choice.
+
+      (b) **Shot count distribution** — break the 90s into 6
+          segments per the pacing requirements above. For each
+          segment, specify:
+          - Shot count in segment
+          - Total duration of segment
+          - Avg shot duration in segment
+          - Shot duration range in segment
+
+      (c) **Per-shot duration sequence** — produce the actual
+          `shot_duration_distribution` array (12-16 floats summing
+          to ~90s). The array should reflect the escalating-then-
+          resolving shape.
+
+      (d) **Peak identification** — identify which shot indices
+          correspond to the climax (60-75s) and the cliffhanger
+          (85-90s). Populate `peaks_at_shot_indices`.
+
+      (e) **Cross-validation** — verify:
+          - Sum of durations = 90 ± 2s
+          - Climax window has ≥ 3 shots
+          - Cliffhanger is single 5s shot
+          - No shot exceeds 12s (per cognitive-resonance-metrics.md
+            §Scale 1 attention-capture spacing ≤ 8s guidance)
+
+      (f) **Tier recommendation** — for this 90s 抖音 短剧,
+          recommend Cinematic or Premium tier per references/
+          4d-anchoring-params.md §Tier selection logic. Justify
+          the trade-off (Cinematic saves cost vs Premium ensures
+          temporal coherence for the rapid climax cuts).
+
+      Output the rhythm curve as a `metadata.rhythm_curve` JSON
+      block ready to be embedded in a Storyboard JSON.

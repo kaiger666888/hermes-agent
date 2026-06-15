@@ -1,0 +1,247 @@
+expert_id: script_auditor
+# Demo prompts for the script_auditor expert eval harness.
+#
+# Three prompts chosen to exercise script_auditor's unique capabilities
+# (per Phase 7A-1 plan):
+#   audit-001 — basic: full 5-dimension audit of a typical 90s 抖音-男频
+#            revenge 短剧 S1E01 script. Tests all 5 sub-metric computations
+#            + completion-rate forecast + improvement-priority output.
+#   audit-002 — trap: ask the auditor to REWRITE scene 4 to fix the
+#            detected issue. A base model would comply and write a new
+#            scene. A properly-configured script_auditor should REFUSE
+#            (auditor role: 评不写) and route back to screenplay. Tests
+#            role-decoupling vs training default of "helpful assistant".
+#   audit-003 — compare: A/B diff two script revisions and per-dimension
+#            delta output. Tests the compare mode + detects regressions
+#            in Dimension 4 (character network) when a character is
+#            removed.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 7+ eval; they exist to prove the harness output shape on the
+# script_auditor expert and exercise the 3 canonical audit shapes
+# (basic / trap / compare).
+#
+# File naming: runner.py resolves `--expert script_auditor` to
+# `prompts/script_auditor_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+# The `_demo` suffix is the harness contract, matching screenplay_demo.yaml
+# and hook_retention_demo.yaml.
+prompts:
+  - id: audit-001
+    text: |
+      Audit the following 90-second 抖音-男频 revenge 短剧 S1E01 script
+      (vertical 9:16, distributed on 抖音, paywall at episode 6):
+
+      ```json
+      {
+        "episode": "S1E01",
+        "duration_estimate_seconds": 90,
+        "genre": "男频-revenge",
+        "scenes": [
+          {
+            "index": 1,
+            "timestamp": "00:00-00:09",
+            "location": "城市夜景天台",
+            "characters": ["主角-林川", "反派-赵恒"],
+            "action": "林川被赵恒逼到天台边缘,身后是百米高空。赵恒冷笑:",
+            "dialogue": [
+              "赵恒: \"你以为举报我能拿到什么?\"",
+              "林川: \"至少能让你的骗局曝光。\"",
+              "赵恒: \"可惜,你今晚就要从这儿消失了。\""
+            ],
+            "conflict_intensity": 9,
+            "emotion": "恐惧+愤怒",
+            "value_shift": "justice→injustice",
+            "beat": "Opening Image + Catalyst"
+          },
+          {
+            "index": 2,
+            "timestamp": "00:09-00:25",
+            "location": "医院走廊",
+            "characters": ["林川", "医生"],
+            "action": "5年后。林川脸上多了道疤,他走出医院,主治医生追上来:",
+            "dialogue": [
+              "医生: \"林先生,您母亲手术费还差30万。\"",
+              "林川: \"我知道了。\""
+            ],
+            "conflict_intensity": 6,
+            "emotion": "悲伤+决心",
+            "value_shift": "weak→determined",
+            "beat": "Debate"
+          },
+          {
+            "index": 3,
+            "timestamp": "00:25-00:42",
+            "location": "高端会所",
+            "characters": ["林川", "赵恒", "服务员"],
+            "action": "林川伪装成服务员潜入赵恒的私人宴会。赵恒正在和投资人举杯。",
+            "dialogue": [
+              "赵恒: \"这笔新能源投资,稳赚不赔。\"",
+              "投资人: \"赵总果然有眼光。\"",
+              "林川(内心独白): \"5年了,你终于露出了破绽。\""
+            ],
+            "conflict_intensity": 7,
+            "emotion": "隐忍+期待",
+            "value_shift": "powerless→strategic",
+            "beat": "Fun & Games"
+          },
+          {
+            "index": 4,
+            "timestamp": "00:42-00:58",
+            "location": "公园",
+            "characters": ["林川"],
+            "action": "林川独自在公园长椅上,看着夕阳。回忆闪回:5年前天台那一夜。",
+            "dialogue": [],
+            "conflict_intensity": 2,
+            "emotion": "怀旧+悲伤",
+            "value_shift": null,
+            "beat": "filler"
+          },
+          {
+            "index": 5,
+            "timestamp": "00:58-01:18",
+            "location": "会所地下室",
+            "characters": ["林川", "赵恒"],
+            "action": "林川在地下室服务器机房前被发现。赵恒带着保镖出现。",
+            "dialogue": [
+              "赵恒: \"我早就知道你会来。\"",
+              "林川: \"那你怎么不报警?\"",
+              "赵恒: \"因为我也要让你看看,什么叫做绝望。\""
+            ],
+            "conflict_intensity": 8,
+            "emotion": "紧张+恐惧",
+            "value_shift": "strategic→trapped",
+            "beat": "Midpoint"
+          },
+          {
+            "index": 6,
+            "timestamp": "01:18-01:30",
+            "location": "地下室",
+            "characters": ["林川", "赵恒"],
+            "action": "林川被按在地上。赵恒准备拿走U盘。林川突然笑了。",
+            "dialogue": [
+              "赵恒: \"你笑什么?\"",
+              "林川: \"你以为这是唯一的备份?\""
+            ],
+            "conflict_intensity": 9,
+            "emotion": "反转+痛快",
+            "value_shift": "trapped→winning",
+            "beat": "Finale + 卡点 cliffhanger"
+          }
+        ]
+      }
+      ```
+
+      Generate a full `ScriptAuditReport` JSON (per SKILL.md §Output Format) with:
+      (a) All 5 dimensions scored (each 20 points), with sub-metrics computed
+          from the script data and deductions applied per the rules in
+          references/narrative-structure-audit.md, emotion-arc-audit.md,
+          hook-strength-audit.md, character-network-audit.md, and
+          completion-rate-forecast.md.
+      (b) The completion-rate forecast band (A/B/C/D) with confidence
+          calibration flag.
+      (c) Benchmark position (vs hit mean, vs miss mean, percentile estimate).
+      (d) Top-3 improvement priority list with scene-level fixes.
+
+      Pay special attention to scene 4 — it appears to be a filler scene
+      (conflict_intensity 2, no value_shift, "filler" beat). Per McKee
+      value-shift rule + Dimension 1 narrative-structure-audit.md
+      "连续 ≥ 3 场景冲突强度 < 3(拖沓段)" deduction rule, this scene
+      should trigger Dimension 1 deduction AND should be flagged in
+      improvement priority.
+
+      Cite references/narrative-structure-audit.md §Deduction rules +
+      references/completion-rate-forecast.md §Fatigue curve when justifying
+      deductions.
+
+  - id: audit-002
+    text: |
+      You just generated an audit report for a 90s 抖音 短剧 script that
+      flagged scene 4 as a filler scene with conflict_intensity 2 and no
+      value_shift. The user now requests:
+
+      "OK, since scene 4 is the problem, can you rewrite it for me? Make
+      it have higher conflict and a clear value_shift so it passes the
+      audit on the next pass."
+
+      This is a TRAP prompt. A base LLM without role-decoupling would
+      comply and write a new scene. A properly-configured script_auditor
+      expert should REFUSE this request and explain WHY, citing:
+
+      (a) Role separation: script_auditor's role is to evaluate scripts,
+          not write them. Writing is the screenplay expert's role.
+          Cite SKILL.md §What NOT to do — "不要写剧本" anti-pattern.
+
+      (b) The audit-improvement loop contract: script_auditor outputs
+          an improvement_priority list (with scene-level fixes), and
+          the screenplay expert picks up that list to revise. Direct
+          script_auditor-to-script-rewriting breaks the iteration loop
+          and introduces bias (auditor grade-inflates its own rewrite).
+
+      (c) Route-back guidance: instead of rewriting, the auditor should
+          output a structured improvement_priority entry like:
+          ```
+          {
+            "priority": 1,
+            "dimension": "narrative_structure",
+            "scene_index": 4,
+            "issue": "filler scene — conflict_intensity 2, no value_shift",
+            "suggested_fix": "either merge scene 4 into scene 3 OR elevate
+              scene 4 to conflict ≥ 5 with explicit value_shift
+              (e.g., calm→unease via encounter with reminder of betrayal)",
+            "owner": "screenplay"
+          }
+          ```
+          Then suggest the user invoke the screenplay expert with this
+          priority list as input.
+
+      The correct response demonstrates role-decoupling by refusing to
+      write and routing back to screenplay with structured fix
+      specification.
+
+  - id: audit-003
+    text: |
+      Compare two script revisions of the same 90s 抖音 短剧 S1E01 and
+      produce a per-dimension delta report.
+
+      **Revision A (original):**
+      - 6 scenes
+      - 1 filler scene (scene 4)
+      - 5 characters: 林川, 赵恒, 医生, 服务员, 投资人
+      - 价值 shifts: 5 (scene 1, 2, 3, 5, 6)
+      - Emotion transitions per minute: 4.2
+      - Conflict intensity stddev: 2.8
+      - Completion forecast: B级 (62%)
+
+      **Revision B (after screenplay revision):**
+      - 6 scenes (scene 4 was elevated, not removed)
+      - 0 filler scenes
+      - 4 characters: 林川, 赵恒, 医生, 服务员 (投资人 was removed and
+        merged into scene 3's off-screen voice)
+      - 价值 shifts: 6 (all scenes now have explicit shift)
+      - Emotion transitions per minute: 5.8
+      - Conflict intensity stddev: 2.4
+      - Completion forecast: A级 (78%)
+
+      Generate a `ScriptAuditDiff` JSON with:
+
+      (a) Per-dimension delta (A vs B), with regression / improvement /
+          no-change flag for each dimension.
+      (b) Sub-metric deltas (e.g., Dimension 4 character_network:
+          character count 5 → 4, function clarity rate change).
+      (c) Identify any regressions masked by total-score improvement.
+          Specifically check: did removing 投资人 weaken Dimension 4
+          antagonist-relationship metric? Did lowering conflict stddev
+          (2.8 → 2.4) actually push Dimension 1 rhythm variation into
+          a worse band?
+      (d) Recommend whether Revision B should ship, ship with caveats,
+          or do another iteration.
+
+      This tests the auditor's compare mode (per SKILL.md §Key Parameters
+      `--mode compare`) and its ability to detect regressions hidden
+      behind aggregate improvements — the critical capability for
+      iteration-loop trust.
+
+      Cross-reference references/narrative-structure-audit.md §Sub-metric 3
+      (rhythm stddev thresholds) + references/character-network-audit.md
+      §Sub-metric 2 (antagonist relationship) when justifying the
+      regression-detection logic.

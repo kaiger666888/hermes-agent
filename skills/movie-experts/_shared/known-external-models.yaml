@@ -26,6 +26,15 @@
 #     video gen models. Remaining text references are documentation of the
 #     phantom strip process (intentional, not phantom use).
 #
+# Phase 7 update (2026-06-16):
+#   - 5 new experts added (script_auditor, lip_sync, character_designer,
+#     storyboard_designer, creative_source) + 5 reference increments in
+#     existing experts. Allowlist expanded for new placeholder resolutions:
+#     LatentSync (lip_sync primary) / Wav2Lip (lip_sync fallback) /
+#     ControlNet / IC-Light / AnimateDiff (storyboard anchoring) /
+#     CLIP / DINO (character_designer + lip_sync eval) / ACE-Step (song gen) /
+#     SyncNet (lip_sync benchmark).
+#
 # Format
 # ------
 # - Keep entries lowercase — the scanner normalizes both file content and
@@ -150,3 +159,59 @@ models:
 
   - name: z-image
     provenance: "Z-Image Turbo — fastest image gen tier per research SUMMARY; accessed via plugins/image_gen/fal."
+
+  # Phase 7 additions (2026-06-16) — placeholder resolutions for 5 new experts
+
+  - name: latentsync
+    provenance: "ByteDance LatentSync v1.5 / v1.6 — primary lip-sync engine per lip_sync/references/latentsync-deployment.md. Open-source latent diffusion for audio-driven lip sync. External (not a Hermes plugin); user deploys per deployment guide."
+
+  - name: wav2lip
+    provenance: "Wav2Lip (Prajwal et al. 2020) — GAN-based lip-sync fallback engine per lip_sync/references/latentsync-deployment.md §Comparison with alternative engines. Used when VRAM < 8GB or processing-time budget < 30s. Open-source."
+
+  - name: synctalk
+    provenance: "SyncTalk (2024) — diffusion-based lip-sync alternative per lip_sync/references/latentsync-deployment.md §Comparison with alternative engines. Open-source."
+
+  - name: musetalk
+    provenance: "MuseTalk (2024) — diffusion + motion lip-sync alternative per lip_sync/references/latentsync-deployment.md. Open-source."
+
+  - name: heygen
+    provenance: "HeyGen — commercial lip-sync / digital human service per lip_sync/references/latentsync-deployment.md §Comparison with alternative engines. External (cloud)."
+
+  - name: d-id
+    provenance: "D-ID — commercial digital human / lip-sync service per lip_sync/references/latentsync-deployment.md. External (cloud)."
+
+  - name: syncnet
+    provenance: "SyncNet (Chung & Zisserman 2016) — audio-visual synchronization model used to compute LSE / LSE-C metrics per lip_sync/references/sync-quality-metrics.md. Open-source academic model."
+
+  - name: controlnet
+    provenance: "ControlNet (Zhang et al. 2023) — conditional control for diffusion models. Used as `<controlnet_depth>` placeholder in storyboard_designer/references/4d-anchoring-params.md for depth-map-conditioned generation. Open-source, integrates with multiple backbones."
+
+  - name: ic-light
+    provenance: "IC-Light (Lvmin Zhang 2024) — lighting conditioning methodology for diffusion models. Used as `<ic_light>` placeholder in storyboard_designer/references/4d-anchoring-params.md for lighting-direction-conditioned generation. Open-source."
+
+  - name: animatediff
+    provenance: "AnimateDiff (Hu et al. 2023) — motion module for diffusion models. Used as `<animatediff>` placeholder in storyboard_designer/references/4d-anchoring-params.md for temporal-coherence-conditioned video generation. Open-source."
+
+  - name: clip
+    provenance: "CLIP (Radford et al. 2021) — image-text contrastive model. Used as `<clip_eval>` placeholder in character_designer/references/consistency-stress-test.md for CLIP-I cross-scene similarity scoring. Open-source."
+
+  - name: dino
+    provenance: "DINO / DINOv2 (Caron et al. 2021, 2023) — self-supervised image embedding. Used as `<dino_eval>` placeholder in character_designer/references/consistency-stress-test.md for shape-aware cross-scene similarity scoring. Open-source."
+
+  - name: arcface
+    provenance: "ArcFace (Deng et al. 2019) — face identity embedding. Used in lip_sync/references/identity-preservation.md + character_designer for cross-shot identity verification. Open-source."
+
+  - name: lrs2
+    provenance: "LRS2 dataset (BBC broadcasts, 142h, 2000+ speakers) — international-standard lip-sync benchmark per lip_sync/references/sync-quality-metrics.md. Public academic dataset (https://github.com/JoonSon/LipSync)."
+
+  - name: lrs3
+    provenance: "LRS3 dataset (TED/TEDx, 433h, 5500+ speakers) — international-standard lip-sync benchmark per lip_sync/references/sync-quality-metrics.md. Public academic dataset (https://github.com/mpc001/Lipreading)."
+
+  - name: ace-step
+    provenance: "ACE-Step 1.5 — AI song generation engine referenced in composer/references/bgm-and-song-creation.md as `<song_gen_primary>` placeholder resolution. Open-source (functions similar to kais-song-agent deployment)."
+
+  - name: speech-ai-forge
+    provenance: "Speech-AI-Forge (Qwen3-TTS 1.7B) — TTS engine with emotion tag + prosody control per voicer/references/tts-emotion-prosody-control.md. Open-source."
+
+  - name: seedance-1.5-pro
+    provenance: "ByteDance Seedance 1.5 Pro — video gen model variant referenced in animator/references/camera-execution-and-degradation.md via kais-evolink integration. External (similar to seedance 2.0 Hermes-catalog model)."

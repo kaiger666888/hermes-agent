@@ -2,7 +2,7 @@
 
 **Purpose:** Canonical EN↔CN term dictionary for the Movie-Experts Suite. Every expert's SKILL.md and `references/*.md` MUST use these terms consistently. Drift in translation breaks downstream metric comparability and judge-prompt reliability.
 
-**Last updated:** 2026-06-15 (Phase 0 skeleton — 24 entries)
+**Last updated:** 2026-06-16 (Phase 7 — 5 new experts add 15+ entries)
 **Refresh cadence:** Phase 1+ adds terms as each new expert requires them; Phase 6 does a full consistency pass.
 
 ---
@@ -140,3 +140,82 @@
 **CN:** 慕强 — 男频短剧的核心情绪驱动:主角从弱到强、碾压对手的爽感循环。
 **EN:** Power-fantasy — core emotional driver of 男频 短剧: protagonist rises from weak to strong, crushing opponents in a 爽点 cycle.
 **Context:** EXPERT-HOOK uses 慕强 as the primary 爽点 design pattern for 男频.
+
+---
+
+## Phase 7 additions (5 new experts — script_auditor / lip_sync / character_designer / storyboard_designer / creative_source)
+
+### 故事核 / Story Kernel
+**CN:** 故事核 — 从社会结构性冲突中提炼的不可逆戏剧前提,一句话能描述的核心矛盾。
+**EN:** Story Kernel — irreducible dramatic premise distilled from social structural conflict, describable in a single sentence.
+**Context:** creative_source expert's output artifact. Lives upstream of style_genome + screenplay. Multi-strata overlay produces resonance coefficient (1.0-3.0).
+
+### 六层地层学 / Six-Strata
+**CN:** 六层地层学 — 创意源头专家的分析框架,把社会分为 L1 制度 / L2 技术 / L3 人口 / L4 空间 / L5 代际契约 / L6 心灵 六个地层,逐层扫描结构性裂缝。
+**EN:** Six-Strata — creative_source expert's analysis framework decomposing society into 6 layers (institutional / technological / demographic / spatial / intergenerational-contract / psychosocial).
+**Context:** Theoretical basis: Bourdieu field theory + Giddens structuration + Barthes narrative analysis + Foucault power/knowledge.
+
+### 不可言说性 / Unspeakability
+**CN:** 不可言说性 — 故事核在 CN 平台制作的禁忌程度,10 分制评分(1=主流安全 / 10=绝对禁忌)。包含 4 子维度:政治敏感度 / 平台算法风险 / 观众不适度 / 监管红线。
+**EN:** Unspeakability — 10-point score (1=mainstream-safe / 10=absolute-taboo) measuring how off-limits a story kernel is for CN platform production. 4 sub-dimensions: political sensitivity / platform algorithm risk / audience discomfort / regulatory redline.
+**Context:** Scores ≥ 9 trigger VETO; 5-8 require per-platform reframing paths.
+
+### 角色圣经 / Character Bible
+**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(drawer / animator / lip_sync / continuity)的 ground truth。
+**EN:** Character Bible — character identity contract JSON output by character_designer. Contains 4D anchors + layered STYLE_PREFIX + consistency stress-test results + negative_traits + consistency_lock. Ground truth for all downstream consumers.
+**Context:** Schema version 2.0.0; frozen after stress test pass.
+
+### 4D 锚点 / 4D Anchor
+**CN:** 4D 锚点 — 角色的 4 个标准视角源图(front 正面 / three_quarter 3/4 / side 侧面 / back 背面),构成角色身份的"4D 护照"。下游专家按 3Q > Front > Side > Back 优先级使用。
+**EN:** 4D Anchor — 4 canonical view source images (front / three_quarter / side / back) defining a character's identity across all shot angles. Downstream consumers use 3Q > Front > Side > Back priority.
+**Context:** character_designer output; lip_sync prefers front + 3Q for identity reference.
+
+### 分层 STYLE_PREFIX / Layered Style Prefix
+**CN:** 分层 STYLE_PREFIX — character_designer 的核心方法论,把角色风格分为 CORE(全局不变)/ IDENTITY(严格锁定)/ VARIANCE(随镜头变化)三层。组合公式:`{CORE}, {IDENTITY}, {VARIANCE}`。
+**EN:** Layered STYLE_PREFIX — character_designer's core methodology decomposing character style into 3 layers (CORE global-frozen / IDENTITY strict-locked / VARIANCE scene-mutable). Composition: `{CORE}, {IDENTITY}, {VARIANCE}`.
+**Context:** Locked STYLE_PREFIX is used by every downstream image-gen prompt.
+
+### 一致性压力测试 / Consistency Stress Test
+**CN:** 一致性压力测试 — 在锁定角色前,把候选角色放入 3 个完全不同场景验证一致性的协议。3 场景:街头夜景(strength 0.40)/ 室内特写(0.55)/ 动作侧拍(0.35)。CLIP-I ≥ 0.80 + DINO-I ≥ 0.78 才 pass。
+**EN:** Consistency Stress Test — protocol verifying candidate character identity survives 3 radically different scene contexts before lock. 3 scenes: street night neon (0.40) / indoor close-up (0.55) / running side view (0.35). CLIP-I ≥ 0.80 + DINO-I ≥ 0.78 to pass.
+**Context:** Gate between variant selection and final character lock.
+
+### 分镜 / Storyboard
+**CN:** 分镜 — 把剧本场景拆解为可执行的 per-shot JSON 列表,每 shot 包含 shot_id / camera 参数 / action / duration / reference_image / end_frame / anchoring。
+**EN:** Storyboard — executable per-shot JSON list decomposed from screenplay scenes. Each shot contains shot_id / camera params / action / duration / reference_image / end_frame / anchoring.
+**Context:** storyboard_designer output; downstream consumers are drawer / animator / editor / continuity.
+
+### 4D 锚定 / 4D Anchoring
+**CN:** 4D 锚定 — 分镜 shot 的渲染层控制参数,4 维度:depth(ControlNet Depth)/ identity(IP-Adapter)/ lighting(IC-Light)/ temporal(AnimateDiff)。每维度可独立开关 + 调强度。4 级降级策略:Draft / Standard / Cinematic / Premium。
+**EN:** 4D Anchoring — render-layer control parameters per storyboard shot. 4 dimensions: depth (ControlNet Depth) / identity (IP-Adapter) / lighting (IC-Light) / temporal (AnimateDiff). Each independently toggleable + strength-adjustable. 4-tier degradation: Draft / Standard / Cinematic / Premium.
+**Context:** Cinematic tier = default for production; Premium required for final delivery.
+
+### 延续锚点 / Extension-Chain End-Frame
+**CN:** 延续锚点 — 多 shot 场景中,前一个 shot 的 end_frame 作为下一个 shot 的视觉延续参考。让 animator 在跨 shot 生成时保持角色 + 场景一致性。
+**EN:** Extension-Chain End-Frame — in multi-shot scenes, prior shot's end_frame serves as next shot's visual continuity reference. Enables animator to maintain character + scene consistency across shot boundaries.
+**Context:** Required for shots 1..N-1 in any scene per storyboard-schema.md.
+
+### 唇形同步 / Lip Sync
+**CN:** 唇形同步 — 把目标音频对齐到人物视频的嘴部运动,生成口型与音频精确匹配的视频。基于音频驱动的潜在扩散(LatentSync v1.5 / v1.6)。
+**EN:** Lip Sync — aligning target audio to mouth motion in person footage, generating video where lip movement matches audio precisely. Based on audio-conditioned latent diffusion (LatentSync v1.5 / v1.6).
+**Context:** lip_sync expert's domain. Decoupled from voicer (audio synthesis) — voicer produces WAV, lip_sync aligns WAV to footage.
+
+### LSE / Lip Sync Error — Distance
+**CN:** LSE — SyncNet 嵌入空间中音频嵌入与视频嵌入的平均欧氏距离,客观指标,越低越好。SOTA ≤ 6.5。
+**EN:** LSE (Lip Sync Error — Distance) — average Euclidean distance between audio and video embeddings in SyncNet space. Objective metric; lower is better. SOTA ≤ 6.5.
+**Context:** International-standard metric (no LLM-judge required). Computed on LRS2 / LRS3 benchmarks.
+
+### LSE-C / Lip Sync Error — Confidence
+**CN:** LSE-C — 错位音频 baseline 与同步输出的 LSE 差值,客观指标,越高越好。SOTA ≥ 7.0。
+**EN:** LSE-C (Lip Sync Error — Confidence) — distance improvement between off-sync baseline and synced output. Objective metric; higher is better. SOTA ≥ 7.0.
+**Context:** Paired with LSE; both must pass for Grade A.
+
+### 剧本审计 / Script Audit
+**CN:** 剧本审计 — 在制作前对剧本进行 5 维度量化评分(叙事结构 / 情感弧线 / Hook 强度 / 角色网络 / 完播率预测),输出 ScoreReport JSON。与 screenplay 解耦:screenplay 写,script_auditor 评。
+**EN:** Script Audit — pre-production 5-dimension quantitative scoring of scripts (narrative structure / emotion arc / hook strength / character network / completion-rate forecast), outputting ScoreReport JSON. Decoupled from screenplay: screenplay writes, script_auditor audits.
+**Context:** script_auditor expert's domain. Dimension 5 (completion-rate forecast) can be independently validated against actual completion rate via Pearson correlation.
+
+### 完播率预测 / Completion Rate Forecast
+**CN:** 完播率预测 — script_auditor Dimension 5,基于疲劳曲线 + 信息密度物理模型预测 A/B/C/D 级完播率区间。可独立验证(预测中点 vs 实际完播率 Pearson ≥ 0.65)。
+**EN:** Completion Rate Forecast — script_auditor Dimension 5, predicting A/B/C/D completion-rate band based on fatigue-curve + information-density physics model. Independently validatable (predicted midpoint vs actual completion rate Pearson ≥ 0.65).
+**Context:** The only script_auditor dimension not requiring LLM-judge for validation.
