@@ -1,0 +1,58 @@
+{
+  "phase": 3,
+  "report_type": "phase3_go_nogo",
+  "generated_at": "2026-06-15",
+  "recommendation_status": "deferred_to_phase6_live_run",
+  "preliminary_recommendation": "CONDITIONAL_GO_pending_phase6_evidence",
+  "go_criteria": {
+    "threshold": "≥2/3 prompts improve with new-with-refs vs new-no-refs across ≥3/4 experts",
+    "source": "CONTEXT D-9",
+    "operationalization": "per-expert improvement_rate = new_with_refs_wins / non_tie_verdicts; per-expert threshold ≥2/3; overall ≥3/4 experts pass"
+  },
+  "evidence_status": {
+    "phase3_dry_run_complete": true,
+    "phase3_live_run_attempted": false,
+    "phase3_live_run_experts_completed": [],
+    "phase6_live_run_required_for_final_verdict": true
+  },
+  "experts_evaluated": ["screenplay", "editor", "colorist", "style_genome"],
+  "conditions_evaluated": ["old_no_refs", "new_no_refs", "new_with_refs"],
+  "expected_phase6_verdict_count": 144,
+  "phase3_dry_run_verdict_count": 36,
+  "phase3_dry_run_signature": "all_tie",
+  "rationale_for_deferral": "Phase 3 dry-run uses _StubJudgeClient (runner.py:453) which deterministically returns 'tie' for every pair; no statistical signal possible. Live run requires OPENROUTER_API_KEY + live model calls; per CONTEXT D-11 deferred to Phase 6 budget decision.",
+  "ref_corpus_summary": {
+    "screenplay": "5 refs (Snyder / McKee / CN shortdrama / academic / dialogue) — REFACTOR-08 satisfied with ≥3 heuristics per ref",
+    "editor": "5 refs (Murch / classical / montage / fxrxt / CN cutting) — REFACTOR-08 satisfied",
+    "colorist": "5 refs (Bellantoni / Hurkman / cross-cultural / CN audience / digital science) — REFACTOR-08 satisfied",
+    "style_genome": "5 refs (director archive 35 entries / genre DNA / auteur theory / cross-cultural / CN director) — REFACTOR-08 satisfied"
+  },
+  "phase6_live_run_prerequisites": [
+    "OPENROUTER_API_KEY configured in ~/.hermes/.env",
+    "config.yaml (not .example) committed locally with live credentials redacted from git",
+    "Phase 6 expand N from 3 to ≥20 prompts per expert (EVAL-05)",
+    "Phase 6 multi-judge ensemble (both qwen3-235b + deepseek-v3 invoked, not just judges[0])"
+  ],
+  "go_decision_authority": "Phase 4 (per ROADMAP Phase 4 GO/NO-GO GATE note); this report provides Phase 3 evidence, Phase 4 produces the formal gate decision after Phase 4 completes its own scope.",
+  "harness_validation": {
+    "runner_accepts_3_conditions": true,
+    "pair_enumeration_correct": true,
+    "total_verdicts_36": true,
+    "stub_signature_observed": true,
+    "no_prompts_file_missing": true,
+    "validity_conclusion": "Runner would have produced statistically analyzable output if live judge client substituted for stub"
+  },
+  "cross_references": {
+    "aggregated_dryrun_json": "skills/movie-experts/_eval/reports/phase3-ablation-dryrun.json",
+    "aggregated_dryrun_md": "skills/movie-experts/_eval/reports/phase3-ablation-dryrun.md",
+    "runner_source": "skills/movie-experts/_eval/runner.py",
+    "config_template": "skills/movie-experts/_eval/config.yaml.example",
+    "phase3_plans": ".planning/phases/03-top-4-existing-experts-rag/",
+    "summaries": [
+      ".planning/phases/03-top-4-existing-experts-rag/03-01-SUMMARY.md",
+      ".planning/phases/03-top-4-existing-experts-rag/03-02-SUMMARY.md",
+      ".planning/phases/03-top-4-existing-experts-rag/03-03-SUMMARY.md",
+      ".planning/phases/03-top-4-existing-experts-rag/03-04-SUMMARY.md"
+    ]
+  }
+}

@@ -35,11 +35,18 @@ test_model:
   api_key_env: OPENAI_API_KEY
 
 # Ablation conditions (EVAL-04: N>=2, pairwise comparison).
-# Phase 0 demo uses 2 conditions. Phase 3 will use 3:
-#   ["old_no_refs", "new_no_refs", "new_with_refs"]
+# Phase 3 uses 3 conditions to isolate the RAG contribution:
+#   - old_no_refs: Phase 0 baseline SKILL.md (no RAG block, no refs)
+#                  loaded from `_eval/baseline/<expert>/SKILL.md`
+#   - new_no_refs: refactored Phase 3 SKILL.md with `## Knowledge Retrieval`
+#                  block stripped (RAG-aware but no refs loaded) — isolates
+#                  the SKILL.md prompt refactor contribution from the refs
+#   - new_with_refs: refactored Phase 3 SKILL.md + bundled `references/*.md`
+#                    injected as retrieval context — full RAG treatment
 conditions:
-  - baseline
-  - candidate
+  - old_no_refs
+  - new_no_refs
+  - new_with_refs
 
 # Prompt file resolution: _eval/prompts/<expert>_demo.yaml
 # Each file declares `expert_id` and a `prompts:` list.
