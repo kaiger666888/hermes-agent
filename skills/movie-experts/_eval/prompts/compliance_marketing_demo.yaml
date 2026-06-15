@@ -80,9 +80,13 @@ prompts:
       backpacks, classroom scenes). The intended audience is 18-35 (adult).
       Run the §4 未成年人保护 红线 checklist from cn-content-rules.md:
       (a) identify specific 触发关键词 and 画面信号 that would trip §4;
-      (b) determine whether the 校园 setting alone is disqualifying or
-      context-dependent; (c) produce either a clearance certificate
-      (with stated conditions) OR a rewrite recommendation that shifts
-      the setting above the 18+ threshold (e.g., 大学, 培训机构, 职场
-      flashback) while preserving ≥ 70% of the original 题材钩 strength.
+      (b) produce a clear yes/no §4 verdict (🔴 一律拒绝 for teen
+      characters per cn-content-rules.md §4 — a 'conditional clearance'
+      for teen characters is NOT acceptable per §4, which has no 🟡
+      middle tier for 未成年人 as 剧情角色 entering 危险/暧昧 场景);
+      (c) enumerate explicit §4 risks (AI-generated minor faces = 🔴,
+      校服 + 暧昧镜头 = 🔴, 校园暴力展示 = 🔴, etc.);
+      (d) produce a rewrite recommendation that shifts the setting above
+      the 18+ threshold (e.g., 大学, 培训机构, 职场 flashback) while
+      preserving ≥ 70% of the original 题材钩 strength.
       Cross-reference viral-element-catalog.md 题材钩 type entries.
