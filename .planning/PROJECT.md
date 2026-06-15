@@ -12,51 +12,45 @@ Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 1
 
 ### Validated
 
-<!-- 现有能力,来自 codebase map 反推 -->
+<!-- v1 shipped — see .planning/MILESTONES.md for full inventory -->
 
+**Pre-v1 baseline (existing capabilities):**
 - ✓ 14 个专家 skill 已运行(screenplay, drawer, animator, editor, colorist, composer, performer, scene_builder, foley, spatial_audio, mixer, voicer, continuity, style_genome) — existing
 - ✓ 模块化 SKILL.md 发现机制(metadata.hermes schema + related_skills 协作图) — existing
 - ✓ 每个专家独立的编码矩阵(5D style genome、CxSxZ color、FxRxT editing、ExBxSxP performance、7D foley) — existing
 - ✓ SKILL.md 纯 markdown,无 Python 代码 — existing
 - ✓ Hermes memory plugin 已部署(可选向量 RAG 复用基础) — existing
 
+**v1 / v1.5 — shipped 2026-06-15 (milestone tag `v1`):**
+- ✓ AUDIT-01: 14-expert gap audit + phantom-ref strip (Phase 0)
+- ✓ REFACTOR-A: 14 SKILL.md refactored (Phase 3 deep × 4 + Phase 5 light × 10)
+- ✓ REFS-A: 58 markdown refs across 18 experts (Phase 3 + Phase 5)
+- ✓ EXPERT-CINE: cinematographer (Phase 4 — 4 refs + SKILL.md + 3 prompts + 7 peer edges)
+- ✓ EXPERT-HOOK: hook_retention (Phase 2 — 4 refs + SKILL.md + 5 prompts)
+- ✓ EXPERT-PROD: production (Phase 5 — 5 refs + SKILL.md + 3 prompts + 8 peer edges; AI-relevant subset per PROD-07)
+- ✓ EXPERT-COMPLI: compliance_marketing (Phase 1 — 5 refs + SKILL.md + 5 prompts)
+- ✓ CORPUS-01: 58 refs curated from 4 source types (~1.2MB, all fair-use + Last-verified stamps)
+- ✓ BILINGUAL-01: 18 SKILL.md files in EN structure + CN prose format
+- ✓ EVAL-01: MT-Bench position-swap harness + 3-condition ablation + 135 dry-run verdicts
+- ✓ DOC-01: top-level README with 18-expert collaboration DAG + RAG usage guide + Phase 6 live-run procedure
+
 ### Active
 
-<!-- 当前 scope,均为 hypothesis 直到交付验证 -->
+<!-- v1 closed 2026-06-15. No active requirements until next milestone is planned via /gsd-new-milestone -->
 
-**A. 现有 14 个专家的深度重构 + refs**
-- [x] **AUDIT-01**: 对 14 个现有专家逐一审计,输出 GAP-REPORT.md(Phase 0 完成 2026-06-15)
-- [x] **REFACTOR-A**: 对 14 个 SKILL.md 深度重构(Phase 3 完成 4 个深度重构 + Phase 5 完成 10 个 light uplift)
-- [x] **REFS-A**: 为 14 个专家各建 `references/` 子目录(Phase 3 + Phase 5 完成,共 30 个 refs across 14 experts)
+(None — milestone v1 closed. Next milestone TBD.)
 
-**B. 4 个新增专家**
-- [x] **EXPERT-CINE**: Cinematographer(运镜/摄影指导)—— Phase 4 完成,4 refs + SKILL.md + 3 prompts + 7 peer edges
-- [x] **EXPERT-HOOK**: Hook & Retention(钩子与留存)—— Phase 2 完成,4 refs + SKILL.md + 5 prompts
-- [x] **EXPERT-PROD**: Production(制作管理)—— Phase 5 完成,AI-relevant subset only(per PROD-07 live-action exclusion),5 refs + SKILL.md + 3 prompts + 8 peer edges
-- [x] **EXPERT-COMPLI**: 合规与宣发 —— Phase 1 完成,5 refs + SKILL.md + 5 prompts
+### Deferred to operator (acknowledged at v1 close)
 
-**C. 跨专家工作**
-- [x] **CORPUS-01**: 从 4 个语料来源策展 — Phase 0-5 完成,共 58 个 refs(~1.2MB),全部 fair-use 引用 + Last-verified 时间戳
-- [x] **BILINGUAL-01**: SKILL.md 双语格式 — Phase 0-5 完成所有 18 个 SKILL.md
-- [x] **EVAL-01**: 轻量级 LLM-as-judge 双盲评分 harness — Phase 0 完成 runner.py + judge_prompt.md,Phase 3 + Phase 5 完成 11 个 expert × 3-condition dry-run 共 135 verdicts
-- [x] **DOC-01**: 顶层 README — Phase 6 完成,18 专家 collaboration DAG + RAG usage guide + Phase 6 live-run procedure
+- Phase 6 live-run execution (requires `OPENROUTER_API_KEY` + budget)
+- N ≥ 20 prompt expansion per expert (currently 3)
+- Multi-judge ensemble invocation (currently single-judge)
+- Live-run statistical GO/NO-GO verdict per CONTEXT D-9
+- CN legal review of compliance_marketing refs (statutes + platform thresholds)
+- Phase 6 UAT (10 checkpoints — paused at user redirect)
+- Full bilingual consistency lint (full v1.5 corpus now shipped; spot-check performed)
 
-### v1.5 Release Status (2026-06-15)
-
-**完整 18-expert collaboration graph v1.5 release ready:**
-
-- **14 original experts:** all RAG-aware(Phase 3 deep × 4 + Phase 5 light × 10)
-- **4 new experts:** compliance_marketing + hook_retention + cinematographer + production
-- **总 ref corpus:** 58 个 markdown refs(~1.2MB)
-- **Eval harness:** MT-Bench position-swap runner + 3-condition ablation + 135 dry-run verdicts
-- **Phantom strip:** 5 phantom refs 清理(animator wan2 / performer 168K / drawer FLUX 1.x / foley AudioLDM-2 / voicer CosyVoice)
-- **Model allowlist:** 33 entries in `_shared/known-external-models.yaml`
-
-**Deferred items (operator / live-run):**
-- Phase 6 live run execution(需 OPENROUTER_API_KEY + budget)
-- N ≥ 20 prompt 扩展 per expert
-- Multi-judge ensemble 调用
-- Live-run statistical GO/NO-GO verdict(per CONTEXT D-9 criteria)
+See `.planning/STATE.md` § Deferred Items for the canonical list.
 
 ### Out of Scope
 
@@ -76,26 +70,30 @@ Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 1
 
 **Brownfield 项目**:这是 Hermes Agent 主仓库内的子系统增强,不另起仓库。
 
-**当前状态(来自 `.planning/codebase/`)**:
-- `skills/movie-experts/` 14 个专家是最近一次提交(`4290ab2`)新增的,纯 markdown,无代码
+**v1 shipped state (2026-06-15):**
+- `skills/movie-experts/` 下 18 个专家目录,全部 RAG-aware(14 refactor + 4 new)
+- 58 markdown refs(~1.2MB),全部 fair-use 引用 + `Last-verified: 2026-06-15` stamps + per-ref LICENSE.md
+- 5 phantom refs 清理:animator wan2 → Hermes catalog / performer "168K controlled tokens" → stripped / drawer FLUX 1.x → FLUX 2 / foley AudioLDM-2 → Stable Audio Open / voicer CosyVoice → multi-provider TTS
+- `_eval/` harness: `runner.py`(MT-Bench position-swap)+ `snapshot.py`(sha256+git-sha provenance)+ `judge_prompt.md`(4-dim rubric)+ `config.yaml.example` + 9 prompt files + 14 baseline snapshots + 40+ reports
+- `_shared/`: `glossary.md`(EN↔CN)+ `known-external-models.yaml`(33 entries)+ `platform-comparison.md` + `RAG-INVOCATION-PATTERN.md` + `SKILL-LAYOUT.md`
+- Top-level `README.md`(297 lines / 20KB)documenting 18-expert collaboration DAG + RAG usage guide + Phase 6 live-run procedure
+- 4 个新专家全部接入 `related_skills` 协作图(bidirectional edges preserved for frozen 14 expert_ids)
+
+**Brownfield 基础(沿用)**:
+- Hermes 已有 memory plugin(向量记忆)、image/video/audio generation providers、3D(Blender via scene_builder)等基础设施
 - 每个专家通过 `metadata.hermes.related_skills` 声明协作关系,通过 `expert_id` 和 `metrics` 定义身份与质量标准
-- 新增一个专家 = 在 `skills/movie-experts/` 加一个 SKILL.md + 在上下游专家的 `related_skills` 中引用
-- Hermes 已有 memory plugin(向量记忆)、image/video/audio generation providers、3D(Bender via scene_builder)等基础设施可直接复用
-- 现有专家集中在「制作工艺层」,缺「制作管理层」和「分发合规层」
 
-**已识别的能力缺口**(来自上一轮对话与 codebase map):
-- 运镜/摄影能力目前分散在 `scene_builder`(机位规划)和 `animator`(动态执行),无统一的镜头语言表达层
-- 短剧主场(中国)特有的「钩子设计」「付费卡点」「平台合规」完全缺失
-- 选角、服化道、灯光、制片等制作管理环节无对应专家
-- 现有 14 个专家的 prompt 偏「机制描述」,缺少「行业经验」注入
+**v1 deferred to operator**(详见 `.planning/STATE.md` § Deferred Items):
+- Phase 6 live-run execution(需 OPENROUTER_API_KEY + budget)
+- N ≥ 20 prompt expansion + multi-judge ensemble + statistical GO/NO-GO verdict
+- CN legal review of compliance_marketing refs( statutes + platform thresholds )
+- Phase 6 UAT(10 checkpoints paused)
+- Full bilingual consistency lint(corpus complete;spot-check performed)
 
-**用户偏好**:混合 RAG(静态主 + memory plugin 可选);深度重构而非轻量增强;双语 SKILL + 中文 refs;v1 含 eval harness;4 种语料来源全要。
-
-**已知风险**:
-- 4 种语料来源 × 18 个专家 = 较大策展工作量
-- 现有短剧/微电影样本存在版权风险,需谨慎选择公开/授权素材
-- 双语内容创作工作量翻倍
-- LLM-as-judge eval 受 judge 模型偏差与 prompt 敏感性影响
+**已知风险**(进入 v2 仍需关注):
+- ⚠ Platform guideline drift —— 抖音/快手/视频号 guidelines 季度更新;refs 已带 `verified_date` + 90-day refresh cadence
+- ⚠ 短剧 sample copyright —— fair-use 边界需 per-ref LICENSE.md 持续维护
+- ⚠ LLM-as-judge invalidity —— live run 未执行前 Phase 3 GO/NO-GO 仍为 CONDITIONAL
 
 ## Constraints
 
@@ -112,14 +110,24 @@ Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 1
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| 混合 RAG(静态 refs 主 + memory plugin 可选) | 静态 refs 即开即用、可 git 跟踪、可 code review;向量 RAG 复用 Hermes 现有 memory plugin 不加新基础设施 | — Pending |
-| 4 个新增专家(Cinematographer / Hook & Retention / Production / Compliance) | 覆盖短剧创作 v1 关键缺口:镜头语言、留存设计、制作管理、中国合规 | — Pending |
-| 现有 14 个深度重构(非轻量加 refs) | 用户选择;深度改进 prompt + 修订 metric + 注入 RAG 指令才能显著提升专家质量 | — Pending |
-| SKILL 双语 + refs 中文 | 兼顾 Hermes 英文社区与短剧中国主场;英文 YAML 结构保兼容,中文段落承载行业经验 | — Pending |
-| v1 含 eval 脚本 | LLM-as-judge 双盲评分可重复验证增强前后效果,避免「感觉变好」的无依据声明 | — Pending |
-| 纯 skill + refs 交付(不改 Hermes 本体) | 减小 PR 风险、聚焦内容质量、与 Hermes 主线解耦 | — Pending |
-| 项目位置:直接在 `hermes-agent` 仓库的 `skills/movie-experts/` 下 | 不另起仓库;作为 Hermes 主仓库子系统;`/gsd:new-project` 把整个 hermes-agent 仓库当项目初始化(已与用户确认) | — Pending |
-| 现有 14 的 expert_id 与 related_skills 协作图保持向后兼容 | 现有用户的工作流不应被破坏;新增专家接入而非重写协作图 | — Pending |
+| 混合 RAG(静态 refs 主 + memory plugin 可选) | 静态 refs 即开即用、可 git 跟踪、可 code review;向量 RAG 复用 Hermes 现有 memory plugin 不加新基础设施 | ✓ Good — 58 refs git-tracked;memory plugin optional path documented in `_shared/RAG-INVOCATION-PATTERN.md` |
+| 4 个新增专家(Cinematographer / Hook & Retention / Production / Compliance) | 覆盖短剧创作 v1 关键缺口:镜头语言、留存设计、制作管理、中国合规 | ✓ Good — all 4 shipped with RAG refs + peer edges into collaboration graph |
+| 现有 14 个深度重构(非轻量加 refs) | 用户选择;深度改进 prompt + 修订 metric + 注入 RAG 指令才能显著提升专家质量 | ⚠ Revisit — Phase 3 deep × 4 measurable uplift pending live run;Phase 5 light × 10 unmeasured. Statistical evidence deferred to operator. |
+| SKILL 双语 + refs 中文 | 兼顾 Hermes 英文社区与短剧中国主场;英文 YAML 结构保兼容,中文段落承载行业经验 | ✓ Good — 18 SKILL.md shipped in EN+CN format; spot-check passed |
+| v1 含 eval 脚本 | LLM-as-judge 双盲评分可重复验证增强前后效果,避免「感觉变好」的无依据声明 | ✓ Good — runner.py + judge_prompt + 3-condition ablation + 135 dry-run verdicts;⚠ statistical GO/NO-GO deferred |
+| 纯 skill + refs 交付(不改 Hermes 本体) | 减小 PR 风险、聚焦内容质量、与 Hermes 主线解耦 | ✓ Good — zero Hermes core changes; all deliverables under `skills/movie-experts/` |
+| 项目位置:直接在 `hermes-agent` 仓库的 `skills/movie-experts/` 下 | 不另起仓库;作为 Hermes 主仓库子系统;`/gsd:new-project` 把整个 hermes-agent 仓库当项目初始化(已与用户确认) | ✓ Good — co-located; .planning/ tracks project state |
+| 现有 14 的 expert_id 与 related_skills 协作图保持向后兼容 | 现有用户的工作流不应被破坏;新增专家接入而非重写协作图 | ✓ Good — FOUND-08 frozen rule honored across all phases; verified at Phase 1 VERIFICATION SC-4 |
+
+## Next Milestone Goals
+
+v1 closed 2026-06-15. Next milestone goals TBD via `/gsd-new-milestone`.
+
+Candidate seeds (carry from v1 deferred items + research):
+- Live-run statistical GO/NO-GO evidence (operator-executed; budgets N≥20 prompts × ≥2 judges × 18 experts)
+- Automated corpus ingestion pipeline (v1 was manual curation; v2 candidates: web-DOI fetcher, fair-use verifier)
+- Production-execution orchestrator (was v2 candidate per v1 scope note; chains experts into runnable pipeline)
+- Cross-expert workflow demos (end-to-end 短剧 / 微电影 generation walkthroughs)
 
 ## Evolution
 
@@ -139,4 +147,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 after initialization*
+*Last updated: 2026-06-15 after v1 milestone close*
