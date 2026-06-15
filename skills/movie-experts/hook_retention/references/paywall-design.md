@@ -9,13 +9,13 @@ verified_date: 2026-06
 
 本 ref 定义 `hook_retention` 专家商业化引擎的核心:**付费卡点 (paywall cliffhanger) 的放置策略**与**完播率 (completion rate) 优化规则**。回答四个核心问题:卡点 应以什么密度分布?卡点 强度如何分级?完播率 的 1.5x / ≤3s 规则如何执行?哪些 转发 (share) 触发器能放大算法分发?
 
-本 ref 是 短剧 商业化数值的**唯一真相源 (canonical source of truth)** —— [`vertical-pacing.md`](./vertical-pacing.md) (02-02) 与 SKILL.md body (02-03) 必须跨链本 ref,而非重新定义数字。**[付费机制 (paywall mechanism) 的合规数字 —— 备案 / 付费门槛 / 分账比例 / 退款规则 —— 由 Phase 1 platform-spec refs 独占](../../compliance_marketing/references/platform-specs-miniprogram.md#付费机制)**;本 ref 只定义"卡点放在哪、强度如何",从不重复合规阈值(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训:同数字在多文件漂移)。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) / [付费卡点](../../_shared/glossary.md#付费卡点--paid-conversion-trigger) / [完播率](../../_shared/glossary.md#完播率--completion-rate) / [转发率](../../_shared/glossary.md#转发率--share-rate) / [爆款](../../_shared/glossary.md#爆款--viral-formula--explosive-hit))。
+本 ref 是 短剧 商业化数值的**唯一真相源 (canonical source of truth)** —— [`vertical-pacing.md`](./vertical-pacing.md) (02-02) 与 SKILL.md body (02-03) 必须跨链本 ref,而非重新定义数字。**[付费机制 (paywall mechanism) 的合规数字 —— 备案 / 付费门槛 / 分账比例 / 退款规则 —— 由 Phase 1 platform-spec refs 独占](../../compliance_marketing/references/platform-specs-miniprogram.md#付费机制)**;本 ref 只定义"卡点放在哪、强度如何",从不重复合规阈值(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训:同数字在多文件漂移)。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) / [付费卡点](../../_shared/glossary.md#付费卡点-paid-conversion-trigger) / [完播率](../../_shared/glossary.md#完播率-completion-rate) / [转发率](../../_shared/glossary.md#转发率-share-rate) / [爆款](../../_shared/glossary.md#爆款-viral-formula-explosive-hit))。
 
 ---
 
 ## 付费卡点 Density Rules
 
-[付费卡点](../../_shared/glossary.md#付费卡点--paid-conversion-trigger) (paid-conversion trigger) 的密度是 [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 与 抖音 / 快手 付费短剧变现的最关键变量。以下是 2026-Q2 公开观察的聚合规则(`*estimated*` —— 行业共识,非平台实测数据):
+[付费卡点](../../_shared/glossary.md#付费卡点-paid-conversion-trigger) (paid-conversion trigger) 的密度是 [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 与 抖音 / 快手 付费短剧变现的最关键变量。以下是 2026-Q2 公开观察的聚合规则(`*estimated*` —— 行业共识,非平台实测数据):
 
 ### 密度规则(观察值,`*estimated*`)
 
@@ -31,7 +31,7 @@ verified_date: 2026-06
 为什么是 3-5 / 每 10 集?基于以下公开观察的推理:
 
 1. **观众容忍阈值:** 公开创作者访谈一致指出,小程序剧观众对付费频率的心理容忍度约在"每 2-3 集一次"。低于此频率会让观众感觉"总是在付费",高于此频率则会让付费漏斗过窄、变现效率低。3-5 / 10 集是这条曲线的甜区。
-2. **算法偏好频繁 卡点:** 抖音 / 快手 / 微信小程序剧 的推荐算法权重中,[完播率](../../_shared/glossary.md#完播率--completion-rate) 与互动率(转发 / 评论 / 点赞)是核心指标。卡点 的本质是"未解的悬念",会驱动观众在评论区讨论("男主到底死没死"),从而提升互动率 —— 间接提升算法分发权重。
+2. **算法偏好频繁 卡点:** 抖音 / 快手 / 微信小程序剧 的推荐算法权重中,[完播率](../../_shared/glossary.md#完播率-completion-rate) 与互动率(转发 / 评论 / 点赞)是核心指标。卡点 的本质是"未解的悬念",会驱动观众在评论区讨论("男主到底死没死"),从而提升互动率 —— 间接提升算法分发权重。
 3. **硬卡点 vs 软卡点 的权衡:** 硬卡点 (episode end, 强制付费) 是直接变现触发器,但密度过高会让免费集观众流失(因为他们无法解锁);软卡点 (mid-episode, 提升粘性但不强制付费) 是免费观众的"留人器",但本身不产生收入。3-5 / 10 集 的组合通常是"硬卡点为主 + 软卡点为辅"。
 
 ### 卡点 位置规则(集中段 vs 集末)
@@ -47,7 +47,7 @@ verified_date: 2026-06
 
 ## 3-Tier 卡点 Strength Scoring
 
-[卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) 本身有强度分级。一个"弱卡点"会让观众"觉得满足,可以不看了",反而降低付费转化率。以下是 3 级强度评分(借用但不重复 [`three-second-hooks.md`](./three-second-hooks.md) 的 5 级符号体系 —— 卡点 只需要 3 级,因为 cliffhanger 的语义空间比 hook 窄):
+[卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) 本身有强度分级。一个"弱卡点"会让观众"觉得满足,可以不看了",反而降低付费转化率。以下是 3 级强度评分(借用但不重复 [`three-second-hooks.md`](./three-second-hooks.md) 的 5 级符号体系 —— 卡点 只需要 3 级,因为 cliffhanger 的语义空间比 hook 窄):
 
 | Tier | 符号 | 名称 | Viewer Behavior | 典型设计特征 |
 |------|------|------|-----------------|--------------|
@@ -78,7 +78,7 @@ verified_date: 2026-06
 
 ## 完播率 Optimization Rules
 
-[完播率](../../_shared/glossary.md#完播率--completion-rate) (completion rate) 是平台算法的最高权重指标([抖音 ~35% *estimated*](../../compliance_marketing/references/platform-specs-douyin.md#推荐机制for-you-页算法信号))。本节定义 完播率 优化的 3 条核心规则 —— 这些规则是本 ref 的**唯一真相源**,[`vertical-pacing.md`](./vertical-pacing.md) (02-02) 与 SKILL.md body (02-03) 必须跨链引用。
+[完播率](../../_shared/glossary.md#完播率-completion-rate) (completion rate) 是平台算法的最高权重指标([抖音 ~35% *estimated*](../../compliance_marketing/references/platform-specs-douyin.md#推荐机制for-you-页算法信号))。本节定义 完播率 优化的 3 条核心规则 —— 这些规则是本 ref 的**唯一真相源**,[`vertical-pacing.md`](./vertical-pacing.md) (02-02) 与 SKILL.md body (02-03) 必须跨链引用。
 
 ### 1.5x Pace Rule
 
@@ -97,7 +97,7 @@ verified_date: 2026-06
 
 1. **算法偏好高密度内容:** 抖音 / 快手 / 微信小程序剧 的推荐算法明确偏好高 cut 密度(参见 [抖音 完播率 权重 ~35%](../../compliance_marketing/references/platform-specs-douyin.md#推荐机制for-you-页算法信号))。慢节奏内容会被算法判定为"低质量",分发权重下降。
 2. **观众注意力衰减曲线:** 移动端观众的注意力衰减比 PC / 影院更快。一个镜头超过 2s,观众的上滑概率显著上升。1.5s 是平衡"信息密度"与"理解负担"的甜区。
-3. **小程序剧长集数模式的例外:** [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 长集(3-5 min)的 cut 密度可略低(2-2.5s),但仍需高于横屏 16:9。详见 [`vertical-pacing.md`](./vertical-pacing.md#multi-platform-pacing-variation) 的多平台分支。
+3. **小程序剧长集数模式的例外:** [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 长集(3-5 min)的 cut 密度可略低(2-2.5s),但仍需高于横屏 16:9。详见 [`vertical-pacing.md`](./vertical-pacing.md#multi-platform-pacing-variation) 的多平台分支。
 
 **具体示例:** 一个 90s 抖音男频 战神归来 短剧,按 1.5x 规则应至少 60 cuts。若实际只有 40 cuts(平均 2.25s/cut),完播率会显著低于同类型爆款。
 
@@ -113,7 +113,7 @@ verified_date: 2026-06
 
 | 场景 | 最长允许 | 触发条件(必须同时满足) |
 |------|----------|--------------------------|
-| **情感特写 (emotional close-up)** | **4-5s** | (1) 可见的强烈情绪(流泪 / 颤抖 / 凝视);(2) BGM 同步推起(BGM swell);(3) 该特写是 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) 或 [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 的兑现瞬间 |
+| **情感特写 (emotional close-up)** | **4-5s** | (1) 可见的强烈情绪(流泪 / 颤抖 / 凝视);(2) BGM 同步推起(BGM swell);(3) 该特写是 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) 或 [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 的兑现瞬间 |
 | **BGM 推起 (BGM swell)** | **4-5s** | (1) BGM 进入音乐性高潮(鼓点 / 弦乐推起);(2) 镜头同步呈现视觉冲击(慢动作 / 关键画面);(3) 推起时长 ≤ 5s(超出会让观众感觉"拖") |
 | **艺术停顿 (artistic pause)** | **3-4s** | (1) 戏剧效果停顿(例如:主角得知真相后的沉默);(2) BGM 必须有"呼吸感"的轻伴奏(不是死寂);(3) 停顿后立即接入下一个 cut / 对白 |
 
@@ -127,7 +127,7 @@ verified_date: 2026-06
 
 ### BGM-Driven Sync
 
-**规则:** 竖屏短剧的 cut(镜头切换)**应当**对齐 [composer.coupled_beat](../../composer/SKILL.md#coupled-beat-design) 时间戳。重大 cut(场景转换 / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 兑现) **必须**对齐 beat。
+**规则:** 竖屏短剧的 cut(镜头切换)**应当**对齐 [composer.coupled_beat](../../composer/SKILL.md#coupled-beat-design) 时间戳。重大 cut(场景转换 / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 兑现) **必须**对齐 beat。
 
 **契约关系:** composer 专家**独占** `coupled_beat` 概念的定义(包括 beat grid、energy_per_beat、emotion_tag 等参数)。本 ref 只声明 HOOK 的同步**需求**(cut 应当对齐 beat),从不重新定义 beat 概念。这是跨专家边界([D-7](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) composer 单向边)。
 
@@ -151,12 +151,12 @@ verified_date: 2026-06
 
 ## 5 转发 Trigger Categories
 
-[转发率](../../_shared/glossary.md#转发率--share-rate) (share rate) 是平台算法权重仅次于 [完播率](../../_shared/glossary.md#完播率--completion-rate) 的核心指标([抖音 ~25% 互动率合并权重 *estimated*](../../compliance_marketing/references/platform-specs-douyin.md#推荐机制for-you-页算法信号))。观众转发 短剧 的动机可归纳为 5 类固定触发器:
+[转发率](../../_shared/glossary.md#转发率-share-rate) (share rate) 是平台算法权重仅次于 [完播率](../../_shared/glossary.md#完播率-completion-rate) 的核心指标([抖音 ~25% 互动率合并权重 *estimated*](../../compliance_marketing/references/platform-specs-douyin.md#推荐机制for-you-页算法信号))。观众转发 短剧 的动机可归纳为 5 类固定触发器:
 
 | Trigger | 定义 | 典型设计 | 转发率预期影响 *estimated* |
 |---------|------|----------|----------------------------|
-| **情感共鸣** | 观众深深感受到情绪(共鸣 / 心痛 / 心动 / 心酸) | 强情感场景 + 可代入的角色处境 | *estimated* 高 for [女频](../../_shared/glossary.md#女频--female-oriented-channel)(豪门虐恋 / 亲情催泪) |
-| **反转冲击** | 观众被意外转折震惊 | setup-payoff 结构 + 误导性线索 | *estimated* 高 for both [男频](../../_shared/glossary.md#男频--male-oriented-channel) / [女频](../../_shared/glossary.md#女频--female-oriented-channel) |
+| **情感共鸣** | 观众深深感受到情绪(共鸣 / 心痛 / 心动 / 心酸) | 强情感场景 + 可代入的角色处境 | *estimated* 高 for [女频](../../_shared/glossary.md#女频-female-oriented-channel)(豪门虐恋 / 亲情催泪) |
+| **反转冲击** | 观众被意外转折震惊 | setup-payoff 结构 + 误导性线索 | *estimated* 高 for both [男频](../../_shared/glossary.md#男频-male-oriented-channel) / [女频](../../_shared/glossary.md#女频-female-oriented-channel) |
 | **共识认同** | 观众认同内容表达的立场 / 价值观 | 价值宣告 + 角色倡导 | *estimated* 中(依赖话题热度) |
 | **视觉震撼** | 视觉瞬间值得反复看 / 分享 | 震撼镜头 / VFX 时刻 / 慢动作 | *estimated* 高 for [抖音](../../compliance_marketing/references/platform-specs-douyin.md) 算法 |
 | **实用价值** | 观众能用内容中的信息(how-to / 生活技巧 / 建议) | 可操作内容 + 短剧叙事框架 | *estimated* 高 for [快手](../../compliance_marketing/references/platform-specs-kuaishou.md) 草根观众 |
@@ -164,10 +164,10 @@ verified_date: 2026-06
 ### 各 Trigger 的设计指南
 
 **情感共鸣 (emotional resonance):**
-设计让观众"代入主角处境"的场景。典型:[女频](../../_shared/glossary.md#女频--female-oriented-channel) 豪门虐恋中的"被婆婆当众羞辱"桥段 —— 观众代入"如果是我"。关键要素:(1) 角色处境必须可代入(普通人的困境);(2) 情绪必须真实(不浮夸);(3) 配合 BGM swell(放大情绪)。本 trigger 与 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) 概念高度重叠。
+设计让观众"代入主角处境"的场景。典型:[女频](../../_shared/glossary.md#女频-female-oriented-channel) 豪门虐恋中的"被婆婆当众羞辱"桥段 —— 观众代入"如果是我"。关键要素:(1) 角色处境必须可代入(普通人的困境);(2) 情绪必须真实(不浮夸);(3) 配合 BGM swell(放大情绪)。本 trigger 与 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) 概念高度重叠。
 
 **反转冲击 (twist shock):**
-设计 setup-payoff 结构,通过误导性线索让观众"以为主角会 A,结果是 B"。典型:[男频](../../_shared/glossary.md#男频--male-oriented-channel) 战神归来中的"以为是主角被打败,结果是主角故意示弱以引出幕后黑手"。关键要素:(1) 误导线索必须合理(不能凭空反转);(2) 反转必须兑现一个爽点(不是为反转而反转)。本 trigger 与 Phase 1 [viral-element-catalog.md](../../compliance_marketing/references/viral-element-catalog.md) 中的 **反差钩** 元素重叠 —— 跨链查询。
+设计 setup-payoff 结构,通过误导性线索让观众"以为主角会 A,结果是 B"。典型:[男频](../../_shared/glossary.md#男频-male-oriented-channel) 战神归来中的"以为是主角被打败,结果是主角故意示弱以引出幕后黑手"。关键要素:(1) 误导线索必须合理(不能凭空反转);(2) 反转必须兑现一个爽点(不是为反转而反转)。本 trigger 与 Phase 1 [viral-element-catalog.md](../../compliance_marketing/references/viral-element-catalog.md) 中的 **反差钩** 元素重叠 —— 跨链查询。
 
 **共识认同 (value consensus):**
 设计让观众"点头同意"的价值宣告。典型:职场剧中的"打工人不该被 996 剥削" —— 观众认同并转发表达立场。关键要素:(1) 价值观必须是主流共识(非争议性);(2) 必须由角色之口表达(不是说教);(3) 话题热度越高,转发率越高。本 trigger 的风险:若价值观偏激,可能触发 [抖音 标题党与封面欺诈 🟡 红线](../../compliance_marketing/references/platform-specs-douyin.md#平台专属红线) —— 需 compliance_marketing 联检。
@@ -178,7 +178,7 @@ verified_date: 2026-06
 **实用价值 (practical utility):**
 设计观众"能用上"的内容。典型:[快手](../../compliance_marketing/references/platform-specs-kuaishou.md) 草根短剧中的"如何用 10 元做出一桌菜"。关键要素:(1) 信息必须可操作(观众能立即用);(2) 必须包装在短剧叙事中(不是纯教程);(3) 适合快手草根观众([快手 实用价值 权重高于抖音](../../compliance_marketing/references/platform-specs-kuaishou.md#爆款公式))。本 trigger 是 [快手](../../compliance_marketing/references/platform-specs-kuaishou.md) 独有强项。
 
-### Trigger 与 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 的关系
+### Trigger 与 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 的关系
 
 5 转发 trigger 不是孤立的 —— 它们通常与 [conflict-escalation.md](./conflict-escalation.md) 定义的 击中点 / 爽点 共生:
 
@@ -195,7 +195,7 @@ verified_date: 2026-06
 
 ### Scenario 1: Romance 短剧 (女频 typical)
 
-**题材:** [女频](../../_shared/glossary.md#女频--female-oriented-channel) 豪门虐恋(灰姑娘 + 霸总 + 误会 + 真相)
+**题材:** [女频](../../_shared/glossary.md#女频-female-oriented-channel) 豪门虐恋(灰姑娘 + 霸总 + 误会 + 真相)
 
 | 卡点 | 类型 | 位置 | 强度 | 内容 |
 |------|------|------|------|------|
@@ -207,7 +207,7 @@ verified_date: 2026-06
 
 ### Scenario 2: Revenge 短剧 (男频 typical)
 
-**题材:** [男频](../../_shared/glossary.md#男频--male-oriented-channel) 战神归来 / 重生复仇
+**题材:** [男频](../../_shared/glossary.md#男频-male-oriented-channel) 战神归来 / 重生复仇
 
 | 卡点 | 类型 | 位置 | 强度 | 内容 |
 |------|------|------|------|------|
@@ -240,12 +240,12 @@ verified_date: 2026-06
 | 付费机制 合规规则(备案 / 付费门槛 / 分账比例) | [`../../compliance_marketing/references/platform-specs-miniprogram.md`](../../compliance_marketing/references/platform-specs-miniprogram.md#付费机制) §付费机制 | **Phase 1 独占合规数字** —— 本 ref 只定义卡点放置策略,从不重复 备案 / 付费门槛 / 分账数字。 |
 | 抖音 付费机制 | [`../../compliance_marketing/references/platform-specs-douyin.md`](../../compliance_marketing/references/platform-specs-douyin.md#付费机制) §付费机制 | **Phase 1 独占合规数字** —— 同上。 |
 | 快手 付费机制 | [`../../compliance_marketing/references/platform-specs-kuaishou.md`](../../compliance_marketing/references/platform-specs-kuaishou.md#付费机制) §付费机制 | **Phase 1 独占合规数字** —— 同上。 |
-| 阶梯式冲突升级(击中点 / 爽点 density) | [`conflict-escalation.md`](./conflict-escalation.md) (02-01) | [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) 是阶梯式升级的**第 5 级 Rung**(episode end cliffhanger)。本 ref 定义 卡点 放置,conflict-escalation.md 定义 卡点 在阶梯中的位置。 |
+| 阶梯式冲突升级(击中点 / 爽点 density) | [`conflict-escalation.md`](./conflict-escalation.md) (02-01) | [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) 是阶梯式升级的**第 5 级 Rung**(episode end cliffhanger)。本 ref 定义 卡点 放置,conflict-escalation.md 定义 卡点 在阶梯中的位置。 |
 | 3 秒钩子设计 | [`three-second-hooks.md`](./three-second-hooks.md) (02-01) | Ep N 的 卡点 → Ep N+1 的 钩子锚定(见 conflict-escalation.md Multi-Episode Escalation)。 |
 | 竖屏 cut density + BGM sync 细节 | [`vertical-pacing.md`](./vertical-pacing.md) (02-02) | 完播率 1.5x / ≤3s / 60 cuts 数值的**竖屏执行细节**(per-shot types / 字幕 design / multi-platform variation)详见此 ref。 |
 | composer.coupled_beat(BGM 同步契约) | [`../../composer/SKILL.md`](../../composer/SKILL.md#coupled-beat-design) | composer 专家**独占** beat 概念。本 ref 只声明 HOOK 的同步需求(cut 对齐 beat),不重新定义 beat。 |
 | 爆款 元素目录(反转冲击 ↔ 反差钩) | [`../../compliance_marketing/references/viral-element-catalog.md`](../../compliance_marketing/references/viral-element-catalog.md) | Phase 1 爆款 catalog。本 ref 的"反转冲击 trigger"与 viral-element-catalog 的"反差钩"重叠 —— 跨链查询。 |
-| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) / [付费卡点](../../_shared/glossary.md#付费卡点--paid-conversion-trigger) / [完播率](../../_shared/glossary.md#完播率--completion-rate) / [转发率](../../_shared/glossary.md#转发率--share-rate) / [爆款](../../_shared/glossary.md#爆款--viral-formula--explosive-hit) / [男频](../../_shared/glossary.md#男频--male-oriented-channel) / [女频](../../_shared/glossary.md#女频--female-oriented-channel) / [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 的标准定义。 |
+| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) / [付费卡点](../../_shared/glossary.md#付费卡点-paid-conversion-trigger) / [完播率](../../_shared/glossary.md#完播率-completion-rate) / [转发率](../../_shared/glossary.md#转发率-share-rate) / [爆款](../../_shared/glossary.md#爆款-viral-formula-explosive-hit) / [男频](../../_shared/glossary.md#男频-male-oriented-channel) / [女频](../../_shared/glossary.md#女频-female-oriented-channel) / [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 的标准定义。 |
 
 ---
 

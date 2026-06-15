@@ -7,9 +7,9 @@ verified_date: 2026-06
 
 ## Summary
 
-本 ref 定义了 3 秒钩子(见 [`three-second-hooks.md`](./three-second-hooks.md))如何在一集 / 一季 短剧中通过**阶梯式冲突升级**逐步推高观众情绪。具体回答两个核心问题:**击中点 (emotional-impact point)** 应该以什么密度分布?**[爽点](../../_shared/glossary.md#爽点--satisfaction-beat) (satisfaction beat)** 应该在什么位置兑现?
+本 ref 定义了 3 秒钩子(见 [`three-second-hooks.md`](./three-second-hooks.md))如何在一集 / 一季 短剧中通过**阶梯式冲突升级**逐步推高观众情绪。具体回答两个核心问题:**击中点 (emotional-impact point)** 应该以什么密度分布?**[爽点](../../_shared/glossary.md#爽点-satisfaction-beat) (satisfaction beat)** 应该在什么位置兑现?
 
-本 ref 是 短剧节奏数字阈值的**唯一真相源 (canonical source of truth)**。02-02 ([`paywall-design.md`](./paywall-design.md)) 与 02-03 (SKILL.md body) 必须跨链本 ref,而非重新定义数字 —— 这避免了 Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训中"同数字在多文件漂移"的故障模式。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([爽点](../../_shared/glossary.md#爽点--satisfaction-beat) / [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) / [完播率](../../_shared/glossary.md#完播率--completion-rate) / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment))。
+本 ref 是 短剧节奏数字阈值的**唯一真相源 (canonical source of truth)**。02-02 ([`paywall-design.md`](./paywall-design.md)) 与 02-03 (SKILL.md body) 必须跨链本 ref,而非重新定义数字 —— 这避免了 Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训中"同数字在多文件漂移"的故障模式。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([爽点](../../_shared/glossary.md#爽点-satisfaction-beat) / [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) / [完播率](../../_shared/glossary.md#完播率-completion-rate) / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment))。
 
 ---
 
@@ -22,8 +22,8 @@ verified_date: 2026-06
 | 1 | **钩子锚定** (hook-pin) | 0-3s | 6/10 | opening | 钩子 |
 | 2 | **第一次冲击** (first 击中点) | ~10-15s | 7/10 | first beat | 击中点 (软峰) |
 | 3 | **中段升级** (mid-escalation) | ~30-45s | 8/10 | mid | 击中点 (硬峰) |
-| 4 | **[爽点](../../_shared/glossary.md#爽点--satisfaction-beat)峰值** (爽点 peak) | ~70-80% of episode | 9-10/10 | pre-卡点 | 爽点 |
-| 5 | **[卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) cliffhanger** | episode end | unresolved (悬而未决) | episode end | 卡点 |
+| 4 | **[爽点](../../_shared/glossary.md#爽点-satisfaction-beat)峰值** (爽点 peak) | ~70-80% of episode | 9-10/10 | pre-卡点 | 爽点 |
+| 5 | **[卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) cliffhanger** | episode end | unresolved (悬而未决) | episode end | 卡点 |
 
 ### 情绪强度 (1-10) 的含义
 
@@ -43,13 +43,13 @@ verified_date: 2026-06
 1. **逐级推高,不允许平级:** 第 N+1 级的情绪强度必须严格高于第 N 级。若 mid-escalation 与 first 击中点 强度持平,观众会感觉"剧情停滞"。
 2. **每级之间留出"喘息帧":** 不要把情绪强度从 7/10 直接推到 9/10 而中间没有缓冲。典型缓冲长度 = 3-5s(可以是一个日常细节镜头 / 一个微表情特写)。这避免了情绪疲劳 (emotional fatigue)。
 3. **钩子锚定 (Rung 1) 与 爽点峰值 (Rung 4) 必须有因果链:** 第 4 级兑现的爽点必须直接回应第 1 级的钩子承诺。例如:钩子锚定"被陷害" → 爽点峰值"反杀真凶"。若没有因果链,观众会觉得"开场骗我进来,后面是另一部剧"。
-4. **卡点 cliffhanger (Rung 5) 是"未解"状态:** 这一集的卡点必须留一个**未解的悬念**,直接驱动观众点开下一集(或在 [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 中付费解锁)。
+4. **卡点 cliffhanger (Rung 5) 是"未解"状态:** 这一集的卡点必须留一个**未解的悬念**,直接驱动观众点开下一集(或在 [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 中付费解锁)。
 
 ---
 
 ## 击中点 Placement Density
 
-[击中点](../../_shared/glossary.md#击中点--emotional-impact-point) (emotional-impact point) 是阶梯式升级的中间台阶 —— 介于钩子与爽点之间的"次级情绪峰"。它的密度直接决定一集 短剧 的"信息密度感"。
+[击中点](../../_shared/glossary.md#击中点-emotional-impact-point) (emotional-impact point) 是阶梯式升级的中间台阶 —— 介于钩子与爽点之间的"次级情绪峰"。它的密度直接决定一集 短剧 的"信息密度感"。
 
 ### 密度规则(观察值,`*estimated*`)
 
@@ -78,7 +78,7 @@ verified_date: 2026-06
 
 ## 爽点 Placement Strategy
 
-[爽点](../../_shared/glossary.md#爽点--satisfaction-beat) (satisfaction beat) 是阶梯式升级的最高峰 —— 观众情绪的最强满足瞬间。它的位置与铺垫直接决定一集 短剧 的"是否值得追看"。
+[爽点](../../_shared/glossary.md#爽点-satisfaction-beat) (satisfaction beat) 是阶梯式升级的最高峰 —— 观众情绪的最强满足瞬间。它的位置与铺垫直接决定一集 短剧 的"是否值得追看"。
 
 ### 放置规则(观察值,`*estimated*`)
 
@@ -162,7 +162,7 @@ verified_date: 2026-06
 
 ## Multi-Episode Escalation
 
-阶梯式升级不仅适用于单集,还延伸到多集 短剧(尤其是 [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 的 10-80 集长格式)。多集阶梯的核心规则:
+阶梯式升级不仅适用于单集,还延伸到多集 短剧(尤其是 [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 的 10-80 集长格式)。多集阶梯的核心规则:
 
 ### Episode N's 卡点 → Episode N+1's 钩子锚定
 
@@ -183,7 +183,7 @@ verified_date: 2026-06
 
 ### Serialized 卡点 Strategy
 
-多集 短剧(尤其是付费 [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama))的卡点策略遵循"硬卡点 + 软卡点"组合规则:
+多集 短剧(尤其是付费 [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama))的卡点策略遵循"硬卡点 + 软卡点"组合规则:
 
 - **硬 卡点 (hard cliffhanger):** 每一集(尤其是付费集)结尾必须有强悬念卡点。典型强度:让"不看下一集就睡不着"。
 - **软 卡点 (soft cliffhanger):** 集中段(约 40-50% 处)可选放置一个轻悬念,提升中段追看粘性。典型强度:让"想看但可以忍住"。
@@ -202,7 +202,7 @@ verified_date: 2026-06
 | 卡点放置细节 | [`paywall-design.md`](./paywall-design.md) (02-02) | Rung 5 卡点 cliffhanger 的具体放置规则、付费墙位置、硬/软卡点强度分级,详见此 ref。 |
 | 节奏时序细节 | [`vertical-pacing.md`](./vertical-pacing.md) (02-02) | 竖屏更快剪辑密度、BGM 驱动同步、字幕设计等节奏技术细节,详见此 ref。 |
 | Marker schema (钩子/爽点/卡点 JSON) | [`../SKILL.md`](../SKILL.md) (02-03) | 阶梯式升级的 5 级 Rung 与 marker schema 的对应关系(钩子 / 击中点 / 爽点 / 卡点 4 个 marker 类型)在 SKILL.md body 中正式定义。 |
-| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) / [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) / [完播率](../../_shared/glossary.md#完播率--completion-rate) / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) / [男频](../../_shared/glossary.md#男频--male-oriented-channel) / [女频](../../_shared/glossary.md#女频--female-oriented-channel) / [慕强](../../_shared/glossary.md#慕强--power-fantasy) / [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 的标准定义。 |
+| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) / [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) / [完播率](../../_shared/glossary.md#完播率-completion-rate) / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) / [男频](../../_shared/glossary.md#男频-male-oriented-channel) / [女频](../../_shared/glossary.md#女频-female-oriented-channel) / [慕强](../../_shared/glossary.md#慕强-power-fantasy) / [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 的标准定义。 |
 
 ---
 
@@ -226,7 +226,7 @@ verified_date: 2026-06
 - **平台算法更新:** 抖音 / 快手 / 微信小程序剧 任意一方修订推荐算法,影响高密度内容的推荐权重(例如:算法从"密度优先"转向"质量优先",会重写击中点密度规则)。
 - **观众跳出模式变化:** 创作者社区观察到观众跳出点发生显著偏移(例如:原本 10s 跳出率高,现在变成 7s 跳出率高) —— 这意味着软峰间隔规则需缩短。
 - **新阶梯模式出现:** top 10 爆款 短剧中出现本 ref 未覆盖的新型阶梯结构(例如:非线性阶梯、双线并行阶梯)。需评估是否扩展阶梯模型。
-- **付费模式变化:** [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 平台修订付费墙规则(如:从"集末付费"转向"集中段付费"),会重写硬/软卡点组合策略。
+- **付费模式变化:** [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 平台修订付费墙规则(如:从"集末付费"转向"集中段付费"),会重写硬/软卡点组合策略。
 - **多集叙事结构创新:** 出现非 10-80 集的新格式(如 3 集短季 / 200 集超长篇),需重新评估 season-long arc 曲线。
 
 > 本 ref 所有数字阈值(10-15s / 30-45s / 6-9 count / 70-80% / 30s setup)均为基于公开观察的聚合估算(`*estimated*`)。这些数字是 hook_retention 专家的**唯一真相源** —— 02-02 与 02-03 必须跨链引用,不得重新定义。实际效果需通过平台 A/B 测试验证,超出本 ref 的纯文档范围。

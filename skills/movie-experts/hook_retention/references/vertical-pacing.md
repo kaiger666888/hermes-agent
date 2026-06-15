@@ -9,7 +9,7 @@ verified_date: 2026-06
 
 本 ref 定义 `hook_retention` 专家的**竖屏 (9:16) 格式节奏需求**,回答三个核心问题:竖屏为什么比横屏更快?cut 密度的具体数字是多少?字幕 设计语言如何适配竖屏 UI?
 
-本 ref 是竖屏执行细节的专题 ref。**[完播率](../../_shared/glossary.md#完播率--completion-rate) 优化规则的数值(1.5x pace / ≤3s dead air / 60 cuts)由 [`paywall-design.md`](./paywall-design.md) 独占定义** —— 本 ref 只展开这些数值的竖屏执行细节(per-shot types / BGM sync 工作流 / 字幕 safe zones),不重新定义数值本身。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([完播率](../../_shared/glossary.md#完播率--completion-rate) / [竖屏](../../_shared/glossary.md#竖屏--vertical-screen--916) / [钩子](../../_shared/glossary.md#钩子--hook) / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment))。
+本 ref 是竖屏执行细节的专题 ref。**[完播率](../../_shared/glossary.md#完播率-completion-rate) 优化规则的数值(1.5x pace / ≤3s dead air / 60 cuts)由 [`paywall-design.md`](./paywall-design.md) 独占定义** —— 本 ref 只展开这些数值的竖屏执行细节(per-shot types / BGM sync 工作流 / 字幕 safe zones),不重新定义数值本身。术语定义见 [`../../_shared/glossary.md`](../../_shared/glossary.md)([完播率](../../_shared/glossary.md#完播率-completion-rate) / [竖屏](../../_shared/glossary.md#竖屏-vertical-screen-916) / [钩子](../../_shared/glossary.md#钩子-hook) / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment))。
 
 ---
 
@@ -23,7 +23,7 @@ verified_date: 2026-06
 | **字幕占比** | ~5% frame | **~15-20% frame**(竖屏字幕必须更大,因移动端外放场景多) |
 | **视觉重心** | 中心 / 三分法(传统构图) | **上 1/3**(避开顶部 UI overlays:摄像头 / 状态栏)+ **下 1/3**(避开底部 UI:评论 / 互动区) |
 | **BGM 节奏** | 较慢,atmospheric(氛围性) | **更快,beat-driven**(节拍驱动,与 cut 同步) |
-| **单集时长** | 3-5 min(横屏 IP 改编长剧) | 1-3 min(主流竖屏短剧);3-5 min([小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 长集) |
+| **单集时长** | 3-5 min(横屏 IP 改编长剧) | 1-3 min(主流竖屏短剧);3-5 min([小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 长集) |
 | **观看场景** | PC / 影院 / 客厅 TV(沉浸式) | 移动端通勤 / 排队 / 碎片时间(易中断) |
 
 ### 为什么竖屏更快?
@@ -64,11 +64,11 @@ verified_date: 2026-06
 
 ### 具体示例:90s Romance 短剧 Cold-Open 帧级 Cut List
 
-以下是一个 90s [女频](../../_shared/glossary.md#女频--female-oriented-channel) romance 短剧 cold-open 的帧级 cut list 示例,展示 1.5x pace rule 的实际应用(共 ~18 cuts for first 27s,符合 1.5s/cut):
+以下是一个 90s [女频](../../_shared/glossary.md#女频-female-oriented-channel) romance 短剧 cold-open 的帧级 cut list 示例,展示 1.5x pace rule 的实际应用(共 ~18 cuts for first 27s,符合 1.5s/cut):
 
 | Cut # | 时间戳 | 时长 | 景别 | 内容 |
 |-------|--------|------|------|------|
-| 1 | 0.0-1.0s | 1.0s | 特写 | 女主泪眼特写(0-3s [钩子](../../_shared/glossary.md#钩子--hook) 锚定) |
+| 1 | 0.0-1.0s | 1.0s | 特写 | 女主泪眼特写(0-3s [钩子](../../_shared/glossary.md#钩子-hook) 锚定) |
 | 2 | 1.0-2.0s | 1.0s | 特写 | 男主背影(悬念:他是谁?) |
 | 3 | 2.0-3.5s | 1.5s | 中景 | 女主追上去,拉住男主袖子 |
 | 4 | 3.5-4.5s | 1.0s | 特写 | 男主转身,表情冷漠 |
@@ -76,7 +76,7 @@ verified_date: 2026-06
 | 6 | 6.0-7.5s | 1.5s | 特写 | 女主错愕表情 |
 | 7 | 7.5-9.0s | 1.5s | 全景 | 场景建立:雨夜街道 |
 | 8 | 9.0-10.5s | 1.5s | 中景 | 女主跪坐在地 |
-| 9 | 10.5-12.0s | 1.5s | 特写 | 女主抬头,眼神坚定(第一次 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) ~10-15s) |
+| 9 | 10.5-12.0s | 1.5s | 特写 | 女主抬头,眼神坚定(第一次 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) ~10-15s) |
 | 10 | 12.0-13.5s | 1.5s | 中景 | 女主站起 |
 | 11 | 13.5-15.0s | 1.5s | 特写 | 女主擦干眼泪 |
 | 12 | 15.0-16.5s | 1.5s | 全景 | 女主转身离开 |
@@ -103,7 +103,7 @@ verified_date: 2026-06
 
 | Cut 类型 | 对齐要求 | 容忍度 *estimated* |
 |----------|----------|---------------------|
-| **重大 cut**(场景转换 / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 兑现 / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) cliffhanger) | **MUST land on beat** | 无容忍(严格对齐) |
+| **重大 cut**(场景转换 / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 兑现 / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) cliffhanger) | **MUST land on beat** | 无容忍(严格对齐) |
 | **普通 cut**(日常切换 / 反应镜头) | SHOULD land on beat | **±100ms** *estimated* |
 
 > **注意:** `±100ms` 是 HOOK 专家的最佳实践估算(`*estimated*`)。composer 专家可能有更严格的 spec(例如基于音频采样精度的 ±50ms)。若两者冲突,以 composer 为准(composer 独占 beat 概念)。
@@ -128,8 +128,8 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 **Swell 时长建议(`*estimated*`):**
 
 - **典型 swell 时长:** 2-4s。短于 2s 推起不明显;长于 4s 会让观众感觉"拖"。
-- **swell 必须在观众注意力衰减前结束:** 基于 [conflict-escalation.md](./conflict-escalation.md#击中点-placement-density) 的 10-15s 软峰间隔规则,swell 后必须立即接入下一个 cut / [击中点](../../_shared/glossary.md#击中点--emotional-impact-point),重新拉起注意力。
-- **swell 与 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 共生:** swell 通常出现在 击中点 或 爽点 的兑现瞬间(放大情绪)。纯氛围性 swell(无情绪兑现)应避免。
+- **swell 必须在观众注意力衰减前结束:** 基于 [conflict-escalation.md](./conflict-escalation.md#击中点-placement-density) 的 10-15s 软峰间隔规则,swell 后必须立即接入下一个 cut / [击中点](../../_shared/glossary.md#击中点-emotional-impact-point),重新拉起注意力。
+- **swell 与 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 共生:** swell 通常出现在 击中点 或 爽点 的兑现瞬间(放大情绪)。纯氛围性 swell(无情绪兑现)应避免。
 
 ---
 
@@ -165,7 +165,7 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 | **字重** | Medium / Bold | 增加可读性,尤其在复杂背景下 |
 | **描边 / 阴影** | 必须(stroke / shadow) | 提供对比度,确保在任何背景下可读 |
 
-**[女频](../../_shared/glossary.md#女频--female-oriented-channel) vs [男频](../../_shared/glossary.md#男频--male-oriented-channel) 字体差异:**
+**[女频](../../_shared/glossary.md#女频-female-oriented-channel) vs [男频](../../_shared/glossary.md#男频-male-oriented-channel) 字体差异:**
 
 - **女频:** 细黑体 / 宋体(优雅感,情感向)。字号可略小(~3.5-4%),配合精致排版。
 - **男频:** 加粗黑体(力量感,爽点向)。字号偏大(~4-5%),配合对比色(黄底黑字 / 红底白字)。
@@ -183,13 +183,13 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 
 ### Emphasis Styling
 
-字幕的强调样式(emphasis styling)用于标记 [钩子](../../_shared/glossary.md#钩子--hook) / [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) marker 类型。**Marker schema 的完整定义在 SKILL.md body (02-03) 中** —— 本 ref 只定义字幕层面的视觉表现:
+字幕的强调样式(emphasis styling)用于标记 [钩子](../../_shared/glossary.md#钩子-hook) / [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) marker 类型。**Marker schema 的完整定义在 SKILL.md body (02-03) 中** —— 本 ref 只定义字幕层面的视觉表现:
 
 | Marker 类型 | 字幕样式 *estimated* | 说明 |
 |-------------|----------------------|------|
-| **[钩子](../../_shared/glossary.md#钩子--hook)** | **黄色高亮** (yellow highlight) | 标记钩子锚定句(0-3s),吸引注意力 |
-| **[爽点](../../_shared/glossary.md#爽点--satisfaction-beat)** | **红色加粗** (red bold) | 标记爽点兑现句,强化冲击 |
-| **[卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment)** | **蓝色闪烁** (blue flash) | 标记卡点 cliffhanger 句,制造悬念感 |
+| **[钩子](../../_shared/glossary.md#钩子-hook)** | **黄色高亮** (yellow highlight) | 标记钩子锚定句(0-3s),吸引注意力 |
+| **[爽点](../../_shared/glossary.md#爽点-satisfaction-beat)** | **红色加粗** (red bold) | 标记爽点兑现句,强化冲击 |
+| **[卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment)** | **蓝色闪烁** (blue flash) | 标记卡点 cliffhanger 句,制造悬念感 |
 
 > **注意:** 这些样式是**视觉强调**,不是必需的。普通字幕可保持默认样式(白色 + 描边)。强调样式只在 marker 出现时使用,避免过度装饰。
 
@@ -197,7 +197,7 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 
 ## Multi-Platform Pacing Variation
 
-不同平台的 [爆款](../../_shared/glossary.md#爆款--viral-formula--explosive-hit) 公式对节奏密度有不同要求(详见 [CONTEXT D-6](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 爆款公式分支)。以下是 4 个主流分支的节奏差异(`*estimated*`):
+不同平台的 [爆款](../../_shared/glossary.md#爆款-viral-formula-explosive-hit) 公式对节奏密度有不同要求(详见 [CONTEXT D-6](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 爆款公式分支)。以下是 4 个主流分支的节奏差异(`*estimated*`):
 
 | Platform | 节奏密度 | 典型 cut rate *estimated* | BGM 风格 | 单集时长 |
 |----------|----------|---------------------------|----------|----------|
@@ -209,16 +209,16 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 ### 各分支的节奏逻辑
 
 **抖音-男频(极快 1.2-1.5s/cut):**
-[男频](../../_shared/glossary.md#男频--male-oriented-channel) 战神归来 / 重生复仇题材的核心是 [爽点](../../_shared/glossary.md#爽点--satisfaction-beat) 密度(每 30s 至少 1 个打脸 / 装逼 / 逆袭桥段,见 [抖音 platform-spec](../../compliance_marketing/references/platform-specs-douyin.md#男频爆款公式))。极快 cut 节奏强化"爽感" —— 快速切换让爽点兑现更"炸"。BGM 必须强节奏 electronic(鼓点与 cut 同步)。
+[男频](../../_shared/glossary.md#男频-male-oriented-channel) 战神归来 / 重生复仇题材的核心是 [爽点](../../_shared/glossary.md#爽点-satisfaction-beat) 密度(每 30s 至少 1 个打脸 / 装逼 / 逆袭桥段,见 [抖音 platform-spec](../../compliance_marketing/references/platform-specs-douyin.md#男频爆款公式))。极快 cut 节奏强化"爽感" —— 快速切换让爽点兑现更"炸"。BGM 必须强节奏 electronic(鼓点与 cut 同步)。
 
 **抖音-女频(快 1.5-2s/cut):**
-[女频](../../_shared/glossary.md#女频--female-oriented-channel) 豪门虐恋 / 闺蜜背叛题材的核心是 [击中点](../../_shared/glossary.md#击中点--emotional-impact-point) 密度(每集至少 1 个让观众"心痛 / 心动 / 心酸"的瞬间,见 [抖音 platform-spec](../../compliance_marketing/references/platform-specs-douyin.md#女频爆款公式))。快 cut 节奏(略慢于男频)让情绪有"呼吸空间"。BGM 必须情感 lyrical(钢琴 / 弦乐,与情绪转折同步)。
+[女频](../../_shared/glossary.md#女频-female-oriented-channel) 豪门虐恋 / 闺蜜背叛题材的核心是 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) 密度(每集至少 1 个让观众"心痛 / 心动 / 心酸"的瞬间,见 [抖音 platform-spec](../../compliance_marketing/references/platform-specs-douyin.md#女频爆款公式))。快 cut 节奏(略慢于男频)让情绪有"呼吸空间"。BGM 必须情感 lyrical(钢琴 / 弦乐,与情绪转折同步)。
 
 **快手-草根(中等 2-2.5s/cut):**
 [快手](../../compliance_marketing/references/platform-specs-kuaishou.md#草根共鸣公式快手主流) 草根共鸣 / 家庭伦理题材的核心是"代入感"(让观众觉得"这就是我 / 我的家人")。中等 cut 节奏让观众有时间"消化"角色处境(太快会让草根观众感觉"看不清")。BGM 民谣 / 流行(接地气)。
 
 **小程序剧-长集数(较慢 2-3s/cut):**
-[小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 长集(3-5 min)的节奏可略慢于抖音 / 快手(因为单集时长长,观众投入度高,容忍慢节奏)。但 2-3s/cut 仍快于横屏 16:9。BGM 叙事 instrumental(氛围性,长篇叙事需要)。详见 [小程序剧 platform-spec](../../compliance_marketing/references/platform-specs-miniprogram.md#长剧集模式与画幅)。
+[小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 长集(3-5 min)的节奏可略慢于抖音 / 快手(因为单集时长长,观众投入度高,容忍慢节奏)。但 2-3s/cut 仍快于横屏 16:9。BGM 叙事 instrumental(氛围性,长篇叙事需要)。详见 [小程序剧 platform-spec](../../compliance_marketing/references/platform-specs-miniprogram.md#长剧集模式与画幅)。
 
 > **注意:** 这些 cut rate 是**典型值**而非硬限制。具体题材 / 具体场景可调整。但任何分支都不得低于 [`paywall-design.md`](./paywall-design.md#15x-pace-rule) §1.5x pace rule 的下限(1.5s average)—— 除非是小程序剧长集(2-3s/cut 是其分支特性,但整体仍快于横屏)。
 
@@ -236,7 +236,7 @@ BGM 推起(swells)可延长镜头超过 1.5s 基线(跨链 [`paywall-design.md`]
 | 3 秒钩子设计 | [`three-second-hooks.md`](./three-second-hooks.md) (02-01) | 钩子锚定 (0-3s) 是 cold-open 的第一 cut。本 ref 的帧级 cut list 示例包含钩子锚定。 |
 | composer.coupled_beat(BGM 同步契约) | [`../../composer/SKILL.md`](../../composer/SKILL.md#coupled-beat-design) §Coupled Beat Design | composer 专家**独占** beat 概念。本 ref 只声明 HOOK 的同步需求。 |
 | 平台 字幕安全区 / UI 布局 | [`../../compliance_marketing/references/platform-specs-douyin.md`](../../compliance_marketing/references/platform-specs-douyin.md#内容时长与画幅) / [`platform-specs-kuaishou.md`](../../compliance_marketing/references/platform-specs-kuaishou.md#内容时长与画幅) / [`platform-specs-miniprogram.md`](../../compliance_marketing/references/platform-specs-miniprogram.md#长剧集模式与画幅) | Phase 1 platform-spec refs 定义各平台 UI 布局与字幕安全区。本 ref 跨链引用。 |
-| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [完播率](../../_shared/glossary.md#完播率--completion-rate) / [竖屏](../../_shared/glossary.md#竖屏--vertical-screen--916) / [钩子](../../_shared/glossary.md#钩子--hook) / [卡点](../../_shared/glossary.md#卡点--paywall-cliffhanger--paywall-moment) / [男频](../../_shared/glossary.md#男频--male-oriented-channel) / [女频](../../_shared/glossary.md#女频--female-oriented-channel) / [小程序剧](../../_shared/glossary.md#小程序剧--mini-program-drama) 的标准定义。 |
+| 术语定义 | [`../../_shared/glossary.md`](../../_shared/glossary.md) | [完播率](../../_shared/glossary.md#完播率-completion-rate) / [竖屏](../../_shared/glossary.md#竖屏-vertical-screen-916) / [钩子](../../_shared/glossary.md#钩子-hook) / [卡点](../../_shared/glossary.md#卡点-paywall-cliffhanger-paywall-moment) / [男频](../../_shared/glossary.md#男频-male-oriented-channel) / [女频](../../_shared/glossary.md#女频-female-oriented-channel) / [小程序剧](../../_shared/glossary.md#小程序剧-mini-program-drama) 的标准定义。 |
 
 ---
 
