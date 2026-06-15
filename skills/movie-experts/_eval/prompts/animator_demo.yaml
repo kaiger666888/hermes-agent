@@ -1,7 +1,41 @@
 expert_id: animator
+# Demo prompts for the animator expert eval harness.
+#
+# Three prompts chosen to exercise the animator's distinct craft axes:
+#   anim-001 — vertical-screen framing (a 短剧-specific constraint)
+#   anim-002 — motion-emotion mapping (the animator's core craft)
+#   anim-003 — cross-shot consistency (continuity across episodes)
+#
+# These are below the N>=20 threshold required for statistically
+# defensible Phase 6 eval (per 00-03-PLAN.md SC #3); they exist only
+# to prove the harness output shape on one real expert. The baseline
+# animator snapshot still carries the phantom ref `wan22_video`
+# (captured pre-00-04 cleanup), so a candidate answer that regresses
+# to that ref will surface here — that's expected and is exactly the
+# kind of drift the harness is built to detect.
 prompts:
   - id: anim-001
     text: |
-      Design a 3-second camera-move specification (camera_type, speed, ease)
-      for a 短剧 opening shot where the protagonist enters a neon-lit alley
-      at night. Justify the choice for vertical-screen framing.
+      Design a 3-second camera-move specification (camera_type, speed,
+      ease) for a 短剧 opening shot where the protagonist enters a
+      neon-lit alley at night. Justify the choice for vertical-screen
+      (9:16) framing — explain why a horizontal dolly would underuse
+      the frame and what vertical-axis move you'd substitute.
+
+  - id: anim-002
+    text: |
+      Given a still frame of a crying woman seated at a piano, propose
+      two motion designs: one emphasizing emotional stillness, one
+      emphasizing inner turmoil. For each, specify motion_intensity
+      (0.0-1.0), velocity_curve (linear|ease-in|ease-out|ease-in-out),
+      and a one-line rationale tying the motion parameters to the
+      intended emotional read.
+
+  - id: anim-003
+    text: |
+      For a 6-episode 短剧 with a consistent protagonist, propose a
+      temporal-consistency protocol across shots. Specify which
+      I-frame references you'd lock per episode, what motion_tags you'd
+      enforce on the protagonist's idle animation, and how you'd detect
+      drift in motion_intensity between episodes without re-rendering
+      the full episode.
