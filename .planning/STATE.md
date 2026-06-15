@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: milestone
+milestone: v1
+milestone_name: Movie-Experts Suite v2 (MESV2)
 status: executing
-last_updated: "2026-06-15T11:02:15.382Z"
+last_updated: "2026-06-15T13:20:24.305Z"
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 4
-  completed_plans: 13
-  percent: 0
+  completed_phases: 3
+  total_plans: 15
+  completed_plans: 15
+  percent: 43
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -26,11 +26,11 @@ progress:
 
 ## Current Position
 
-Phase: 3 (Top-4 Existing Experts RAG) — EXECUTING
-Plan: 1 of 5
+Phase: 03 (top-4-existing-experts-rag) — COMPLETE
+Plan: 5 of 5
 **Phase:** 3
-**Plan:** Not started
-**Status:** Executing Phase 3
+**Plan:** Complete (Gate artifact produced)
+**Status:** Phase 3 complete — GO/NO-GO gate artifact produced; formal gate decision deferred to Phase 4
 **Constraint:** Phase 0 is a blocker gate. Nothing else starts until it passes.
 
 ### Progress
@@ -49,10 +49,10 @@ Phase 6 [ .......... ] 0% Not started
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 0 | AUDIT + Eval Skeleton | Not started | BLOCKER GATE. ≤ 2 GLM-heavy ops in parallel. |
-| 1 | EXPERT-COMPLI | Not started | Legal gate. Research flag: verify 2026-Q2 platform guidelines + AI 漫剧 备案 thresholds. |
-| 2 | EXPERT-HOOK | Not started | Commercial engine. Research flag: validate 短剧 pacing data + video gen model behavior. |
-| 3 | Top-4 RAG | Not started | GO/NO-GO gate follows in Phase 4. Sequential screenplay → editor → colorist → style_genome. |
+| 0 | AUDIT + Eval Skeleton | Complete | BLOCKER GATE passed 2026-06-15. ≤ 2 GLM-heavy ops in parallel. |
+| 1 | EXPERT-COMPLI | Complete | Legal gate. Built compliance_marketing expert end-to-end. |
+| 2 | EXPERT-HOOK | Complete | Commercial engine. Built hook_retention expert end-to-end. |
+| 3 | Top-4 RAG | Gate artifact produced | Dry-run complete (36 verdicts); live deferred to Phase 6. GO/NO-GO report at `_eval/reports/phase3-go-nogo.{json,md}`. Formal gate decision deferred to Phase 4 per ROADMAP. |
 | 4 | EXPERT-CINE | Not started | Boundary vs scene_builder/animator/editor MUST be documented before SKILL.md written. |
 | 5 | Remaining 10 + EXPERT-PROD | Not started (v1.5) | Deferred beyond v1 release. Scrap entirely if Phase 3 RAG uplift is statistically insignificant. |
 | 6 | Full Eval + Bilingual + README | Not started | N ≥ 20 prompts/expert. Panel of ≥ 2 judges. Both orderings. |
