@@ -1,0 +1,9 @@
+{
+  "byte_size": 7950,
+  "captured_at": "2026-06-15T04:16:10.600387+00:00",
+  "expert_id": "style_genome",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "85eae12561aac0954bb178bee746b4da7e4a101d8dc17e7de5c25eb90d241a5d",
+  "source_path": "skills/movie-experts/style_genome/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

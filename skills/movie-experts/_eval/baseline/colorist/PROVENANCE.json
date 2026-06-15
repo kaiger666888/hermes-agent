@@ -1,0 +1,9 @@
+{
+  "byte_size": 5566,
+  "captured_at": "2026-06-15T04:16:10.590926+00:00",
+  "expert_id": "colorist",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "64473e0a101ea5eb99a72c4b17f1b790a81b59758e491d94d1431b7bbf436f31",
+  "source_path": "skills/movie-experts/colorist/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

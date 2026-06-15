@@ -1,0 +1,9 @@
+{
+  "byte_size": 4619,
+  "captured_at": "2026-06-15T04:16:10.589967+00:00",
+  "expert_id": "animator",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "96293f1c5778ed3bec7ab81505e1e15b551370b9a5a863e528f52ad8a3976c33",
+  "source_path": "skills/movie-experts/animator/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

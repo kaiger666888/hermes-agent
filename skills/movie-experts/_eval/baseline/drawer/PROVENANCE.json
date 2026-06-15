@@ -1,0 +1,9 @@
+{
+  "byte_size": 4065,
+  "captured_at": "2026-06-15T04:16:10.593454+00:00",
+  "expert_id": "drawer",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "50918f5a00ccfa2fa301aae3b25d016180c59d9da29d5a8a443e6ab8bcdfa5e2",
+  "source_path": "skills/movie-experts/drawer/SKILL.md",
+  "tag": "eval-baseline-v1"
+}
