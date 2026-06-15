@@ -1,0 +1,101 @@
+# Manual allowlist for models/vendors NOT registered as Hermes plugins.
+# Auto-merged with plugin-derived tokens at verify_skill_references.py runtime.
+#
+# Purpose
+# -------
+# The scanner at `scripts/verify_skill_references.py` flags any model / vendor
+# token in `skills/movie-experts/*/SKILL.md` that does not appear in
+# `plugins/image_gen/*/plugin.yaml` or `plugins/video_gen/*/plugin.yaml`.
+# This file lists external models that are legitimate CONTEXT references
+# (e.g. cited in research, recommended as alternatives, or user-deployed
+# outside Hermes) but are NOT shipped as Hermes plugins — so they need an
+# explicit manual override to avoid false positives.
+#
+# CRITICAL: Do NOT add phantom / fabricated tokens here.
+#   - `wan22_video` is NOT a Hermes plugin model — keep it flagged.
+#   - `168K controlled tokens` is a fabricated concept — keep it flagged.
+#   - `flux_1_nsfw` / `flux_1_euler_a` etc. — superseded by FLUX 2 in Hermes,
+#     the v1 samplers should be flagged so the AUDIT phase can clean them up.
+#
+# Format
+# ------
+# - Keep entries lowercase — the scanner normalizes both file content and
+#   allowlist to lowercase before comparison.
+# - Each entry MUST carry a one-line provenance note explaining where the
+#   model comes from or why it is a legitimate context reference.
+# - Entries are sorted alphabetically by `name` to minimize merge conflicts.
+#
+# Provenance categories used in notes:
+#   - fal: accessed via plugins/video_gen/fal or plugins/image_gen/fal
+#   - external: not a Hermes plugin; user deploys or references externally
+#   - open-source: openly available model weights (may be self-hosted)
+
+models:
+  - name: cosyvoice
+    provenance: "Alibaba CosyVoice 3.0 — SOTA CN emotional TTS; external (user-deployed, not a Hermes plugin). Documented in voicer/references/cosyvoice-deployment.md per research SUMMARY."
+
+  - name: deepseek
+    provenance: "DeepSeek LLM family — referenced as open-weight judge candidate in research SUMMARY (open-weight vs commercial panel discussion)."
+
+  - name: elevenlabs
+    provenance: "ElevenLabs TTS — listed in research SUMMARY as production TTS option for voice cloning / character consistency."
+
+  - name: flux2
+    provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal. Accessed via fal plugin; 'flux2' is a context-only shorthand."
+
+  - name: flux_2
+    provenance: "Black Forest Labs FLUX 2 — underscore variant of the shorthand above. Used in skill prose; resolved via fal plugin."
+
+  - name: glm
+    provenance: "Zhipu GLM-4 LLM — referenced as open-weight judge candidate and as a CN-context fallback model in screenplay/SKILL.md."
+
+  - name: gpt-image-1.5
+    provenance: "OpenAI gpt-image-1.5 — accessed via plugins/image_gen/fal; in-flux at audit time."
+
+  - name: gpt-image-2
+    provenance: "OpenAI gpt-image-2 — accessed via plugins/image_gen/openai and plugins/image_gen/openai-codex."
+
+  - name: grok-imagine
+    provenance: "xAI grok-imagine (image + video) — accessed via plugins/image_gen/xai and plugins/video_gen/xai."
+
+  - name: kling
+    provenance: "Kuaishou Kling v3 (incl. kling-v3-4k) — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY)."
+
+  - name: minimax
+    provenance: "MiniMax LLM + TTS — research SUMMARY lists MiniMax TTS as strong CN + emotion-control option; also a judge candidate."
+
+  - name: musicgen
+    provenance: "Meta MusicGen-large — open-source music generation default per research SUMMARY (composer/SKILL.md)."
+
+  - name: nano-banana
+    provenance: "Google Nano Banana Pro — accessed via plugins/image_gen/fal."
+
+  - name: pixverse
+    provenance: "Pixverse v6 — accessed via plugins/video_gen/fal. Cheap-tier option per research SUMMARY."
+
+  - name: qwen
+    provenance: "Alibaba Qwen-Max LLM — referenced as open-weight judge candidate in research SUMMARY."
+
+  - name: recraft
+    provenance: "Recraft v3 — accessed via plugins/image_gen/fal."
+
+  - name: runway
+    provenance: "Runway Gen-3 Alpha — external (not a Hermes plugin); referenced as context for current video gen capabilities in research SUMMARY."
+
+  - name: sora
+    provenance: "OpenAI Sora — external (closed beta); referenced as context only in research SUMMARY and EXPERT-CINE planning notes."
+
+  - name: stable_audio
+    provenance: "Stable Audio Open 1.0 — open-source foley / SFX default per research SUMMARY (foley/SKILL.md)."
+
+  - name: stable_audio_open
+    provenance: "Stable Audio Open 1.0 — underscore variant; same model as `stable_audio` entry above."
+
+  - name: veo
+    provenance: "Google Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY)."
+
+  - name: yi
+    provenance: "01.AI Yi LLM — referenced as open-weight judge candidate in research SUMMARY."
+
+  - name: z-image
+    provenance: "Z-Image Turbo — fastest image gen tier per research SUMMARY; accessed via plugins/image_gen/fal."
