@@ -43,8 +43,8 @@ prompts:
       (b) Place 卡点 across the first 10 episodes — apply the 3-5 卡点 / 10
       episode density rule, hard 卡点 at end of every paid episode (≥ 6),
       optional soft 卡点 mid-episode at ~40-60% runtime; score each with
-      the 3-tier strength (🟢 / 🟡 / 🔴). Apply 1.5x pace rule (≤ 1.5s avg
-      shot length) and ≤3s dead-air rule.
+      the 3-tier strength (🟢 / 🟡 / 🔴). Apply 1.5x pace rule (average shot
+      length ≈ 1.5s; ~60 cuts per 90s episode) and ≤3s dead-air rule.
       (c) Output 钩子 + 卡点 markers per the JSON schema (type / timestamp
       MM:SS / intensity 1-5 / setup_callback / payoff_callback). For the
       爽点 that pays off the revenge setup, demonstrate multi-episode
