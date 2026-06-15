@@ -1,7 +1,7 @@
 ---
 name: voicer
-description: "Voicer Expert: CosyVoice speech synthesis for character voice generation, emotion-adaptive delivery, and dialogue timing sync."
-version: 1.0.0
+description: "Voicer Expert: Multi-provider TTS (MiniMax / ElevenLabs / Voxtral / Gemini / Edge / NeuTTS) for character voice generation, emotion-adaptive delivery, and dialogue timing sync."
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -9,15 +9,15 @@ prerequisites:
   tools: [hermes_llm]
 metadata:
   hermes:
-    tags: [movie, voice, speech, cosyvoice, dialogue, tts, character-voice]
-    related_skills: [screenplay, performer, editor, mixer, spatial_audio]
+    tags: [movie, voice, speech, tts, dialogue, character-voice, multi-provider]
+    related_skills: [screenplay, performer, editor, mixer, spatial_audio, production]
     expert_id: voicer
     metrics: [voice_naturalness, emotion_match, character_distinctiveness]
 ---
 
 # Voicer Expert (配音专家)
 
-CosyVoice speech synthesis specialist for character voice generation, emotion-adaptive delivery, and dialogue timing synchronization in AI film production.
+Multi-provider TTS synthesis specialist for character voice generation, emotion-adaptive delivery, and dialogue timing synchronization. **Phase 5 v1.5 RAG uplift:** CosyVoice phantom references replaced with Hermes-catalog providers (MiniMax / ElevenLabs / Mistral Voxtral / Gemini / Edge / NeuTTS) per [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md).
 
 ## When to use this skill
 
@@ -25,9 +25,28 @@ The user needs to generate character dialogue audio, create voice profiles, synt
 
 ## References
 
+本专家所有 TTS provider 选择与 voice consistency 阈值由下列 2 个 refs 独占定义(Phase 5 v1.5 light-refs uplift per REFACTOR-rest-05):
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md) | 选择 TTS provider 或 替换 phantom CosyVoice 前 | Hermes 6-provider 能力矩阵(MiniMax / ElevenLabs / Voxtral / Gemini / Edge / NeuTTS)+ per-character 推荐 + 5s voice cloning sample 协议 + CosyVoice phantom 替换 mapping + TTS prompt 工程 5 大原则 + per-platform TTS divergence |
+| [`references/character-voice-consistency.md`](./references/character-voice-consistency.md) | 验证 voice identity 跨 shot/episode 一致性 前 | Speaker embedding cosine similarity 3 层验证 + voice cloning 4-tier 协议 + per-character voice baseline 数据结构 + cross-episode voice arc 协议 + 与 mixer / continuity handoff |
+
+## Knowledge Retrieval
+
+在生成任何 dialogue stem / voice profile / character voice baseline 输出前,按以下顺序检索上下文(2 个检索主题):
+
+- **Hermes TTS provider matrix + per-character 推荐 + CosyVoice phantom 替换 + prompt 工程** —— 详见 [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md)
+- **Speaker embedding 3 层验证 + voice cloning 协议 + cross-episode voice arc** —— 详见 [`references/character-voice-consistency.md`](./references/character-voice-consistency.md)
+
+**若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
+
+```
+tags="expert:voicer,domain:cn-tts-model-matrix"
+tags="expert:voicer,domain:character-voice-consistency"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件。
 
 ## Role & Philosophy
 
@@ -50,14 +69,17 @@ The user needs to generate character dialogue audio, create voice profiles, synt
 
 ## Key Parameters
 
-### CosyVoice API
-- **model**: CosyVoice-300M (preview), CosyVoice-300M-SFT (production)
-- **speaker_embedding**: character-specific vector (3-5 reference samples)
-- **emotion_control**: neutral, happy, sad, angry, fearful, surprised, contempt
+### TTS Provider API (Phase 5 v1.5 multi-provider)
+- **primary provider**: MiniMax T2A-01 (CN 母语级 + emotional control) per [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md) §Hermes TTS Provider Capability Matrix
+- **fallback providers**: ElevenLabs Multilingual v2 (全球发行) / Mistral Voxtral (自部署) / Gemini TTS (preset) / Edge TTS (免费群演) / NeuTTS (CN 本土)
+- **speaker_embedding**: character-specific vector via voice cloning (5-30s sample per [`references/character-voice-consistency.md`](./references/character-voice-consistency.md) §Voice Cloning Protocol)
+- **emotion_control**: neutral, happy, sad, angry, fearful, surprised, contempt (per Ekman 7 basic emotions)
 - **emotion_strength**: 0.0-1.0 (0=subtle, 0.7=moderate, 1.0=extreme)
 - **speed_factor**: 0.8-1.3 (1.0 = natural)
 - **pitch_shift**: -12 to +12 semitones (character adjustment)
 - **sample_rate**: 48000 Hz
+
+> **NOTE:** 旧 SKILL.md 的 CosyVoice-300M / CosyVoice-300M-SFT references 是 phantom(per Phase 0 GAP-REPORT + research SUMMARY:Hermes 不部署 CosyVoice)。已替换为 `<tts_primary>` placeholder + provider matrix reference。详见 [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md) §Phantom Strip: CosyVoice 替换协议。
 
 ### Voice Cloning
 - **Reference audio**: 5-15 seconds minimum for stable clone
@@ -126,7 +148,7 @@ The user needs to generate character dialogue audio, create voice profiles, synt
 
 ## What NOT to do
 
-- Don't use CosyVoice-300M (preview model) for final output
+- Don't use Edge TTS / preset voices for main characters (no emotional control; use MiniMax / ElevenLabs voice cloning per [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md) §Per-character 推荐选择)
 - Don't skip post-processing (noise gate + normalization + de-essing)
 - Don't exceed 3 concurrent streams on single RTX 3090
 - Don't clone voices with <5 seconds reference audio
