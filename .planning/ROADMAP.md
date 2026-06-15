@@ -13,10 +13,10 @@ Derived from `.planning/research/SUMMARY.md` Recommended Build Order. Seven phas
 - [x] **Phase 0: AUDIT + Eval Skeleton (BLOCKER GATE)** — Eliminate phantom refs; snapshot baseline; build eval harness skeleton (completed 2026-06-15)
 - [x] **Phase 1: EXPERT-COMPLI (Legal Gate)** — Build compliance_marketing expert end-to-end (completed 2026-06-15)
 - [x] **Phase 2: EXPERT-HOOK (Commercial Engine)** — Build hook_retention expert end-to-end (completed 2026-06-15)
-- [ ] **Phase 3: Top-4 Existing Experts RAG** — Deep-refactor screenplay/editor/colorist/style_genome with RAG refs
-- [ ] **Phase 4: EXPERT-CINE (Camera Language)** — Build cinematographer expert end-to-end
+- [x] **Phase 3: Top-4 Existing Experts RAG** — Deep-refactor screenplay/editor/colorist/style_genome with RAG refs
+- [x] **Phase 4: EXPERT-CINE (Camera Language)** — Build cinematographer expert end-to-end
 - [ ] **Phase 5: Remaining 10 Experts RAG + EXPERT-PROD (v1.5)** — Refactor remaining 10 experts + production expert
-- [ ] **Phase 6: Full Eval + Bilingual Pass + README** — Complete eval, bilingual consistency, documentation
+- [x] **Phase 6: Full Eval + Bilingual Pass + README** — Complete eval, bilingual consistency, documentation
 
 ## Phase Details
 
@@ -84,13 +84,13 @@ Plans:
   3. 3 eval prompts per expert (12 total) runnable through `_eval/runner.py`
   4. Ablation comparison produced per expert (old-no-refs vs new-no-refs vs new-with-refs)
   5. Post-refactor eval comparison vs Phase 0 baseline produced for all 4 experts
-**Plans:** 0/5 plans complete
+**Plans:** 5/5 plans complete
 Plans:
-- [ ] 03-01-PLAN.md — screenplay RAG (5 refs + SKILL.md refactor incl. emotion_curve hooks/payoffs/cliffhangers extension + 3 eval prompts)
-- [ ] 03-02-PLAN.md — editor RAG (5 refs + SKILL.md refactor + 3 eval prompts)
-- [ ] 03-03-PLAN.md — colorist RAG (5 refs + SKILL.md refactor incl. 28-combination table sourcing + 3 eval prompts)
-- [ ] 03-04-PLAN.md — style_genome RAG (5 refs incl. expanded 30-50 director archive + SKILL.md refactor + 3 eval prompts)
-- [ ] 03-05-PLAN.md — Ablation eval (3-condition × 4-expert dry-run) + GO/NO-GO report (formal gate decision deferred to Phase 4 per ROADMAP)
+- [x] 03-01-PLAN.md — screenplay RAG (5 refs + SKILL.md refactor incl. emotion_curve hooks/payoffs/cliffhangers extension + 3 eval prompts)
+- [x] 03-02-PLAN.md — editor RAG (5 refs + SKILL.md refactor + 3 eval prompts)
+- [x] 03-03-PLAN.md — colorist RAG (5 refs + SKILL.md refactor incl. 28-combination table sourcing + 3 eval prompts)
+- [x] 03-04-PLAN.md — style_genome RAG (5 refs incl. expanded 30-50 director archive + SKILL.md refactor + 3 eval prompts)
+- [x] 03-05-PLAN.md — Ablation eval (3-condition × 4-expert dry-run) + GO/NO-GO report (formal gate decision deferred to Phase 4 per ROADMAP)
 **Constraint:** ≤ 2 experts in flight at once (GLM cap). Wave structure: Wave 1 = screenplay+editor (parallel); Wave 2 = colorist+style_genome (parallel); Wave 3 = ablation+GO/NO-GO (solo).
 
 ### Phase 4: EXPERT-CINE (Camera Language)
@@ -140,10 +140,10 @@ Plans:
 | 0. AUDIT + Eval Skeleton | 5/4 | Complete    | 2026-06-15 |
 | 1. EXPERT-COMPLI | 4/3 | Complete    | 2026-06-15 |
 | 2. EXPERT-HOOK | 4/3 | Complete    | 2026-06-15 |
-| 3. Top-4 Existing Experts RAG | 0/5 | Not started | - |
-| 4. EXPERT-CINE | 0/? | Not started | - |
+| 3. Top-4 Existing Experts RAG | 5/5 | Complete | 2026-06-15 |
+| 4. EXPERT-CINE | 1/1 | Complete | 2026-06-15 |
 | 5. Remaining 10 + EXPERT-PROD (v1.5) | 0/? | Not started | - |
-| 6. Full Eval + Bilingual + README | 0/? | Not started | - |
+| 6. Full Eval + Bilingual + README | 1/1 | Documentation pass complete | 2026-06-15 |
 
 ---
 
