@@ -1,0 +1,179 @@
+expert_id: colorist
+# Demo prompts for the colorist expert eval harness.
+#
+# Three prompts chosen to exercise the colorist expert's ref absorption
+# (per Phase 3 03-03-PLAN.md):
+#   co-001 — basic: 90s 抖音-女频 romance 短剧 CxSxZ design + LUT params.
+#            Tests Bellantoni 8-color vocabulary + 28-combination table
+#            selection + ΔE2000 shot-to-shot consistency + Hurkman LUT
+#            parameter derivation.
+#   co-002 — trap: ask for an arbitrary "very saturated high-contrast"
+#            palette for a 现实主义 drama. Base model would comply; a
+#            refactored colorist should REFUSE and cite Bellantoni
+#            "color as character" doctrine + digital-color-science.md
+#            §8-bit banding threshold (S delta >= 0.03 triggers visible
+#            banding) + cn-audience-color.md §realism constraint.
+#   co-003 — cross-cultural: CN director (Wong Kar-wai × In the Mood for
+#            Love homage) × Western audience deployment. Tests
+#            cross-cultural-style.md §Hybrid Encoding Protocol (0.65/0.35)
+#            + Non-translatable elements (teal/orange duo-tone + step-printing
+#            signature must be preserved) + ΔE2000 production tolerance.
+#
+# These are below the N>=20 threshold required for statistically defensible
+# Phase 6 eval (per 03-CONTEXT.md deferred section); they exist only to
+# prove the harness output shape on the colorist expert and to exercise
+# the 3 canonical scenario shapes (basic / trap / cross-cultural).
+#
+# File naming: runner.py resolves `--expert colorist` to
+# `prompts/colorist_demo.yaml` (line 570: f"{args.expert}_demo.yaml").
+prompts:
+  - id: co-001
+    text: |
+      A 30-episode 抖音-女频 romance 短剧 (protagonist is a college student
+      who falls in love with her senior; soft pink + warm yellow aesthetic;
+      female 18-25 demographic) is in pre-production. Each episode is ~90
+      seconds, vertical 9:16. Design the complete color grading package
+      for S1E01 (the meet-cute episode):
+
+      (a) Map each emotion in the episode's emotion_curve to a CxSxZ
+      combination from the 28-combination table. The episode has 5 emotional
+      anchor points: 0s anticipation (女角 entering campus), 12s curiosity
+      (first sight of senior), 35s nervousness (first conversation),
+      60s flutter (small kindness from senior), 88s cliffhanger (senior
+      mentions his girlfriend — value-shift to disappointment).
+
+      For each anchor point, identify:
+      - The Bellantoni 8-color category (Red / Yellow / Blue / etc.) —
+        cite references/bellantoni-color-psychology.md §The 8-Color Vocabulary
+      - The 28-combination ID (e.g., C14 Romantic soft light) or a custom
+        CxSxZ tuple with rationale
+      - The CN audience divergence adjustment — cite
+        references/cn-audience-color.md §Per-Platform Divergence (女频
+        mid-sat warm + high brightness preference)
+
+      (b) Design the LUT parameters (lift / gamma / gain / saturation_boost
+      / temperature_shift / tint_shift) for the dominant combination. Apply
+      the Hurkman primary/secondary grading pipeline — cite
+      references/hurkman-color-pipeline.md §Lift/Gamma/Gain Semantics. Justify
+      each parameter value with a specific technical reason.
+
+      (c) Verify shot-to-shot ΔE2000 consistency for the cliffhanger transition
+      at 88s (flutter pink → disappointment blue). The ΔE2000 must be
+      >= 8.0 (deliberate emotional shift) but <= 15.0 (avoids jarring
+      jump). Cite references/digital-color-science.md §ΔE2000 Tolerance Bands.
+      Show the calculation step.
+
+      (d) Flag any 8-bit banding risks. If any anchor has S >= 0.85 OR if
+      two adjacent anchors have S delta >= 0.03, mark with
+      banding_warning: true and propose mitigation (10-bit pipeline OR
+      reduce S delta). Cite references/digital-color-science.md §LUT
+      Bit-Depth Error Accumulation.
+
+      Output the complete color_intent.json with per-shot CxSxZ encoding +
+      LUT params + mood_color_map + ΔE2000 verification table + banding
+      risk assessment.
+
+  - id: co-002
+    text: |
+      A user requests the color grading for a 90s 现实主义 短剧 depicting
+      a migrant worker's daily struggle (factory job, long commute, small
+      apartment). The user's request: "Make it look cinematic — very
+      saturated high-contrast colors, like Wong Kar-wai or Zack Snyder.
+      I want the audience to feel the intensity of the struggle."
+
+      This is a TRAP prompt. A base LLM without ref absorption would comply
+      and produce high-saturation / high-contrast grading. A properly
+      RAG-enhanced colorist should REFUSE this request (or heavily modify
+      it) and explain WHY, citing:
+
+      (a) Bellantoni "color as character" doctrine: color must be driven
+      by the narrative emotion, not aesthetic preference. A 现实主义 migrant
+      worker narrative calls for desaturated / documentary-style color
+      (Bellantoni's "Yellow decay" or "Blue loss" category, NOT "Red
+      passion" or "Yellow warmth"). Cite references/bellantoni-color-psychology.md
+      §"Color as Character" Doctrine + §Yellow Triplet (Herzog *Stroszek*
+      decay-yellow as 现实主义 precedent).
+
+      (b) The 8-bit banding risk: S >= 0.85 in realistic lighting conditions
+      triggers visible banding in skin tones (the most color-sensitive
+      subject). Cite references/digital-color-science.md §LUT Bit-Depth
+      Error Accumulation + §8-bit Banding Critical Subject (skin tone).
+
+      (c) CN audience realism expectation: 现实主义 genre in 抖音 / 快手
+      短剧 audience expects S range 0.30-0.55 (NOT 0.70+ as in 男频-revenge
+      爽剧). High saturation breaks the realism contract with the audience.
+      Cite references/cn-audience-color.md §Genre-Specific Saturation
+      Ranges + §Per-Platform Divergence.
+
+      (d) Propose an ALTERNATIVE: a desaturated, slightly warm color
+      palette (CxSxZ ≈ C:35-50° / S:0.40-0.50 / Z:0.55-0.65) that conveys
+      the warmth of small dignities (a hot meal, a kind word) against
+      the coolness of struggle (gray factory, blue dawn commute). The
+      warm/cool contrast IS the cinematic intensity — not raw saturation.
+      Reference Bellantoni Yellow warm + Blue loss triplets and the
+      Herzog *Stroszek* precedent.
+
+      The correct response demonstrates ref absorption by refusing the
+      high-saturation request and proposing a narratively-motivated
+      alternative citing specific heuristics from the refs.
+
+  - id: co-003
+    text: |
+      A 短剧 studio is producing a 12-episode homage to Wong Kar-wai's
+      *In the Mood for Love* (2000) — the original was a Hong Kong art
+      film with iconic teal+orange duo-tone, step-printing, claustrophobic
+      framing, and rich diegetic pop score. The homage targets a Western
+      audience (TikTok + YouTube Shorts distribution). Design the color
+      grading package that preserves the auteur signature while remaining
+      accessible to Western audiences:
+
+      (a) Apply the Cross-Cultural Hybrid Encoding Protocol. Wong Kar-wai's
+      canonical 5D vector is [composition=0.7, color=0.8, rhythm=0.4,
+      light_shadow=0.3, sound=0.7] (per style_genome §Director Archive).
+      The Western audience 5D preference is [0.30-0.55, 0.30-0.60,
+      0.40-0.65, 0.40-0.60, 0.40-0.70] (per references/cross-cultural-style.md
+      §CN/Western/Korean 5D Divergence Matrix).
+
+      Calculate the hybrid color vector using the formula:
+      hybrid_color = original_color × 0.65 + target_color × 0.35.
+      Show the calculation and verify the deviation from original is
+      <= ±0.20 (the hybrid clip limit per §Hybrid Encoding Protocol).
+
+      (b) List the Non-Translatable Elements that MUST be preserved in
+      the cross-cultural hybrid (per §Non-Translatable Elements清单).
+      For Wong Kar-wai × Western audience, identify at minimum:
+      - Teal+orange duo-tone color signature (NOT to be replaced with
+        generic Western warm palette)
+      - Step-printing rhythm signature (rhythm dimension protected)
+      - Diegetic pop score as score (sound dimension protected)
+      - Claustrophobic framing (composition protected)
+
+      For each protected element, justify why it is non-translatable
+      (cultural auteur signature vs aesthetic preference).
+
+      (c) Design the adapted CxSxZ encoding for the homage. Compare the
+      hybrid vs original side-by-side for 3 anchor points (opening meal
+      scene / corridor passing / final farewell). For each anchor:
+      - Original CN CxSxZ (Wong Kar-wai canonical)
+      - Adapted hybrid CxSxZ (Western audience)
+      - ΔE2000 between original and adapted
+      - Audience acceptance rationale
+
+      (d) Verify the dual-track encoding requirement. Per
+      references/cross-cultural-style.md §Bilingual 短剧 出海特殊规则,
+      this homage must output TWO color_intent.json files:
+      - original_color_intent.json (CN platform: 抖音 / 快手 distribution)
+      - adapted_color_intent.json (Western platform: TikTok / YouTube Shorts)
+      Show the dual-track structure and the dual_track: true flag in the
+      metadata.
+
+      The correct response demonstrates cross-cultural hybrid encoding
+      competence — not erasure of the Wong Kar-wai signature, not
+      uncritical port of CN style to Western audience, but a measured
+      hybrid that preserves auteur signature while reducing cultural
+      translation cost.
+
+      Cross-reference references/bellantoni-color-psychology.md §Color as
+      Character Doctrine, references/cross-cultural-style.md §Hybrid
+      Encoding Protocol + §Non-Translatable Elements + §Bilingual 短剧 出海,
+      references/digital-color-science.md §ΔE2000 Tolerance Bands.
