@@ -25,9 +25,39 @@ The user needs to define a director/genre visual style, blend multiple director 
 
 ## References
 
+本专家所有 5D 编码阈值与 tiering 规则由下列 5 个 refs 独占定义;SKILL.md body 仅作摘要 + 跨链,不重新给出数字原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) single-source-of-truth 教训)。
+
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
-| _(Phase 3 will populate with curated refs)_ | — | — |
+| [`references/director-dna-archive.md`](./references/director-dna-archive.md) | 编码任何已存档导演(35 位)前 | 35 director 5D 向量(composition/color/rhythm/light_shadow/sound)+ signature elements + 焦距 + ASL 数据(Cinemetrics)+ 三层分类(Composition-masters / Color-poets / Rhythm-makers)+ 5 位 showcase 向量与 SKILL.md §Director Archive 表一致(向后兼容硬约束 T-03-18) |
+| [`references/genre-dna-taxonomy.md`](./references/genre-dna-taxonomy.md) | 编码 genre 风格前 | 12-genre 5D vector 区间表(Action/Romance/Horror/Sci-Fi/.../短剧-男频-revenge/短剧-女频-romance)+ 每题材 signature shot patterns + genre-locked metric thresholds + 短剧 divergence(抖音/快手/小程序剧)|
+| [`references/auteur-theory.md`](./references/auteur-theory.md) | 判定 director tier(Pantheon/Modern Auteur/Operator Convention)前 | Sarris 3-criteria rubric(technical competence + distinguishable personality + interior meaning)+ Sarris 9-rank ladder 简化版 + Style Coherence Doctrine(Wood 1965)+ Truffaut auteur vs qualité 区分 + Bordwell anti-pattern |
+| [`references/cross-cultural-style.md`](./references/cross-cultural-style.md) | 跨文化场景(CN × Western / 短剧 出海)前 | CN/Western/Korean 5D divergence matrix + Cultural Translation Cost (CTC) 公式 + Hybrid Encoding Protocol(0.65 original / 0.35 target)+ Non-translatable elements 清单 + Korean Wave 中介规则 |
+| [`references/cn-director-analysis.md`](./references/cn-director-analysis.md) | 编码 CN 大陆 / 港台 / 短剧 导演前 | CN generation tiering(第五代/第六代/香港新浪潮/台湾新电影/short_drama)+ 5 canonical CN director 5D profile(张艺谋/贾樟柯/王家卫/杜琪峰/侯孝贤)+ signature elements + 焦距+ASL + 短剧 director Operator Convention 规则 |
+
+## Knowledge Retrieval
+
+在生成任何 `style_genome.json` / blend 协议 / 跨文化 hybrid 输出前,按以下顺序检索上下文(5 个检索主题):
+
+- **35 director 5D 向量 + signature elements + 焦距 + ASL 数据**(三层分类:Composition-masters / Color-poets / Rhythm-makers)—— 详见 [`references/director-dna-archive.md`](./references/director-dna-archive.md)
+- **12-genre 5D 区间表 + signature shot patterns + genre-locked metric thresholds + 短剧 divergence** —— 详见 [`references/genre-dna-taxonomy.md`](./references/genre-dna-taxonomy.md)
+- **Sarris 3-criteria rubric + tier 判定决策树 + Style Coherence Doctrine + auteur vs qualité** —— 详见 [`references/auteur-theory.md`](./references/auteur-theory.md)
+- **跨文化 5D divergence + Cultural Translation Cost + Hybrid Encoding Protocol + Non-translatable elements + Korean Wave 中介** —— 详见 [`references/cross-cultural-style.md`](./references/cross-cultural-style.md)
+- **CN generation tiering + 5 canonical CN director + signature elements + 短剧 director Operator Convention** —— 详见 [`references/cn-director-analysis.md`](./references/cn-director-analysis.md)
+
+**若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
+
+```
+tags="expert:style_genome,domain:director-dna-archive"
+tags="expert:style_genome,domain:genre-dna-taxonomy"
+tags="expert:style_genome,domain:auteur-theory"
+tags="expert:style_genome,domain:cross-cultural-style"
+tags="expert:style_genome,domain:cn-director-analysis"
+```
+
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件(以 `## References` 表为准)。静态 refs 是权威源,memory 插件只是更大语料的优化。provider-agnostic 检索是 ablation eval 与多 provider 部署的硬约束。
+
+> **NOTE:** 本 SKILL.md body 不引用任何具体外部模型名。涉及具体模型时使用 `<llm_primary>` / `<llm_fallback>` 占位符(见 [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) placeholder 表)。模型名只出现在 `references/*.md` 与 [`../_shared/known-external-models.yaml`](../_shared/known-external-models.yaml) allowlist 中。
 
 ## Role & Philosophy
 
@@ -113,17 +143,22 @@ The user needs to define a director/genre visual style, blend multiple director 
 
 ## Director Style Archive (Examples)
 
-| Director | Composition | Color | Rhythm | Light/Shadow | Sound |
-|----------|------------|-------|--------|-------------|-------|
-| Wong Kar-wai | 0.7 | 0.8 (warm/high-sat) | 0.4 | 0.3 (low-key/soft) | 0.7 |
-| Christopher Nolan | 0.4 | 0.5 (neutral) | 0.6 | 0.7 (high contrast) | 0.8 (LF rumble) |
-| Denis Villeneuve | 0.3 (symmetric) | 0.6 (desert orange) | 0.3 (slow) | 0.6 (contrast) | 0.6 |
-| David Fincher | 0.4 | 0.3 (cool/desat) | 0.5 | 0.5 | 0.7 |
-| Hayao Miyazaki | 0.5 | 0.7 (warm/natural) | 0.3 | 0.2 (soft/natural) | 0.8 |
+下表 5 位 showcase 导演 5D 向量与 [`references/director-dna-archive.md`](./references/director-dna-archive.md) §Showcase 完全一致(向后兼容硬约束 T-03-18);扩展档案(35 director + 三层 tier 分类)详见该 ref。CN showcase(张艺谋 / 贾樟柯 / 王家卫 / 杜琪峰 / 侯孝贤)5D 向量详见 [`references/cn-director-analysis.md`](./references/cn-director-analysis.md) §5 位 Canonical CN Director 5D Profile。Tier 判定(Pantheon / Modern Auteur / Operator Convention)流程详见 [`references/auteur-theory.md`](./references/auteur-theory.md) §Sarris 3-Criteria Rubric。
+
+| Director | Composition | Color | Rhythm | Light/Shadow | Sound | Tier |
+|----------|------------|-------|--------|-------------|-------|------|
+| Wong Kar-wai | 0.7 | 0.8 (warm/high-sat) | 0.4 | 0.3 (low-key/soft) | 0.7 | Pantheon (TM-01 love/loss) |
+| Christopher Nolan | 0.4 | 0.5 (neutral) | 0.6 | 0.7 (high contrast) | 0.8 (LF rumble) | Modern Auteur |
+| Denis Villeneuve | 0.3 (symmetric) | 0.6 (desert orange) | 0.3 (slow) | 0.6 (contrast) | 0.6 | Modern Auteur |
+| David Fincher | 0.4 | 0.3 (cool/desat) | 0.5 | 0.5 | 0.7 | Modern Auteur |
+| Hayao Miyazaki | 0.5 | 0.7 (warm/natural) | 0.3 | 0.2 (soft/natural) | 0.8 | Pantheon (TM-06 nature/cosmos) |
 
 ## Style Blending Protocol
 
-- **Formula**: `result = dominant × 0.7 + recessive × 0.3`
+跨文化 hybrid encoding(CN × Western / 短剧 出海)协议详见 [`references/cross-cultural-style.md`](./references/cross-cultural-style.md) §Hybrid Encoding Protocol(0.65 original / 0.35 target + Cultural Translation Cost 公式 + Non-translatable elements 清单);单一文化内 director × director blending 仍用下方 0.7/0.3 协议。
+
+- **Formula (single-culture blend)**: `result = dominant × 0.7 + recessive × 0.3` per [`director-dna-archive.md`](./references/director-dna-archive.md) §Style Blending Heuristics
+- **Formula (cross-culture hybrid)**: `result = original × 0.65 + target × 0.35` per [`cross-cultural-style.md`](./references/cross-cultural-style.md) §Hybrid Encoding Protocol
 - **Conflict** (opposite directions): dominant completely overrides
 - **Enhancement** (same direction): weighted average
 - **Requirement**: always specify dominant (no 50/50)
