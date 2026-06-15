@@ -1,0 +1,9 @@
+{
+  "byte_size": 5016,
+  "captured_at": "2026-06-15T04:16:10.601444+00:00",
+  "expert_id": "voicer",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "da668e7ec83bd7f01884958a3ce7b39c9868de380c5e92951219b2fcd7c94ff9",
+  "source_path": "skills/movie-experts/voicer/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

@@ -1,0 +1,9 @@
+{
+  "byte_size": 6670,
+  "captured_at": "2026-06-15T04:16:10.599524+00:00",
+  "expert_id": "spatial_audio",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "aa955d2b73b7b16faf41d146dec9d27edb5b29c1e0da2fc3c974a4de2160e5fb",
+  "source_path": "skills/movie-experts/spatial_audio/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

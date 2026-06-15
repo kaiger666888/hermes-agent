@@ -1,0 +1,9 @@
+{
+  "byte_size": 5939,
+  "captured_at": "2026-06-15T04:16:10.596118+00:00",
+  "expert_id": "mixer",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "f70494d7c883e46d9109055ce0b9477fa4ee1482ec199110dbf54d10fd053c9e",
+  "source_path": "skills/movie-experts/mixer/SKILL.md",
+  "tag": "eval-baseline-v1"
+}

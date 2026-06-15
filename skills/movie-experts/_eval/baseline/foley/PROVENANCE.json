@@ -1,0 +1,9 @@
+{
+  "byte_size": 6243,
+  "captured_at": "2026-06-15T04:16:10.595259+00:00",
+  "expert_id": "foley",
+  "git_sha": "817953459c809b4f91e3be0208c8832314e2d026",
+  "sha256": "c26e557bfac3b74451152e359be52211f726f3599d1d55587c8fb0e5457d0870",
+  "source_path": "skills/movie-experts/foley/SKILL.md",
+  "tag": "eval-baseline-v1"
+}
