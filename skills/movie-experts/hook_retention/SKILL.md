@@ -238,7 +238,7 @@ tags="expert:hook_retention,domain:platform-<platform>"
 | Metric | Target |
 |--------|--------|
 | `hook_strength` | opening hook ≥ ✅ strong(4/5 tier);secondary hook ≥ ⚠️ weak 可接受;🎯 bullseye 是 stretch |
-| `完播率_proxy` | 1.5x pace rule 满足 + ≤3s dead air + BGM coupled_beat 同步率 ≥ 90% *estimated* |
+| `完播率_proxy` | 1.5x pace rule 满足 + ≤3s dead air + BGM coupled_beat 同步(同步率目标见 [`references/paywall-design.md`](./references/paywall-design.md) §BGM-Driven Sync;degree of alignment is qualitative in v1, quantitative measurement deferred to Phase 6) |
 | `卡点_density` | 每 10 集 3-5 个 + 每 2-3 集至少 1 个 + 100% 付费集末为 🟢 hard 卡点 |
 | `转发_trigger_coverage` | 每集至少激活 5 类 转发 trigger 中的 ≥ 2 类(情感共鸣 / 反转冲击 / 共识认同 / 视觉震撼 / 实用价值) |
 
