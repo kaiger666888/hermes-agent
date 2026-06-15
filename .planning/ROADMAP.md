@@ -12,7 +12,7 @@ Derived from `.planning/research/SUMMARY.md` Recommended Build Order. Seven phas
 
 - [x] **Phase 0: AUDIT + Eval Skeleton (BLOCKER GATE)** — Eliminate phantom refs; snapshot baseline; build eval harness skeleton (completed 2026-06-15)
 - [x] **Phase 1: EXPERT-COMPLI (Legal Gate)** — Build compliance_marketing expert end-to-end (completed 2026-06-15)
-- [ ] **Phase 2: EXPERT-HOOK (Commercial Engine)** — Build hook_retention expert end-to-end
+- [x] **Phase 2: EXPERT-HOOK (Commercial Engine)** — Build hook_retention expert end-to-end (completed 2026-06-15)
 - [ ] **Phase 3: Top-4 Existing Experts RAG** — Deep-refactor screenplay/editor/colorist/style_genome with RAG refs
 - [ ] **Phase 4: EXPERT-CINE (Camera Language)** — Build cinematographer expert end-to-end
 - [ ] **Phase 5: Remaining 10 Experts RAG + EXPERT-PROD (v1.5)** — Refactor remaining 10 experts + production expert
@@ -66,11 +66,11 @@ Plans:
   3. Per-platform 爆款公式 branching documented in SKILL.md (抖音 男频/女频 / 快手 草根 / 小程序剧 long episodes)
   4. Bidirectional edges in related_skills graph (↔ screenplay for hook rewrites; ↔ editor for retention pacing)
   5. Output schema markers (钩子 / 爽点 / 卡点) documented for `screenplay.emotion_curve` integration
-**Plans:** 3 plans
+**Plans:** 4/3 plans complete
 Plans:
-- [ ] 02-01-PLAN.md — three-second-hooks.md (5-type taxonomy × 3 examples × frame-by-frame + 5-tier scoring) + conflict-escalation.md (阶梯式升级 + 击中点/爽点 density) + LICENSE.md (all 4 HOOK refs)
-- [ ] 02-02-PLAN.md — paywall-design.md (3-5 卡点 + 3-tier strength + 完播率 1.5x/≤3s rules + 5 转发 triggers) + vertical-pacing.md (竖屏 cut density + BGM sync + 字幕 design)
-- [ ] 02-03-PLAN.md — hook_retention/SKILL.md (bilingual, 5 爆款公式 branches, marker schema) + related_skills edges (3 existing + composer one-way) + 5 eval prompts + scanner verify
+- [x] 02-01-PLAN.md — three-second-hooks.md (5-type taxonomy × 3 examples × frame-by-frame + 5-tier scoring) + conflict-escalation.md (阶梯式升级 + 击中点/爽点 density) + LICENSE.md (all 4 HOOK refs)
+- [x] 02-02-PLAN.md — paywall-design.md (3-5 卡点 + 3-tier strength + 完播率 1.5x/≤3s rules + 5 转发 triggers) + vertical-pacing.md (竖屏 cut density + BGM sync + 字幕 design)
+- [x] 02-03-PLAN.md — hook_retention/SKILL.md (bilingual, 5 爆款公式 branches, marker schema) + related_skills edges (3 existing + composer one-way) + 5 eval prompts + scanner verify
 **Research flag:** `/gsd:plan-phase --research-phase 2` to validate whether "1.5-2x horizontal cut rate" for 短剧 pacing is empirical or folklore, and to document current video gen model behavior (focal lengths / camera moves Runway Gen-3 / Kling / Veo reliably support as of 2026-06).
 
 ### Phase 3: Top-4 Existing Experts RAG
@@ -133,7 +133,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 0. AUDIT + Eval Skeleton | 5/4 | Complete    | 2026-06-15 |
 | 1. EXPERT-COMPLI | 4/3 | Complete    | 2026-06-15 |
-| 2. EXPERT-HOOK | 0/3 | Not started | - |
+| 2. EXPERT-HOOK | 4/3 | Complete    | 2026-06-15 |
 | 3. Top-4 Existing Experts RAG | 0/? | Not started | - |
 | 4. EXPERT-CINE | 0/? | Not started | - |
 | 5. Remaining 10 + EXPERT-PROD (v1.5) | 0/? | Not started | - |
