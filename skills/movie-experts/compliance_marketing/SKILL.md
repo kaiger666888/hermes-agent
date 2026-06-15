@@ -85,7 +85,7 @@ metadata:
 
 ### 备案 (Filing) 触发阈值
 
-> 全局阈值以 `references/cn-content-rules.md §备案触发矩阵` 为权威源(本节为简化摘要,完整 5-factor 矩阵见该 ref);各平台可应用更严格的触发条件,详见 `references/platform-specs-{douyin,kuaishou,miniprogram}.md §备案要求`。
+> 全局阈值以 `references/cn-content-rules.md §备案触发矩阵` 为权威源(本节为简化摘要,完整 5-factor 矩阵 = 内容类型 × 集数 × 总时长 × 商业意图 × 付费机制,见该 ref);各平台可应用更严格的触发条件,详见 `references/platform-specs-{douyin,kuaishou,miniprogram}.md §备案要求`。
 
 - **拟人化动画 漫剧**:商业意图 + 任意付费机制 → 触发广电 备案(2026-04-01)
 - **真人 + AIG 混合短剧**:*estimated* 10 集 / *estimated* 60 分钟 总时长(全局阈值,cn-content-rules.md)+ 商业意图 → 触发
