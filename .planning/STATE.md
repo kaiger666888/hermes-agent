@@ -53,9 +53,9 @@ Phase 6 [ .......... ] 0% Not started
 | 1 | EXPERT-COMPLI | Complete | Legal gate. Built compliance_marketing expert end-to-end. |
 | 2 | EXPERT-HOOK | Complete | Commercial engine. Built hook_retention expert end-to-end. |
 | 3 | Top-4 RAG | Gate artifact produced | Dry-run complete (36 verdicts); live deferred to Phase 6. GO/NO-GO report at `_eval/reports/phase3-go-nogo.{json,md}`. Formal gate decision deferred to Phase 4 per ROADMAP. |
-| 4 | EXPERT-CINE | Not started | Boundary vs scene_builder/animator/editor MUST be documented before SKILL.md written. |
+| 4 | EXPERT-CINE | Complete | Built cinematographer expert end-to-end (4 refs + SKILL.md + 3 prompts + 7 peer related_skills updates). Boundary doc with scene_builder/animator/editor BEFORE SKILL.md. |
 | 5 | Remaining 10 + EXPERT-PROD | Not started (v1.5) | Deferred beyond v1 release. Scrap entirely if Phase 3 RAG uplift is statistically insignificant. |
-| 6 | Full Eval + Bilingual + README | Not started | N ≥ 20 prompts/expert. Panel of ≥ 2 judges. Both orderings. |
+| 6 | Full Eval + Bilingual + README | Documentation pass complete | Top-level README published (17-expert collaboration graph + RAG usage guide + Phase 6 live-run procedure). Bilingual consistency spot-check performed. Live run deferred to operator (requires OPENROUTER_API_KEY + budget). |
 
 ## Performance Metrics
 
