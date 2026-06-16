@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, hook, retention, 3-second-hooks, paywall-cliffhanger, viral-formula, vertical-pacing, marker-schema]
-    related_skills: [screenplay, editor, compliance_marketing, composer, cinematographer]  # composer is one-directional (HOOK→composer for BGM sync); composer does not reciprocate by design (CONTEXT D-7). cinematographer receives first-frame hook + close-up cliffhanger framing intent.
+    related_skills: [screenplay, editor, compliance_gate, composer, cinematographer]  # composer is one-directional (HOOK→composer for BGM sync); composer does not reciprocate by design (CONTEXT D-7). cinematographer receives first-frame hook + close-up cliffhanger framing intent.
     expert_id: hook_retention
     metrics: [hook_strength, 完播率_proxy, 卡点_density, 转发_trigger_coverage]
 ---
@@ -28,7 +28,7 @@ metadata:
 - **per-platform 爆款公式 选型**(男频 / 女频 / 草根 / 长集数小程序剧 / 通用 fallback 五分支)
 - 为下游 `screenplay.emotion_curve` 输出 **钩子 / 爽点 / 卡点 marker**(含多集 callback 支持)
 - 为下游 `editor.cut_density` 输出 1.5x pace rule / ≤3s dead air / BGM sync 节奏约束
-- 红线 ↔ 爆款 权衡场景(钩子强度过高 → 触发 🟡 → 需在保留 ≥ 70% 强度的前提下 降级,跨链 compliance_marketing `viral-element-catalog.md` 风险徽章)
+- 红线 ↔ 爆款 权衡场景(钩子强度过高 → 触发 🟡 → 需在保留 ≥ 70% 强度的前提下 降级,跨链 compliance_gate `viral-element-catalog.md` 风险徽章)
 
 ## References
 
@@ -43,7 +43,7 @@ metadata:
 
 ## Role & Philosophy
 
-- **设计视角 ≠ 合规视角。** Phase 1 [`viral-element-catalog.md`](../compliance_marketing/references/viral-element-catalog.md) 站在「合规审核」组织 5 类(情感钩 / 冲突钩 / 反差钩 / 题材钩 / 角色钩);HOOK 站在「设计实操」组织 5 类(情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩)。两者在 3 个类型上重叠但不冲突 —— 互补而非互斥
+- **设计视角 ≠ 合规视角。** Phase 1 [`viral-element-catalog.md`](../compliance_gate/references/viral-element-catalog.md) 站在「合规审核」组织 5 类(情感钩 / 冲突钩 / 反差钩 / 题材钩 / 角色钩);HOOK 站在「设计实操」组织 5 类(情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩)。两者在 3 个类型上重叠但不冲突 —— 互补而非互斥
 - **钩子决定 完播率 上限,卡点决定 付费转化 漏斗。** 3 秒钩子成功 → 观众看完整集 → 完播率 上来 → 算法分发权重上来;硬卡点 成功 → 观众付费解锁 → 付费转化 漏斗收窄 → 商业回报。两者是不同商业指标,缺一不可
 - **数值的单一真相源原则。** 3-5 / 1.5x / ≤3s / 70% / 30s 等数字的原理只在 refs 中解释一次;SKILL.md body 只引用数字 + 跨链,不重述原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训:同数字在多文件漂移)
 - **provider-agnostic,不绑死任何具体模型 / 工具。** 本专家不假设客户端一定有 `<memory_plugin>` 或 `<rag_search>` 工具,所有 RAG 指令都给「有 memory 插件」与「无 memory 插件」两条路径
@@ -60,7 +60,7 @@ metadata:
 - 5 类 转发 triggers 激活(情感共鸣 / 反转冲击 / 共识认同 / 视觉震撼 / 实用价值)
 - per-platform 爆款公式 5 分支选型(抖音-男频 / 抖音-女频 / 快手-草根 / 小程序剧-长集数 / 通用 fallback)
 - 钩子 / 爽点 / 卡点 marker 输出(含多集 callback 支持)
-- 红线 ↔ 爆款 权衡(对 🟡 钩子应用 降级方案,保留 ≥ 70% 强度,跨链 compliance_marketing catalog)
+- 红线 ↔ 爆款 权衡(对 🟡 钩子应用 降级方案,保留 ≥ 70% 强度,跨链 compliance_gate catalog)
 
 ## Output Format
 
@@ -148,14 +148,14 @@ metadata:
 
 ## Per-Platform 爆款公式 Branching
 
-同一 master cut 在 5 种 平台 × 受众 组合下的差异化留存策略。本节给出每分支的关键差异点,具体公式 / 阈值 / 平台规则以 `references/paywall-design.md`、`references/vertical-pacing.md §Multi-Platform Pacing Variation` 与 Phase 1 [`platform-specs-{douyin,kuaishou,miniprogram}.md`](../compliance_marketing/references/) 为准。
+同一 master cut 在 5 种 平台 × 受众 组合下的差异化留存策略。本节给出每分支的关键差异点,具体公式 / 阈值 / 平台规则以 `references/paywall-design.md`、`references/vertical-pacing.md §Multi-Platform Pacing Variation` 与 Phase 1 [`platform-specs-{douyin,kuaishou,miniprogram}.md`](../compliance_gate/references/) 为准。
 
 ### 抖音-男频
 
-- **核心动机:** 逆袭 / 复仇 / 装穷打脸 / 阶级碰撞 —— 男性受众追求"压抑 → 释放"的爽感曲线;复仇兑现的瞬时高潮是付费驱动力(跨链 [`../../compliance_marketing/references/viral-element-catalog.md`](../compliance_marketing/references/viral-element-catalog.md) 冲突钩 / 反差钩 类型条目 + 风险徽章)
+- **核心动机:** 逆袭 / 复仇 / 装穷打脸 / 阶级碰撞 —— 男性受众追求"压抑 → 释放"的爽感曲线;复仇兑现的瞬时高潮是付费驱动力(跨链 [`../../compliance_gate/references/viral-element-catalog.md`](../compliance_gate/references/viral-element-catalog.md) 冲突钩 / 反差钩 类型条目 + 风险徽章)
 - **情感曲线:** 阶梯式 上升(对应 [`references/conflict-escalation.md`](./references/conflict-escalation.md) §The 阶梯式 Escalation Ladder)—— 钩子 6/10 → 击中点 7/10 → 中段升级 8/10 → 爽点 9-10/10 → 卡点 悬而未决
 - **节奏密度:** 最快 cut 密度(1.5s 平均镜头,见 [`references/vertical-pacing.md`](./references/vertical-pacing.md) §Multi-Platform Pacing Variation);抖音算法权重 完播率 ~35% *estimated*,快切是硬约束
-- **付费卡点位置:** 第 5-7 集设 付费门槛(详见 [`../../compliance_marketing/references/platform-specs-douyin.md`](../compliance_marketing/references/platform-specs-douyin.md) §付费机制);硬卡点强度目标 🟢 must-watch-next(复仇将近但被打断)
+- **付费卡点位置:** 第 5-7 集设 付费门槛(详见 [`../../compliance_gate/references/platform-specs-douyin.md`](../compliance_gate/references/platform-specs-douyin.md) §付费机制);硬卡点强度目标 🟢 must-watch-next(复仇将近但被打断)
 - **典型案例:** (1)「战神归来」开场 3 秒 hook = 战神雨中独行 + 第一句台词"我回来了",30 集主线"复仇兑现阶梯";(2)「霸总装穷」反差钩,主角穿破西装被前任羞辱 → 第 6 集末 硬卡点"奶奶的遗嘱居然是…"
 
 ### 抖音-女频
@@ -168,7 +168,7 @@ metadata:
 
 ### 快手-草根
 
-- **核心动机:** 普通人 / 家庭 / 逆袭 / 情感共鸣 —— 快手受众更重视"接地气"与"真实感",草根美学 是核心;避炫富画面信号(豪车 / 名表 是平台专属 红线,跨链 [`../../compliance_marketing/references/platform-specs-kuaishou.md`](../compliance_marketing/references/platform-specs-kuaishou.md) §内容红线)
+- **核心动机:** 普通人 / 家庭 / 逆袭 / 情感共鸣 —— 快手受众更重视"接地气"与"真实感",草根美学 是核心;避炫富画面信号(豪车 / 名表 是平台专属 红线,跨链 [`../../compliance_gate/references/platform-specs-kuaishou.md`](../compliance_gate/references/platform-specs-kuaishou.md) §内容红线)
 - **情感曲线:** 线性上升(无陡峭反转);阶梯式 较缓(2-3 级而非 5 级);情感共鸣 触发器权重最高
 - **节奏密度:** 较慢于抖音(1.5-2.5s 平均镜头);草根美学 避免过度快切显得"刻意"
 - **付费卡点位置:** 第 6-10 集设 付费门槛(晚于抖音);硬卡点 较柔和(🟡 curious-but-skippable 可接受 —— 快手付费意愿较低,过强 卡点 反而劝退)
@@ -179,7 +179,7 @@ metadata:
 - **核心动机:** 长剧集悬念 / 多集反转 / 季末解谜 —— 微信小程序剧 单集 3-5 min(最长形态),叙事容量远大于抖快;serial cliffhanger 是核心商业模式
 - **情感曲线:** 多峰 阶梯式(每集 1 峰,跨集 callback 织成悬念网);多集 callback 是常态(setup_callback 跨集回指 S1E03,payoff_callback 跨集前瞻 S1E07)
 - **节奏密度:** 单集内部慢(2-3s 平均镜头,因集长更长);但 卡点 密度最高(每集末硬卡点 + 集中段软卡点)
-- **付费卡点位置:** 第 3-5 集设 付费门槛(最早);每集末必有 🟢 hard 卡点(详见 [`../../compliance_marketing/references/platform-specs-miniprogram.md`](../compliance_marketing/references/platform-specs-miniprogram.md) §付费机制);双重 备案 触发(广电 + 微信小程序)
+- **付费卡点位置:** 第 3-5 集设 付费门槛(最早);每集末必有 🟢 hard 卡点(详见 [`../../compliance_gate/references/platform-specs-miniprogram.md`](../compliance_gate/references/platform-specs-miniprogram.md) §付费机制);双重 备案 触发(广电 + 微信小程序)
 - **典型案例:** (1)12 集 拟人化 漫剧「锁着的房间」每集末硬卡点,setup 跨集回指 S1E01 一封信,payoff 前瞻 S1E12;(2)30 集真人短剧「家族秘辛」,每三集一次反转,季末解谜
 
 ### 通用 fallback
@@ -216,7 +216,7 @@ metadata:
 
 - 当前 平台 × 受众 分支对应的 5-type taxonomy 条目([`references/three-second-hooks.md`](./references/three-second-hooks.md) §Taxonomy)
 - 当前分支对应的 阶梯式 升级阶梯([`references/conflict-escalation.md`](./references/conflict-escalation.md) §The 阶梯式 Escalation Ladder)
-- 当前平台 付费机制 + 付费门槛 位置([`../../compliance_marketing/references/platform-specs-{douyin,kuaishou,miniprogram}.md`](../compliance_marketing/references/) §付费机制)
+- 当前平台 付费机制 + 付费门槛 位置([`../../compliance_gate/references/platform-specs-{douyin,kuaishou,miniprogram}.md`](../compliance_gate/references/) §付费机制)
 - 竖屏 cut density + BGM sync 要求([`references/vertical-pacing.md`](./references/vertical-pacing.md) §Cut Density Rules + §BGM Sync Requirements)
 
 **若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
@@ -229,7 +229,7 @@ tags="expert:hook_retention,domain:vertical-pacing"
 tags="expert:hook_retention,domain:platform-<platform>"
 ```
 
-**若无此类工具**,回退到本目录 `references/*.md` 静态文件(以 `## References` 表为准)+ Phase 1 [`../../compliance_marketing/references/`](../compliance_marketing/references/) 跨链 catalog。静态 refs 是权威源,memory 插件只是更大语料的优化。provider-agnostic 检索是 ablation eval 与多 provider 部署的硬约束。
+**若无此类工具**,回退到本目录 `references/*.md` 静态文件(以 `## References` 表为准)+ Phase 1 [`../../compliance_gate/references/`](../compliance_gate/references/) 跨链 catalog。静态 refs 是权威源,memory 插件只是更大语料的优化。provider-agnostic 检索是 ablation eval 与多 provider 部署的硬约束。
 
 > **NOTE:** 本 SKILL.md body 不引用任何具体外部模型名(veo3.1 / kling-v3-4k / FLUX 2 / Stable Audio / CosyVoice 等)。涉及具体模型时使用 `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(见 [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) placeholder 表)。模型名只出现在 `references/*.md` 与 [`../_shared/known-external-models.yaml`](../_shared/known-external-models.yaml) allowlist 中。
 
@@ -245,18 +245,18 @@ tags="expert:hook_retention,domain:platform-<platform>"
 ## Collaboration
 
 - **<- screenplay**:接收 `script.json` + scene-list 做开场 hook 插入点推荐(剧本结构决定 hook 锚定位置)
-- **<- compliance_marketing**:接收 `distribution_cuts.json` + 平台 付费门槛 位置约束 + 红线 风险徽章(合规闸门决定 hook 强度上限)
+- **<- compliance_gate**:接收 `distribution_cuts.json` + 平台 付费门槛 位置约束 + 红线 风险徽章(合规闸门决定 hook 强度上限)
 - **<- editor**:接收 `cut_density` 反馈做 完播率 复检(剪辑决定 1.5x pace rule 是否真达成)
 - **-> screenplay**:输出 `钩子_爽点_卡点_markers.json` 给 `emotion_curve` 离散锚点集成(Phase 3 screenplay 重构将原生消费)
 - **-> editor**:输出 1.5x pace / ≤3s dead air / BGM coupled_beat 节奏约束(给 `cut_density` 决策输入)
 - **-> composer**:输出 BGM sync 时间戳要求(给 `coupled_beat` 对齐;**单向 edge** —— composer 不需要回调 HOOK,只需把 cut 时间戳纳入 coupled_beat 设计,CONTEXT D-7)
-- **-> compliance_marketing**:输出 `hook_design.json` + `卡点_placement.json` 给 🟡 / 🔴 风险元素复审(关闭 Phase 1 单向 edge 合同)
+- **-> compliance_gate**:输出 `hook_design.json` + `卡点_placement.json` 给 🟡 / 🔴 风险元素复审(关闭 Phase 1 单向 edge 合同)
 
 ## What NOT to do
 
 - **不要硬编码 provider 专属工具名。** 严禁在 SKILL.md body 中出现具体 provider 专属工具名作为直接调用(以 `fact_store` / `mem0_search` / `cosyvoice_api` 为反例 —— 这些只是历史警示,不允许在 body 其它任何位置复用);一律用 `<memory_plugin>` / `<rag_search>` / `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(参考 [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) 与 [`scripts/verify_skill_references.py`](../../../../../scripts/verify_skill_references.py) allowlist)
 - **不要在付费集末放 🟡 或 🔴 卡点。** Workflow §4 强制要求硬卡点强度目标 🟢;🟡 只在集中段 软卡点 可接受;付费集末 🔴 weak-resolve 等于付费转化漏斗泄漏
 - **不要把所有钩子评 🎯 不做诚实批判。** 5-tier 评分的存在意义是区分;若全部 🎯 等于未评分 —— 至少 1 个 secondary hook 应该是 ✅ 或 ⚠️
-- **不要在 SKILL.md body 重复 Phase 1 付费机制 合规数字。** 备案 / 付费门槛 / 分账比例 / 退款规则 由 [`../../compliance_marketing/references/platform-specs-*.md`](../compliance_marketing/references/) 独占 —— HOOK body 只引用数字 + 跨链,不重述原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训)
+- **不要在 SKILL.md body 重复 Phase 1 付费机制 合规数字。** 备案 / 付费门槛 / 分账比例 / 退款规则 由 [`../../compliance_gate/references/platform-specs-*.md`](../compliance_gate/references/) 独占 —— HOOK body 只引用数字 + 跨链,不重述原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训)
 - **不要在 body 中引入新模型名。** 若需引用具体模型,必须先加入 [`../_shared/known-external-models.yaml`](../_shared/known-external-models.yaml) allowlist;否则一律用 `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(防止 [`scripts/verify_skill_references.py`](../../../../../scripts/verify_skill_references.py) `--strict` 误报)
 - **不要忽略 multi-episode callback。** marker schema 的 `setup_callback` / `payoff_callback` 字段对 小程序剧-长集数 分支是核心 —— 填 "next episode" 这种模糊值视为不合格,必须指到具体的 `S1E0X MM:SS`

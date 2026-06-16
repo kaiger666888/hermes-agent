@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, image, flux-2, lora, ip-adapter, instantid, visual, cinematic, character-consistency]
-    related_skills: [screenplay, continuity_auditor, colorist, animator, style_genome, compliance_marketing, cinematographer, production]
+    related_skills: [screenplay, continuity_auditor, colorist, animator, style_genome, compliance_gate, cinematographer, production]
     expert_id: drawer
     metrics: [aesthetic_score, character_consistency, film_realism, vram_efficiency]
 ---

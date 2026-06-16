@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, creative, story-kernel, social-narrative, realism, ideation, story-mining]
-    related_skills: [style_genome, screenplay, hook_retention, compliance_marketing, topic_curator]
+    related_skills: [style_genome, screenplay, hook_retention, compliance_gate, topic_curator]
     expert_id: creative_source
     metrics: [strata_resonance_depth, bourdieu_field_accuracy, kernel_actionability, unspeakability_calibration]
 ---
@@ -156,7 +156,7 @@ tags="expert:creative_source,domain:unspeakability-protocol"
     "style_genome",
     "screenplay",
     "topic_curator",
-    "compliance_marketing"
+    "compliance_gate"
   ],
   "created_at": "2026-06-16T14:30:00Z",
   "created_by": "creative_source",
@@ -237,7 +237,7 @@ tags="expert:creative_source,domain:unspeakability-protocol"
 - **-> [`style_genome`](../style_genome/SKILL.md)** — StoryKernel's `structural_formula` + `target_audience_overlap` inform genre / mood selection
 - **-> [`screenplay`](../screenplay/SKILL.md)** — StoryKernel's `dramatic_potential` + `strata_layers` inform scene design + character motivation
 - **-> `topic_curator` (future)** — multiple StoryKernels feed topic selection
-- **-> [`compliance_marketing`](../compliance_marketing/SKILL.md)** — StoryKernel's `unspeakability_score` + `platform_compliance_paths` inform distribution strategy
+- **-> [`compliance_gate`](../compliance_gate/SKILL.md)** — StoryKernel's `unspeakability_score` + `platform_compliance_paths` inform distribution strategy
 
 ## What NOT to do
 
