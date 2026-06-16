@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, character, design, identity, 4d-anchor, consistency, character-bible]
-    related_skills: [style_genome, screenplay, visual_executor, performer, continuity_auditor, audio_pipeline, production]
+    related_skills: [style_genome, screenplay, visual_executor, continuity_auditor, audio_pipeline, production]
     expert_id: character_designer
     metrics: [cross_angle_consistency, identity_preservation_rate, stress_test_pass_rate, negative_trait_compliance]
 ---

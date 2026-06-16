@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, screenplay, script, dialogue, narrative, emotion-curve]
-    related_skills: [style_genome, scene_builder, editor, performer, audio_pipeline, compliance_gate, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
+    related_skills: [style_genome, editor, audio_pipeline, compliance_gate, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
     expert_id: screenplay
     metrics: [narrative_tension, dialogue_naturalness, emotional_arc]
 ---
@@ -220,9 +220,9 @@ tags="expert:screenplay,domain:dialogue-craft"
 
 - **<- style_genome**: `style_correction` to adapt tone/genre
 - **<- hook_retention**: 接收 `钩子_爽点_卡点_markers.json` 给 `emotion_curve` 离散锚点集成(HOOK-09 合同闭环 —— `hooks[]` / `payoffs[]` / `cliffhangers[]` 数组消费 HOOK marker)
-- **-> scene_builder**: scenes[] with camera-ready descriptions, `lighting_mood`
+- **-> cinematographer** (replaces deprecated Phase 17 scene_builder): scenes[] with camera-ready descriptions, `lighting_mood` (mise-en-scène as composition_lock sub-task)
 - **-> editor**: shot_count estimates, rhythm intent, cross-reference IDs
-- **-> performer**: emotion per shot, character psychology annotations
+- **-> character_designer** (replaces deprecated Phase 17 performer): emotion per shot, character psychology annotations (dialogue subtext remains in-screenplay)
 - **-> audio_pipeline (composer sub-step)**: `sound_mood` per scene, coupled_beat hints
 - **-> hook_retention**: 输出 `emotion_curve.hooks[]` / `payoffs[]` / `cliffhangers[]` 供 HOOK marker 对齐验证(双向 edge —— HOOK 设计 marker,screenplay 消费 marker,形成闭环)
 

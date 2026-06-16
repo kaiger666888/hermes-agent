@@ -32,7 +32,7 @@ The user needs to plan shot sequences, design editing rhythm, create edit decisi
 | [`references/murch-rule-of-six.md`](./references/murch-rule-of-six.md) | 做任何 cut 决策前 | Murch Rule of Six 加权评分模型(Emotion 50% / Story 23% / Rhythm 10% / Eye-trace 7% / 2D plane 5% / 3D space 3%,2nd ed canonical)+ Emotion-First 决策规则(emotion ≥ 8.0 豁免 / emotion ≤ 3.0 否决)+ Eye-trace 帧位移量化(横屏 ≤30%/40%,竖屏收紧 10%)+ Blink 节奏理论(~4s 眨眼间隔 + 30 cuts/min viewer-fatigue 阈值)+ 6-shot 完整评分工作流示例 |
 | [`references/classical-editing-rhythm.md`](./references/classical-editing-rhythm.md) | 设计任何场景的节奏前 | Reisz-Millar 古典剪辑节奏学:cut-density windows by genre(横屏 drama 8-12 / action 20-40 / comedy 12-20 cuts/min)+ 竖屏 1.5x 换算 + build-to-climax 规则(最后 25% runtime = 1.5-2x baseline)+ cut on action 隐形效果(-70% viewer 察觉率)+ invisible editing 定义(eye-tracking < 10% 阈值)+ 喘息帧设计(2-3s 长度,15-20s 间隔) |
 | [`references/montage-theory.md`](./references/montage-theory.md) | 设计任何蒙太奇 / 主题升华段前 | Eisenstein 5 种 montage 方法表(Metric / Rhythmic / Tonal / Overtonal / Intellectual)+ collision 原理(thesis + antithesis → synthesis)+ 经典示例(Strike / Potemkin / October)+ metric montage 帧数规则(24/48/96 frames at 24fps)+ tonal montage 在 短剧 爽点 段的三维协同(cut-density + color-tone + sound-tone)+ montage method 选择决策树 |
-| [`references/fxrxt-axis-compliance.md`](./references/fxrxt-axis-compliance.md) | 做任何 cut 决策前(180°/30°/eyeline 验证) | 180° 轴线规则(angle delta > 180° = 零容忍违反)+ 30° 规则(angle delta < 30° = jump-cut 风险)+ eyeline match(方向差 > 45° = 违反)+ match cut 设计(graphic / motion / sound 三种类型)+ FxRxT 矩阵整合(editor=compliance, scene_builder=feasibility)+ 轴线合规自检工作流 JSON 输出 |
+| [`references/fxrxt-axis-compliance.md`](./references/fxrxt-axis-compliance.md) | 做任何 cut 决策前(180°/30°/eyeline 验证) | 180° 轴线规则(angle delta > 180° = 零容忍违反)+ 30° 规则(angle delta < 30° = jump-cut 风险)+ eyeline match(方向差 > 45° = 违反)+ match cut 设计(graphic / motion / sound 三种类型)+ FxRxT 矩阵整合(editor=compliance, scene_builder=feasibility; Phase 17 v3.0 起 scene_builder feasibility 已折叠入 cinematographer composition_lock 子任务)+ 轴线合规自检工作流 JSON 输出 |
 | [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) | 设计 短剧 单集节奏前 | 平台 cut-density windows(抖音-男频 revenge 40-60/90s-ep / 抖音-女频 romance 30-45 / 快手-草根 20-35 / 小程序剧 60-90)+ 1.5x pace rule 跨链(数值由 [`../hook_retention/references/paywall-design.md`](../hook_retention/references/paywall-design.md) 独占)+ ≤3s dead air rule 跨链 + BGM-driven cut sync(rhythm_coherence +25%)+ 击中点 cut alignment + 3 个反模式 + 自检工作流 |
 | [`../_shared/project-corpus/editing-sound-post.md`](../_shared/project-corpus/editing-sound-post.md) | 研究默奇剪辑哲学 / 学 7 位剪辑先驱 / 学音效圣经 5 分类时 | 《剪辑之道》5 城市 5 对话 + 默奇"谦卑的声音" + 6 原则权重 + 庖丁解牛比喻 + 7 位剪辑先驱(梅里爱/史密斯/波特/百代/格里菲斯/爱森斯坦/戈达尔)+ 《音效圣经》5 大分类(硬效果/拟音/背景/电子/声音设计)+ 录音十诫 |
 
@@ -51,7 +51,7 @@ The user needs to plan shot sequences, design editing rhythm, create edit decisi
 - **Murch Rule of Six 加权评分模型**(Emotion 50% / Story 23% / Rhythm 10% / Eye-trace 7% / 2D plane 5% / 3D space 3% + Emotion-First 决策规则 + Eye-trace 帧位移量化 + Blink 节奏理论)—— 详见 [`references/murch-rule-of-six.md`](./references/murch-rule-of-six.md)
 - **Reisz-Millar 古典剪辑节奏学**(cut-density windows by genre + build-to-climax 规则 + cut on action + invisible editing 定义 + 喘息帧设计)—— 详见 [`references/classical-editing-rhythm.md`](./references/classical-editing-rhythm.md)
 - **Eisenstein 蒙太奇理论**(5 种 montage 方法 + collision 原理 + metric montage 帧数 + tonal montage 在 短剧 爽点 的应用)—— 详见 [`references/montage-theory.md`](./references/montage-theory.md)
-- **FxRxT 轴线合规规则**(180° / 30° / eyeline / match cut + editor 与 scene_builder 的责任边界)—— 详见 [`references/fxrxt-axis-compliance.md`](./references/fxrxt-axis-compliance.md)
+- **FxRxT 轴线合规规则**(180° / 30° / eyeline / match cut + editor 与 scene_builder 的责任边界;Phase 17 v3.0 起 scene_builder feasibility 已折叠入 cinematographer composition_lock 子任务)—— 详见 [`references/fxrxt-axis-compliance.md`](./references/fxrxt-axis-compliance.md)
 - **CN 短剧 剪辑节奏**(平台 cut-density windows + 1.5x pace rule + ≤3s dead air rule + BGM-driven cut sync + 击中点 cut alignment)—— 详见 [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md)
 
 **若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
@@ -191,7 +191,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 2. **Rhythm Planning** — Determine per-scene editing rhythm from emotion_curve + coupled_beat + 平台 cut-density window(见 Key Parameters — Rhythm Parameters — Cut-Density Windows)
 3. **FxRxT Assignment** — Assign F (Frame) / R (Rhythm) / T (Transition) per shot;标注 segment_type + montage_method
 4. **Murch Rule of Six Scoring** — 对每个候选 cut,按 6 维度评分并计算 murch_score;触发 Emotion-First 豁免 / 否决逻辑(per [`references/murch-rule-of-six.md`](./references/murch-rule-of-six.md) §Murch Score Calculation)
-5. **Axis Establishment** — Set 180° axis from first two-person frame;消费 scene_builder.axis_data(若存在)
+5. **Axis Establishment** — Set 180° axis from first two-person frame;消费 cinematographer (Phase 17 v3.0: was scene_builder composition_lock sub-task) axis_data(若存在)
 6. **Shot Ordering** — Arrange shot sequence by narrative logic + rhythm + 击中点 alignment
 7. **Transition Design** — Determine transition type and duration between shots;match cut 优先在场景转换处
 8. **L/J-cut Marking** — Design audio lead/lag for key dialogue
@@ -217,7 +217,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - **<- audio_pipeline (composer sub-step)**: coupled_beat.json(用于 BGM-driven cut sync)+ light_beat.json
 - **<- audio_pipeline (voicer sub-step)**: dialogue timeline (L/J-cut reference)
 - **<- continuity_auditor**: consistency report (reject failed frames)
-- **<- scene_builder**: axis_data(180° 轴线定义 + 摄影机位置;editor 负责 compliance,scene_builder 负责 feasibility)
+- **<- cinematographer (replaces deprecated Phase 17 scene_builder; composition_lock sub-task)**: axis_data(180° 轴线定义 + 摄影机位置;editor 负责 compliance,cinematographer composition_lock 子任务负责 feasibility)
 - **<- hook_retention**: 击中点 / 爽点 / 卡点 markers(用于 cut alignment 验证)
 - **-> audio_pipeline (composer sub-step)**: final cut points (adjust coupled_beat)
 - **-> audio_pipeline (mixer sub-step)**: post-edit audio timeline
