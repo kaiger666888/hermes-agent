@@ -16,7 +16,7 @@
 
 ### MERGE — Expert Merge(2 reqs)
 
-- [ ] **MERGE-01**: `drawer` + `animator` 合并为 `visual_executor` 新 expert。保留原 expert_id 作为 sub-step 名(`visual_executor` SKILL.md 内部声明 `sub_steps: [drawer, animator]`)。`related_skills` 协作图更新:visual_executor 继承 drawer + animator 的全部 edge。
+- [x] **MERGE-01**: `drawer` + `animator` 合并为 `visual_executor` 新 expert。保留原 expert_id 作为 sub-step 名(`visual_executor` SKILL.md 内部声明 `sub_steps: [drawer, animator]`)。`related_skills` 协作图更新:visual_executor 继承 drawer + animator 的全部 edge。
 - [ ] **MERGE-02**: 5 个 audio experts(`voicer` + `composer` + `foley` + `mixer` + `spatial_audio`)合并为 `audio_pipeline` 新 expert。`audio_pipeline` SKILL.md 内部声明 `sub_steps: [voicer, lip_sync, composer, foley, mixer]`(lip_sync 是新增显式 sub-step)。`related_skills` 协作图更新。
 
 ### NEW — New Expert(1 req)
@@ -75,7 +75,7 @@
 |-------------|-------|--------|
 | RENAME-01 | 13 | Complete |
 | RENAME-02 | 13 | Complete |
-| MERGE-01 | 14 | Pending |
+| MERGE-01 | 14 | Complete |
 | MERGE-02 | 15 | Pending |
 | NEW-01 | 16 | Pending |
 | DEPRECATE-01 | 17 | Pending |
