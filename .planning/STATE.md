@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: ready_to_plan
-last_updated: 2026-06-17T18:33:08Z
-last_activity: 2026-06-17 — Phase 18 Plan 01 COMPLETE (VALIDATION-REPORT.md audit + ROADMAP §18 reconciliation: 31 SKILL.md files = 15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs; VALIDATE-01 PASS + VALIDATE-02 PASS; 2 defects surfaced for 18-03: VALIDATE-D1 missing quality_gate + VALIDATE-D2 stale README count). Phase 18 plans 02 + 03 remain.
+last_updated: 2026-06-17T18:39:00Z
+last_activity: 2026-06-17 — Phase 18 Plan 02 COMPLETE (README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + reconciled 4-bucket inventory tables + accurate 31-count footer with 21-discrepancy surfaced per CONTEXT D-06; glossary.md DOC-02 verification — 3 of 5 terms PRESENT from Phase 14/15/16, 2 ADDED in Phase 18 [continuity_auditor + compliance_gate]; known-external-models.yaml Phase 8 §2.17 dated annex — 18 NEW + 9 inline-extended entries, 27 entries with verified_date: 2026-06-17). DOC-01 + DOC-02 satisfied. Phase 18 plan 03 remains).
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 14
   completed_plans: 14
   percent: 86
-stopped_at: Phase 18 Plan 01 complete (1/3) — ready to plan 18-02 or 18-03
+stopped_at: Phase 18 Plan 02 complete (2/3) — ready to plan 18-03 (sign-off + close)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,7 +30,7 @@ stopped_at: Phase 18 Plan 01 complete (1/3) — ready to plan 18-02 or 18-03
 ## Current Position
 
 Phase: 18
-Plan: 01 complete (18-02 + 18-03 remain)
+Plan: 02 complete (18-03 remains)
 Status: In progress
 Last activity: 2026-06-17
 
@@ -47,7 +47,7 @@ v3.0 Skills-to-DAG Alignment milestone:
   Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
   Phase 16 [██████████] 100% Complete (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 done: close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
   Phase 17 [██████████] 100% Complete (17-01 done: 3 experts deprecated [performer / scene_builder / storyboard_designer] with status:deprecated + FOUND-08 preservation + 8-consumer related_skills rewired to inheritance targets; 17-02 done: close-out docs — README inventory + DAG diagram + footer count + glossary deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates)
-  Phase 18 [███       ] 33% In progress (18-01 done: VALIDATION-REPORT.md — 31 SKILL.md files classified 15+3+3+10; FOUND-08 audit 13/13 PASS; backward-compat 13/13 PASS; ROADMAP §18 #1 reconciled to 31 with 21-discrepancy surfaced per CONTEXT D-06; DEFECT VALIDATE-D1 [missing quality_gate] + VALIDATE-D2 [stale README count] deferred to 18-03)
+  Phase 18 [██████    ] 67% In progress (18-01 done: VALIDATION-REPORT.md — 31 SKILL.md files classified 15+3+3+10; FOUND-08 audit 13/13 PASS; backward-compat 13/13 PASS; ROADMAP §18 #1 reconciled to 31 with 21-discrepancy surfaced per CONTEXT D-06; DEFECT VALIDATE-D1 [missing quality_gate] deferred to 18-03. 18-02 done: README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + 4-bucket inventory tables + reconciled footer; glossary.md DOC-02 verification [3 PRESENT + 2 ADDED]; known-external-models.yaml §2.17 dated annex [18 NEW + 9 extended]; DOC-01 + DOC-02 satisfied. 18-03 sign-off + close remains)
 ```
 
 ### Phase Statuses (v2.0 PRFP)
@@ -179,6 +179,16 @@ v3.0 Skills-to-DAG Alignment milestone:
 | skills-mapping.yaml sign_off action_for_v21 repurposed to FULFILLED record | Mirrors Phase 16 prompt_injector pattern (CONTEXT D-06 'No silent sign-off'); single field carries both original intent AND v3.0 fulfillment | Applied 2026-06-17 in plan 17-02 |
 | Plan verify-script signed_off count threshold bug (Rule 1) | Plan `<verify>` asserted `>=8` signed_off based on faulty premise that N-to-one merges (visual_executor + audio_pipeline) were signed off — they use `revisit_in_phase` instead. Actual pre-Phase-17 count was 3 (2 renames + 1 new); post-Phase-17 is 6. Implementation unchanged; substantive per-entry checks all passed | Documented 2026-06-17 in plan 17-02 SUMMARY §Deviations |
 
+### Decisions (v3.0 — Phase 18)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Mermaid DAG replaces ASCII art wholesale (no comment fallback retained) | The prior ASCII-art DAG had accreted across Phases 14-15-16-17 and no longer matched v2.0 PRFP canonical topology (omitted quality_gate, had production in linear pipeline, missing screenplay↔script_auditor loop). Single canonical source-of-truth: `01-NODE-DAG.md §1.5` | Applied 2026-06-17 in plan 18-02 Task 1 |
+| Phase 8 Cross-Cutting ASCII diagram converted to 3-row table | theory_critic is the only vertical in the canonical DAG (consultative node); documentary_maker + animation_studio are NOT in DAG but preserved as parallel corpus-driven verticals. Table form makes this distinction explicit | Applied 2026-06-17 in plan 18-02 Task 1 |
+| 7 inventory sub-sections consolidated into 3 canonical tables (Active / Deprecated / Redirect stubs) with provenance preserved in notes subsection | Single canonical inventory matching VALIDATION-REPORT.md's 4-bucket classification; per-phase provenance preserved separately so no historical info lost | Applied 2026-06-17 in plan 18-02 Task 1 |
+| Glossary DOC-02 verification matrix pattern | Each of the 5 required terms (visual_executor / audio_pipeline / prompt_injector / continuity_auditor / compliance_gate) is auditable: line-of-entry × phase-18-status. 3 PRESENT from Phase 14/15/16, 2 ADDED in Phase 18 §canonical term reconciliation | Applied 2026-06-17 in plan 18-02 Task 2 |
+| Existing-entry inline extension (corrected from initial overlay block) | Plan 18-02 Task 3 initial overlay-block approach created 9 duplicate-name entries (82 total, 73 unique) — violated plan's "do NOT duplicate the base entry" directive. Corrected mid-task (Rule 1 bug): removed overlay block; inline-extended the 9 existing base entries with verified_date + stability + node_role + extended provenance. Single source of truth preserved | Applied 2026-06-17 in plan 18-02 Task 3 (correction landed in same commit before push) |
+
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
@@ -207,9 +217,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 18 Plan 01 executed (2026-06-17) — VALIDATION-REPORT.md published at .planning/phases/18-validation-documentation/VALIDATION-REPORT.md as the canonical audit artifact for VALIDATE-01 + VALIDATE-02. Classified all 31 SKILL.md files into 4 buckets: 15 active DAG (canonical 16 minus quality_gate gap) + 3 active non-DAG (documentary_maker, animation_studio, production) + 3 deprecated (Phase 17) + 10 redirect stubs (FOUND-08 preservation). FOUND-08 Compliance Audit: 13/13 migrations PASS (zero silent renames/merges/folds/deprecations). Backward Compatibility Verification: 13/13 legacy expert_ids resolve via aliases or preserved stubs (VALIDATE-02 PASS). ROADMAP §18 #1 reconciled: original 21 = 16 + 5 aliases estimate replaced with the audited 31 = 15+3+3+10 decomposition; original 21-target discrepancy surfaced explicitly per CONTEXT D-06 no-silent-sign-off. ROADMAP §18 #6 + #7 now reference VALIDATION-REPORT.md as canonical audit artifact. Two defects surfaced for plan 18-03: VALIDATE-D1 (missing quality_gate expert directory — canonical DAG has 16 nodes but on-disk reality is 15) + VALIDATE-D2 (README Status line stale at "18 expert_ids"). Commits a594047fd + 27378b1aa.
-**Next action:** `/gsd:plan-phase 18 --plan 02` for documentation finalization (README.md Mermaid DAG + reconciled inventory table + glossary 5-new-term verification + known-external-models.yaml Phase 8 §2.17 dated annex; DOC-01 + DOC-02). Plan 18-02 consumes VALIDATION-REPORT.md as source-of-truth.
-**Hand-off note:** Phase 18 Plan 01 COMPLETE (1/3). VALIDATE-01 + VALIDATE-02 verdicts PASS in VALIDATION-REPORT.md; the 21-vs-31 discrepancy is no longer hidden. Plans 18-02 (docs finalization) + 18-03 (sign-off + close) remain; both depend on 18-01's audit artifact.
+**Last action:** Phase 18 Plan 02 executed (2026-06-17) — finalized the v3.0 user-facing documentation surfaces: (1) README.md replaced accreted ASCII-art DAG with canonical Mermaid block from `01-NODE-DAG.md §1.5` (16-node topology with 7 subgraphs, linear + loop + human-gate + consultative + cross-cutting-invariant edges, 7 topology properties documented); consolidated 7 inventory sub-sections into 3 canonical tables (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs) with per-phase provenance preserved; updated Status line + footer to reconciled 31-count with explicit 21-target → actual reconciliation note per CONTEXT D-06. (2) glossary.md verified 5 DOC-02 terms: 3 PRESENT (visual_executor / audio_pipeline / prompt_injector from Phase 14/15/16), 2 ADDED in Phase 18 §canonical term reconciliation (continuity_auditor + compliance_gate). (3) known-external-models.yaml added Phase 8 §2.17 dated annex: 18 NEW entries (Claude Sonnet/Haiku/Opus 4.x, GLM-4.6, GPT-5/5-mini, Gemini 3 Pro, Suno V5, Udio 2, AudioLDM-3, Ideogram, Runway Gen-5, Azure TTS, OpenAI TTS-2, SD4, DaVinci Resolve, ffmpeg-DSP, template-few-shot) + 9 inline-extended existing entries (flux2 / cosyvoice / elevenlabs / stable_audio / musicgen / kling / sora / veo / ip-adapter) — 27 entries carry verified_date: 2026-06-17. Mid-task bug: initial overlay-block approach created 9 duplicate-name entries; corrected to inline-extend per plan directive "do NOT duplicate the base entry" (single source of truth preserved). DOC-01 + DOC-02 satisfied. Commits 9ee702f5a + f57c0cda3 + 70a478a18.
+**Next action:** `/gsd:plan-phase 18 --plan 03` for sign-off + close (skills-mapping.yaml all entries signed_off + visual_executor/audio_pipeline revisit_in_phase resolved; REQUIREMENTS + STATE + ROADMAP updates for v3.0 milestone close; 18-VERIFICATION.md per-criterion verdicts; DOC-01 + DOC-02 final mark-complete; DEFECT VALIDATE-D1 quality_gate decision).
+**Hand-off note:** Phase 18 Plan 02 COMPLETE (2/3). DOC-01 + DOC-02 satisfied at the artifact level (README + glossary + known-external-models.yaml). Plan 18-03 (sign-off + close) is the final v3.0 milestone plan; it owns the formal DOC-01/DOC-02 mark-complete + skills-mapping.yaml sign_off + 18-VERIFICATION.md + DEFECT VALIDATE-D1 decision.
 
 ---
 

@@ -36,8 +36,8 @@
 
 ### DOC — Documentation + Collaboration Graph(2 reqs)
 
-- [ ] **DOC-01**: 更新 `skills/movie-experts/README.md` 26-expert inventory → 21-expert inventory(16 active + 5 aliases 注释)。更新 18-expert collaboration DAG → 新 DAG 拓扑(per `01-NODE-DAG.md` Mermaid)。更新 RAG usage guide + Phase 6 live-run procedure(指向新 DAG)。
-- [ ] **DOC-02**: 更新 `_shared/glossary.md` 添加新术语(`visual_executor`, `audio_pipeline`, `prompt_injector`, `continuity_auditor`, `compliance_gate`)+ EN↔CN 映射。更新 `_shared/known-external-models.yaml` 添加 Phase 8 §2.17 dated annex 的模型清单。
+- [x] **DOC-01**: 更新 `skills/movie-experts/README.md` 26-expert inventory → 21-expert inventory(16 active + 5 aliases 注释)。更新 18-expert collaboration DAG → 新 DAG 拓扑(per `01-NODE-DAG.md` Mermaid)。更新 RAG usage guide + Phase 6 live-run procedure(指向新 DAG)。**DONE 2026-06-17 in Phase 18-02 (commits 9ee702f5a + f57c0cda3 + 70a478a18): README.md ASCII-art DAG replaced wholesale with canonical Mermaid block from 01-NODE-DAG.md §1.5 (16-node topology, 7 subgraphs, 7 topology properties documented); 7 inventory sub-sections consolidated into 3 canonical tables (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs) matching VALIDATION-REPORT.md 4-bucket classification; Status line + footer updated to reconciled 31-count with explicit 21-target → actual reconciliation note per CONTEXT D-06. Note: reconciled actual count is 31 (not 21) per VALIDATION-REPORT.md §Reconciliation Arithmetic — original 21-target was an early estimate that undercounted stubs + omitted non-DAG verticals.**
+- [x] **DOC-02**: 更新 `_shared/glossary.md` 添加新术语(`visual_executor`, `audio_pipeline`, `prompt_injector`, `continuity_auditor`, `compliance_gate`)+ EN↔CN 映射。更新 `_shared/known-external-models.yaml` 添加 Phase 8 §2.17 dated annex 的模型清单。**DONE 2026-06-17 in Phase 18-02 (commits f57c0cda3 + 70a478a18): glossary.md DOC-02 verification — 3 of 5 terms already PRESENT from Phase 14/15/16 (visual_executor, audio_pipeline, prompt_injector), 2 ADDED in Phase 18 §canonical term reconciliation (continuity_auditor + compliance_gate) with bilingual CN/EN/Context entries; Phase 18 DOC-02 verification matrix documents per-term status. known-external-models.yaml Phase 8 §2.17 dated annex — 18 NEW entries (Claude Sonnet/Haiku/Opus 4.x, GLM-4.6, GPT-5/5-mini, Gemini 3 Pro, Suno V5, Udio 2, AudioLDM-3, Ideogram, Runway Gen-5, Azure TTS, OpenAI TTS-2, SD4, DaVinci Resolve, ffmpeg-DSP, template-few-shot) + 9 inline-extended existing entries (flux2, cosyvoice, elevenlabs, stable_audio, musicgen, kling, sora, veo, ip-adapter); 27 entries carry verified_date: 2026-06-17.**
 
 ---
 
@@ -83,8 +83,8 @@
 | DEPRECATE-03 | 17 | Complete |
 | VALIDATE-01 | 18 | Complete |
 | VALIDATE-02 | 18 | Complete |
-| DOC-01 | 18 | Pending |
-| DOC-02 | 18 | Pending |
+| DOC-01 | 18 | Complete |
+| DOC-02 | 18 | Complete |
 
 **Coverage:**
 - v3.0 requirements: **12 total** (RENAME × 2 + MERGE × 2 + NEW × 1 + DEPRECATE × 3 + VALIDATE × 2 + DOC × 2)

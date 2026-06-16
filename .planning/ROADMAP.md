@@ -169,11 +169,11 @@ Plans:
 6. FOUND-08 frozen rule compliance verified: zero silent renames; all aliases explicit. Per VALIDATION-REPORT.md §FOUND-08 Compliance Audit (verdict: 13/13 migrations PASS).
 7. Backward compat verified: old expert_id references still resolve via aliases. Per VALIDATION-REPORT.md §Backward Compatibility Verification (verdict: 13/13 legacy IDs resolve, VALIDATE-02 PASS).
 
-**Plans:** 3/3 plans defined
+**Plans:** 2/3 plans complete
 
 Plans:
 - [x] 18-01-PLAN.md — Validation + reconciliation (VALIDATION-REPORT.md inventory classification + FOUND-08 audit + backward-compat verification + ROADMAP §18 #1 reconciliation; VALIDATE-01/02) — COMPLETE 2026-06-17 (commit a594047fd)
-- [ ] 18-02-PLAN.md — Documentation finalization (README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + reconciled inventory table + footer count; glossary.md 5 new-expert term verification; known-external-models.yaml Phase 8 §2.17 dated annex; DOC-01/02) — depends on 18-01
+- [x] 18-02-PLAN.md — Documentation finalization (README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + reconciled inventory table + footer count; glossary.md 5 new-expert term verification; known-external-models.yaml Phase 8 §2.17 dated annex; DOC-01/02) — COMPLETE 2026-06-17 (commits 9ee702f5a + f57c0cda3 + 70a478a18)
 - [ ] 18-03-PLAN.md — Sign-off + close (skills-mapping.yaml all entries signed_off + visual_executor/audio_pipeline revisit_in_phase resolved; REQUIREMENTS + STATE + ROADMAP updates for v3.0 milestone close; 18-VERIFICATION.md per-criterion verdicts; VALIDATE-01/02 + DOC-01/02) — depends on 18-01 + 18-02
 
 ---
