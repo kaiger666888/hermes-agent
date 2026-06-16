@@ -20,7 +20,7 @@
 ### 运镜 / cinematography / camera movement
 **CN:** 运镜 — 摄影机移动方式的统称,包括推拉摇移升降跟。
 **EN:** The collective term for camera movement techniques (dolly, pan, tilt, crane, tracking, handheld).
-**Context:** Used by EXPERT-CINE (Phase 4) and references `animator.camera_type`. Distinguished from 景别 (shot size) and 视角 (angle).
+**Context:** Used by EXPERT-CINE (Phase 4) and references `visual_executor.animator.camera_type`. Distinguished from 景别 (shot size) and 视角 (angle).
 
 ### 钩子 / hook
 **CN:** 钩子 — 短剧开场 3 秒内抓住观众注意力的设计。分为情感钩、悬念钩、冲突钩、反差钩、情绪爆点钩五类。
@@ -75,7 +75,7 @@
 ### 镜头语言 / shot grammar / cinematic language
 **CN:** 镜头语言 — 通过镜头选择(景别、视角、运动、构图)传递意义的系统化表达方式。
 **EN:** Shot grammar — systematic expression of meaning through lens choices (shot size, angle, movement, composition).
-**Context:** EXPERT-CINE (Phase 4) owns 镜头语言 semantics; scene_builder owns spatial geometry; animator owns motion execution.
+**Context:** EXPERT-CINE (Phase 4) owns 镜头语言 semantics; scene_builder owns spatial geometry; visual_executor (animator sub-step) owns motion execution.
 
 ### 景别 / shot size / shot scale
 **CN:** 景别 — 主体在画面中所占比例的分级。常见分:远景、全景、中景、近景、特写、大特写。
@@ -161,7 +161,7 @@
 **Context:** Scores ≥ 9 trigger VETO; 5-8 require per-platform reframing paths.
 
 ### 角色圣经 / Character Bible
-**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(drawer / animator / lip_sync / continuity_auditor)的 ground truth。
+**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(visual_executor / lip_sync / continuity_auditor)的 ground truth。
 **EN:** Character Bible — character identity contract JSON output by character_designer. Contains 4D anchors + layered STYLE_PREFIX + consistency stress-test results + negative_traits + consistency_lock. Ground truth for all downstream consumers.
 **Context:** Schema version 2.0.0; frozen after stress test pass.
 
@@ -183,7 +183,7 @@
 ### 分镜 / Storyboard
 **CN:** 分镜 — 把剧本场景拆解为可执行的 per-shot JSON 列表,每 shot 包含 shot_id / camera 参数 / action / duration / reference_image / end_frame / anchoring。
 **EN:** Storyboard — executable per-shot JSON list decomposed from screenplay scenes. Each shot contains shot_id / camera params / action / duration / reference_image / end_frame / anchoring.
-**Context:** storyboard_designer output; downstream consumers are drawer / animator / editor / continuity_auditor.
+**Context:** storyboard_designer output; downstream consumers are visual_executor / editor / continuity_auditor.
 
 ### 4D 锚定 / 4D Anchoring
 **CN:** 4D 锚定 — 分镜 shot 的渲染层控制参数,4 维度:depth(ControlNet Depth)/ identity(IP-Adapter)/ lighting(IC-Light)/ temporal(AnimateDiff)。每维度可独立开关 + 调强度。4 级降级策略:Draft / Standard / Cinematic / Premium。
@@ -191,8 +191,8 @@
 **Context:** Cinematic tier = default for production; Premium required for final delivery.
 
 ### 延续锚点 / Extension-Chain End-Frame
-**CN:** 延续锚点 — 多 shot 场景中,前一个 shot 的 end_frame 作为下一个 shot 的视觉延续参考。让 animator 在跨 shot 生成时保持角色 + 场景一致性。
-**EN:** Extension-Chain End-Frame — in multi-shot scenes, prior shot's end_frame serves as next shot's visual continuity reference. Enables animator to maintain character + scene consistency across shot boundaries.
+**CN:** 延续锚点 — 多 shot 场景中,前一个 shot 的 end_frame 作为下一个 shot 的视觉延续参考。让 visual_executor 的 animator sub-step 在跨 shot 生成时保持角色 + 场景一致性。
+**EN:** Extension-Chain End-Frame — in multi-shot scenes, prior shot's end_frame serves as next shot's visual continuity reference. Enables visual_executor's animator sub-step to maintain character + scene consistency across shot boundaries.
 **Context:** Required for shots 1..N-1 in any scene per storyboard-schema.md.
 
 ### 唇形同步 / Lip Sync
@@ -219,3 +219,15 @@
 **CN:** 完播率预测 — script_auditor Dimension 5,基于疲劳曲线 + 信息密度物理模型预测 A/B/C/D 级完播率区间。可独立验证(预测中点 vs 实际完播率 Pearson ≥ 0.65)。
 **EN:** Completion Rate Forecast — script_auditor Dimension 5, predicting A/B/C/D completion-rate band based on fatigue-curve + information-density physics model. Independently validatable (predicted midpoint vs actual completion rate Pearson ≥ 0.65).
 **Context:** The only script_auditor dimension not requiring LLM-judge for validation.
+
+---
+
+## Phase 14 additions (visual_executor merge)
+
+### visual_executor / 视觉执行专家
+
+**CN:** 视觉执行专家 — Phase 14 merge of `drawer` (FLUX 2 image gen) + `animator` (Hermes-catalog video gen)。声明 `sub_steps: [drawer, animator]`,unified visual + temporal consistency context per Phase 7 §4.8 + PITFALLS §2.1。Backward-compat aliases `[drawer, animator]` 保留 per FOUND-08。
+
+**EN:** Visual Executor Expert — Phase 14 merge of `drawer` + `animator` experts per v2.0 PRFP DAG. Unified sub-steps handle image gen (FLUX 2 + LoRA + IP-Adapter + InstantID) and video gen (veo3.1 / kling-v3-4k / pixverse-v6 / ltx-2.3 / seedance-2.0).
+
+**Context:** Replaces the v1 drawer → animator inter-expert collaboration edge with an intra-expert sub-step handoff (drawer generates first_frame I-frame → animator consumes it). Declared at `skills/movie-experts/visual_executor/SKILL.md`.
