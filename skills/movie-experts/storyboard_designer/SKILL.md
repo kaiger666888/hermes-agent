@@ -7,15 +7,24 @@ license: MIT
 platforms: [linux, macos, windows]
 prerequisites:
   tools: [hermes_llm]
+status: deprecated
 metadata:
   hermes:
     tags: [movie, storyboard, shot-list, shot-decomposition, 4d-anchoring, cinematography, previsualization]
     related_skills: [screenplay, cinematographer, scene_builder, character_designer, visual_executor, editor, continuity_auditor]
     expert_id: storyboard_designer
     metrics: [shot_count_accuracy, shot_size_distribution, rhythm_curve_fit, axis_compliance_rate, anchoring_completeness]
+    deprecated: true
+    deprecated_reason: "分镜设计职能已折叠至 cinematographer 的 composition_lock 子任务 — shot 分解规则(scene→shots / 对话=正反打 / 动作=全景→中景→特写)、camera params 字典、4D anchoring 协议、180°/30° 轴线审计全部作为 cinematographer 内部子任务承载,不再独立成 node — 参见 Phase 7 §3.4 D3.4 + skills-mapping.yaml not_in_new_dag 条目。"
+    inheritance_targets: [cinematographer]
 ---
 
 # Storyboard Designer Expert (分镜设计专家)
+
+> ⚠️ **DEPRECATED (Phase 17 v3.0, 2026-06-17)**: 本专家已废弃。其职能已折叠至:
+> - `cinematographer` — composition_lock 子任务吸收(shot 分解规则 + camera params 字典 + 4D anchoring 协议 + 180°/30° 轴线审计),per Phase 7 §3.4 D3.4
+>
+> **原 v1 内容保留于下方以维持向后兼容 (FOUND-08 frozen rule)。新项目请直接使用继承目标专家。**
 
 Decomposes screenplay scenes into executable per-shot Storyboard JSON. Each shot carries: identity, scene/character references, camera parameters (angle / movement / lens), action description, duration, reference image pointer, end-frame (extension-chain anchor), and 4D anchoring block (depth / identity / lighting / temporal). **Decoupled from [`cinematographer`](../cinematographer/SKILL.md)**: cinematographer defines shot-grammar rules (when to use close-up vs wide, when to cross the 180° axis); storyboard_designer applies those rules to produce the actual shot list a production executes.
 
