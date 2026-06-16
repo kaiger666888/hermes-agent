@@ -11,7 +11,7 @@ sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]
 metadata:
   hermes:
     tags: [movie, audio, voice, speech, tts, dialogue, character-voice, multi-provider, lip-sync, audio-driven, video-generation, benchmark, talking-head, digital-human, music, score, sound, beat-sync, film-scoring, musicgen, chion-audio-vision, foley, sound-effects, physical-audio, impact-sync, sound-design, mixing, mastering, ducking, lufs, frequency, audio-balance, stems, senior-mixing-secrets, spatial-audio, 3d-sound, ambience, reverb, immersive, dolby-atmos, hrtf, binaural]
-    related_skills: [screenplay, performer, editor, production, visual_executor, continuity_auditor, style_genome, scene_builder]
+    related_skills: [screenplay, performer, editor, production, visual_executor, continuity_auditor, style_genome, scene_builder, prompt_injector]
     expert_id: audio_pipeline
     aliases: [voicer, lip_sync, composer, foley, mixer, spatial_audio]
     metrics: [voice_naturalness, emotion_match, character_distinctiveness, lip_sync_error, lip_sync_confidence, temporal_consistency, identity_preservation, emotional_sync, spatial_coherence, dynamic_range, material_credibility, impact_sync_accuracy, force_consistency, spectral_clarity, level_compliance, frequency_masking_score, dialogue_intelligibility, dynamic_range_appropriateness, reality_anchor_stability, distance_transition_smoothness, vacuum_detection_pass]

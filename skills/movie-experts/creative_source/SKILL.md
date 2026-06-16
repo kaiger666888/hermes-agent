@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, creative, story-kernel, social-narrative, realism, ideation, story-mining]
-    related_skills: [style_genome, screenplay, hook_retention, compliance_gate, topic_curator]
+    related_skills: [style_genome, screenplay, hook_retention, compliance_gate, topic_curator, prompt_injector]
     expert_id: creative_source
     metrics: [strata_resonance_depth, bourdieu_field_accuracy, kernel_actionability, unspeakability_calibration]
 ---
