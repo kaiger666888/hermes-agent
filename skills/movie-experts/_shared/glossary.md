@@ -75,7 +75,7 @@
 ### 镜头语言 / shot grammar / cinematic language
 **CN:** 镜头语言 — 通过镜头选择(景别、视角、运动、构图)传递意义的系统化表达方式。
 **EN:** Shot grammar — systematic expression of meaning through lens choices (shot size, angle, movement, composition).
-**Context:** EXPERT-CINE (Phase 4) owns 镜头语言 semantics; scene_builder owns spatial geometry; visual_executor (animator sub-step) owns motion execution.
+**Context:** EXPERT-CINE (Phase 4) owns 镜头语言 semantics; scene_builder (deprecated Phase 17 → cinematographer+style_genome) owns spatial geometry; visual_executor (animator sub-step) owns motion execution.
 
 ### 景别 / shot size / shot scale
 **CN:** 景别 — 主体在画面中所占比例的分级。常见分:远景、全景、中景、近景、特写、大特写。
@@ -90,12 +90,12 @@
 ### 轴线 / axis line / 180° rule line
 **CN:** 轴线 — 场景中两个主体之间的连线,定义了 180° 拍摄半圆。越线拍摄会造成观众方向感混乱。
 **EN:** Axis line — imaginary line between two subjects in a scene, defining the 180° shooting semicircle. Crossing the line disorients the viewer.
-**Context:** editor enforces 180° axis compliance (zero-tolerance metric). EXPERT-CINE documents the rule; scene_builder pre-computes axis data.
+**Context:** editor enforces 180° axis compliance (zero-tolerance metric). EXPERT-CINE documents the rule; scene_builder (deprecated Phase 17 → cinematographer+style_genome) pre-computes axis data.
 
 ### 调度 / blocking / staging
 **CN:** 调度 — 演员在场景空间中的位置安排与移动路径设计。
 **EN:** Blocking / staging — arrangement and movement paths of actors within the scene space.
-**Context:** performer outputs stage positions (S dimension); scene_builder validates spatial feasibility; EXPERT-CINE consumes for camera-blocking design.
+**Context:** performer (deprecated Phase 17 → character_designer+screenplay) outputs stage positions (S dimension); scene_builder (deprecated Phase 17 → cinematographer+style_genome) validates spatial feasibility; EXPERT-CINE consumes for camera-blocking design.
 
 ---
 
@@ -124,7 +124,7 @@
 ### 男主 / 女主 / male lead / female lead
 **CN:** 男主 / 女主 — 短剧的男主角 / 女主角。男频短剧以男主视角为主,女频反之。
 **EN:** Male lead / female lead — protagonist of the 短剧. 男频 centers male lead POV; 女频 centers female lead POV.
-**Context:** screenplay branches narrative POV by 男频/女频; performer adjusts body-language intensity accordingly.
+**Context:** screenplay branches narrative POV by 男频/女频; performer (deprecated Phase 17 → character_designer+screenplay) adjusts body-language intensity accordingly.
 
 ### 小程序剧 / mini-program drama
 **CN:** 小程序剧 — 在微信小程序 / 抖音小程序内分发的短剧,通常以 10-80 集连续剧形式付费解锁。
@@ -143,7 +143,7 @@
 
 ---
 
-## Phase 7 additions (5 new experts — script_auditor / lip_sync / character_designer / storyboard_designer / creative_source)
+## Phase 7 additions (5 new experts — script_auditor / lip_sync / character_designer / storyboard_designer (deprecated Phase 17 → cinematographer) / creative_source)
 
 ### 故事核 / Story Kernel
 **CN:** 故事核 — 从社会结构性冲突中提炼的不可逆戏剧前提,一句话能描述的核心矛盾。
@@ -183,7 +183,7 @@
 ### 分镜 / Storyboard
 **CN:** 分镜 — 把剧本场景拆解为可执行的 per-shot JSON 列表,每 shot 包含 shot_id / camera 参数 / action / duration / reference_image / end_frame / anchoring。
 **EN:** Storyboard — executable per-shot JSON list decomposed from screenplay scenes. Each shot contains shot_id / camera params / action / duration / reference_image / end_frame / anchoring.
-**Context:** storyboard_designer output; downstream consumers are visual_executor / editor / continuity_auditor.
+**Context:** storyboard_designer (deprecated Phase 17 → cinematographer composition_lock sub-task) output; downstream consumers are visual_executor / editor / continuity_auditor.
 
 ### 4D 锚定 / 4D Anchoring
 **CN:** 4D 锚定 — 分镜 shot 的渲染层控制参数,4 维度:depth(ControlNet Depth)/ identity(IP-Adapter)/ lighting(IC-Light)/ temporal(AnimateDiff)。每维度可独立开关 + 调强度。4 级降级策略:Draft / Standard / Cinematic / Premium。

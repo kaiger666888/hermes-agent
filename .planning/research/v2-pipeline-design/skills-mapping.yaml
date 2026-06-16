@@ -114,16 +114,28 @@ not_in_new_dag:
     disposition: deprecate_candidate
     rationale: "Performance truth folded into character_designer (voice + behavioral tics) + screenplay (dialogue subtext); no standalone node necessary"
     final_decision_milestone: v2.1+
+    action_for_v21: "FULFILLED in v3.0 milestone Phase 17 (2026-06-17): performer marked status: deprecated in skills/movie-experts/performer/SKILL.md with inheritance_targets: [character_designer, screenplay] + deprecated_reason (CN prose) + body deprecation notice; consumer related_skills rewired (Plan 17-01 Task 2)"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-17
 
   - v1_expert_id: scene_builder
     disposition: deprecate_candidate
     rationale: "Scene design folded into cinematographer (mise-en-scène as composition_lock sub-task) + style_genome"
     final_decision_milestone: v2.1+
+    action_for_v21: "FULFILLED in v3.0 milestone Phase 17 (2026-06-17): scene_builder marked status: deprecated in skills/movie-experts/scene_builder/SKILL.md with inheritance_targets: [cinematographer, style_genome] + deprecated_reason (CN prose) + body deprecation notice; consumer related_skills rewired (Plan 17-01 Task 2)"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-17
 
   - v1_expert_id: storyboard_designer
     disposition: deprecate_candidate
     rationale: "Phase 7 §3.4 D3.4: storyboard folded into cinematographer composition_lock"
     final_decision_milestone: v2.1+
+    action_for_v21: "FULFILLED in v3.0 milestone Phase 17 (2026-06-17): storyboard_designer marked status: deprecated in skills/movie-experts/storyboard_designer/SKILL.md with inheritance_targets: [cinematographer] + deprecated_reason (CN prose) + body deprecation notice; zero external consumers in related_skills (Plan 17-01 Task 2)"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-17
 
   - v1_expert_id: production
     disposition: deferred
