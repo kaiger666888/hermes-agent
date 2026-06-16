@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, color, grading, color-intent, lut, cinematic, color-science]
-    related_skills: [screenplay, style_genome, drawer, continuity, animator, production, theory_critic, cinematographer]
+    related_skills: [screenplay, style_genome, drawer, continuity_auditor, animator, production, theory_critic, cinematographer]
     expert_id: colorist
     metrics: [color_intent_match, color_cross_shot_consistency, style_fidelity]
 ---
@@ -170,9 +170,9 @@ tags="expert:colorist,domain:digital-color-science"
 - **<- screenplay**: emotion_curve, lighting_mood, sound_mood
 - **<- style_genome**: style gene vector, genre color preferences
 - **<- drawer**: raw generated frames (pre-grading input)
-- **<- continuity**: cross-shot deviation reports (feedback)
+- **<- continuity_auditor**: cross-shot deviation reports (feedback)
 - **-> drawer**: color_intent.json (influences subsequent frame generation)
-- **-> continuity**: graded frames for consistency audit
+- **-> continuity_auditor**: graded frames for consistency audit
 - **-> animator**: color params for temporal consistency
 - **-> mixer**: color emotion annotations for mixing judgment
 

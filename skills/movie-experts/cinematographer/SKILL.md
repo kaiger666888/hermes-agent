@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, cinematography, shot-intent, axis-rules, vertical-framing, camera-motion, 镜头语言]
-    related_skills: [screenplay, scene_builder, animator, editor, continuity, drawer, hook_retention, production, theory_critic, documentary_maker]
+    related_skills: [screenplay, scene_builder, animator, editor, continuity_auditor, drawer, hook_retention, production, theory_critic, documentary_maker]
     expert_id: cinematographer
     metrics: [shot_intent_clarity, axis_compliance, vertical_framing_quality, motion_narrative_fit]
 ---
@@ -23,7 +23,7 @@ Shot intent specialist for AI 短剧 / 微电影 production — owns the **seman
 
 The user needs to design shot lists, plan shot scale per scene, document axis continuity, design camera moves with emotional motivation, generate per-shot vertical 9:16 framing intent, or translate cinematic intent into 2026 video gen model prompt tokens (Runway Gen-3 Alpha / Kling 1.6 / Veo 2 / Sora 2).
 
-Typically invoked after `screenplay` (to receive emotion_curve + scene structure) and `style_genome` (to receive 5D style vector for color + composition tendency). Outputs feed into `scene_builder` (spatial feasibility check), `animator` (prompt-token execution), `editor` (axis compliance across cuts), and `continuity` (cross-shot consistency audit).
+Typically invoked after `screenplay` (to receive emotion_curve + scene structure) and `style_genome` (to receive 5D style vector for color + composition tendency). Outputs feed into `scene_builder` (spatial feasibility check), `animator` (prompt-token execution), `editor` (axis compliance across cuts), and `continuity_auditor` (cross-shot consistency audit).
 
 ## References
 
@@ -166,7 +166,7 @@ cinematographer 专家是 **shot intent layer** 的 owner,与相邻 expert 有�
 5. **Camera Move Intent** — Per shot, select camera move based on emotion + narrative beat
 6. **Vertical Framing Intent** — Per shot, define power_point + headroom + subtitle_zone + platform_target
 7. **Model-Specific Handoff** — Translate camera_move to Runway/Kling/Veo/Sora prompt tokens
-8. **Output Encoding** — Generate `shot_intent.json` + 4 handoff files (scene_builder / animator / editor / continuity)
+8. **Output Encoding** — Generate `shot_intent.json` + 4 handoff files (scene_builder / animator / editor / continuity_auditor)
 9. **Handoff to Downstream** — scene_builder validates feasibility → animator executes → editor verifies compliance
 
 ## Quality Thresholds
@@ -189,7 +189,7 @@ cinematographer 专家是 **shot intent layer** 的 owner,与相邻 expert 有�
 - **-> scene_builder**: `shot_intent.json` (spatial intent: camera position + sight line + subject blocking)
 - **-> animator**: `animator_handoff.json` (model-agnostic camera move + 4-model prompt-token table)
 - **-> editor**: `editor_handoff.json` (axis_line + screen_direction + compliance_required list)
-- **-> continuity**: `shot_intent.json` (full per-shot intent for cross-shot consistency audit)
+- **-> continuity_auditor**: `shot_intent.json` (full per-shot intent for cross-shot consistency audit)
 - **-> drawer**: shot composition + framing intent for first_frame generation
 - **-> hook_retention**: first-frame hook + close-up cliffhanger framing (per [`vertical-screen-framing.md`](./references/vertical-screen-framing.md) §抖音 / 小程序剧 framing 铁律)
 
@@ -208,6 +208,6 @@ cinematographer 专家是 **shot intent layer** 的 owner,与相邻 expert 有�
 
 ## Pipeline Position
 
-cinematographer sits in the production DAG between upstream semantic experts (screenplay + style_genome) and downstream execution / verification experts (scene_builder / animator / editor / continuity):
+cinematographer sits in the production DAG between upstream semantic experts (screenplay + style_genome) and downstream execution / verification experts (scene_builder / animator / editor / continuity_auditor):
 
-`screenplay + style_genome → cinematographer → (scene_builder feasibility check) → (animator execution) → (drawer first_frame) → (editor compliance) → (continuity audit) → final`
+`screenplay + style_genome → cinematographer → (scene_builder feasibility check) → (animator execution) → (drawer first_frame) → (editor compliance) → (continuity_auditor audit) → final`

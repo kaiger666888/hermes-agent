@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, mixing, mastering, ducking, lufs, frequency, audio-balance, stems, senior-mixing-secrets]
-    related_skills: [voicer, composer, foley, spatial_audio, editor, continuity]
+    related_skills: [voicer, composer, foley, spatial_audio, editor, continuity_auditor]
     expert_id: mixer
     metrics: [level_compliance, frequency_masking_score, dialogue_intelligibility, dynamic_range_appropriateness]
 ---
@@ -171,7 +171,7 @@ tags="expert:mixer,domain:lufs-standards"
 - **<- spatial_audio**: spatial field data + 5.1 panning instructions
 - **<- editor**: edit timeline (audio sync)
 - **-> spatial_audio**: post-mix stereo/5.1 output
-- **-> continuity**: final audio consistency confirmation
+- **-> continuity_auditor**: final audio consistency confirmation
 
 ## What NOT to do
 

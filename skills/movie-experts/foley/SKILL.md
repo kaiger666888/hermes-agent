@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, foley, sound-effects, physical-audio, impact-sync, sound-design]
-    related_skills: [animator, performer, scene_builder, composer, mixer, spatial_audio, continuity]
+    related_skills: [animator, performer, scene_builder, composer, mixer, spatial_audio, continuity_auditor]
     expert_id: foley
     metrics: [material_credibility, impact_sync_accuracy, force_consistency, spectral_clarity]
 ---
@@ -165,7 +165,7 @@ tags="expert:foley,domain:sound-effect-taxonomy"
 - **<- composer**: beat timeline (rhythm alignment)
 - **-> mixer**: foley_stems[] + foley_metadata.json (mixing input)
 - **-> spatial_audio**: spatial position data (3D sound field placement)
-- **-> continuity**: sound effect consistency check (same material + force = similar)
+- **-> continuity_auditor**: sound effect consistency check (same material + force = similar)
 
 ## What NOT to do
 

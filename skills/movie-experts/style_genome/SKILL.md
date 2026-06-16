@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity, compliance_marketing, theory_critic, animation_studio, documentary_maker]
+    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity_auditor, compliance_marketing, theory_critic, animation_studio, documentary_maker]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
@@ -210,7 +210,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - **-> composer**: sound signal
 - **-> scene_builder**: composition + light_shadow signals
 - **-> performer**: rhythm + sound signals
-- **-> continuity**: style_genome.json as consistency audit baseline
+- **-> continuity_auditor**: style_genome.json as consistency audit baseline
 - **<- all modules**: preliminary outputs for deviation detection and correction
 
 ## What NOT to do
@@ -224,4 +224,4 @@ tags="expert:style_genome,domain:cn-director-analysis"
 ## Pipeline Position
 
 Style Genome is the **root expert** in the production DAG:
-`style_genome -> screenplay -> (scene_builder, performer) -> (drawer, voicer, colorist, editor, composer) -> (animator, foley, spatial_audio, continuity) -> mixer -> final`
+`style_genome -> screenplay -> (scene_builder, performer) -> (drawer, voicer, colorist, editor, composer) -> (animator, foley, spatial_audio, continuity_auditor) -> mixer -> final`

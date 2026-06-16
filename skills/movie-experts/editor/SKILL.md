@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, editing, rhythm, transition, montage, axis-rule, cut]
-    related_skills: [screenplay, animator, composer, voicer, continuity, mixer, compliance_marketing, hook_retention, cinematographer, theory_critic, documentary_maker]
+    related_skills: [screenplay, animator, composer, voicer, continuity_auditor, mixer, compliance_marketing, hook_retention, cinematographer, theory_critic, documentary_maker]
     expert_id: editor
     metrics: [rhythm_accuracy, continuity_match, axis_violation_count, transition_smoothness]
 ---
@@ -216,12 +216,12 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - **<- animator**: video clips (per-shot MP4) + focal_point 字段(用于 eye-trace 计算)
 - **<- composer**: coupled_beat.json(用于 BGM-driven cut sync)+ light_beat.json
 - **<- voicer**: dialogue timeline (L/J-cut reference)
-- **<- continuity**: consistency report (reject failed frames)
+- **<- continuity_auditor**: consistency report (reject failed frames)
 - **<- scene_builder**: axis_data(180° 轴线定义 + 摄影机位置;editor 负责 compliance,scene_builder 负责 feasibility)
 - **<- hook_retention**: 击中点 / 爽点 / 卡点 markers(用于 cut alignment 验证)
 - **-> composer**: final cut points (adjust coupled_beat)
 - **-> mixer**: post-edit audio timeline
-- **-> continuity**: edited shot sequence for final audit
+- **-> continuity_auditor**: edited shot sequence for final audit
 - **-> hook_retention**: cut list 中的 击中点 / 爽点 / 卡点 cut alignment 验证结果
 
 ## What NOT to do

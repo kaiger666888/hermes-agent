@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, performance, acting, body-language, emotion, character-action, stanislavski, meisner, laban-effort]
-    related_skills: [screenplay, continuity, scene_builder, editor, drawer, animator, voicer, style_genome, production]
+    related_skills: [screenplay, continuity_auditor, scene_builder, editor, drawer, animator, voicer, style_genome, production]
     expert_id: performer
     metrics: [emotion_accuracy, movement_naturalness, body_consistency, prompt_effectiveness]
 ---
@@ -126,7 +126,7 @@ tags="expert:performer,domain:meisner-truth"
 4. **Token Encoding** — Generate 200-500 token performance sequence
 5. **Prompt Generation** — Convert token encoding to drawer/animator action description text
 6. **Naturalness Check** — Verify joint limits, ease curves, causation
-7. **Cross-Frame Consistency** — Validate limb continuity (with continuity expert)
+7. **Cross-Frame Consistency** — Validate limb continuity (with continuity_auditor expert)
 8. **Output** — Generate `performance_intent.json` + `action_prompt` + `body_language_annotations`
 
 ## Quality Thresholds
@@ -141,14 +141,14 @@ tags="expert:performer,domain:meisner-truth"
 ## Collaboration
 
 - **<- screenplay**: emotion_curve, dialogue, character psychology
-- **<- continuity**: character reference (clothing/body consistency)
+- **<- continuity_auditor**: character reference (clothing/body consistency)
 - **<- scene_builder**: spatial layout, camera constraints
 - **<- editor**: shot duration budgets
 - **<- style_genome**: genre performance style preferences
 - **-> drawer**: action_prompt (action description text)
 - **-> animator**: performance_intent.json (animation parameters)
 - **-> voicer**: performance rhythm reference (affects voice rhythm)
-- **-> continuity**: performance tokens for cross-frame consistency audit
+- **-> continuity_auditor**: performance tokens for cross-frame consistency audit
 
 ## What NOT to do
 
