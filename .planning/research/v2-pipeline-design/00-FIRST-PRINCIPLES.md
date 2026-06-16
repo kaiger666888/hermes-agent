@@ -327,3 +327,270 @@ Phase 7 的 Q4 答案("AI 不能替代创意意图起源")**直接喂给** Phase
 
 ---
 
+## §3 — 推导链 (Derivation trace)
+
+> 本节是文档主体:从 §2 的四个第一性问题出发,逐步推导到中间结论。每步都带认识论标签 + 语料引用 + 假设分类 + 显式质疑的继承假设。**禁止类比跳到结论** — 每步必须从上一步的逻辑推出,不能"传统电影工业就是这样"。
+
+### §3.0 — 推导方法回顾
+
+每个编号步骤(D1.1, D1.2, ..., D4.x)具有 4 个不可省略的字段:
+
+1. **论断(claim)** — 这步在主张什么
+2. **认识论标签(epistemic-status)** — `[physical]` / `[psychological]` / `[platform-algorithmic]` / `[tool-capability]` 之一
+3. **语料引用(corpus citation)** — 至少一个 102 书目或 Hermes 集成语料的支持源
+4. **假设分类(assumption classification)** — `validated-invariant` 或 `contingent`
+
+可选第 5 字段:**显式质疑的继承假设(inherited-assumption-questioned)** — 如果这步在挑战 kais-movie-agent V1-V8 的某个继承假设,标出来。
+
+任何违反此结构的步骤 — 例如缺认识论标签、用"传统就是这样"作论据、跳过中间逻辑 — 都是 PITFALLS §1.1 第一性原理剧场警告信号。
+
+### §3.1 — 从 Q1 ("观众消费什么?") 到中间结论
+
+**D1.1** — 观众消费的是 **整合的情感-认知体验**,不是视频文件。一个没有情感弧的视频文件被消费为噪声并被遗忘。
+- `[psychological]` — 观众接受层是人类本性偶然但稳定;不是平台算法
+- 语料支持:Bazin 电影本体论(`film-philosophy-bazin-tarkovsky.md`);Tarkovsky《雕刻时光》(cited via `narrative-revolution-and-modernism.md`)
+- 假设分类:`validated-invariant`(挑战它需要 extraordinary evidence — 跨文化、跨时代、跨平台的观众研究都支持此规律)
+
+**D1.2** — 整合体验 **同时需要** 叙事意义 + 感知丰富 + 情感弧,作为 **联合** 属性,不是可分离的阶段产出物。
+- `[psychological]` — 受众体验的多层耦合是心理学稳定的
+- 语料支持:Tarkovsky 雕刻时光("电影是雕刻时间,不是讲述故事") + 劳逊《戏剧与电影的剧作理论与技巧》(drama vs film 体验层差异) + Bazin 现实主义(感知丰富是电影本体的一部分)
+- 假设分类:`validated-invariant`
+- **显式质疑的继承假设:** kais-movie-agent V1-V8 把 "scenario → storyboard → shots" 当作 **顺序阶段**(每阶段产出独立 JSON asset 向前传)。D1.2 暗示这是错的 — 这三层是同一个体验的不可分割属性,顺序分离是 V1-V8 偶然的工作流选择,不是体验的本质结构。
+
+**D1.3** — 因此 pipeline 的 **root node** 必须产出 **整合体验 spec**(元意图:logline + 主角欲望 + 中央冲突 + 转折点 + 解决立场 + 风格基因),不是分别的 script 或 storyboard。
+- `[psychological]` — 元意图的整合性是体验的源头属性
+- 语料支持:v1 `creative_source` expert(已经实现 — 6 社会阶层生活经验挖 kernel);Field《剧本》(logline + 主角欲望);McKee《故事》(转折点 + 解决立场)
+- 假设分类:`validated-invariant`(整合性来自 D1.1+D1.2)
+- **显式质疑的继承假设:** V6/V8 的 20 步 pipeline 把 Step 1 设为 `kais-soul-radar`(痛点发现)然后才 `kais-script-agent`(剧本生成)。D1.3 暗示痛点 + 故事 kernel + 风格基因应该 **同时** 在 root node 产出,不是分散到 Step 1-2。
+
+**D1.4** — 整合体验 spec **不能** 从单一 LLM call 一次产出 — 模型当前能力上限使 root 必须做"种子化 + 增量精炼",不是"端到端生成"。
+- `[tool-capability]` — 当前 LLM 在 zero-shot 端到端长程故事生成上仍有 plot-hole / 一致性 drift 问题
+- 语料支持:STACK §5 Plot Hole Detection(arXiv 2504.11900)+ ConStory-Bench(arXiv 2603.05890)+ EMNLP 2025 LLM Story Generation Survey
+- 假设分类:`contingent` — 这是 **当前** 模型能力限制,不是本性。如果未来模型能 native 端到端,此论断需重审(标记为 `volatile`)
+- **显式质疑的继承假设:** V8 "唯一 LLM 编排一切"(OpenClaw Agent 收编 movie-agent)假设 LLM 端到端能力足够。D1.4 暗示在 2026-Q2 当前模型上不够。
+
+**D1.5** — 因此 pipeline root 是 **`creative_source` 节点**(挖故事 kernel + 元意图 + 风格基因),下游是 **分层执行链**(把元意图展开为可执行规格 → 模型 tokens → 渲染输出)。
+- `[psychological]` + `[tool-capability]` — 元意图起源是人类本性,展开机制是当前模型能力
+- 语料支持:综合 D1.1-D1.4 + v1 `creative_source` expert precedent
+- 假设分类:`validated-invariant`(根节点存在的必要性)+ `contingent`(展开机制细节)
+
+**Q1 中间结论汇总:**
+- C1.1:root 节点产出整合元意图(不是分离的 script/storyboard)
+- C1.2:元意图来自人类生活经验(D1.5 + D4.1 会进一步强化)
+- C1.3:下游展开是分层执行链(D1.4 + D1.5)
+
+### §3.2 — 从 Q2 ("什么决定质量?") 到中间结论
+
+**D2.1** — 短剧/微电影的质量由 **Murch Rule of Six** 的六维度共同决定:emotion, story, rhythm, eye-trace, planarity, spatial continuity。
+- `[psychological]` — 六维度对应人类观众的多层感知响应
+- 语料支持:`04-后期/editing-by-murch-rules.md`(Murch *In the Blink of an Eye* 浓缩)+ Hermes `editing-sound-post.md`
+- 假设分类:`validated-invariant` — Murch 六维度跨 40+ 年实证成立
+
+**D2.2** — 六维度中,**180° 轴线规则** 是感知不变量(`physical` + `validated-invariant`),而 **完播率加权** 是平台偶然(`platform-algorithmic` + `contingent`)— 这两类不能混淆(防 PITFALLS §1.5"我推导自物理"谬误)。
+- `[physical]` + `[platform-algorithmic]` — 区分两类
+- 语料支持:`02-分镜/cinematic-language-grammar.md`(轴线规则感知基础)+ v1 `hook_retention/references/three-second-hooks.md`(完播率加权是平台算法层)
+- 假设分类:轴线 = `validated-invariant`;完播率 = `contingent`
+- **显式质疑的继承假设:** V6/V8 把完播率优化当作 root-level quality metric。D2.2 暗示完播率只是 `platform-algorithmic` 偶然,不能与感知不变量混为一谈 — pipeline 设计必须能解耦这两层。
+
+**D2.3** — 质量由 **跨节点 coherence** 主导 — 一个电影不是各部分成本之和,而是 emergent Gestalt,互动质量主导价值。
+- `[psychological]` — Gestalt 感知是人类本性
+- 语料支持:Bazin 现实主义(整体性)+ Tarkovsky 雕刻时光(节奏是整体涌现)+ PITFALLS §5.2(coherence budget 概念)
+- 假设分类:`validated-invariant`
+- **显式质疑的继承假设:** V1-V8 的 JSON asset bus 假设各阶段产出物可以独立优化(每阶段一个 JSON,向前传)。D2.3 暗示独立优化会损害整体 coherence — 设计必须有显式的跨节点 invariant ownership。
+
+**D2.4** — 因此 pipeline 必须有 **跨节点 invariant ownership**:身份一致性、风格一致性、plot 连续性、空间一致性、情感弧 — 每个不变量都有显式 owner 节点(生成节点消费它,或 critic 节点验证它)。
+- `[psychological]` + `[tool-capability]` — 不变量是心理学稳定,owner 机制是当前模型能力要求
+- 语料支持:PITFALLS §2.2(每全局不变量必须有显式 owner)+ v1 `continuity` expert precedent
+- 假设分类:`validated-invariant`(不变量本身)+ `contingent`(owner 机制实现细节)
+
+**D2.5** — 每个生成型节点必须有 **配对的 critic 节点或 self-critic 步骤**,携带量化指标。无 critic 的生成节点需显式说明理由。
+- `[psychological]` + `[tool-capability]` — critic 是质量保证机制;量化指标是当前 LLM-as-judge 能力
+- 语料支持:v1 `script_auditor` expert(5-dim quantitative, Pearson ≥ 0.65 验证)+ PITFALLS §2.5 + STACK §5 ConStory-Bench(LLM-as-judge consistency)
+- 假设分类:`validated-invariant`(critic 必要性)+ `contingent`(具体指标设计)
+
+**D2.6** — 短剧 vs 微电影 vs 长片质量权重不同。短剧偏 hook + retention + 付费卡点(平台分发驱动);微电影偏叙事完整 + 艺术价值(电影节驱动);长片偏全面 craft(院线驱动)。pipeline 必须支持这种 **多形态差异** 而非硬编码单一形态。
+- `[platform-algorithmic]` + `[psychological]` — 短剧权重是平台偶然,微电影/长片权重是审美稳定
+- 语料支持:PITFALLS §6.3(genre conflation 警告)+ v1 `hook_retention` + `compliance_marketing` experts + STACK §1.4 短剧 gap flag
+- 假设分类:形态差异 = `validated-invariant`(三种形态本质不同);具体权重 = `contingent`(平台演化)
+- **显式质疑的继承假设:** V1-V8 假设单一 pipeline 形态(主要面向短剧/微电影混合)。D2.6 暗示需要 **可参数化的形态切换**,而不是硬编码。
+
+**Q2 中间结论汇总:**
+- C2.1:质量由跨节点 coherence 主导(D2.3)
+- C2.2:必须显式 invariant ownership 机制(D2.4)
+- C2.3:每生成节点配 critic(D2.5)
+- C2.4:支持多形态切换(D2.6)
+- C2.5:感知不变量 vs 平台偶然必须解耦(D2.2)
+
+### §3.3 — 从 Q3 ("AI 能加速什么?") 到中间结论
+
+**D3.1** — AI 加速分三类操作:
+- (a) **高程序化后期操作**(调色、foley 分层、混音辅助)— 当前模型稳定 (`stable_2026`)
+- (b) **规范明确的模态转换**(text→image, text→video, script→storyboard)— 当前模型 evolving
+- (c) **一致性验证**(LLM-as-critic 检测 plot hole、跨镜头身份验证)— 当前模型 evolving
+
+- `[tool-capability]` — 三类都受当前模型能力约束
+- 语料支持:`04-后期/` 后期工艺 + STACK §5 LLM-story-gen 论文 + kais-movie-agent V8 架构(实际尝试过的集成点)
+- 假设分类:`contingent` — 这是 **当前** 模型能力映射;月度迭代需重审(标记为 `volatile`)
+
+**D3.2** — AI **不** 加速:
+- (d) **创意意图起源**(从生活经验挖 kernel)— 人类本性
+- (e) **最终艺术判断**(theory_critic 咨询 — 创作者手动拉)
+- (f) **平台分发策略**(算法是 `platform-algorithmic`,AI 训练数据滞后)
+
+- `[psychological]` + `[platform-algorithmic]` — 创意 + 判断是人类本性;分发是平台偶然
+- 语料支持:综合 D4.x(详见 §3.4)+ PITFALLS §1.3 + §2.7
+- 假设分类:`validated-invariant`(创意起源)+ `contingent`(分发策略)
+
+**D3.3** — 节点设计必须按 AI 关系类型分类:
+- `AI-accelerated` — AI 主导,人类 review 可选(调色、foley、生成节点)
+- `AI-augmented` — AI 辅助,人类或规则主导(混音、ADR)
+- `AI-verification` — AI 批判人类或 AI 输出(script_auditor, continuity_auditor)
+- `AI-bounded` — AI 不能替代,只能辅助(creative_source, theory_critic)
+- `AI-native` — 无传统对应(prompt_injector, camera_preview)
+
+- `[tool-capability]` + `[psychological]` — 关系类型混合了能力 + 本性
+- 语料支持:PITFALLS §2.11(AIGC 转化点分类)+ D3.1+D3.2 综合
+- 假设分类:`contingent`(具体节点归哪类随能力演化)
+
+**D3.4** — V1-V8 的 **sketch-then-render 两阶段**(线稿→渲染)是当前 `tool-capability` 弱组合控制的 workaround,**不是** 第一性原理必要。设计应该把 **`composition_lock`**(用户价值层 — 锁定构图意图)作为节点,sketch-then-render 作为 **当前 instantiation**(dated annex)。
+- `[tool-capability]` — 当前模型弱组合控制
+- 语料支持:PITFALLS §1.3 + §2.7(避免过早模型承诺)+ kais-movie-agent V8 `Phase 5.3/5.5` 实际架构
+- 假设分类:`contingent`(sketch-then-render)+ `validated-invariant`(composition_lock 用户价值)
+- **显式质疑的继承假设:** V8 把 sketch-then-render 当作 pipeline 的必要两阶段。D3.4 暗示这是当前模型限制,未来 native 多镜头模型成熟后此结构会变。
+
+**D3.5** — `prompt_injector`(intent → model tokens)是 AIGC-native **必要节点** — 没有传统对应。它的存在从 D1.4(模型不能端到端)+ D2.4(invariant ownership)共同推出。
+- `[tool-capability]` — 当前模型的 prompt 工程必要性
+- 语料支持:PITFALLS §2.11 + STACK §5 LLM-story-gen(prompt 策略)
+- 假设分类:`contingent`(prompt 工程本身)+ `validated-invariant`(intent → tokens 转化节点必要)
+
+**Q3 中间结论汇总:**
+- C3.1:AI 加速三类操作(D3.1)
+- C3.2:AI 不加速三类操作(D3.2)
+- C3.3:节点按 AI 关系分类(D3.3)
+- C3.4:capability-spec 是规范层,模型名只在 dated annex(D3.4)
+- C3.5:prompt_injector 是 AI-native 必要节点(D3.5)
+
+### §3.4 — 从 Q4 ("AI 不能替代什么?") 到中间结论
+
+**D4.1** — **创意意图起源** 不可还原为 prompt — 它来自人类 **生活经验**,不是训练数据。
+- `[psychological]` + `[validated-invariant]` — 人类创意起源的本性,跨世纪稳定
+- 语料支持:Bazin 现实主义("objectivity"论证 — 创作者对现实的有意识的取舍)+ Tarkovsky(creative fire 是个人经验)+ v1 `creative_source` expert(6 社会阶层生活经验挖 kernel 的实证)+ STACK §5 ACM Creator-Centric Methods(creator-side gaps)
+- 假设分类:`validated-invariant` — 挑战它需要证明 LLM 能从训练数据生成 truly novel creative intent(目前无证据)
+
+**D4.2** — **最终艺术判断** 不能自动 invoke — 必须是 **consultative**(咨询式),创作者是手动拉的(META-06 锁定)。
+- `[psychological]` + `[validated-invariant]` — 艺术判断的本质是人类作者的有意识选择
+- 语料支持:`06-理论批评/`(theory_critic 传统)+ PITFALLS §4.7(平台 vs 艺术张力非教条)+ META-06 锁定 manual trigger
+- 假设分类:`validated-invariant`(判断必须由人做)+ `contingent`(trigger 模式可参数化)
+
+**D4.3** — 以下传统工艺是 **`validated-invariant`**,第一性原理推导会重新发现它们,**不能** 当 bias 扔掉:
+- Murch Rule of Six(D2.1)
+- 180° 轴线规则(D2.2)
+- Field 三幕结构(叙事节奏的心理学稳定)
+- McKee 转折点 + 解决立场(叙事闭合感)
+- Stanislavski 体验派表演(表演真实性)
+
+- `[physical]` + `[psychological]` — 都是跨世纪稳定的感知/心理规律
+- 语料支持:`01-剧本/`(Field + McKee)+ `03-拍摄/acting-stanislavski-stella` + `04-后期/editing-by-murch-rules` + Hermes `theory-formalism-vs-realism.md`
+- 假设分类:`validated-invariant`
+- **显式质疑的继承假设:** 部分第一性原理文献建议"清空所有 bias 重起"。D4.3 暗示这是误用 — Musk 的方法拒绝的是 **无物理基础的类比**,不是 **经验验证的不变量**(per PITFALLS §1.2 + §5.3)。
+
+**D4.4** — `theory_critic` 必须是 **consultative 垂直边**,不是主 DAG blocking gate(防 PITFALLS §4.7 + AF-12 — 短剧 throughput 杀手)。
+- `[psychological]` + `[platform-algorithmic]` — consultative 是艺术判断本性 + 短剧平台 throughput 实际
+- 语料支持:`06-理论批评/`(理论批判的传统咨询角色)+ PITFALLS §4.7 + AF-12 + META-06
+- 假设分类:`validated-invariant`(consultative 性质)+ `contingent`(具体 trigger 阈值)
+- **显式质疑的继承假设:** V1-V8 的 `审核门`(review gate)模式假设每个 visual phase 后都要 review。D4.4 暗示只有高 leverage 的 seam 才需 human gate;theory_critic 是咨询(可拉可不拉),不是强制阻塞。
+
+**D4.5** — `AI-bounded` 节点(creative_source + theory_critic + 最终剪辑判断)的设计必须 **保留人类作者是 in-the-loop**,不能假装全自动。pipeline 必须显式标记这些节点的 `human_gate: true`(per PITFALLS §2.9)。
+- `[psychological]` — 人类作者在场是 AI-bounded 节点的定义性属性
+- 语料支持:PITFALLS §2.9(human-in-the-loop seams)+ D4.1-D4.4 综合
+- 假设分类:`validated-invariant`
+
+**Q4 中间结论汇总:**
+- C4.1:创意意图起源不可还原(D4.1)
+- C4.2:theory_critic 必须 consultative(D4.2 + D4.4)
+- C4.3:validated-invariants 不能当 bias 扔(D4.3)
+- C4.4:AI-bounded 节点必须 human-in-loop(D4.5)
+
+### §3.5 — 综合:从中间结论到候选集结构形态
+
+把 §3.1-§3.4 的 17 个中间结论(C1.1-C1.3 + C2.1-C2.5 + C3.1-C3.5 + C4.1-C4.4)综合,候选节点集必须具有以下 **结构性质**:
+
+| 结构性质 | 来自哪个中间结论 | 含义 |
+|---|---|---|
+| **Root 是元意图 producer** | C1.1, C1.2, C4.1 | pipeline 起点是 `creative_source`(挖 kernel + 元意图 + 风格基因) |
+| **下游是分层执行链** | C1.3, C3.5 | 元意图 → 可执行规格 → 模型 tokens → 渲染输出 |
+| **跨节点 invariant ownership** | C2.1, C2.2 | 身份/风格/plot/空间/情感弧不变量有显式 owner 节点 |
+| **生成节点配 critic** | C2.3 | 每生成节点有 critic 节点或 self-critic 步骤 |
+| **多形态可参数化** | C2.4, C2.5 | 短剧/微电影/长片形态切换;感知不变量 vs 平台偶然解耦 |
+| **capability-spec 规范层** | C3.4 | 用户价值层是规范;模型名只在 dated annex |
+| **prompt_injector 是 AI-native 必要** | C3.5 | intent → model tokens 的显式节点 |
+| **theory_critic consultative 垂直边** | C4.2 | 不在主 DAG blocking;创作者手动拉(META-06) |
+| **AI-bounded 节点 human-in-loop** | C4.4, C4.5 | creative_source + theory_critic + 最终判断标记 human_gate |
+| **validated-invariants 保留** | C4.3 | Murch, Field, 180° 轴线, Stanislavski 不能当 bias |
+
+**Mermaid 推理树图:**
+
+```mermaid
+graph TB
+    Q1[Q1: 观众消费什么?]
+    Q2[Q2: 什么决定质量?]
+    Q3[Q3: AI 能加速什么?]
+    Q4[Q4: AI 不能替代什么?]
+    
+    Q1 --> C1[元意图整合体验]
+    Q1 --> C11[不能端到端一次产出]
+    
+    Q2 --> C2[跨节点 coherence 主导]
+    Q2 --> C21[invariant ownership 必要]
+    Q2 --> C22[生成节点配 critic]
+    Q2 --> C23[多形态可参数化]
+    
+    Q3 --> C3[AI 加速 3 类]
+    Q3 --> C31[capability-spec 规范层]
+    Q3 --> C32[prompt_injector AI-native]
+    
+    Q4 --> C4[创意意图不可还原]
+    Q4 --> C41[theory_critic consultative]
+    Q4 --> C42[validated-invariants 保留]
+    
+    C1 --> R[root: creative_source]
+    C11 --> R
+    C4 --> R
+    
+    C2 --> I[invariant ownership 机制]
+    C21 --> I
+    C22 --> G[生成-critic 配对]
+    
+    C3 --> A[AI-accelerated 节点]
+    C31 --> A
+    C32 --> P[prompt_injector 节点]
+    
+    C41 --> T[theory_critic 垂直边]
+    C42 --> V[validated-invariant 锚点]
+    
+    R --> S[候选节点集]
+    I --> S
+    G --> S
+    A --> S
+    P --> S
+    T --> S
+    V --> S
+```
+
+**注意:** §3.5 给出候选集的 **结构形态**,但不枚举具体节点 ID。节点 ID 在 §4 用 per-node 模板逐个推出来 — 每个节点都必须能追溯到 §3 的某个中间结论。
+
+候选集大致包括:
+- root:`creative_source`
+- 元意图展开:`style_genome`, `screenplay`, `character_designer`
+- critic 配对:`script_auditor`, `continuity_auditor`, `quality_gate`
+- 视觉意图 → 执行链:`cinematographer`, `storyboard_designer`, `drawer`, `animator`
+- AI-native:`prompt_injector`, `camera_preview`
+- 音频:`voicer`, `lip_sync`, `composer`, `foley`, `mixer`
+- 后期:`editor`, `colorist`
+- 形态特定:`hook_retention`(短剧), `compliance_pre_check` + `compliance_final`(CN 平台)
+- 咨询垂直:`theory_critic`
+
+具体节点数 + 每节点的 8 字段细节在 §4。
+
+---
+
