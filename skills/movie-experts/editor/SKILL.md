@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, editing, rhythm, transition, montage, axis-rule, cut]
-    related_skills: [screenplay, animator, composer, voicer, continuity, mixer, compliance_marketing, hook_retention, cinematographer]
+    related_skills: [screenplay, animator, composer, voicer, continuity, mixer, compliance_marketing, hook_retention, cinematographer, theory_critic, documentary_maker]
     expert_id: editor
     metrics: [rhythm_accuracy, continuity_match, axis_violation_count, transition_smoothness]
 ---
@@ -34,6 +34,7 @@ The user needs to plan shot sequences, design editing rhythm, create edit decisi
 | [`references/montage-theory.md`](./references/montage-theory.md) | 设计任何蒙太奇 / 主题升华段前 | Eisenstein 5 种 montage 方法表(Metric / Rhythmic / Tonal / Overtonal / Intellectual)+ collision 原理(thesis + antithesis → synthesis)+ 经典示例(Strike / Potemkin / October)+ metric montage 帧数规则(24/48/96 frames at 24fps)+ tonal montage 在 短剧 爽点 段的三维协同(cut-density + color-tone + sound-tone)+ montage method 选择决策树 |
 | [`references/fxrxt-axis-compliance.md`](./references/fxrxt-axis-compliance.md) | 做任何 cut 决策前(180°/30°/eyeline 验证) | 180° 轴线规则(angle delta > 180° = 零容忍违反)+ 30° 规则(angle delta < 30° = jump-cut 风险)+ eyeline match(方向差 > 45° = 违反)+ match cut 设计(graphic / motion / sound 三种类型)+ FxRxT 矩阵整合(editor=compliance, scene_builder=feasibility)+ 轴线合规自检工作流 JSON 输出 |
 | [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) | 设计 短剧 单集节奏前 | 平台 cut-density windows(抖音-男频 revenge 40-60/90s-ep / 抖音-女频 romance 30-45 / 快手-草根 20-35 / 小程序剧 60-90)+ 1.5x pace rule 跨链(数值由 [`../hook_retention/references/paywall-design.md`](../hook_retention/references/paywall-design.md) 独占)+ ≤3s dead air rule 跨链 + BGM-driven cut sync(rhythm_coherence +25%)+ 击中点 cut alignment + 3 个反模式 + 自检工作流 |
+| [`../_shared/project-corpus/editing-sound-post.md`](../_shared/project-corpus/editing-sound-post.md) | 研究默奇剪辑哲学 / 学 7 位剪辑先驱 / 学音效圣经 5 分类时 | 《剪辑之道》5 城市 5 对话 + 默奇"谦卑的声音" + 6 原则权重 + 庖丁解牛比喻 + 7 位剪辑先驱(梅里爱/史密斯/波特/百代/格里菲斯/爱森斯坦/戈达尔)+ 《音效圣经》5 大分类(硬效果/拟音/背景/电子/声音设计)+ 录音十诫 |
 
 ## Role & Philosophy
 

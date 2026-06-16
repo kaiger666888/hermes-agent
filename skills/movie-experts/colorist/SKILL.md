@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, color, grading, color-intent, lut, cinematic, color-science]
-    related_skills: [screenplay, style_genome, drawer, continuity, animator, production]
+    related_skills: [screenplay, style_genome, drawer, continuity, animator, production, theory_critic, cinematographer]
     expert_id: colorist
     metrics: [color_intent_match, color_cross_shot_consistency, style_fidelity]
 ---
@@ -34,6 +34,7 @@ The user needs to design color grading, apply color intent to scenes, create LUT
 | [`references/color-cross-cultural.md`](./references/color-cross-cultural.md) | 设计跨文化或海外发行色盘前 | 学术 cross-cultural 研究 — Schirillo 1200-film sample 色温-情绪映射 + Adams & Osgood 23-culture color-emotion 跨文化 survey + Ekman basic-emotion 色彩关联(meta-analysis) |
 | [`references/cn-audience-color.md`](./references/cn-audience-color.md) | 设计 短剧 / 微电影 CN 受众色盘前 | CN 受众色彩偏好(抖音 100K+ 视频色温统计 + 短剧 男频/女频 色温分野 + 国风 色盘 + 年节/双 11 节庆色卡)+ per-platform divergence(抖音高饱和 / 快手暖色偏低饱和 / 小程序剧重 deep teal+orange) |
 | [`references/digital-color-science.md`](./references/digital-color-science.md) | 验证色精度或设计 ablation 实验前 | 数字色彩科学 — Rec.709 / Rec.2020 / DCI-P3 色域 + ΔE2000 色差公式(production ≤3 / preview ≤6)+ACES IDT/ODT 流水线 + LUT bit-depth 误差累积模型(8-bit banding 临界点 0.03 S delta)|
+| [`../_shared/project-corpus/lighting-equipment-and-design.md`](../_shared/project-corpus/lighting-equipment-and-design.md) §Part 2 | 设计色彩叙事 / 研究第五代摄影师时 | 《镜头在说话》第五代摄影师色彩分析方法 + 色彩画中画 + 平面蒙太奇 + 理性写实主义 + 经典案例(英雄/花样年华/卧虎藏龙) |
 
 ## Knowledge Retrieval
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, production, character-lora, wardrobe, lighting-intent, gpu-budget, asset-reuse, 制作管理]
-    related_skills: [performer, drawer, animator, scene_builder, continuity, colorist, compliance_marketing, cinematographer]
+    related_skills: [performer, drawer, animator, scene_builder, continuity, colorist, compliance_marketing, cinematographer, theory_critic, documentary_maker]
     expert_id: production
     metrics: [character_id_consistency, wardrobe_continuity, lighting_intent_match, budget_adherence, asset_reuse_rate]
 ---
@@ -34,6 +34,7 @@ The user needs to plan character casting (LoRA training), specify wardrobe per s
 | [`references/lighting-intent-layer.md`](./references/lighting-intent-layer.md) | 设计 lighting 或翻译到 AI prompt token 前 | 3-point lighting standard + per-genre key-to-fill ratio + FLUX 2 / SD 对 lighting prompt 的 5 大 AI native constraints + AI lighting prompt token 推荐 + Lighting Intent JSON schema |
 | [`references/gpu-render-budget.md`](./references/gpu-render-budget.md) | 计算 budget 或选择 GPU / model 前 | 主流 GPU 速率参考(2026-06 AWS/RunPod/Modal)+ LoRA 训练成本公式 + FLUX 2 / Stable Diffusion 推理成本 + Runway/Kling/Veo/Sora video gen API pricing + 总 budget allocation 公式 |
 | [`references/asset-reuse-plan.md`](./references/asset-reuse-plan.md) | 设计 cross-shot / cross-episode asset reuse 策略前 | 5 asset 类别 + 各自 reuse 协议(I-frame / background / wardrobe / lighting / music)+ Asset library schema + Batch generation 4 phase 协议 + reuse rate 度量公式 |
+| [`../_shared/project-corpus/production-chinese-and-low-budget.md`](../_shared/project-corpus/production-chinese-and-low-budget.md) | 学制片全流程 / 好莱坞片厂体系 / 低成本入门时 | 《拍电影》+《电影制片手册》6 阶段全流程 + 《创意制片完全手册》项目策划 + 《好莱坞模式》迪士尼 5 大部门 + 《英国影视制作基础》从短片起步 + 《影视预算手册》低成本模板 |
 
 ## Knowledge Retrieval
 
