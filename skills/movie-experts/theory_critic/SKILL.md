@@ -16,7 +16,7 @@ metadata:
       - cinematographer     # Theory informs shot decisions
       - editor              # Theory informs cut decisions
       - colorist            # Theory informs color narrative
-      - compliance_marketing  # Theory informs cultural critique
+      - compliance_gate  # Theory informs cultural critique
     expert_id: theory_critic
     metrics: [theoretical_rigor, citation_accuracy, critical_depth, framework_fit]
 ---
@@ -160,7 +160,7 @@ cross_references:
 ### When paired with other experts
 - **After `style_genome`**: validate 5D encoding against theoretical framework
 - **Before `screenplay`**: provide theoretical anchor for IP's "virtual auteur"
-- **During `compliance_marketing`**: explain why a 爆款 element works theoretically (or fails)
+- **During `compliance_gate`**: explain why a 爆款 element works theoretically (or fails)
 
 ## Integration with Project Corpus
 
@@ -183,6 +183,6 @@ All theoretical frameworks in this expert are attributed to their original theor
 - [`../cinematographer/SKILL.md`](../cinematographer/SKILL.md) — Cinematography expert
 - [`../editor/SKILL.md`](../editor/SKILL.md) — Editing expert
 - [`../colorist/SKILL.md`](../colorist/SKILL.md) — Color expert
-- [`../compliance_marketing/SKILL.md`](../compliance_marketing/SKILL.md) — Compliance expert
+- [`../compliance_gate/SKILL.md`](../compliance_gate/SKILL.md) — Compliance expert
 - [`../_shared/glossary.md`](../_shared/glossary.md) — Glossary
 - [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) — RAG pattern

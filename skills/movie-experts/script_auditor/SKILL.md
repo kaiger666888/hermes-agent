@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, script, audit, scoring, completion-rate, benchmark, quality-control]
-    related_skills: [screenplay, hook_retention, editor, style_genome, compliance_marketing]
+    related_skills: [screenplay, hook_retention, editor, style_genome, compliance_gate]
     expert_id: script_auditor
     metrics: [audit_score_correlation, completion_rate_prediction_accuracy, dimension_separation]
 ---
@@ -272,7 +272,7 @@ tags="expert:script_auditor,domain:completion-rate-forecast"
 
 - **<- [`screenplay`](../screenplay/SKILL.md)** — `script.json` 输入,本专家审计
 - **<- [`style_genome`](../style_genome/SKILL.md)** — 风格约束(男频 / 女频 / genre)影响阈值校准
-- **<- [`compliance_marketing`](../compliance_marketing/SKILL.md)** — 平台约束(抖音 / 快手 / 小程序剧)影响 Dimension 5 预测阈值
+- **<- [`compliance_gate`](../compliance_gate/SKILL.md)** — 平台约束(抖音 / 快手 / 小程序剧)影响 Dimension 5 预测阈值
 
 ### Downstream
 

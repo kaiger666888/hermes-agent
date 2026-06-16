@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, production, character-lora, wardrobe, lighting-intent, gpu-budget, asset-reuse, 制作管理]
-    related_skills: [performer, drawer, animator, scene_builder, continuity_auditor, colorist, compliance_marketing, cinematographer, theory_critic, documentary_maker]
+    related_skills: [performer, drawer, animator, scene_builder, continuity_auditor, colorist, compliance_gate, cinematographer, theory_critic, documentary_maker]
     expert_id: production
     metrics: [character_id_consistency, wardrobe_continuity, lighting_intent_match, budget_adherence, asset_reuse_rate]
 ---
@@ -170,7 +170,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - **<- screenplay**: scene breakdown + emotion_curve + character list
 - **<- style_genome**: 5D style vector (color / composition / light_shadow) for wardrobe + lighting baseline
 - **<- scene_builder**: spatial constraints (camera blocking + sight lines) affecting lighting feasibility
-- **<- compliance_marketing**: wardrobe + casting compliance (CN censorship rules)
+- **<- compliance_gate**: wardrobe + casting compliance (CN censorship rules)
 - **-> performer**: character behavior consistency (ExBxSxP matrix) for LoRA training data
 - **-> voicer**: character voice consistency (speaker embedding target) for LoRA + I-frame coordination
 - **-> continuity_auditor**: wardrobe + lighting + character ID verification protocol
@@ -178,7 +178,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - **-> cinematographer**: lighting consistency with shot_intent
 - **-> drawer**: lighting prompt tokens + character LoRA + wardrobe reference
 - **-> animator**: I-frame assets for video generation
-- **-> compliance_marketing**: wardrobe + casting compliance pre-distribution review
+- **-> compliance_gate**: wardrobe + casting compliance pre-distribution review
 
 ## What NOT to do
 

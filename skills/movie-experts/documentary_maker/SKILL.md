@@ -15,7 +15,7 @@ metadata:
       - cinematographer    # Verité camera work
       - editor             # Documentary editing rhythm
       - production         # Documentary budgeting
-      - compliance_marketing  # Documentary distribution
+      - compliance_gate  # Documentary distribution
       - theory_critic      # Documentary theory (Vertov, etc.)
     expert_id: documentary_maker
     metrics: [authenticity_score, ethical_compliance, narrative_arc_quality, observational_rigor]
@@ -45,7 +45,7 @@ Invoke this expert when:
 | [`_shared/project-corpus/README.md`](../_shared/project-corpus/README.md) §民族志 | 拍民族志纪录片 / 田野工作时 | 项目内 068 民族志纪录片创作原书索引 |
 | [`../editor/references/classical-editing-rhythm.md`](../editor/references/classical-editing-rhythm.md) | 纪录片剪辑节奏 | 剪辑节奏原则 |
 | [`../cinematographer/references/camera-motion-catalog.md`](../cinematographer/references/camera-motion-catalog.md) | Vérité 摄影机运动 | 手持、跟随等观察式运镜 |
-| [`../compliance_marketing/references/cn-content-rules.md`](../compliance_marketing/references/cn-content-rules.md) | 纪录片发布合规 | 真实人物隐私 / 肖像权 |
+| [`../compliance_gate/references/cn-content-rules.md`](../compliance_gate/references/cn-content-rules.md) | 纪录片发布合规 | 真实人物隐私 / 肖像权 |
 
 ## Role & Philosophy
 
@@ -162,7 +162,7 @@ short_drama_adaptation:
 - **`cinematographer`**: Vérité = handheld, available light, observation
 - **`editor`**: Documentary cutting = thematic-driven, not action-driven
 - **`production`**: Documentary budget often 1/10 of fiction
-- **`compliance_marketing`**: Real people = real consent forms, real privacy risk
+- **`compliance_gate`**: Real people = real consent forms, real privacy risk
 - **`theory_critic`**: Documentary theory (Vertov, Flaherty ethics, observational tradition)
 
 ## Sources & Attribution
@@ -179,7 +179,7 @@ Both books are in `_shared/project-corpus/`. Fair Use paraphrasing per project c
 - [`../cinematographer/SKILL.md`](../cinematographer/SKILL.md) — Vérité camera
 - [`../editor/SKILL.md`](../editor/SKILL.md) — Documentary cutting
 - [`../production/SKILL.md`](../production/SKILL.md) — Documentary budget
-- [`../compliance_marketing/SKILL.md`](../compliance_marketing/SKILL.md) — Real-person consent
+- [`../compliance_gate/SKILL.md`](../compliance_gate/SKILL.md) — Real-person consent
 - [`../theory_critic/SKILL.md`](../theory_critic/SKILL.md) — Documentary theory
 - [`../_shared/project-corpus/editing-sound-post.md`](../_shared/project-corpus/editing-sound-post.md) §Part 5
 - [`../_shared/glossary.md`](../_shared/glossary.md)

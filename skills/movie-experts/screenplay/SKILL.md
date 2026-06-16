@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, screenplay, script, dialogue, narrative, emotion-curve]
-    related_skills: [style_genome, scene_builder, editor, performer, composer, compliance_marketing, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
+    related_skills: [style_genome, scene_builder, editor, performer, composer, compliance_gate, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
     expert_id: screenplay
     metrics: [narrative_tension, dialogue_naturalness, emotional_arc]
 ---

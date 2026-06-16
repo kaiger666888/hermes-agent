@@ -187,7 +187,7 @@ voice_casting:
 - **`composer`**: Musical numbers composition
 - **`voicer`**: Voice casting for animation characters
 - **`hook_retention`**: Children's content hook design (3-second attention)
-- **`compliance_marketing`**: Animation-specific compliance (儿童内容, 广告限制)
+- **`compliance_gate`**: Animation-specific compliance (儿童内容, 广告限制)
 
 ## Sources & Attribution
 
