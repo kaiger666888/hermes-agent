@@ -2,7 +2,7 @@
 
 **Purpose:** Canonical EN↔CN term dictionary for the Movie-Experts Suite. Every expert's SKILL.md and `references/*.md` MUST use these terms consistently. Drift in translation breaks downstream metric comparability and judge-prompt reliability.
 
-**Last updated:** 2026-06-16 (Phase 7 — 5 new experts add 15+ entries)
+**Last updated:** 2026-06-17 (Phase 18 — DOC-02 verification: 5 new-expert terms confirmed present, 2 added [continuity_auditor + compliance_gate], 0 inline-updated)
 **Refresh cadence:** Phase 1+ adds terms as each new expert requires them; Phase 6 does a full consistency pass.
 
 ---
@@ -255,3 +255,39 @@
 **EN:** Prompt Injector — Phase 16 NEW AI-native node (no v1 predecessor) that translates upstream human intent — `visual_intent` (from cinematographer) + `style_genome_5d` (from style_genome) + `character_assets` (from character_designer) — into model-ready prompts (`model_prompts` + `consistency_context`) consumed by visual_executor. Owns two quality metrics: `cross_call_consistency` (≥0.85 — downstream visual outputs maintain style/identity across multiple gen-model calls) and `prompt_token_efficiency` (≤4000 tokens/call — token budget hard ceiling). Fail modes: `consistency_drift` (consistency context lost between calls → fallback: explicit carry + repeat key constraints) and `prompt_overload` (prompt token overload → fallback: split into structured sections + system prompt for stable constraints). Per v2.0 PRFP Phase 7 §4.7 D3.5+D2.4 derivation.
 
 **Context:** Distinct from cinematographer (which owns shot intent / composition_lock) — prompt_injector owns the prompt-assembly layer that did not exist in traditional pre-AI cinematography. Provider-agnostic: uses `<image_primary>` / `<video_primary>` placeholders (no literal model names committed as identifiers in SKILL.md body). Related_skills peer set: [creative_source, cinematographer, visual_executor, audio_pipeline]. Mapping type in skills-mapping.yaml: `new_ai_native`. Declared at `skills/movie-experts/prompt_injector/SKILL.md`.
+
+---
+
+## Phase 18 canonical term reconciliation (DOC-02 verification)
+
+### continuity_auditor / 连续性审计专家
+
+**CN:** 连续性审计专家 — Phase 13 rename from `continuity`(per ROADMAP §13 + skills-mapping.yaml RENAME-01)。强调 "critic/audit" 角色 — 不是被动记录连续性,而是主动审计跨 shot 的一致性,在 L3 critic_paired with visual_executor。审计 4 个维度:face identity / wardrobe / color / object,加 eyeline match + 180° axis compliance(zero-tolerance metric)。输出 `continuity_audit.json`,与 visual_executor 形成显式 loop_with_critic(见 `01-NODE-DAG.md §1.4`):max 2 iter,exit 条件 `identity_match ≥ 0.85 AND axis_compliance = 100%`,cost ceiling ¥50/iter。Backward-compat alias `continuity` 保留 per FOUND-08(`skills/movie-experts/continuity/SKILL.md` 是 redirect stub,`metadata.hermes.aliases: [continuity]` 在新 SKILL.md frontmatter)。
+
+**EN:** Continuity Auditor Expert — Phase 13 rename from `continuity` per v2.0 PRFP DAG. Emphasizes the active critic/audit role (not passive continuity recording) at L3 critic_paired with visual_executor. Audits 4 dimensions: face identity / wardrobe / color / object, plus eyeline match + 180° axis compliance (zero-tolerance). Outputs `continuity_audit.json`, forms an explicit loop_with_critic with visual_executor (per `01-NODE-DAG.md §1.4`): max 2 iterations, exit condition `identity_match ≥ 0.85 AND axis_compliance = 100%`, cost ceiling ¥50/iter. Backward-compat alias `continuity` preserved per FOUND-08.
+
+**Context:** DAG layer L3 (Visual exec — critic_paired with visual_executor). Renamed to emphasize that this is an active audit role that pairs with visual_executor's generation loop, not a standalone continuity recorder. Mapping type in skills-mapping.yaml: `one_to_one_renamed`. Declared at `skills/movie-experts/continuity_auditor/SKILL.md`.
+
+### compliance_gate / 合规门
+
+**CN:** 合规门 — Phase 13 rename from `compliance_marketing`(per ROADMAP §13 + skills-mapping.yaml RENAME-02)。聚焦 pure compliance — 分离 marketing 到独立 ref 或 sub-skill,只保留 CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review。DAG 位置 L6 final_gate(与 quality_gate 配对,sequential:quality_gate → compliance_gate 是最终门)。Backward-compat alias `compliance_marketing` 保留 per FOUND-08。per v2.0 PRFP DAG §1.4 edges:`audio_pipeline → quality_gate` + `colorist → quality_gate` + `quality_gate → compliance_gate`。
+
+**EN:** Compliance Gate Expert — Phase 13 rename from `compliance_marketing` per v2.0 PRFP DAG. Focuses on pure compliance — separates marketing concerns to independent refs/sub-skills, retaining CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review. DAG position L6 final_gate (paired with quality_gate, sequential: quality_gate → compliance_gate is the final gate). Backward-compat alias `compliance_marketing` preserved per FOUND-08.
+
+**Context:** DAG layer L6 (Final gates — paired with quality_gate per v2.0 PRFP DAG §1.4 edges). The rename separates the pure-compliance role from the marketing/distribution role the v1 expert carried; compliance_gate owns the hard regulatory gate (备案 + 标识 + 红线), while marketing formulas now live as `references/viral-element-catalog.md` etc. Mapping type in skills-mapping.yaml: `one_to_one_renamed`. Declared at `skills/movie-experts/compliance_gate/SKILL.md`.
+
+---
+
+## Phase 18 DOC-02 verification matrix
+
+Per REQUIREMENTS DOC-02, `_shared/glossary.md` must have entries for: `visual_executor`, `audio_pipeline`, `prompt_injector`, `continuity_auditor`, `compliance_gate`.
+
+| Term | Line of entry (pre-Phase 18) | Phase 18 status |
+|------|------------------------------|-----------------|
+| `visual_executor` | line 227 (`### visual_executor / 视觉执行专家`) | PRESENT — no action needed (Phase 14 additions section) |
+| `audio_pipeline` | line 239 (`### audio_pipeline / 音频管线专家`) | PRESENT — no action needed (Phase 15 additions section) |
+| `prompt_injector` | line 251 (`### prompt_injector / 提示注入 / Prompt Injector`) | PRESENT — no action needed (Phase 16 additions section) |
+| `continuity_auditor` | (none — only inline references at lines 164 + 186) | **ADDED in Phase 18 §Phase 18 canonical term reconciliation** (bilingual CN/EN/Context per DOC-02) |
+| `compliance_gate` | (none — no entry; role-only references via EXPERT-COMPLI) | **ADDED in Phase 18 §Phase 18 canonical term reconciliation** (bilingual CN/EN/Context per DOC-02) |
+
+**Verification verdict:** 5 / 5 terms present with dedicated H3 entries post-Phase 18. DOC-02 PASS.
