@@ -48,11 +48,11 @@
 4. Old directory paths (`continuity/`, `compliance_marketing/`) preserved with redirect SKILL.md (backward compat)
 5. `skills-mapping.yaml` `sign_off_status` updated: `pending` → `signed_off` for both renamed entries
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 13-01-PLAN.md — Rename continuity → continuity_auditor (new dir + redirect stub + 17-consumer edge sync)
-- [ ] 13-02-PLAN.md — Rename compliance_marketing → compliance_gate (new dir + redirect stub + 11-consumer edge sync, depends on 13-01)
+- [x] 13-02-PLAN.md — Rename compliance_marketing → compliance_gate (new dir + redirect stub + 11-consumer edge sync, depends on 13-01)
 - [ ] 13-03-PLAN.md — Close-out: skills-mapping.yaml sign_off + README + _shared/glossary.md updates (depends on 13-01 + 13-02)
 
 ---
