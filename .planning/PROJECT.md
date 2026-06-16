@@ -153,7 +153,49 @@ See `.planning/STATE.md` § Deferred Items for the canonical list.
 
 ---
 
-## Current Milestone: v3.0 — Skills-to-DAG Alignment
+## Previous Milestone: v3.0 — Skills-to-DAG Alignment ✅ SHIPPED 2026-06-17
+
+**Goal (achieved):** Aligned hermes-agent `skills/movie-experts/` from v1 expert layout to v2.0 PRFP DAG topology via 2 renames + 2 merges + 1 new AI-native + 3 deprecations. All 13 legacy expert_id migrations preserved via FOUND-08 backward-compat aliases.
+
+**Stats:** 6 phases (13-18) · 16 plans · 67 commits · 137 files changed · 19007 insertions · 2137 deletions · 1-day execution (2026-06-16 → 2026-06-17)
+
+**Audit status:** tech_debt (12/12 requirements satisfied, 4 non-blocking WARNINGs) — see `.planning/v3.0-MILESTONE-AUDIT.md`
+
+**Key outcomes:**
+
+- **5 new expert directories:** `continuity_auditor`, `compliance_gate`, `visual_executor` (sub_steps: [drawer, animator]), `audio_pipeline` (sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio] — spatial_audio FOLDED as 6th sub-step per D-1), `prompt_injector` (NEW AI-native)
+- **3 deprecated experts:** `performer` (→ character_designer + screenplay), `scene_builder` (→ cinematographer + style_genome), `storyboard_designer` (→ cinematographer composition_lock)
+- **10 redirect stubs** preserving v1 expert_ids (continuity, compliance_marketing, drawer, animator, voicer, lip_sync, composer, foley, mixer, spatial_audio)
+- **31 SKILL.md files reconciled** into 4 buckets: 15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs
+- **skills-mapping.yaml** all 19 entries signed_off (16 mappings + 3 deprecate_candidates); production deferred per FUTURE-09
+- **README.md** Mermaid DAG replaces ASCII art with canonical 01-NODE-DAG.md §1.5 topology
+- **Glossary** 5 new terms (visual_executor, audio_pipeline, prompt_injector, continuity_auditor, compliance_gate)
+- **known-external-models.yaml** Phase 8 §2.17 dated annex (27 entries with verified_date: 2026-06-17)
+
+**Known deferred items at close:**
+
+- W-1: creative_source → topic_curator dead ref (pre-existing v2.0)
+- W-2: character_designer missing Phase 17 inheritance body annotation
+- W-3: 32 pre-existing v2.0 bidirectional asymmetries
+- W-4: Frontmatter `status:` field path inconsistency (documentation drift)
+- VALIDATE-D1: quality_gate gap — canonical 16th DAG node has no SKILL.md
+- FUTURE-09: production expert (disposition: deferred)
+
+See full archive: `.planning/milestones/v3.0-ROADMAP.md`
+
+---
+
+## Current Milestone: None (awaiting operator decision)
+
+v3.0 milestone archived 2026-06-17. Operator may:
+
+- Start v4 via `/gsd:new-milestone` (suggest: clean up v3.0 deferred items W-1 through W-4 + VALIDATE-D1)
+- Run `/gsd:review-backlog` to triage
+- Run `/gsd:progress` to view state
+
+---
+
+## Previous Milestone (legacy section): v3.0 — Skills-to-DAG Alignment [LEGACY TEXT — pre-shipping]
 
 **Goal:** 把 hermes-agent `skills/movie-experts/` 从 26 experts 对齐到 v2.0 PRFP 设计的 16 pipeline-roles —— 执行 `skills-mapping.yaml` 锁定的 rename / merge / new / deprecate 决定,让 skills 知识层与新 DAG 干净映射。
 
@@ -223,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 — started milestone v3.0 (Skills-to-DAG Alignment) via /gsd-new-milestone; v2.0 PRFP design shipped*
+*Last updated: 2026-06-17 — v3.0 milestone archived (tech_debt: 12/12 reqs satisfied, 4 warnings); awaiting next milestone decision*

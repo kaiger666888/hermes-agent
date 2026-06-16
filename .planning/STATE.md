@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: milestone_complete
-last_updated: 2026-06-16T18:44:52.996Z
-last_activity: 2026-06-17 — Phase 18 Plan 03 COMPLETE — v3.0 milestone closed. All 4 Phase 18 requirements (VALIDATE-01/02 + DOC-01/02) marked Complete. skills-mapping.yaml 19 entries signed_off (16 mappings + 3 deprecates); production deferred per FUTURE-09. 18-VERIFICATION.md produced with per-criterion verdicts (7/7 PASS).
+status: archived
+last_updated: "2026-06-16T18:53:01.726Z"
+last_activity: 2026-06-16
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 16
   completed_plans: 16
   percent: 100
-stopped_at: Milestone complete (Phase 18 was final phase)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -31,7 +30,7 @@ stopped_at: Milestone complete (Phase 18 was final phase)
 
 Phase: 18
 Plan: Not started
-Status: Milestone complete
+Status: archived
 Last activity: 2026-06-16
 
 ### Progress
@@ -228,6 +227,7 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 **Milestone:** v3.0 Skills-to-DAG Alignment — shipped 2026-06-17
 
 **Phases:** 6 (Phases 13-18), 16 plans total, all complete:
+
 - Phase 13: Expert Rename + Alias Scaffolding (3 plans) — RENAME-01 + RENAME-02
 - Phase 14: Visual Executor Merge (3 plans) — MERGE-01 (drawer + animator → visual_executor)
 - Phase 15: Audio Pipeline Merge (3 plans) — MERGE-02 (voicer + lip_sync + composer + foley + mixer + spatial_audio → audio_pipeline)
@@ -242,6 +242,7 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 **Inventory reality (per VALIDATION-REPORT.md):** 31 SKILL.md files decomposed as 15 active DAG pipeline-roles (canonical 16 minus unresolved quality_gate gap per DEFECT VALIDATE-D1) + 3 active non-DAG verticals (documentary_maker, animation_studio, production) + 3 deprecated (performer, scene_builder, storyboard_designer) + 10 redirect stubs preserving legacy expert_id per FOUND-08. Original 21-target reconciled to on-disk reality per CONTEXT D-06 no-silent-sign-off.
 
 **Audit artifacts:**
+
 - `.planning/phases/18-validation-documentation/VALIDATION-REPORT.md` (primary audit entry point — inventory classification + FOUND-08 audit + backward compat)
 - `.planning/phases/18-validation-documentation/18-VERIFICATION.md` (per-criterion verdicts for all 7 ROADMAP §18 success criteria)
 - `.planning/research/v2-pipeline-design/skills-mapping.yaml` (sign-off chain)
@@ -250,6 +251,7 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 - Per-phase SUMMARYs (13-01 through 18-03) for granular change history
 
 **Deferred items carried forward (NOT v3.0 failures):**
+
 - FUTURE-06: project-corpus/ refs re-align to v3.0 expert inventory
 - FUTURE-07: _eval/ benchmark prompts update from 26-expert to 21-expert
 - FUTURE-08: v3.0 live run vs v2.0 PRFP DAG statistical GO/NO-GO
