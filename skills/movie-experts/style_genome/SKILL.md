@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity, compliance_marketing]
+    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity, compliance_marketing, theory_critic, animation_studio, documentary_maker]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
@@ -34,6 +34,7 @@ The user needs to define a director/genre visual style, blend multiple director 
 | [`references/auteur-theory.md`](./references/auteur-theory.md) | 判定 director tier(Pantheon/Modern Auteur/Operator Convention)前 | Sarris 3-criteria rubric(technical competence + distinguishable personality + interior meaning)+ Sarris 9-rank ladder 简化版 + Style Coherence Doctrine(Wood 1965)+ Truffaut auteur vs qualité 区分 + Bordwell anti-pattern |
 | [`references/cross-cultural-style.md`](./references/cross-cultural-style.md) | 跨文化场景(CN × Western / 短剧 出海)前 | CN/Western/Korean 5D divergence matrix + Cultural Translation Cost (CTC) 公式 + Hybrid Encoding Protocol(0.65 original / 0.35 target)+ Non-translatable elements 清单 + Korean Wave 中介规则 |
 | [`references/cn-director-analysis.md`](./references/cn-director-analysis.md) | 编码 CN 大陆 / 港台 / 短剧 导演前 | CN generation tiering(第五代/第六代/香港新浪潮/台湾新电影/short_drama)+ 5 canonical CN director 5D profile(张艺谋/贾樟柯/王家卫/杜琪峰/侯孝贤)+ signature elements + 焦距+ASL + 短剧 director Operator Convention 规则 |
+| [`../_shared/project-corpus/auteur-director-biographies.md`](../_shared/project-corpus/auteur-director-biographies.md) | 任何 auteur 编码需要传记深度时 | 7 位导演独立方法论:Bergman(梦/日记)/Kieślowski(偶然与宿命)/Tarkovsky(七部半)/Ozu(仰拍/相似形)/Fassbinder(反剧场)/Buñuel(超现实)/Altman(群像)+ 5 维度研究法 |
 
 ## Knowledge Retrieval
 

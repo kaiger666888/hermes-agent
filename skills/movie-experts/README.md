@@ -2,14 +2,60 @@
 
 **Project:** RAG-augmented movie-expert skill suite for AI 短剧 / 微电影 production.
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Status:** v2 complete — 23 experts (14 original + 4 Phase 1-5 + 5 Phase 7 — SCRIPT_AUDIT / LIP_SYNC / CHARACTER / STORYBOARD / CREATIVE). All RAG-aware. 5 new experts have independent validation protocols (no LLM-judge required).
+**Status:** v2 complete — 26 experts (14 original + 4 Phase 1-5 + 5 Phase 7 — SCRIPT_AUDIT / LIP_SYNC / CHARACTER / STORYBOARD / CREATIVE + **3 Phase 8 — THEORY_CRITIC / DOCUMENTARY_MAKER / ANIMATION_STUDIO** integrated from project corpus). All RAG-aware. 5 Phase-7 + 3 Phase-8 experts have independent validation protocols.
 **Last updated:** 2026-06-16
+
+---
+
+## 🆕 Phase 8 Update — Project Corpus Integration (2026-06-16)
+
+Integrated **102-book Chinese film production library** (`/home/kai/Downloads/100+本影视剪辑书/`) into the movie-experts suite as a unified RAG corpus. Total additions:
+
+### 3 New Experts
+
+| Expert | Chinese Name | Role | Source Books |
+|---|---|---|---|
+| [`theory_critic`](./theory_critic/SKILL.md) | 理论批评专家 | 电影理论(形式/写实/精神分析)+ 作者研究 + 电影史方法 + 学术批评方法 | 25+ 本理论批评书 |
+| [`documentary_maker`](./documentary_maker/SKILL.md) | 纪录片创作专家 | 王竞六讲 + 6 种类型 + 4 大流派 + 民族志 + 纪录片风格 短剧 | 《纪录片创作六讲》《民族志纪录片创作》 |
+| [`animation_studio`](./animation_studio/SKILL.md) | 动画制作专家 | 迪士尼 4 阶段 + 12 阶段流程 + 跨文化改编(花木兰)+ 歌舞叙事 | 《迪士尼的艺术》《影视动画经典剧本赏析》 |
+
+### Shared Project Corpus (`_shared/project-corpus/`)
+
+9 new ref files synthesizing the project's 102 books:
+
+| Ref | Source Books | Used By |
+|---|---|---|
+| `README.md` | 102-book index | All experts (corpus navigation) |
+| `theory-formalism-vs-realism.md` | Andrew / Agel / Balázs | theory_critic |
+| `film-philosophy-bazin-tarkovsky.md` | Bazin / Tarkovsky / 七部半 | theory_critic |
+| `psychoanalytic-film-theory.md` | 凝视的快感 / 好莱坞中的拉康 | theory_critic, compliance_marketing |
+| `auteur-director-biographies.md` | 7 本导演传记 | theory_critic, style_genome |
+| `film-criticism-methodology.md` | 戴锦华 / 如何写影评 / 外国批评文选 | theory_critic |
+| `film-history-methods.md` | Allen / Oxford / Sadoul | theory_critic |
+| `narrative-revolution-and-modernism.md` | 郭小橹 / 本雅明 / 阿多诺 | theory_critic |
+| `screenwriting-chinese-and-supplementary.md` | 芦苇 / 维基·金 / 刘天赐 / 编剧策略 / 奥班农 / 温斯顿 | screenplay |
+| `cinematography-masterclass-and-grammar.md` | 阿里洪 / 100 手法 / 拉片子 / 拆解好电影 / 21 位大师 | cinematographer, editor |
+| `lighting-equipment-and-design.md` | 照明器材 / 影视光线艺术 / 镜头在说话 / 狼图腾 | cinematographer, colorist |
+| `editing-sound-post.md` | 剪辑之道 / 魅力剪辑 / 音效圣经 / 视听 / 王竞六讲 | editor, foley, composer, documentary_maker |
+| `production-chinese-and-low-budget.md` | 拍电影 / 制片手册 / 创意制片 / 好莱坞模式 / 英国基础 / 预算手册 | production |
+| `animation-disney-system.md` | 迪士尼的艺术 / 影视动画剧本赏析 | animation_studio |
+
+### Existing Experts Enhanced
+
+Cross-references to project corpus added for:
+
+- `style_genome` — now cites auteur-director-biographies for 7-master research
+- `screenplay` — now cites screenwriting-chinese-and-supplementary (芦苇 / 21-day / hook / O'Bannon)
+- `cinematographer` — now cites masterclass-and-grammar + lighting-equipment
+- `editor` — now cites editing-sound-post (Murch philosophy + 7 pioneers + sound bible)
+- `colorist` — now cites lighting-equipment Part 2 (Fifth Generation color narrative)
+- `production` — now cites production-chinese-and-low-budget
 
 ---
 
 ## Suite Overview
 
-23 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from creative-source mining through final mix + lip-sync. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges. Total ref corpus: ~80 files (~1.8MB cited fair-use content).
+26 specialists covering the entire AI 短剧 / 微电影 creation pipeline, from creative-source mining through final mix + lip-sync, plus theory / documentary / animation verticals. Each expert is a self-contained Hermes skill (`SKILL.md` + `references/*.md`) that integrates with the others via declared `related_skills` edges. Total ref corpus: ~95 files (~3MB cited fair-use content) including 9 project-corpus refs.
 
 ### 14 Original Experts (Phase 0 baselined; 4 deep-refactored Phase 3, 10 light-uplifted Phase 5)
 
@@ -48,6 +94,17 @@
 | [`character_designer`](./character_designer/SKILL.md) | 角色设计专家 | Character Bible 2.0 authoring with 4D-Anchor (front/3-quarter/side/back) + layered STYLE_PREFIX (CORE/IDENTITY/VARIANCE) + consistency stress test. Decoupled from drawer (drawer generates images, character_designer defines identity contract) | CLIP-I / DINO-I cross-scene similarity ≥ 0.80 on 30-character × 7-image corpus | 4 |
 | [`storyboard_designer`](./storyboard_designer/SKILL.md) | 分镜设计专家 | Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring (depth/identity/lighting/temporal) + extension-chain end_frames. Decoupled from cinematographer (cinematographer defines rules, storyboard_designer applies them) | Shot count accuracy / shot size distribution KL / rhythm curve DTW vs professional ground truth on 50-script corpus | 4 |
 | [`creative_source`](./creative_source/SKILL.md) | 创意源头专家 | Story Kernel mining from 6 social strata (institutional / technological / demographic / spatial / intergenerational / psychosocial). DAG root — upstream of style_genome. Sources: Bourdieu / Foucault / Giddens + Lefebvre + Han Byung-Chul | Strata resonance Pearson / Bourdieu field accuracy / unspeakability AUC on 100-topic labeled corpus | 4 |
+
+### 3 New Experts (Phase 8 — Project Corpus Integration, 2026-06-16)
+
+These 3 experts are the **primary consumers** of the integrated 102-book project corpus at `_shared/project-corpus/`. They cover verticals (theory / documentary / animation) that were not in the original 短剧-focused suite.
+
+| Expert | Chinese Name | Role | Source | Refs |
+|--------|--------------|------|--------|------|
+| [`theory_critic`](./theory_critic/SKILL.md) | 理论批评专家 | 电影理论框架(形式 vs 写实 / 精神分析 / 巴赞 / 塔可夫斯基)+ 作者研究(7 位大师)+ 电影史方法(4 大路径)+ 学术批评(戴锦华 4 维度 + 自问十题) | Project corpus: Andrew / Bazin / Tarkovsky / Mulvey / Žižek / Dai Hua / 7 本导演传记 | 8 |
+| [`documentary_maker`](./documentary_maker/SKILL.md) | 纪录片创作专家 | 王竞六讲法 + 6 种纪录片类型 + 4 大流派(Flaherty / Vertov / Grierson / Direct-Vérité)+ 民族志参与观察 + 纪录片风格 短剧 | Project corpus: 《纪录片创作六讲》《民族志纪录片创作》 | 5 |
+| [`animation_studio`](./animation_studio/SKILL.md) | 动画制作专家 | 迪士尼 4 阶段体系 + 12 阶段制作流程 + 跨文化改编 5 法则(花木兰案例)+ 歌舞叙事 + 搭档喜剧 | Project corpus: 《迪士尼的艺术》《影视动画经典剧本赏析》 | 6 |
+
 
 ---
 
@@ -152,7 +209,7 @@
                 └─────────────────┘
 ```
 
-**Key DAG properties (v2 with Phase 7):**
+**Key DAG properties (v2 with Phase 7 + 8):**
 - **New root:** `creative_source` (no upstream; mines Story Kernel from social strata) — replaces style_genome as DAG root
 - **Quality loop:** `screenplay` ↔ `script_auditor` iterate until target audit band
 - **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by drawer / animator / lip_sync / continuity
@@ -161,6 +218,49 @@
 - **Bottleneck nodes:** `screenplay` (after style) / `drawer` (after intent) / `lip_sync` (after audio + footage) / `mixer` (after all audio)
 - **Audit nodes:** `continuity` (parallel to mixer) + `script_auditor` (pre-production) verify consistency
 - **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
+- **Phase 8 verticals (cross-cutting):** `theory_critic` / `documentary_maker` / `animation_studio` are NOT in the linear pipeline — they are **consultative experts** invoked when the pipeline encounters their domain (theory analysis, documentary-style, animation). They draw from `_shared/project-corpus/` (102-book library).
+
+### Phase 8 Cross-Cutting Experts (consultative layer)
+
+```text
+                ┌──────────────────────────────────┐
+                │  Project Corpus (102 books)       │
+                │  _shared/project-corpus/          │
+                │  ┌────────────────────────────┐  │
+                │  │ theory-formalism-vs-realism │  │
+                │  │ film-philosophy-bazin-tark  │  │
+                │  │ psychoanalytic-film-theory  │  │
+                │  │ auteur-biographies          │  │
+                │  │ film-criticism-methodology  │  │
+                │  │ film-history-methods        │  │
+                │  │ narrative-revolution-modern  │  │
+                │  │ cinematography-masterclass  │  │
+                │  │ lighting-equipment-design   │  │
+                │  │ editing-sound-post          │  │
+                │  │ production-chinese-low      │  │
+                │  │ animation-disney-system     │  │
+                │  │ screenwriting-chinese       │  │
+                │  └────────────────────────────┘  │
+                └────┬─────────────┬───────────────┬┘
+                     │             │               │
+                     ▼             ▼               ▼
+              ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+              │   theory_   │ │ documentary │ │ animation_  │
+              │   critic    │ │   _maker    │ │   studio    │
+              │  理论批评    │ │  纪录片创作  │ │  动画制作    │
+              └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+                     │               │               │
+                     └───────────────┼───────────────┘
+                                     │
+                          (cross-cutting consultation)
+                                     │
+                                     ▼
+                  ┌──────────────────────────────────┐
+                  │  Existing Linear Pipeline         │
+                  │  (creative_source → ... → mixer)  │
+                  └──────────────────────────────────┘
+```
+
 
 ---
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, screenplay, script, dialogue, narrative, emotion-curve]
-    related_skills: [style_genome, scene_builder, editor, performer, composer, compliance_marketing, hook_retention, cinematographer]
+    related_skills: [style_genome, scene_builder, editor, performer, composer, compliance_marketing, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
     expert_id: screenplay
     metrics: [narrative_tension, dialogue_naturalness, emotional_arc]
 ---
@@ -34,6 +34,7 @@ The user needs to write a script, design dialogue, plan emotional arcs, generate
 | [`references/cn-shortdrama-structure.md`](./references/cn-shortdrama-structure.md) | 设计 短剧 多集 season arc 或 per-platform 结构前 | 90s/180s 短剧 时间预算(钩子 0-3s / escalation 15-40s / 爽点 70-80s / 卡点 88-90s)+ 10-ep season arc(ep 3/7/10 大 爽点)+ per-platform divergence(抖音/快手/小程序剧) |
 | [`references/emotion-curve-academic.md`](./references/emotion-curve-academic.md) | 设计 emotion_curve 或采样协议前 | Tan interest 公式(concern × uncertainty × anticipation ≥ 0.6)+ McMahon 6 arc 形状(85% 覆盖率)+ anchor-based 采样协议(信噪比 +30% vs uniform)+ 注意力衰减曲线(8-12s 无 击中点 则 drops ≥15%) |
 | [`references/dialogue-craft.md`](./references/dialogue-craft.md) | 写任何台词前 | 台词密度阈值(男频 0.4-0.6 / 女频 0.5-0.7 / ≥0.8 = 旁白过度 anti-pattern)+ 潜台词比例 ≥ 60% + "as you know" CN anti-pattern 3-strike 规则 + per-platform register(抖音/快手/小程序剧) |
+| [`../_shared/project-corpus/screenwriting-chinese-and-supplementary.md`](../_shared/project-corpus/screenwriting-chinese-and-supplementary.md) | 中国题材 / 长篇小说改编 / 需要快速产出初稿 | 芦苇《白鹿原》史诗改编(七易其稿/方言对白)+ 维基·金 21 天剧本法(心 vs 脑 / 9 分钟电影路标)+ 刘天赐主题"机灵性"+ 钩子设计 4 来源 + 奥班农动态结构(不归点)+ 温斯顿电影文法 |
 
 ## Role & Philosophy
 

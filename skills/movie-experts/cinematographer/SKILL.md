@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, cinematography, shot-intent, axis-rules, vertical-framing, camera-motion, 镜头语言]
-    related_skills: [screenplay, scene_builder, animator, editor, continuity, drawer, hook_retention, production]
+    related_skills: [screenplay, scene_builder, animator, editor, continuity, drawer, hook_retention, production, theory_critic, documentary_maker]
     expert_id: cinematographer
     metrics: [shot_intent_clarity, axis_compliance, vertical_framing_quality, motion_narrative_fit]
 ---
@@ -35,6 +35,8 @@ Typically invoked after `screenplay` (to receive emotion_curve + scene structure
 | [`references/axis-rules.md`](./references/axis-rules.md) | 设计对话 / 对峙场景 axis continuity 前 | 180° axis rule + 4 个合法 axis-crossing 例外 + 30° rule 防 jump cut + screen direction 4 状态(L2R/R2L/Up/Down)+ reverse cut 标准 coverage + cross-cut 协议与密度 |
 | [`references/vertical-screen-framing.md`](./references/vertical-screen-framing.md) | 设计 9:16 竖屏 短剧 framing 前 | 9:16 power points 修正(1/4 vertical 而非 1/3)+ headroom 标准 + 字幕 safe area 5 区(避开 face + nav bar)+ per-platform divergence(抖音/快手/小程序剧/视频号/TikTok/YouTube Shorts/Reels)+ 抖音/小程序剧 framing 3 大铁律 |
 | [`references/camera-motion-catalog.md`](./references/camera-motion-catalog.md) | 设计 camera move 或翻译到 video gen model prompt 前 | 12 camera moves taxonomy(static/pan/tilt/dolly/tracking/crane/handheld/steadicam/zoom)+ emotional semantics + dolly vs zoom 关键差异 + **2026-06 verified prompt-token mapping for 4 production-grade models**(Runway Gen-3 Alpha / Kling 1.6 / Veo 2 / Sora 2)+ 竖屏 camera move 修正 |
+| [`../_shared/project-corpus/cinematography-masterclass-and-grammar.md`](../_shared/project-corpus/cinematography-masterclass-and-grammar.md) | 学电影语言语法 / 研究 21 位摄影大师时 | 阿里洪《电影语言的语法》平行剪辑 / 动作反动作 / 高峰瞬间 + 100 电影化叙事手法 + 拉《空军一号》热开场 + 21 位摄影大师访谈(迪金斯 / 阿尔曼德罗斯) |
+| [`../_shared/project-corpus/lighting-equipment-and-design.md`](../_shared/project-corpus/lighting-equipment-and-design.md) | 选灯光器材 / 设计色彩叙事时 | 钨丝卤素 / 金属卤素 / LED 器材分类 + 5 种灯位(主/补/背/背景/效果)+ 经典布光模式 + 第五代摄影师色彩分析方法(色彩画中画 / 平面蒙太奇)+ 美术指导全流程 |
 
 ## Knowledge Retrieval
 
