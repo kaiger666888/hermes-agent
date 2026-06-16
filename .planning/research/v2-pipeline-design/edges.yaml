@@ -1,0 +1,185 @@
+# edges.yaml — Canonical edge definitions for kais-movie-agent v2.0 pipeline DAG
+# Source of truth: 01-NODE-DAG.md §1.4 (Phase 8 topology)
+# Edge types: linear | loop_with_critic | human_gate | consultative | cross_cutting_invariant
+
+schema_version: design-2026-06-16-prfp
+total_edges: 28
+
+edges:
+  # ============================================
+  # Linear edges (main DAG sequence) — 17 edges
+  # ============================================
+  - from: creative_source
+    to: style_genome
+    type: linear
+    description: "Intent propagation: root → style genome"
+
+  - from: creative_source
+    to: screenplay
+    type: linear
+    description: "Intent propagation: root → narrative"
+
+  - from: creative_source
+    to: character_designer
+    type: linear
+    description: "Intent propagation: root → character identity"
+
+  - from: screenplay
+    to: cinematographer
+    type: linear
+    description: "Narrative → visual intent"
+
+  - from: character_designer
+    to: cinematographer
+    type: linear
+    description: "Character identity → visual intent"
+
+  - from: style_genome
+    to: cinematographer
+    type: linear
+    description: "Style genome → visual intent"
+
+  - from: cinematographer
+    to: prompt_injector
+    type: linear
+    description: "Visual intent → prompt engineering"
+
+  - from: prompt_injector
+    to: visual_executor
+    type: linear
+    description: "Prompt → visual asset generation"
+
+  - from: visual_executor
+    to: audio_pipeline
+    type: linear
+    description: "Visual assets → audio sync"
+
+  - from: visual_executor
+    to: editor
+    type: linear
+    description: "Visual assets → editing"
+
+  - from: editor
+    to: colorist
+    type: linear
+    description: "Edited sequence → color grading"
+
+  - from: audio_pipeline
+    to: quality_gate
+    type: linear
+    description: "Mixed audio → quality check"
+
+  - from: colorist
+    to: quality_gate
+    type: linear
+    description: "Color-graded sequence → quality check"
+
+  - from: quality_gate
+    to: compliance_gate
+    type: linear
+    description: "Quality-approved → compliance check"
+
+  # Form-specific edges (短剧 only)
+  - from: screenplay
+    to: hook_retention
+    type: linear
+    description: "Narrative → 短剧 hook design"
+    form_scope: short_drama
+
+  - from: hook_retention
+    to: screenplay
+    type: linear
+    description: "Hook pacing feedback → screenplay revise"
+    form_scope: short_drama
+    feedback: true
+
+  # Lip_sync explicit edge (within audio_pipeline, but cross-node)
+  - from: visual_executor
+    to: audio_pipeline
+    type: linear
+    description: "Visual timing → lip_sync sub-step"
+    sub_step: lip_sync
+
+  # ============================================
+  # Loop_with_critic edges — 2 explicit
+  # ============================================
+  - from: screenplay
+    to: script_auditor
+    type: loop_with_critic
+    description: "Narrative consistency loop"
+    direction: bidirectional
+    exit_condition: "script_auditor.score >= 0.75 across 5 dimensions"
+    max_iterations: 3
+    cost_ceiling_per_iteration_yuan: 5
+    on_max_iter_exhausted: "escalate to human review"
+
+  - from: visual_executor
+    to: continuity_auditor
+    type: loop_with_critic
+    description: "Cross-shot consistency loop"
+    direction: bidirectional
+    exit_condition: "continuity_auditor.identity_match >= 0.85 AND axis_compliance = 100%"
+    max_iterations: 2
+    cost_ceiling_per_iteration_yuan: 50
+    on_max_iter_exhausted: "escalate to human art director + degrade to static image fallback"
+
+  # ============================================
+  # Human_gate edges — 2 explicit per PITFALLS §2.9
+  # ============================================
+  - from: screenplay
+    to: human_review_gate_1
+    type: human_gate
+    description: "Narrative intent checkpoint (PITFALLS §2.9 high-leverage seam)"
+    review_budget_minutes: 5
+    reviewer_role: "Director or assigned reviewer"
+    on_reject: "revise creative_source kernel OR screenplay rewrite"
+    on_accept: "proceed to Layer 2"
+
+  - from: editor
+    to: human_review_gate_2
+    type: human_gate
+    description: "Final cut checkpoint"
+    review_budget_minutes: 5
+    reviewer_role: "Director or assigned reviewer"
+    on_reject: "revise editor rhythm OR escalate to theory_critic consultation"
+    on_accept: "proceed to Layer 6 final gates"
+
+  # ============================================
+  # Consultative edge — theory_critic, creator-pulled per META-06
+  # ============================================
+  - from: any_layer_node
+    to: theory_critic
+    type: consultative
+    description: "Theory critique consultation (META-06: creator-pulled, not auto-invoked)"
+    trigger: "Creator manual invoke; not auto-triggered"
+    scope: "Any layer; creator decides when artistic-vs-commercial tension needs consultation"
+    edge_count: "polymorphic — enumerated per layer below"
+    # Expanded per-layer consultative edges:
+    sub_edges:
+      - from: creative_source
+        to: theory_critic
+      - from: screenplay
+        to: theory_critic
+      - from: visual_executor
+        to: theory_critic
+      - from: editor
+        to: theory_critic
+      - from: quality_gate
+        to: theory_critic
+
+  # ============================================
+  # Cross_cutting_invariant edges — 2 ownership-style
+  # ============================================
+  - from: style_genome
+    to: all_downstream_visual_audio_nodes
+    type: cross_cutting_invariant
+    description: "Style ownership: style_genome output consumed by all visual/audio nodes"
+    invariant: "5D style genome vector (色调 + 构图 + 节奏 + 材质 + 情感基调)"
+    consumer_nodes: [cinematographer, prompt_injector, visual_executor, editor, colorist, audio_pipeline]
+
+  - from: character_designer
+    to: all_downstream_visual_nodes
+    type: cross_cutting_invariant
+    description: "Character identity ownership"
+    invariant: "Character asset (face, body, wardrobe, voice profile, behavioral tics)"
+    consumer_nodes: [cinematographer, prompt_injector, visual_executor, continuity_auditor]

@@ -1,0 +1,170 @@
+# nodes.yaml — Canonical node definitions for kais-movie-agent v2.0 pipeline
+# Source of truth: 00-FIRST-PRINCIPLES.md §4 (Phase 7 derivation) + 01-NODE-DAG.md (Phase 8 topology)
+# Rendered as Markdown in 02-NODE-SPECS.md (Phase 8 Plan 04)
+# Lint script: scripts/validate_design.py (Phase 12 GOV-02)
+# Stability: stable (per Phase 7 §1.7)
+
+schema_version: design-2026-06-16-prfp
+total_nodes: 16  # 15 linear + 1 consultative
+linear_node_count: 15
+consultative_node_count: 1
+total_cost_per_episode_yuan: 7000-10000  # within META-05 ceiling ¥1000-10000
+
+nodes:
+  # ============================================
+  # Layer 0 — Root
+  # ============================================
+  - id: creative_source
+    name: "Creative Source (创意源)"
+    layer: 0
+    location: linear
+    role: root
+    v1_expert_id: creative_source
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.1 (D1.1+D1.2+D1.3+D1.5+D4.1)"
+    # Plan 08-02 fills 15 spec fields below
+
+  # ============================================
+  # Layer 1 — Intent parallel (3-way)
+  # ============================================
+  - id: style_genome
+    name: "Style Genome (风格基因组)"
+    layer: 1
+    location: linear
+    role: intent_parallel
+    v1_expert_id: style_genome
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.2 (D2.3+D2.4)"
+
+  - id: screenplay
+    name: "Screenplay (剧本)"
+    layer: 1
+    location: linear
+    role: intent_parallel
+    v1_expert_id: screenplay
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.3 (D1.3+D2.1)"
+
+  - id: script_auditor
+    name: "Script Auditor (剧本审计)"
+    layer: 1
+    location: linear
+    role: critic_paired
+    v1_expert_id: script_auditor
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.4 (D2.5+D3.1(c))"
+
+  - id: character_designer
+    name: "Character Designer (角色设计)"
+    layer: 1
+    location: linear
+    role: intent_parallel
+    v1_expert_id: character_designer
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.6 (D2.4)"
+
+  # ============================================
+  # Layer 2 — Visual intent (2-way)
+  # ============================================
+  - id: cinematographer
+    name: "Cinematographer (摄影指导)"
+    layer: 2
+    location: linear
+    role: visual_intent
+    v1_expert_id: cinematographer
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.5 (D2.1+D2.2+D3.4)"
+
+  - id: prompt_injector
+    name: "Prompt Injector (提示注入)"
+    layer: 2
+    location: linear
+    role: visual_intent
+    v1_expert_id: NEW  # AI-native, no v1 precedent
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.7 (D3.5+D2.4)"
+
+  # ============================================
+  # Layer 3 — Visual execution (with loop)
+  # ============================================
+  - id: visual_executor
+    name: "Visual Executor (视觉执行)"
+    layer: 3
+    location: linear
+    role: visual_exec
+    v1_expert_id: NEW_COMPOSITE  # drawer + animator merged
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.8 (D3.1(b)+D2.5)"
+    merge_note: "v1 drawer + animator merged; Phase 11 handoff may revisit split"
+
+  - id: continuity_auditor
+    name: "Continuity Auditor (连续性审计)"
+    layer: 3
+    location: linear
+    role: critic_paired
+    v1_expert_id: continuity  # renamed to continuity_auditor (HANDOFF-02 mapping preserved)
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.10 (D2.4+D2.5+D3.1(c))"
+
+  # ============================================
+  # Layer 4 — Audio + Post parallel (3-way)
+  # ============================================
+  - id: audio_pipeline
+    name: "Audio Pipeline (音频管线)"
+    layer: 4
+    location: linear
+    role: audio_post
+    v1_expert_id: NEW_COMPOSITE  # voicer + lip_sync + composer + foley + mixer merged
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.9 (D3.1(a))"
+    merge_note: "v1 5 audio experts merged; Phase 11 handoff may revisit split"
+
+  - id: editor
+    name: "Editor (剪辑)"
+    layer: 4
+    location: linear
+    role: audio_post
+    v1_expert_id: editor
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.11 (D2.1+D1.2)"
+
+  - id: colorist
+    name: "Colorist (调色)"
+    layer: 4
+    location: linear
+    role: audio_post
+    v1_expert_id: colorist
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.12 (D2.1+D2.4)"
+
+  # ============================================
+  # Layer 5 — Form-specific
+  # ============================================
+  - id: hook_retention
+    name: "Hook & Retention (钩子留存)"
+    layer: 5
+    location: linear
+    role: form_specific
+    form_scope: short_drama  # 短剧 only; disabled for 微电影/长片
+    v1_expert_id: hook_retention
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.13 (D2.6)"
+
+  # ============================================
+  # Layer 6 — Final gates (2-way sequential)
+  # ============================================
+  - id: quality_gate
+    name: "Quality Gate (质量门)"
+    layer: 6
+    location: linear
+    role: final_gate
+    v1_expert_id: quality_gate
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.14 (D2.1+D2.5+D3.1(c))"
+
+  - id: compliance_gate
+    name: "Compliance Gate (合规门)"
+    layer: 6
+    location: linear
+    role: final_gate
+    v1_expert_id: compliance_marketing  # renamed to compliance_gate (HANDOFF-02 mapping preserved)
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.15 (D2.6)"
+    merge_note: "v1 implied pre_check + final; merged; Phase 11 handoff may revisit split"
+
+  # ============================================
+  # Vertical — Consultative
+  # ============================================
+  - id: theory_critic
+    name: "Theory Critic (理论批评)"
+    layer: vertical
+    location: consultative  # NOT in linear sequence
+    role: consultative_vertical
+    trigger_mode: creator_pulled  # META-06
+    v1_expert_id: theory_critic
+    phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.16 (D4.2+D4.4)"
