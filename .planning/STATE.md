@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: ready_to_plan
-last_updated: 2026-06-17T00:00:00.000Z
+last_updated: 2026-06-16T18:05:27.558Z
 last_activity: 2026-06-17 — Phase 16 COMPLETE (prompt_injector NEW AI-native expert fully integrated: Plan 16-01 created SKILL.md + 4 refs + bidirectional edges; Plan 16-02 close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
 progress:
   total_phases: 6
@@ -11,7 +11,7 @@ progress:
   total_plans: 11
   completed_plans: 11
   percent: 67
-stopped_at: Phase 16 COMPLETE (2/2 plans) — ready for Phase 17 (deprecations) or Phase 18 (validation)
+stopped_at: Phase 16 complete (2/2) — ready to discuss Phase 17
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,14 +25,14 @@ stopped_at: Phase 16 COMPLETE (2/2 plans) — ready for Phase 17 (deprecations) 
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 16 COMPLETE — ready for Phase 17 (deprecations) or Phase 18 (validation + docs)
+**Current focus:** Phase 17 — deprecate 3 candidates (performer / scene_builder / storyboard_designer)
 
 ## Current Position
 
-Phase: 16 (COMPLETE)
-Plan: 16-02 complete (2/2)
-Status: Phase 16 done — ready to plan Phase 17
-Last activity: 2026-06-17
+Phase: 17
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-16
 
 ### Progress
 
