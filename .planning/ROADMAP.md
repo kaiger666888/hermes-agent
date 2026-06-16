@@ -100,7 +100,7 @@ Plans:
 
 Plans:
 - [x] 15-01-PLAN.md — Create audio_pipeline/ with merged SKILL.md (sub_steps + aliases + unioned related_skills + Spatial Audio Disposition section + lip_sync NODE-09 note) + 6 sub-folder refs + consolidated GAP-REPORT + 6 redirect stubs (5 merged_into + 1 folded_into for spatial_audio) (Wave 1)
-- [ ] 15-02-PLAN.md — Consumer edge sync: 9 consumer SKILL.md files updated (related_skills dedup + body prose reference sync; visual_executor reverse edge added) (Wave 2, depends on 15-01)
+- [x] 15-02-PLAN.md — Consumer edge sync: 11 consumer SKILL.md files updated (9 planned + 2 deviation discoveries: production + colorist — both had stranded audio references not enumerated in plan files_modified). related_skills dedup + body prose reference sync + visual_executor + production reverse edges added (Wave 2, depends on 15-01) — DONE 2026-06-17
 - [ ] 15-03-PLAN.md — Close-out: README inventory + corpus→expert table + corpus tree + DAG diagram + Phase 7 summary + footer count (22→17) + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus updates (Wave 3, depends on 15-01 + 15-02)
 
 ---
