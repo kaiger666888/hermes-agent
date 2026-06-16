@@ -96,12 +96,12 @@ Plans:
 4. Old 5 audio expert directories preserved with `status: merged_into` + redirect
 5. lip_sync explicitly added as sub-step (was implicit in v1; new DAG makes it explicit per Phase 8 §2.9 NODE-09 critic pairing)
 
-**Plans:** 1/3 plans complete
+**Plans:** 3/3 plans complete — PHASE 15 COMPLETE
 
 Plans:
 - [x] 15-01-PLAN.md — Create audio_pipeline/ with merged SKILL.md (sub_steps + aliases + unioned related_skills + Spatial Audio Disposition section + lip_sync NODE-09 note) + 6 sub-folder refs + consolidated GAP-REPORT + 6 redirect stubs (5 merged_into + 1 folded_into for spatial_audio) (Wave 1)
 - [x] 15-02-PLAN.md — Consumer edge sync: 11 consumer SKILL.md files updated (9 planned + 2 deviation discoveries: production + colorist — both had stranded audio references not enumerated in plan files_modified). related_skills dedup + body prose reference sync + visual_executor + production reverse edges added (Wave 2, depends on 15-01) — DONE 2026-06-17
-- [ ] 15-03-PLAN.md — Close-out: README inventory + corpus→expert table + corpus tree + DAG diagram + Phase 7 summary + footer count (22→17) + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus updates (Wave 3, depends on 15-01 + 15-02)
+- [x] 15-03-PLAN.md — Close-out: README inventory + corpus→expert table + corpus tree + DAG diagram + Phase 7 summary + footer count (22→17) + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus updates (Wave 3, depends on 15-01 + 15-02) — DONE 2026-06-17
 
 ---
 
