@@ -75,7 +75,7 @@ Plans:
 **Plans:** 3/3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Create visual_executor/ with merged SKILL.md (sub_steps + aliases + unioned related_skills) + refs sub-folders + redirect stubs for drawer/animator (Wave 1)
+- [x] 14-01-PLAN.md — Create visual_executor/ with merged SKILL.md (sub_steps + aliases + unioned related_skills) + refs sub-folders + redirect stubs for drawer/animator (Wave 1)
 - [ ] 14-02-PLAN.md — Consumer edge sync: 15 consumer SKILL.md files updated (related_skills dedup + body prose reference sync) (Wave 2, depends on 14-01)
 - [ ] 14-03-PLAN.md — Close-out: README inventory + corpus tree + DAG diagram + _shared/ glossary + quality-rubric + RAG-INVOCATION-PATTERN + project-corpus updates (Wave 3, depends on 14-01 + 14-02)
 
