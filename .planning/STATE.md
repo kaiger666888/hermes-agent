@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: Executing
 last_updated: "2026-06-17T00:00:00.000Z"
-last_activity: 2026-06-17 — Phase 13 Plan 02 complete (compliance_marketing → compliance_gate)
+last_activity: 2026-06-17 — Phase 13 Plan 03 complete (close-out: skills-mapping.yaml sign_off + README + glossary) — Phase 13 COMPLETE
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 17
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 13 (Expert Rename + Alias Scaffolding) — In Progress
-Plan: 13-02 complete; 13-03 next (close-out: skills-mapping.yaml sign_off + README + glossary)
-Status: Executing Phase 13
-Last activity: 2026-06-17 — Plan 13-02 (compliance_marketing → compliance_gate) complete
+Phase: 13 (Expert Rename + Alias Scaffolding) — COMPLETE
+Plan: 13-03 complete; Phase 13 done. Next phase: Phase 14 (visual_executor merge) — gated on Phase 13's rename pattern which is now established + signed off.
+Status: Phase 13 complete; Phase 14-17 can now begin
+Last activity: 2026-06-17 — Plan 13-03 (skills-mapping.yaml sign_off + README + glossary close-out) complete
 
 ### Progress
 
@@ -41,11 +41,11 @@ v1 milestone: [██████████] 100% Complete (Phases 0-6, shippe
 v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12, shipped 2026-06-16)
 
 v3.0 Skills-to-DAG Alignment milestone:
-  Phase 13 [██        ] 67% In Progress (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 pending close-out)
-  Phase 14 [          ] 0% Not started (depends on 13)
-  Phase 15 [          ] 0% Not started (depends on 13)
-  Phase 16 [          ] 0% Not started (depends on 13)
-  Phase 17 [          ] 0% Not started (depends on 13)
+  Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
+  Phase 14 [          ] 0% Not started (depends on 13 — UNBLOCKED)
+  Phase 15 [          ] 0% Not started (depends on 13 — UNBLOCKED)
+  Phase 16 [          ] 0% Not started (depends on 13 — UNBLOCKED)
+  Phase 17 [          ] 0% Not started (depends on 13 — UNBLOCKED)
   Phase 18 [          ] 0% Not started (depends on 13-17)
 ```
 
@@ -99,6 +99,8 @@ v3.0 Skills-to-DAG Alignment milestone:
 | Composer excluded from continuity_auditor consumer set | `composer/SKILL.md` never had `continuity` in `related_skills`; plan over-listed based on "invisible continuity" English noun | Documented in 13-01-SUMMARY §Deviations; rename correctly applied to all 16 actual consumers |
 | `_eval/baseline/` snapshots NOT renamed | Frozen regression baselines must preserve point-in-time expert_id for eval harness integrity | Documented in 13-01-SUMMARY §Deviations; only active SKILL.md consumers renamed |
 | lip_sync JSON output field names (`continuity_handoff`, `needs_continuity_audit`) preserved | These are data field names in the output schema, not expert_id references; renaming would be an API-shape change | Documented in 13-01-SUMMARY §Deviations; plan action 5 scope respected |
+| Added `signed_off_at: 2026-06-17` + `signed_off_by: phase-13` traceability fields under each signed_off entry in skills-mapping.yaml | CONTEXT.md explicitly granted Claude's discretion; explicit sign-off timestamp + signer make audit trail unambiguous for Phase 18 verification | Applied 2026-06-17 in plan 13-03 (Task 1) |
+| Phase 13 ASCII DAG diagram multi-line compliance box preserved (`compliance_` / `gate 合规`) | Same two-line form + column alignment as character_designer multi-line box — visual consistency | Applied 2026-06-17 in plan 13-03 (Task 2) |
 
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
@@ -128,9 +130,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 13 Plan 02 executed (2026-06-17) — compliance_marketing → compliance_gate rename complete. New expert dir + redirect stub + 11-consumer edge sync + regression check on 13-01's continuity_auditor tokens in 4 shared consumer files. Commits ccad47b87 + 25f1b3d7e.
-**Next action:** Plan 13-03 — Close-out: update `skills-mapping.yaml` `sign_off_status: pending` → `signed_off` for both rename entries, refresh README inventory, and add `_shared/glossary.md` alias entries. After 13-03, Phase 13 is complete and Phases 14-18 can begin (each depends on Phase 13's pattern).
-**Hand-off note:** Phase 13 is the bottleneck for v3.0 — establishes the rename + alias pattern reused by Phases 14-17 (merge / new / deprecate). 13-01 and 13-02 have both validated the pattern; 13-03 is pure documentation/sign-off close-out.
+**Last action:** Phase 13 Plan 03 executed (2026-06-17) — Close-out: skills-mapping.yaml `sign_off_status: pending` → `signed_off` for BOTH renamed entries (continuity_auditor + compliance_gate) + traceability fields `signed_off_at: 2026-06-17` + `signed_off_by: phase-13` + README.md inventory / corpus tree / ASCII DAG / shell-loop updates + _shared/glossary.md expert_id reference updates. Commits 8985f450a + 71da7c0f7.
+**Next action:** Phase 14 (visual_executor merge — drawer + animator → visual_executor) can now begin. Phase 13's backward-compat rename pattern is established + authoritative per skills-mapping.yaml sign-off. Same pattern (new dir + redirect stub + metadata.hermes.aliases) is reusable for the N:1 merge cases in Phase 14 + 15.
+**Hand-off note:** Phase 13 is COMPLETE — both renames signed off in canonical mapping. Phase 14 (visual_executor merge), Phase 15 (audio_pipeline merge), Phase 16 (prompt_injector new), Phase 17 (deprecations) are all UNBLOCKED. Phase 18 (finalization + inventory + verification) is gated on 13-17 all being complete.
 
 ---
 
