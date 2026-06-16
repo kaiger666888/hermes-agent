@@ -173,7 +173,7 @@ tags="expert:colorist,domain:digital-color-science"
 - **<- continuity_auditor**: cross-shot deviation reports (feedback)
 - **-> visual_executor**: color_intent.json (influences subsequent frame generation) + color params for temporal consistency
 - **-> continuity_auditor**: graded frames for consistency audit
-- **-> mixer**: color emotion annotations for mixing judgment
+- **-> audio_pipeline (mixer sub-step)**: color emotion annotations for mixing judgment
 
 ## What NOT to do
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, hook, retention, 3-second-hooks, paywall-cliffhanger, viral-formula, vertical-pacing, marker-schema]
-    related_skills: [screenplay, editor, compliance_gate, composer, cinematographer]  # composer is one-directional (HOOK→composer for BGM sync); composer does not reciprocate by design (CONTEXT D-7). cinematographer receives first-frame hook + close-up cliffhanger framing intent.
+    related_skills: [screenplay, editor, compliance_gate, audio_pipeline, cinematographer]  # audio_pipeline (composer sub-step) is one-directional (HOOK→audio_pipeline for BGM sync); audio_pipeline does not reciprocate by design (CONTEXT D-7). cinematographer receives first-frame hook + close-up cliffhanger framing intent.
     expert_id: hook_retention
     metrics: [hook_strength, 完播率_proxy, 卡点_density, 转发_trigger_coverage]
 ---
@@ -64,7 +64,7 @@ metadata:
 
 ## Output Format
 
-本专家产出以下 JSON 工件(供下游 screenplay / editor / composer 机械消费):
+本专家产出以下 JSON 工件(供下游 screenplay / editor / audio_pipeline (composer sub-step) 机械消费):
 
 - `hook_design.json` — 开场 3 秒钩子规格(type / 0-1s/1-2s/2-3s 帧级拆解 / 5-tier 评分)
 - `卡点_placement.json` — 全季 卡点 放置计划(每集至少 1 硬卡点 / 集中段可选 软卡点 / 3-tier 评分)
@@ -143,7 +143,7 @@ metadata:
 
 - **1.5x pace rule**:平均镜头 ≤ 1.5s(竖屏 9:16 硬约束;权威源:[`references/paywall-design.md`](./references/paywall-design.md) §1.5x Pace Rule + [`references/vertical-pacing.md`](./references/vertical-pacing.md) §竖屏 vs 横屏)
 - **≤3s dead air**:不允许连续 ≥ 3s 静止 / 静默;BGM swell 与情绪 close-up 是仅有的例外(可延至 4-5s)
-- **BGM coupled_beat 同步**:cut 必须落在 composer.coupled_beat 时间戳(详见 [`references/vertical-pacing.md`](./references/vertical-pacing.md) §BGM Sync Requirements)
+- **BGM coupled_beat 同步**:cut 必须落在 audio_pipeline.composer.coupled_beat 时间戳(详见 [`references/vertical-pacing.md`](./references/vertical-pacing.md) §BGM Sync Requirements)
 - **字幕 safe zone**:避开上 1/3(状态栏)与下 1/3(评论 / 互动区),字幕占 frame ~15-20%
 
 ## Per-Platform 爆款公式 Branching
@@ -249,7 +249,7 @@ tags="expert:hook_retention,domain:platform-<platform>"
 - **<- editor**:接收 `cut_density` 反馈做 完播率 复检(剪辑决定 1.5x pace rule 是否真达成)
 - **-> screenplay**:输出 `钩子_爽点_卡点_markers.json` 给 `emotion_curve` 离散锚点集成(Phase 3 screenplay 重构将原生消费)
 - **-> editor**:输出 1.5x pace / ≤3s dead air / BGM coupled_beat 节奏约束(给 `cut_density` 决策输入)
-- **-> composer**:输出 BGM sync 时间戳要求(给 `coupled_beat` 对齐;**单向 edge** —— composer 不需要回调 HOOK,只需把 cut 时间戳纳入 coupled_beat 设计,CONTEXT D-7)
+- **-> audio_pipeline (composer sub-step)**:输出 BGM sync 时间戳要求(给 `coupled_beat` 对齐;**单向 edge** —— audio_pipeline 不需要回调 HOOK,只需把 cut 时间戳纳入 coupled_beat 设计,CONTEXT D-7)
 - **-> compliance_gate**:输出 `hook_design.json` + `卡点_placement.json` 给 🟡 / 🔴 风险元素复审(关闭 Phase 1 单向 edge 合同)
 
 ## What NOT to do

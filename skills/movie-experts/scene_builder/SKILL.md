@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design, pallasmaa, architectural-storytelling]
-    related_skills: [screenplay, style_genome, colorist, performer, editor, visual_executor, foley, continuity_auditor, cinematographer, production]
+    related_skills: [screenplay, style_genome, colorist, performer, editor, visual_executor, audio_pipeline, continuity_auditor, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
 ---
@@ -66,7 +66,7 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 
 - `scene_3d_package/`: Blender project file + texture assets
 - `camera_constraints.json`: pre-computed camera paths + axis data
-- `material_annotations.json`: scene material tags (for foley)
+- `material_annotations.json`: scene material tags (for audio_pipeline (foley sub-step))
 - `previsualization.mp4`: 3D previz video (low quality preview)
 
 ## Key Parameters
@@ -123,7 +123,7 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 - Asymmetry -> chaos/unease
 
 ### Material Annotation
-- Every visible surface tagged with material type (for foley)
+- Every visible surface tagged with material type (for audio_pipeline (foley sub-step))
 - Fields: material_type, surface_roughness, area_sqm
 - Priority: floor, tabletop, walls (most sound-generating surfaces)
 
@@ -141,7 +141,7 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 4. **Lighting Setup** — Configure three-point + HDRI based on colorist intent
 5. **Camera Previz** — Set camera paths per editor shot plan, verify feasibility
 6. **Axis Calculation** — Output per-frame camera position + axis data (for editor)
-7. **Material Annotation** — Tag all visible surface materials (for foley)
+7. **Material Annotation** — Tag all visible surface materials (for audio_pipeline (foley sub-step))
 8. **Previz Render** — Low quality preview (960x540, EEVEE, 64 samples)
 9. **Reference Frame Render** — High quality key frames (1920x1080, Cycles, 256 samples)
 10. **Pipeline Package** — Output scene_3d_package + camera_constraints + material_annotations
@@ -164,13 +164,13 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 - **<- editor**: shot planning, camera type requirements
 - **-> visual_executor**: reference frame images (composition/lighting reference) + camera_constraints.json (camera path constraints)
 - **-> editor**: axis data + previz video
-- **-> foley**: material_annotations.json (surface material tags)
+- **-> audio_pipeline (foley sub-step)**: material_annotations.json (surface material tags)
 - **-> continuity_auditor**: scene layout reference (environment consistency audit)
 
 ## What NOT to do
 
 - Don't exceed 500K tris per scene (Blender interactivity breaks)
 - Don't skip camera path validation (impossible shots waste generation time)
-- Don't forget material annotations (foley depends on them)
+- Don't forget material annotations (audio_pipeline (foley sub-step) depends on them)
 - Don't render final quality before previz approval (saves GPU time)
 - Don't run scene_builder alongside visual_executor on single GPU (combined >24GB)

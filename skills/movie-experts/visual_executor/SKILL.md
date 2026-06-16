@@ -11,7 +11,7 @@ sub_steps: [drawer, animator]
 metadata:
   hermes:
     tags: [movie, image, video, flux-2, lora, ip-adapter, instantid, video-gen, camera-motion, temporal-consistency, veo, kling, ltx, pixverse, visual, cinematic, character-consistency]
-    related_skills: [screenplay, continuity_auditor, colorist, style_genome, compliance_gate, cinematographer, production, scene_builder, editor, performer]
+    related_skills: [screenplay, continuity_auditor, colorist, style_genome, compliance_gate, cinematographer, production, scene_builder, editor, performer, audio_pipeline]
     expert_id: visual_executor
     aliases: [drawer, animator]
     metrics: [aesthetic_score, character_consistency, film_realism, vram_efficiency, motion_smoothness, motion_complexity, temporal_consistency, generation_fidelity]

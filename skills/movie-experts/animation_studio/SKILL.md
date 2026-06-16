@@ -15,8 +15,7 @@ metadata:
       - visual_executor    # Character design / concept art + animation execution
       - colorist            # Color script
       - scene_builder       # 3D scene construction
-      - composer            # Musical storytelling
-      - voicer              # Voice casting for animation
+      - audio_pipeline      # Musical storytelling (composer sub-step) + voice casting for animation (voicer sub-step)
       - hook_retention      # Children's content hook design
     expert_id: animation_studio
     metrics: [story_structure_score, visual_consistency, character_appeal, musical_integration, cross_cultural_adaptation]
@@ -24,7 +23,7 @@ metadata:
 
 # Animation Production Expert (动画制作专家)
 
-Specialist for animation production pipeline, Disney system methodology, and cross-cultural adaptation (East Asian / folk tale to global animation). Complements `visual_executor` (stills + motion), `composer` (music) by providing the structural / methodological framework.
+Specialist for animation production pipeline, Disney system methodology, and cross-cultural adaptation (East Asian / folk tale to global animation). Complements `visual_executor` (stills + motion), `audio_pipeline` (music, voice) by providing the structural / methodological framework.
 
 ## When to use this skill
 
@@ -172,7 +171,7 @@ voice_casting:
 1. Standard workflow steps 1-3
 2. Compress to 短剧 runtime (60-180s)
 3. Use AI tools (visual_executor) for character / scene
-4. Skip traditional animation stages 8-9 (no voice casting; TTS via voicer)
+4. Skip traditional animation stages 8-9 (no voice casting; TTS via audio_pipeline (voicer sub-step))
 5. Focus on color script and shot composition
 
 ## Integration with Other Experts
@@ -181,8 +180,8 @@ voice_casting:
 - **`visual_executor`**: Character design / concept art / model sheets (drawer sub-step) + Animation execution (veo3.1, kling-v3-4k, etc.) (animator sub-step)
 - **`colorist`**: Color script + per-scene LUT
 - **`scene_builder`**: 3D scene construction for 3D animation
-- **`composer`**: Musical numbers composition
-- **`voicer`**: Voice casting for animation characters
+- **`audio_pipeline (composer sub-step)`**: Musical numbers composition
+- **`audio_pipeline (voicer sub-step)`**: Voice casting for animation characters
 - **`hook_retention`**: Children's content hook design (3-second attention)
 - **`compliance_gate`**: Animation-specific compliance (儿童内容, 广告限制)
 
@@ -200,7 +199,6 @@ Both books are in `_shared/project-corpus/`. Fair Use paraphrasing per project c
 - [`../visual_executor/SKILL.md`](../visual_executor/SKILL.md) — Visual executor expert (drawing + animation sub-steps)
 - [`../colorist/SKILL.md`](../colorist/SKILL.md) — Color expert
 - [`../scene_builder/SKILL.md`](../scene_builder/SKILL.md) — 3D scene expert
-- [`../composer/SKILL.md`](../composer/SKILL.md) — Music expert
-- [`../voicer/SKILL.md`](../voicer/SKILL.md) — Voice expert
+- [`../audio_pipeline/SKILL.md`](../audio_pipeline/SKILL.md) — Music expert (composer sub-step) + Voice expert (voicer sub-step)
 - [`../hook_retention/SKILL.md`](../hook_retention/SKILL.md) — Hook expert
 - [`../_shared/glossary.md`](../_shared/glossary.md)

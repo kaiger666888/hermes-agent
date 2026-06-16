@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, performance, acting, body-language, emotion, character-action, stanislavski, meisner, laban-effort]
-    related_skills: [screenplay, continuity_auditor, scene_builder, editor, visual_executor, voicer, style_genome, production]
+    related_skills: [screenplay, continuity_auditor, scene_builder, editor, visual_executor, audio_pipeline, style_genome, production]
     expert_id: performer
     metrics: [emotion_accuracy, movement_naturalness, body_consistency, prompt_effectiveness]
 ---
@@ -146,7 +146,7 @@ tags="expert:performer,domain:meisner-truth"
 - **<- editor**: shot duration budgets
 - **<- style_genome**: genre performance style preferences
 - **-> visual_executor**: action_prompt (action description text) + performance_intent.json (animation parameters)
-- **-> voicer**: performance rhythm reference (affects voice rhythm)
+- **-> audio_pipeline (voicer sub-step)**: performance rhythm reference (affects voice rhythm)
 - **-> continuity_auditor**: performance tokens for cross-frame consistency audit
 
 ## What NOT to do
