@@ -1333,3 +1333,306 @@ Phase 7 允许 mid-Phase re-evaluation,需 audit log:
 
 ---
 
+## §6 — Musk 方法审计清单
+
+> per DERIV-08,本节走过 PITFALLS §1(6 个 first-principles 误用 failure mode)+ §5(4 个 Musk 方法 specific failure mode)= 共 **10 个 failure mode**。每条:audit prompt + 本推导的答案 + verdict(PASS / FAIL / CONDITIONAL)。Verdict 必须 **earned** — 不能 rubber-stamp PASS,否则本身就是 Pitfall 1.1 警告信号。
+
+### §6.0 — 审计框架
+
+每条审计的格式:
+- **Source:** PITFALLS §X.Y
+- **Audit prompt:** 来自 RESEARCH §2 表
+- **This derivation's answer:** 引用具体的 §3 derivation step / §4 node entry / §0-§2 framework element(不是 "推导总体上...")
+- **Verdict:** PASS / FAIL / CONDITIONAL
+
+---
+
+### Audit 1.1 — "First principles" 装饰性语言(无实际还原)
+
+**Source:** PITFALLS §1.1
+
+**Audit prompt:** 是否有任何节点的 `derivation` 字段读起来像"每个 pipeline 都有这个"?推导部分长度是否超过或匹配节点描述部分?"obviously" 一词是否出现在任何 justification 中?
+
+**This derivation's answer:**
+- 每节点 `derivation` 字段引用具体的 §3 推导 step(D1.1-D4.5 + 中间结论 C1.1-C4.4)— 例如 `creative_source` 的 derivation 引用 D1.1+D1.2+D1.3+D1.5+D4.1;`script_auditor` 引用 D2.5+D3.1(c)+ v1 验证。无 "每个 pipeline 都有这" 措辞。
+- §3 derivation trace(Plan 02)长度 ≈ §4 节点描述(Plan 03)长度 — 推导不是装饰。
+- "obviously" / "every pipeline has" / "traditionally" 在全文 grep = **0 次出现**(per Plan 01-04 verify)。
+
+**Verdict:** PASS
+
+---
+
+### Audit 1.2 — 把验证过的工艺当 "bias" 扔掉
+
+**Source:** PITFALLS §1.2
+
+**Audit prompt:** 推导是否显式保留 validated invariants(Murch Rule of Six、180° 轴线、三幕结构)作为 `validated-invariant`?每节点是否引用 ≥1 corpus-anchor?
+
+**This derivation's answer:**
+- §3.2 D2.1 显式声明 Murch Rule of Six 为 `validated-invariant`(跨 40+ 年实证)
+- §3.2 D2.2 显式声明 180° 轴线为 `physical + validated-invariant`(感知不变量)
+- §3.4 D4.3 列出 5 类 validated-invariants 必须保留(Murch, Field 三幕, 180° 轴线, McKee 转折点, Stanislavski)
+- §4 每 16 节点都有 `Corpus anchor` 字段引用 ≥1 STACK §1.4 或 Hermes 集成语料源
+
+**Verdict:** PASS
+
+---
+
+### Audit 1.3 — 过早模型承诺(Sora/Kling/Veo)
+
+**Source:** PITFALLS §1.3
+
+**Audit prompt:** 任何候选节点 ID 是否包含模型特定术语?节点 ID 是否在用户价值层(composition_lock, identity lock)而非模型层?
+
+**This derivation's answer:**
+- 16 候选节点 ID 全部 model-agnostic:`creative_source`, `style_genome`, `screenplay`, `script_auditor`, `cinematographer`, `character_designer`, `prompt_injector`, `visual_executor`, `audio_pipeline`, `continuity_auditor`, `editor`, `colorist`, `hook_retention`, `quality_gate`, `compliance_gate`, `theory_critic`
+- 模型名(Sora/Kling)只出现在:(1) §2.3 framing(警告不要过早承诺);(2) §4.8 visual_executor steelman counter(作为反对合并的论点,response 反驳)
+- §3.3 D3.4 显式分层:`composition_lock` 是用户价值层;`sketch-then-render` 是当前 instantiation(dated annex)
+- §4.5 cinematographer 的 `assumption-classification` 标 sketch-then-render 为 `contingent` instantiation,composition_lock 为 `validated-invariant`
+
+**Verdict:** PASS
+
+---
+
+### Audit 1.4 — "不同于现有" 误读为 "优于现有"
+
+**Source:** PITFALLS §1.4
+
+**Audit prompt:** 推导是否把 divergence 当作正确性的证明?(Convergence log 是 Phase 11 deliverable,但 Phase 7 推导不得 unjustified 庆祝 divergence。)
+
+**This derivation's answer:**
+- §3 derivation 显式质疑继承假设(V1-V8 linear DAG, JSON asset bus, 20-step granularity, sketch-then-render 两阶段),但 **每次质疑都给出具体 failure mode**(per D1.2, D2.3, D3.4 等)
+- §4 每节点的 `analogy-validity` 字段标 `analogy-valid`(传统工艺直接适用)vs `analogy-breaks-here`(AIGC 重新推导):
+  - `analogy-valid`:style_genome, screenplay, character_designer, cinematographer, editor, colorist, theory_critic, quality_gate(8 节点 — 传统工艺直接保留)
+  - `analogy-breaks-here`:creative_source, script_auditor, prompt_injector, visual_executor, audio_pipeline, continuity_auditor, hook_retention, compliance_gate(8 节点 — AIGC 重新推导)
+- **8:8 平衡** — 推导不全是 divergence,也不全是 convergence
+
+**Verdict:** PASS
+
+---
+
+### Audit 1.5 — "我推导自物理" 谬误(类比伪装成推导)
+
+**Source:** PITFALLS §1.5
+
+**Audit prompt:** 是否每条推导论断都打了 epistemic-status tag?平台相关 / 工具相关论断是否被标为 `volatile`?
+
+**This derivation's answer:**
+- §3 共 22 个 epistemic-status tags(per Plan 02 verify: 22 处 [physical/psychological/platform-algorithmic/tool-capability] 标记)
+- §3.2 D2.2 显式分离 180° 轴线(`physical` + stable)与完播率加权(`platform-algorithmic` + volatile)
+- §3.4 D4.3 显式分类 5 类 validated-invariants(都标 physical 或 psychological)
+- §4 每节点的 `Epistemic-status tags` 字段有 1-3 个标签(共 16 节点 × 平均 2 个 ≈ 32 个标签)
+
+**Verdict:** PASS
+
+---
+
+### Audit 1.6 — 把想要的答案反向工程成 "第一性原理"
+
+**Source:** PITFALLS §1.6
+
+**Audit prompt:** 是否每节点都带 steelman-the-elimination 段落?alternatives-considered 日志是否实质(不是 "无 alternatives")?
+
+**This derivation's answer:**
+- §4 每 16 节点都有 `Steelman-the-elimination` 字段,包含 strongest counter + response + verdict(SURVIVES / RECONSIDER / MERGE)
+- §4 每 16 节点都有 `Alternatives considered` 字段(MADR-style),每节点 ≥1 个 REJECTED option,共 34 个 REJECTED(per Plan 03 verify)
+- REJECTED options 的 Cons 是 **具体失败模式**,不是 "less preferred"(例如 §4.1 creative_source 的 Option 2 `auto_story_generator` REJECTED 理由:"违反 D4.1(novelty 来自生活经验)+ PITFALLS §4.5(creative ≠ random)+ 短剧市场饱和")
+
+**Verdict:** PASS
+
+---
+
+### Audit 5.1 — Booster-reuse 误用("reuse 总是更便宜")
+
+**Source:** PITFALLS §5.1
+
+**Audit prompt:** 是否有节点从"reusability"作为通用原则推导其存在?每节点的 cost-driver 识别是否填了?(Phase 8 填 cost_budget;Phase 7 emit 暗示 cost-driver class 的节点 ID。)
+
+**This derivation's answer:**
+- 无节点从"reusability"通用原则推导存在 — 每节点都从 §3 的中间结论推导(C1.1-C4.4)
+- §3.3 D3.1 + §3.4 D4.x 显式区分 AI-accelerated / AI-bounded / AI-native 三类(暗示 cost-driver class)
+- §4 每节点的 `Epistemic-status tags` + `Assumption classification` 隐含 cost-driver info(`tool-capability` tag 暗示 compute-bound;`psychological` + `validated-invariant` 暗示 human-time-bound)
+- Phase 8 NODE-04 (cost_budget) 将填充具体成本预算;Phase 7 不做(避免越界)
+
+**Verdict:** PASS(conditional:Phase 8 必须填 cost_budget 字段)
+
+---
+
+### Audit 5.2 — Battery-cost 误用("还原到材料"不适用于工艺)
+
+**Source:** PITFALLS §5.2
+
+**Audit prompt:** 推导是否试图按节点成本求和?跨节点 coherence invariant 是否被当作 first-class 价值驱动?
+
+**This derivation's answer:**
+- 推导 **不** 按节点成本求和 — Phase 7 不涉及 cost 计算
+- §3.2 D2.3 显式声明"质量由跨节点 coherence 主导 — 一个电影不是各部分成本之和,而是 emergent Gestalt"(直接引用 PITFALLS §5.2 coherence budget)
+- §3.2 D2.4 推出 "跨节点 invariant ownership 必要" — coherence 是 first-class value driver
+- §4 `continuity_auditor` 节点是 cross-shot coherence 的显式 owner;`style_genome` + `character_designer` 是 cross-stage invariant 的显式 owner
+
+**Verdict:** PASS
+
+---
+
+### Audit 5.3 — Twitter/X pricing 误用("质疑假设" ≠ "无视数据")
+
+**Source:** PITFALLS §5.3
+
+**Audit prompt:** 核心假设是否分类为 `contingent` vs `validated-invariant`?是否在无 extraordinary evidence 的情况下保留 validated-invariant?
+
+**This derivation's answer:**
+- §1.4 显式定义分类框架 + 与 epistemic-status tag 的映射规则
+- §3 每个推导 step 都有 `Assumption classification` 字段(per Plan 02 verify: 38 处 validated-invariant|contingent)
+- §4 每 16 节点的 `Assumption classification` 字段填了(per Plan 03 verify: 54 处 validated-invariant)
+- §3.4 D4.3 + §6 Audit 1.2 共同确认:5 类 validated-invariants(Murch, Field, 180° 轴线, McKee, Stanislavski)被显式保留,无 extraordinary evidence 时 **不** 质疑
+- §3.2 D2.2 显式区分:180° 轴线(`validated-invariant`)+ 完播率加权(`contingent`)— 不混淆
+
+**Verdict:** PASS
+
+---
+
+### Audit 5.4 — Musk 自己警告 "first principles theater"
+
+**Source:** PITFALLS §5.4
+
+**Audit prompt:** 推导是否显式标 `analogy-valid` vs `analogy-breaks-here`?是否只对后者做深度推导?
+
+**This derivation's answer:**
+- §4 每 16 节点的 `Analogy validity` 字段填了(per Plan 03 verify: 17 处 analogy-valid|analogy-breaks-here)
+- 8 节点标 `analogy-valid`(style_genome, screenplay, character_designer, cinematographer, editor, colorist, theory_critic, quality_gate)— 这些节点的 derivation 较短(引用传统工艺直接适用)
+- 8 节点标 `analogy-breaks-here`(creative_source, script_auditor, prompt_injector, visual_executor, audio_pipeline, continuity_auditor, hook_retention, compliance_gate)— 这些节点的 derivation 较长(从 §3 第一性原理推出,不引用传统)
+- §3.4 D4.3 + §6 Audit 1.2 显式声明 `analogy-valid` 节点保留 validated-invariant(Murch, Field 等),不深度重推导
+- §3 推导链深度集中在 `analogy-breaks-here` 节点的支撑(creative_source 推导有 5 个 D step;prompt_injector 有 3 个 D step 等)
+
+**Verdict:** PASS
+
+---
+
+### §6.3 — 审计汇总
+
+| # | Failure mode | Verdict | Notes |
+|---|---|---|---|
+| 1.1 | "First principles" 装饰性语言 | PASS | "obviously" / "every pipeline has" grep = 0;推导长度 ≈ 节点描述长度 |
+| 1.2 | 把验证工艺当 bias 扔 | PASS | Murch + 180° 轴线 + Field 等都标 validated-invariant 保留 |
+| 1.3 | 过早模型承诺 | PASS | 16 节点 ID 全 model-agnostic;模型名只在 framing + steelman 出现 |
+| 1.4 | "不同于现有"误读为"优于" | PASS | 8:8 analogy-valid vs analogy-breaks-here 平衡 |
+| 1.5 | "推导自物理"谬误 | PASS | 22 epistemic-status tags in §3 + ~32 in §4 |
+| 1.6 | 反向工程想要的答案 | PASS | 16 steelman 段落 + 34 REJECTED options |
+| 5.1 | Booster-reuse 误用 | PASS (conditional) | 无节点从 reusability 推导;Phase 8 必须填 cost_budget |
+| 5.2 | Battery-cost 误用 | PASS | coherence 是 first-class value driver(D2.3+D2.4) |
+| 5.3 | Twitter/X pricing 误用 | PASS | 38 assumption classifications in §3 + 54 in §4 |
+| 5.4 | Musk 自己警告 first principles theater | PASS | 8:8 analogy-valid vs analogy-breaks-here;深度推导集中在后者 |
+
+**Overall verdict: PASS(全 10 PASS,其中 1 个 conditional)**
+
+**Conditional 项(5.1):** Phase 8 必须填 cost_budget 字段。Phase 7 推导已完成其责任(emit 节点 + 暗示 cost-driver class);cost 实际预算是 Phase 8 NODE-04 deliverable。
+
+---
+
+## §7 — 推导揭示的未解问题
+
+> per GOV-04 (Phase 12 OPEN-QUESTIONS.md 强制存在),本节记录推导 **未能解决** 的真实 gap。**不是** "我们没推导什么",**而是** "推导揭示了什么研究 gap 需要未来工作"。本节直接喂给 Phase 12 GOV-04 OPEN-QUESTIONS.md(copy-paste ready)。
+
+### §7.1 — 来自 RESEARCH.md §11 的 gaps(直接 carry forward)
+
+1. **Musk 引文主源分页** — STACK §4.1 给了 URL,但 Isaacson 2023 Simon & Schuster 不同版次页码不同。本推导按章节上下文引用,不引具体页码。如果未来消费者挑战特定引文,需对照特定版次验证。**推荐阶段:** Phase 12 finalization(在 OPEN-QUESTIONS.md 记录 + 标 LOW confidence)。
+
+2. **平台特定波动性分类** — PITFALLS §5.3 说 抖音 algorithmic weighting 是 `platform-algorithmic`(volatile),但部分平台 convention 可能是 `psychological`(stable)。Phase 7 的 Q2 推导做了 case-by-case 判断(§3.2 D2.2),但 borderline 案例需文档化:
+   - "前 3 秒 hook" 是 `psychological`(注意力衰减稳定)还是 `platform-algorithmic`(完播率加权偶然)?本推导判 `psychological`(感知响应)+ `platform-algorithmic`(加权策略)— 双标签。
+   - "付费卡点 pacing" 是 `platform-algorithmic`(平台变现机制)— 单标签。
+   - 需后续平台研究验证这些分类。**推荐阶段:** 后续研究 milestone(超 v2.0 PRFP 范围)。
+
+3. **Theory_critic 触发模式** — META-06 (Phase 8) 锁定 "创作者手动拉"。Phase 7 的 Q4 推导建立了 AI-limits 边界(D4.1-D4.5),但 **不** 设计 trigger 机制。Phase 8 必须解决:trigger 是创作者按钮?自动 heuristic 建议?always-available-but-optional?**推荐阶段:** Phase 8。
+
+### §7.2 — 来自 PITFALLS.md Open Questions 的 gaps(选择 carry forward)
+
+4. **成本上限假设验证** — META-05 (Phase 8) 假设 ¥1000-10000/episode。Phase 7 的推导 **未验证** 此假设(超 scope — Phase 7 是 derivation,不是 cost 估算);flag for Phase 8 cost_budget 填充时验证。**推荐阶段:** Phase 8。
+
+5. **2026-Q2 短剧平台 convention 稳定性** — 影响 §3 epistemic-status 标签;Phase 7 做了判断(完播率加权 = volatile;注意力衰减 = stable),但平台 convention drift monitoring 需要。**推荐阶段:** 后续 milestone(超 v2.0 PRFP)。
+
+6. **V8 审核门(review gate) survival into v2.0** — V8 架构有审核门;v2.0 可能 automate 部分。Phase 7 的 Q3 推导识别 AI-accelerated 操作(D3.1),但 **不** 决定哪些审核门 automate。Phase 8 human-gate placement 必须解决(per PITFALLS §2.9)。**推荐阶段:** Phase 8。
+
+### §7.3 — Phase 7 执行期间新发现的 gaps
+
+7. **节点数 vs Phase 8 C1-C7 过滤压缩空间** — Phase 7 候选集 16 节点(超 target 1 个)。Phase 8 C1-C7 过滤器能压缩到多少?Phase 7 无法预测 — Phase 8 实际过滤后才知。如果 Phase 8 输出仍 ≥15,可能需要 roadmap 修订。**推荐阶段:** Phase 8 后回顾。
+
+8. **`visual_executor` 和 `audio_pipeline` 合并的 critic 配对** — §4.8 + §4.9 合并 drawer+animator / 5 audio 任务。每生成配 critic(D2.5)的原则下,合并后的 visual_executor 配 `continuity_auditor`(cross-shot)+ `quality_gate`(final)是否够?还是需要 mid-loop visual critic 节点?Phase 8 必须解决。**推荐阶段:** Phase 8。
+
+9. **`compliance_gate` CN 法规具体阈值** — §4.15 合并 pre_check + final,但 CN 法规(网络安全法 + 广告法 + 视听节目服务通则)的具体阈值(政治敏感词、涉黄涉暴判定)需要独立法律审核。v1 PROJECT.md deferred to operator 的 "CN legal review of compliance_marketing refs" 项目在此 milestone 仍未执行。**推荐阶段:** Phase 9 后或独立法律审核 milestone。
+
+### §7.4 — Out-of-scope 但记录
+
+10. **Distribution-node 设计** — 本推导显式 **不** 包含 distribution / auto-upload 节点(per PROJECT.md Out-of-Scope AF-9: TOS 风险)。但短剧 pipeline 完整生命周期包含 distribution — 未来 milestone 可能需要补。**推荐阶段:** 未来 milestone(超 v2.0 PRFP)。
+
+11. **Live statistical GO/NO-GO 验证** — 本设计为 **design doc**,无 live-run。设计的实际效果(对比 V8 现有 pipeline 的量化提升)需要 kais-movie-agent 实施 + 实际运行 budget。**推荐阶段:** FUTURE-04(per REQUIREMENTS.md "Future Requirements")。
+
+---
+
+## References
+
+### Primary sources
+
+- **Musk, Elon.** 2012. *Foundation Series #3 interview with Kevin Rose*. URL: <https://www.kevinrose.com/p/elon-musk-interview-kevin-reboots-the-old-foundation-series>
+- **Isaacson, Walter.** 2023. *Elon Musk*. Simon & Schuster.
+- **Musk, Elon.** *The First Principles Method Explained by Elon Musk* [YouTube]. URL: <https://www.youtube.com/watch?v=NV3sBlRgzTI>
+- **Aristotle.** *Physics* Book I.1, 184a16-22 (Hardie & Gaye translation). URL: <http://www.logoslibrary.org/aristotle/physics/11.html>
+- **Aristotle.** *Metaphysics* Book Δ. URL: <https://classics.mit.edu/Aristotle/metaphysics.11.xi.html>
+- **Stanford Encyclopedia of Philosophy.** *Aristotle's Metaphysics*. URL: <https://plato.stanford.edu/entries/aristotle-metaphysics/>
+- **Altshuller, Genrich.** *TRIZ 40 Inventive Principles*. URL: <https://www.triz40.com/aff_Principles_TRIZ.php>
+- **IEEE.** *TRIZ 40 Principles Ranking by Contradiction Matrix*. URL: <https://ieeexplore.ieee.org/document/8226329/>
+- **Wilson, Neil L.** 1958-59. *The principle of charity* (named). Via Wikipedia: <https://en.wikipedia.org/wiki/Principle_of_charity>
+- **Graham, Paul.** 2008. *How to Disagree*. URL: <https://www.paulgraham.com/disagree.html>
+- **Zimmermann, Olaf et al.** *MADR (Markdown Architectural Decision Records)*. URL: <https://adr.github.io/madr/>
+
+### Secondary synthesis
+
+- **James Clear.** *First Principles: Elon Musk on the Power of Thinking for Yourself*. URL: <https://jamesclear.com/first-principles>
+- **Wikipedia.** *First principle*. URL: <https://en.wikipedia.org/wiki/First_principle>
+- **Wikipedia.** *Elon Musk (Isaacson book)*. URL: <https://en.wikipedia.org/wiki/Elon_Musk_(Isaacson_book)>
+- **Discourse Magazine.** *Now More Than Ever, We Need Steel-Manning*. URL: <https://www.discoursemagazine.com/p/now-more-than-ever-we-need-steel-manning>
+- **LessWrong.** *Better Disagreement*. URL: <https://www.lesswrong.com/posts/FhH8m5n8qGSSHsAgG/better-disagreement>
+
+### 102-book 语料库(cited per node's `corpus-anchor` field)
+
+**Path:** `/home/kai/Downloads/100+本影视剪辑书/converted/`(102 MinerU-converted 书目,~9.7M CN chars)
+
+**Hermes 集成:** `skills/movie-experts/_shared/project-corpus/`(12 内容 refs;完整文件列表见 `.planning/research/STACK.md §2.1`)
+
+### v2.0 PRFP 研究文档(本推导的 primary input)
+
+- `.planning/research/STACK.md` — corpus + 方法论 canon
+- `.planning/research/FEATURES.md` — 41-candidate palette(参考,**不** 作为推导输入)
+- `.planning/research/ARCHITECTURE.md` — Phase A-F 分解 + YAML canonical schema
+- `.planning/research/PITFALLS.md` — 7 类 failure mode(本推导 §6 审计的基础)
+- `.planning/research/SUMMARY.md` — 4 研究文件综合
+
+### kais-movie-agent 架构历史("what was tried" 数据集)
+
+- `/data/workspace/kais-movie-agent/docs/ARCHITECTURE_AND_WORKFLOW.md` (V1)
+- `/data/workspace/kais-movie-agent/docs/WORKFLOW.md` (V1/V2)
+- `/data/workspace/kais-movie-agent/docs/V2-REFACTOR-PLAN.md` (V2)
+- `/data/workspace/kais-movie-agent/docs/v6-architecture-notion.md` (V4.1/V6)
+- `/data/workspace/kais-movie-agent/docs/V8-ARCHITECTURE.md` (V8)
+
+### LLM-story-gen 研究(for Phase 10 forward-reference)
+
+(not load-bearing for Phase 7; recorded here for Phase 10 deep-dive)
+
+- **Plot Hole Detection benchmark** — arXiv 2504.11900. URL: <https://arxiv.org/html/2504.11900v1>
+- **ConStory-Bench** — arXiv 2603.05890 + GitHub. URLs: <https://arxiv.org/html/2603.05890v1>, <https://github.com/Picrew/ConStory-Bench>
+- **CONFACTCHECK** — ACL 2025 Findings. URL: <https://aclanthology.org/2025.findings-ijcnlp.129/>
+- **Survey on LLMs for Story Generation** — EMNLP 2025 Findings. URL: <https://aclanthology.org/2025.findings-emnlp.750.pdf>
+- **Learning to Reason for Long-Form Story Generation** — OpenReview. URL: <https://openreview.net/forum?id=dr3eg5ehR2>
+- **Awesome-Story-Generation** — GitHub. URL: <https://github.com/yingpengma/Awesome-Story-Generation>
+- **Creator-Centric Methods for LLM-Assisted Interactive Narrative** — ACM. URL: <https://dl.acm.org/doi/10.1145/3772318.3791362>
+- **Scaffolding the Story: An LLM-Based Assessment** — IASDR. URL: <https://dl.designresearchsociety.org/cgi/viewcontent.cgi?article=1644&context=iasdr>
+
+---
+
+*Document version: design-2026-06-16-prfp*
+*Supersedes: none*
+*Superseded by: TBD (Phase 12 will freeze this version when implementation begins)*
+*Phase 7 of v2.0 PRFP milestone — Pipeline Redesign from First Principles*
+*Bilingual policy: EN structure + CN prose (META-03)*
+*Physical location: hermes-agent/.planning/research/v2-pipeline-design/00-FIRST-PRINCIPLES.md (META-04)*
+
