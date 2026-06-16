@@ -121,7 +121,11 @@ Plans:
 5. 4 refs in `prompt_injector/references/` (prompt engineering patterns + cross-call consistency literature)
 6. README 21-expert inventory lists prompt_injector as NEW (Phase 16 entry)
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Create prompt_injector/ expert directory (SKILL.md + 4 refs + LICENSE.md + GAP-REPORT.md) + bidirectional edge sync to 4 consumers (creative_source, cinematographer, visual_executor, audio_pipeline) (Wave 1)
+- [ ] 16-02-PLAN.md — Close-out: README inventory + corpus tree + DAG diagram + _shared/glossary.md + skills-mapping.yaml sign-off (Wave 2, depends on 16-01)
 
 ---
 
