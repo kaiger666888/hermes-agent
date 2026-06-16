@@ -2,7 +2,7 @@
 
 **Project:** RAG-augmented movie-expert skill suite for AI 短剧 / 微电影 production.
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Status:** v3.0 in progress — 18 active expert_ids (17 post-Phase-15 + 1 Phase 16 prompt_injector NEW). Phases 13-15 merged 4+6+1 predecessors into continuity_auditor / compliance_gate / visual_executor / audio_pipeline; Phase 16 added prompt_injector (the only NEW AI-native node, no v1 predecessor). All RAG-aware. 5 Phase-7 + 3 Phase-8 experts have independent validation protocols.
+**Status:** v3.0 in progress — 18 expert_ids in codebase (15 active + 3 deprecated: performer / scene_builder / storyboard_designer). Phases 13-15 merged 4+6+1 predecessors into continuity_auditor / compliance_gate / visual_executor / audio_pipeline; Phase 16 added prompt_injector (the only NEW AI-native node, no v1 predecessor); Phase 17 deprecated 3 candidates (performer → character_designer+screenplay; scene_builder → cinematographer+style_genome; storyboard_designer → cinematographer). All RAG-aware. 5 Phase-7 + 3 Phase-8 experts have independent validation protocols. Phase 18 will reconcile to canonical 21-expert topology (16 DAG pipeline-roles + 5 aliases).
 **Last updated:** 2026-06-17
 
 ---
@@ -63,8 +63,8 @@ Cross-references to project corpus added for:
 |--------|--------------|------|------|
 | [`style_genome`](./style_genome/SKILL.md) | 风格基因专家 | 5D director/genre style encoding + blend protocol + cross-module alignment (root expert) | 5 (Phase 3 deep) |
 | [`screenplay`](./screenplay/SKILL.md) | 剧本专家 | Scene-level script + dialogue + emotion_curve design (HOOK-09 marker schema integrated) | 5 (Phase 3 deep) |
-| [`scene_builder`](./scene_builder/SKILL.md) | 三维场景建构专家 | FxSxA scene matrix + Blender 4.x previz + Pallasmaa space-as-character doctrine | 2 (Phase 5 light) |
-| [`performer`](./performer/SKILL.md) | 表演专家 | ExBxSxP matrix + Stanislavski + Laban Effort + Meisner truth-of-moment | 2 (Phase 5 light) |
+| [`scene_builder`](./scene_builder/SKILL.md) ⚠️ DEPRECATED Phase 17 | 三维场景建构专家 | ~~FxSxA scene matrix + Blender 4.x previz + Pallasmaa space-as-character doctrine~~ → folded into `cinematographer` (composition_lock sub-task) + `style_genome` | 2 (Phase 5 light) |
+| [`performer`](./performer/SKILL.md) ⚠️ DEPRECATED Phase 17 | 表演专家 | ~~ExBxSxP matrix + Stanislavski + Laban Effort + Meisner truth-of-moment~~ → folded into `character_designer` (voice + behavioral tics) + `screenplay` (dialogue subtext) | 2 (Phase 5 light) |
 | [`visual_executor`](./visual_executor/SKILL.md) | 视觉执行专家 | Unified FLUX 2 image gen (drawer sub-step) + Hermes-catalog video gen (animator sub-step) — merged Phase 14 per v2.0 PRFP DAG §4.8 | 5 (Phase 5 light × 2 + Phase 14 merge) |
 | [`colorist`](./colorist/SKILL.md) | 色彩专家 | CxSxZ 28-combination color intent + LUT design + Bellantoni color psychology | 5 (Phase 3 deep) |
 | [`editor`](./editor/SKILL.md) | 剪辑专家 | FxRxT editing matrix + Murch Rule of Six + 180° axis compliance | 5 (Phase 3 deep) |
@@ -86,7 +86,7 @@ Cross-references to project corpus added for:
 |--------|--------------|------|---------------------|------|
 | [`script_auditor`](./script_auditor/SKILL.md) | 剧本审计专家 | 5-dimension quantitative script audit (narrative / emotion / hook / character / completion-forecast) BEFORE production. Decoupled from screenplay (screenplay writes, script_auditor audits) | Pearson correlation between predicted & actual 完播率 ≥ 0.65 on 100-script labeled corpus | 5 |
 | [`character_designer`](./character_designer/SKILL.md) | 角色设计专家 | Character Bible 2.0 authoring with 4D-Anchor (front/3-quarter/side/back) + layered STYLE_PREFIX (CORE/IDENTITY/VARIANCE) + consistency stress test. Decoupled from visual_executor (visual_executor generates images, character_designer defines identity contract) | CLIP-I / DINO-I cross-scene similarity ≥ 0.80 on 30-character × 7-image corpus | 4 |
-| [`storyboard_designer`](./storyboard_designer/SKILL.md) | 分镜设计专家 | Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring (depth/identity/lighting/temporal) + extension-chain end_frames. Decoupled from cinematographer (cinematographer defines rules, storyboard_designer applies them) | Shot count accuracy / shot size distribution KL / rhythm curve DTW vs professional ground truth on 50-script corpus | 4 |
+| [`storyboard_designer`](./storyboard_designer/SKILL.md) ⚠️ DEPRECATED Phase 17 | 分镜设计专家 | ~~Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring (depth/identity/lighting/temporal) + extension-chain end_frames. Decoupled from cinematographer (cinematographer defines rules, storyboard_designer applies them)~~ → folded into `cinematographer` (composition_lock sub-task per Phase 7 §3.4 D3.4) | Shot count accuracy / shot size distribution KL / rhythm curve DTW vs professional ground truth on 50-script corpus | 4 |
 | [`creative_source`](./creative_source/SKILL.md) | 创意源头专家 | Story Kernel mining from 6 social strata (institutional / technological / demographic / spatial / intergenerational / psychosocial). DAG root — upstream of style_genome. Sources: Bourdieu / Foucault / Giddens + Lefebvre + Han Byung-Chul | Strata resonance Pearson / Bourdieu field accuracy / unspeakability AUC on 100-topic labeled corpus | 4 |
 
 ### 3 New Experts (Phase 8 — Project Corpus Integration, 2026-06-16)
@@ -107,6 +107,17 @@ The only NEW AI-native node in v3.0 (no v1 predecessor per `skills-mapping.yaml:
 | Expert | Chinese Name | Role | Source | Refs |
 |--------|--------------|------|--------|------|
 | [`prompt_injector`](./prompt_injector/SKILL.md) | 提示注入专家 | AI-native node translating visual_intent + style_genome + character_assets → model_prompts + consistency_context. Cross-call consistency context + token budget management (≤4000/call). No v1 predecessor (new_ai_native mapping) | 02-NODE-SPECS.md §2.7 + Phase 7 §4.7 D3.5+D2.4 | 4 |
+
+
+### 3 Deprecated Experts (Phase 17 — 2026-06-17)
+
+Per `.planning/research/v2-pipeline-design/skills-mapping.yaml` `not_in_new_dag:` section (disposition: `deprecate_candidate`). Each deprecated SKILL.md retains its original expert_id + full body content (FOUND-08 backward compatibility); only `status: deprecated` + `metadata.hermes.{deprecated, deprecated_reason, inheritance_targets}` frontmatter + a body deprecation blockquote are added. Consumer `related_skills` edges were rewired to the inheritance targets in Plan 17-01.
+
+| Expert | Chinese Name | Original Role | Inheritance Target(s) | Rationale |
+|--------|--------------|---------------|------------------------|-----------|
+| [`performer`](./performer/SKILL.md) | 表演专家 | ExBxSxP matrix + Stanislavski + Laban Effort + Meisner truth-of-moment | `character_designer` + `screenplay` | Performance truth folded into character_designer (voice + behavioral tics) + screenplay (dialogue subtext); no standalone node necessary |
+| [`scene_builder`](./scene_builder/SKILL.md) | 三维场景建构专家 | FxSxA scene matrix + Blender 4.x previz + Pallasmaa space-as-character doctrine | `cinematographer` + `style_genome` | Scene design folded into cinematographer (mise-en-scène as composition_lock sub-task) + style_genome |
+| [`storyboard_designer`](./storyboard_designer/SKILL.md) | 分镜设计专家 | Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring + extension-chain end_frames | `cinematographer` | Phase 7 §3.4 D3.4: storyboard folded into cinematographer composition_lock sub-task |
 
 
 ---
@@ -147,15 +158,10 @@ The only NEW AI-native node in v3.0 (no v1 predecessor per `skills-mapping.yaml:
                          │                                 └────────┬────────┘
                          ▼                                          │
                 ┌─────────────────┐                                 │
-                │ cinematographer │                                 │
-                │   镜头           │                                 │
-                └────────┬────────┘                                 │
-                         │                                          │
-                         ▼                                          │
-                ┌─────────────────┐                                 │
-                │ storyboard_     │ ◄───────────────────────────────┘
-                │ designer 分镜    │
-                │ (Storyboard JSON)│
+                │ cinematographer │ ◄───────────────────────────────┘
+                │   镜头           │   (composition_lock sub-task absorbs
+                │ (composition_   │    deprecated scene_builder +
+                │  lock sub-task) │    storyboard_designer)
                 └────────┬────────┘
                          │
                          ▼
@@ -165,17 +171,12 @@ The only NEW AI-native node in v3.0 (no v1 predecessor per `skills-mapping.yaml:
                     └────────┬────────┘   ◄── character_assets
                              │               (parallel edge)
                              ▼
-                ┌────────┴────────┬──────────────────┐
-                │                 │                  │
-                ▼                 ▼                  ▼
-       ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-       │ scene_builder │  │   performer   │  │  production   │
-       │ 三维场景建构   │  │   表演         │  │  制作管理      │
-       └───────┬───────┘  └───────┬───────┘  └───────┬───────┘
-               │                  │                  │
-               └──────────┬───────┴──────────────────┘
-                          │
-                          ▼
+                ┌─────────────────────┐
+                │     production      │
+                │     制作管理          │
+                └──────────┬──────────┘
+                           │
+                           ▼
                 ┌─────────────────┐
                 │  visual_        │   (FLUX stills + Runway/Kling/Veo video)
                 │  executor 视觉  │   (Phase 14 merge: drawer + animator sub-steps)
@@ -202,15 +203,17 @@ The only NEW AI-native node in v3.0 (no v1 predecessor per `skills-mapping.yaml:
                 └─────────────────┘
 ```
 
+**Deprecated (Phase 17, 2026-06-17):** `performer` → `character_designer` + `screenplay`; `scene_builder` → `cinematographer` (composition_lock) + `style_genome`; `storyboard_designer` → `cinematographer` (composition_lock sub-task per Phase 7 §3.4 D3.4). The 3 deprecated experts no longer appear as active collaborators in the DAG above — their roles are folded into the inheritance targets. See the [3 Deprecated Experts (Phase 17)](#3-deprecated-experts-phase-17--2026-06-17) inventory sub-section for full rationale + FOUND-08 preservation note.
+
 **Key DAG properties (v2 with Phase 7 + 8):**
 - **New root:** `creative_source` (no upstream; mines Story Kernel from social strata) — replaces style_genome as DAG root
 - **Quality loop:** `screenplay` ↔ `script_auditor` iterate until target audit band
 - **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by visual_executor / audio_pipeline (lip_sync sub-step) / continuity_auditor
-- **Bridge nodes:** `storyboard_designer` fills cinematographer → visual_executor gap with concrete Storyboard JSON
+- **Bridge nodes:** ~~`storyboard_designer` fills cinematographer → visual_executor gap with concrete Storyboard JSON~~ (Phase 17 v3.0: `storyboard_designer` deprecated — its bridge role is now folded into `cinematographer`'s composition_lock sub-task)
 - **Audio-visual lock:** `audio_pipeline` (voicer sub-step) produces audio → `audio_pipeline` (lip_sync sub-step) aligns to footage (now intra-expert handoff; still decoupled, composable)
 - **Bottleneck nodes:** `screenplay` (after style) / `visual_executor` (after intent) / `audio_pipeline` (after all audio + footage) — single node now subsumes lip_sync + mixer bottleneck roles
 - **Audit nodes:** `continuity_auditor` (parallel to audio_pipeline) + `script_auditor` (pre-production) verify consistency
-- **AI-native prompt assembly:** `prompt_injector` (Phase 16) translates visual_intent + style_genome_5d + character_assets into model_prompts + consistency_context consumed by visual_executor. No traditional cinematography precedent — this node exists because AI generation requires explicit prompt engineering that human director tools did not. Indirect path from DAG root: creative_source → style_genome → cinematographer → storyboard_designer → prompt_injector.
+- **AI-native prompt assembly:** `prompt_injector` (Phase 16) translates visual_intent + style_genome_5d + character_assets into model_prompts + consistency_context consumed by visual_executor. No traditional cinematography precedent — this node exists because AI generation requires explicit prompt engineering that human director tools did not. Indirect path from DAG root: creative_source → style_genome → cinematographer → prompt_injector (Phase 17 v3.0: storyboard_designer node removed from path — folded into cinematographer composition_lock).
 - **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
 - **Phase 8 verticals (cross-cutting):** `theory_critic` / `documentary_maker` / `animation_studio` are NOT in the linear pipeline — they are **consultative experts** invoked when the pipeline encounters their domain (theory analysis, documentary-style, animation). They draw from `_shared/project-corpus/` (102-book library).
 
@@ -456,7 +459,7 @@ If you build on this suite, please cite:
 ---
 
 *Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7) + 2026-06-17 (Phases 13-16).*
-*v3.0 = 18 active expert_ids (17 post-Phase-15 + 1 Phase 16 prompt_injector NEW — AI-native, no v1 predecessor) — Phase 17 will deprecate 3 candidates (performer, scene_builder, storyboard_designer); Phase 18 will reconcile to canonical 21-expert topology (16 DAG pipeline-roles + 5 aliases). All RAG-aware, all phantom refs stripped.*
+*v3.0 = 18 expert_ids in codebase (15 active + 3 deprecated: performer, scene_builder, storyboard_designer). Phase 17 deprecation complete. Phase 18 will reconcile to canonical 21-expert topology (16 DAG pipeline-roles + 5 aliases). All RAG-aware, all phantom refs stripped.*
 *Total ref corpus: ~85 files (~1.9MB cited fair-use content).*
 *5 Phase 7 experts carry independent validation protocols (no LLM-judge required).*
 *Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
