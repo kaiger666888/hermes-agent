@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: executing
-last_updated: "2026-06-16T18:20:29.984Z"
+status: ready_to_plan
+last_updated: 2026-06-16T18:23:47.430Z
 last_activity: 2026-06-17 — Phase 17 Plan 02 COMPLETE (close-out docs: README inventory + DAG diagram + footer count + glossary deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates). Phase 17 fully complete; Phase 18 (validate + docs) is the only remaining v3.0 phase.
 progress:
   total_phases: 6
@@ -11,6 +11,7 @@ progress:
   total_plans: 13
   completed_plans: 13
   percent: 83
+stopped_at: Phase 17 complete (2/2) — ready to discuss Phase 18
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -24,14 +25,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 17 COMPLETE — 3 candidates deprecated (performer / scene_builder / storyboard_designer) with full close-out documentation. Phase 18 (validate + docs) is the next + final v3.0 phase.
+**Current focus:** Phase 18 — validation + documentation + collaboration graph update
 
 ## Current Position
 
-Phase: 17 (complete) → Phase 18 next
-Plan: 17-02 complete (Phase 17 fully done)
-Status: Executing
-Last activity: 2026-06-17
+Phase: 18
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-16
 
 ### Progress
 
