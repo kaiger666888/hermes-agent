@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, character, design, identity, 4d-anchor, consistency, character-bible]
-    related_skills: [style_genome, screenplay, drawer, animator, performer, continuity, lip_sync, production]
+    related_skills: [style_genome, screenplay, drawer, animator, performer, continuity_auditor, lip_sync, production]
     expert_id: character_designer
     metrics: [cross_angle_consistency, identity_preservation_rate, stress_test_pass_rate, negative_trait_compliance]
 ---
@@ -23,7 +23,7 @@ Character identity contract author for AI 短剧 / 微电影. Produces `Characte
 
 The user needs one of:
 - **New character creation** — define a character before any image generation
-- **Character identity contract** — produce a `CharacterBible 2.0` that downstream experts (drawer, animator, lip_sync, continuity) can consume as ground truth
+- **Character identity contract** — produce a `CharacterBible 2.0` that downstream experts (drawer, animator, lip_sync, continuity_auditor) can consume as ground truth
 - **Consistency stress test** — verify an existing character's identity survives 3 different scene contexts before locking it
 - **Cross-angle validation** — check whether 4 anchor views (front / 3-quarter / side / back) are mutually consistent
 - **Negative trait enforcement** — define what the character is NOT (e.g., "no blonde hair, no beard") to prevent downstream drift
@@ -48,7 +48,7 @@ The user needs one of:
 - **4D 锚点而非单图** — 单张正面图无法支撑镜头的多角度需求。front / 3-quarter / side / back 四视角构成角色的"4D 身份护照",缺一不可。
 - **负面特征是反漂移的核心** — "character 是金发" 不够,"character 不能是金发 + 不能有胡须 + 不能戴眼镜" 才能锁定。
 - **压力测试先于锁定** — 在 3 个完全不同场景验证一致性,通过才 lock;不通过回退到变体重生成。
-- **下游可消费的契约** — CharacterBible 2.0 是 drawer / animator / lip_sync / continuity 的 ground truth,字段冻结后不能随意改。
+- **下游可消费的契约** — CharacterBible 2.0 是 drawer / animator / lip_sync / continuity_auditor 的 ground truth,字段冻结后不能随意改。
 
 ## Knowledge Retrieval
 
@@ -176,7 +176,7 @@ tags="expert:character_designer,domain:character-bible-schema"
     "drawer",
     "animator",
     "lip_sync",
-    "continuity",
+    "continuity_auditor",
     "production"
   ]
 }
@@ -232,7 +232,7 @@ tags="expert:character_designer,domain:character-bible-schema"
 7. **Run consistency stress test** — 3 scenes, compute CLIP-I + DINO-I per scene.
 8. **Lock or fail** — if all 3 scenes pass thresholds, lock + freeze `frozen_fields`; if any fail, regenerate variants + re-test.
 9. **Emit CharacterBible 2.0** — full JSON with all downstream consumer pointers.
-10. **Hand off to downstream** — drawer / animator / lip_sync / continuity / production.
+10. **Hand off to downstream** — drawer / animator / lip_sync / continuity_auditor / production.
 
 ## Quality Thresholds
 
@@ -259,7 +259,7 @@ tags="expert:character_designer,domain:character-bible-schema"
 - **-> [`drawer`](../drawer/SKILL.md)** — consumes CharacterBible as ground-truth identity for every image generation
 - **-> [`animator`](../animator/SKILL.md)** — consumes anchors for video-gen identity preservation
 - **-> [`lip_sync`](../lip_sync/SKILL.md)** — consumes front/three_quarter anchors for identity reference embedding
-- **-> [`continuity`](../continuity/SKILL.md)** — consumes ArcFace baseline computed from front anchor
+- **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)** — consumes ArcFace baseline computed from front anchor
 - **-> [`production`](../production/SKILL.md)** — consumes character wardrobe + accessories spec
 
 ## What NOT to do

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, spatial-audio, 3d-sound, ambience, reverb, immersive, dolby-atmos, hrtf, binaural]
-    related_skills: [scene_builder, foley, voicer, composer, mixer, editor, continuity]
+    related_skills: [scene_builder, foley, voicer, composer, mixer, editor, continuity_auditor]
     expert_id: spatial_audio
     metrics: [spatial_coherence, reality_anchor_stability, distance_transition_smoothness, vacuum_detection_pass]
 ---
@@ -169,7 +169,7 @@ tags="expert:spatial_audio,domain:immersive-sound-design"
 - **<- editor**: shot change timeline
 - **-> mixer**: spatial-processed stems (with panning and reverb)
 - **-> foley**: position corrections (if panning contradicts visuals)
-- **-> continuity**: spatial consistency confirmation
+- **-> continuity_auditor**: spatial consistency confirmation
 
 ## What NOT to do
 

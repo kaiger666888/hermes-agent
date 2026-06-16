@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, video, animation, video-gen, camera-motion, temporal-consistency, veo, kling, ltx, pixverse]
-    related_skills: [drawer, scene_builder, editor, performer, colorist, continuity, cinematographer, production]
+    related_skills: [drawer, scene_builder, editor, performer, colorist, continuity_auditor, cinematographer, production]
     expert_id: animator
     metrics: [motion_smoothness, motion_complexity, temporal_consistency]
 ---
@@ -135,7 +135,7 @@ tags="expert:animator,domain:temporal-consistency"
 - **<- editor**: beat timing and shot duration
 - **<- performer**: character motion/action parameters
 - **<- colorist**: CxSxZ temporal consistency reference
-- **-> continuity**: video clip for cross-shot consistency audit
+- **-> continuity_auditor**: video clip for cross-shot consistency audit
 
 ## What NOT to do
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, storyboard, shot-list, shot-decomposition, 4d-anchoring, cinematography, previsualization]
-    related_skills: [screenplay, cinematographer, scene_builder, character_designer, drawer, animator, editor, continuity]
+    related_skills: [screenplay, cinematographer, scene_builder, character_designer, drawer, animator, editor, continuity_auditor]
     expert_id: storyboard_designer
     metrics: [shot_count_accuracy, shot_size_distribution, rhythm_curve_fit, axis_compliance_rate, anchoring_completeness]
 ---
@@ -171,7 +171,7 @@ tags="expert:storyboard_designer,domain:storyboard-schema"
     "animator",
     "scene_builder",
     "editor",
-    "continuity"
+    "continuity_auditor"
   ]
 }
 ```
@@ -264,7 +264,7 @@ tags="expert:storyboard_designer,domain:storyboard-schema"
 - **-> [`drawer`](../drawer/SKILL.md)** — generates per-shot reference images using `reference_image` + `anchoring`
 - **-> [`animator`](../animator/SKILL.md)** — generates per-shot video using `end_frame` chain + `anchoring.temporal`
 - **-> [`editor`](../editor/SKILL.md)** — cuts per shot duration + assembles final cut
-- **-> [`continuity`](../continuity/SKILL.md)** — audits cross-shot consistency (character / wardrobe / color / axis)
+- **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)** — audits cross-shot consistency (character / wardrobe / color / axis)
 
 ## What NOT to do
 

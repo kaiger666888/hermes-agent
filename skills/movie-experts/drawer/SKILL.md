@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, image, flux-2, lora, ip-adapter, instantid, visual, cinematic, character-consistency]
-    related_skills: [screenplay, continuity, colorist, animator, style_genome, compliance_marketing, cinematographer, production]
+    related_skills: [screenplay, continuity_auditor, colorist, animator, style_genome, compliance_marketing, cinematographer, production]
     expert_id: drawer
     metrics: [aesthetic_score, character_consistency, film_realism, vram_efficiency]
 ---
@@ -135,7 +135,7 @@ per [`references/character-consistency-lora.md`](./references/character-consiste
 - **<- performer**: action_prompt (character pose/action descriptions)
 - **<- colorist**: color_intent.json (influences generation parameters)
 - **-> animator**: first_frame image as I-frame reference
-- **-> continuity**: production frames for cross-shot consistency audit
+- **-> continuity_auditor**: production frames for cross-shot consistency audit
 - **-> colorist**: raw frames for color grading
 
 ## What NOT to do

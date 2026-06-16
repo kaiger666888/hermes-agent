@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design, pallasmaa, architectural-storytelling]
-    related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity, cinematographer, production]
+    related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity_auditor, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
 ---
@@ -166,7 +166,7 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 - **-> animator**: camera_constraints.json (camera path constraints)
 - **-> editor**: axis data + previz video
 - **-> foley**: material_annotations.json (surface material tags)
-- **-> continuity**: scene layout reference (environment consistency audit)
+- **-> continuity_auditor**: scene layout reference (environment consistency audit)
 
 ## What NOT to do
 

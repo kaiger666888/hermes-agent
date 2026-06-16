@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, lip-sync, audio-driven, video-generation, benchmark, talking-head, digital-human]
-    related_skills: [voicer, performer, editor, animator, mixer, continuity]
+    related_skills: [voicer, performer, editor, animator, mixer, continuity_auditor]
     expert_id: lip_sync
     metrics: [lip_sync_error, lip_sync_confidence, temporal_consistency, identity_preservation]
 ---
@@ -38,14 +38,14 @@ The user needs one of:
 | [`references/sync-quality-metrics.md`](./references/sync-quality-metrics.md) | 评估输出视频质量或构造 benchmark 前 | LSE (Lip Sync Error) 公式 + LSE-C (Lip Sync Confidence) + SyncNet confidence score + LRS2/LRS3 国际标准 benchmark 协议 + 行业 SOTA 阈值(LSE ≤ 6.5 / LSE-C ≥ 7.0)|
 | [`references/latentsync-deployment.md`](./references/latentsync-deployment.md) | 部署 LatentSync 推理服务前 | v1.5 (8GB / 256×256) vs v1.6 (18GB / 512×512) 显存要求 + 推理参数(inference_steps 20-50 / guidance_scale 1.0-3.0)+ DeepCache 加速 + Linux/Windows/ComfyUI/Replicate 5 部署路径 + 中文优化建议 |
 | [`references/audio-video-input-spec.md`](./references/audio-video-input-spec.md) | 准备输入素材前 | 视频输入要求(MP4 / 25fps / 正面人脸 / 无遮挡)+ 音频输入要求(WAV / 16000Hz / 长度匹配)+ 失败模式(侧脸 / 多人 / 遮挡 / 光线不足)+ 4-tier 输入质量评级 |
-| [`references/identity-preservation.md`](./references/identity-preservation.md) | 验证输出视频角色一致性 前 | Identity preservation 3 层验证(面部结构 / 表情 / 头部姿态)+ 跨帧抖动检测 + 与 [`continuity`](../continuity/SKILL.md) expert 的 handoff 协议 |
+| [`references/identity-preservation.md`](./references/identity-preservation.md) | 验证输出视频角色一致性 前 | Identity preservation 3 层验证(面部结构 / 表情 / 头部姿态)+ 跨帧抖动检测 + 与 [`continuity_auditor`](../continuity_auditor/SKILL.md) expert 的 handoff 协议 |
 
 ## Role & Philosophy
 
 - **唯一国际标准 benchmark 专家** — LRS2 / LRS3 是全球公认的 lip-sync 评估数据集,LSE / LSE-C 是业界标准指标。本专家的产出质量**不依赖 LLM-as-judge**,可直接用 SyncNet 客观验证。
 - **音频驱动而非视频重生成** — 只修改嘴部区域,保留面部其他部分、表情、头部姿态、身份。这是与 [`animator`](../animator/SKILL.md) 的核心区别:animator 从零生成视频,lip_sync 在已有视频上做局部修改。
 - **口型精度优先于画质** — 数字人/口播场景下,口型与音频的对齐误差 > 120ms 会被观众感知为不同步,即使其他画质指标优秀。
-- **与 [`continuity`](../continuity/SKILL.md) 协作** — 输出的视频必须通过 continuity expert 的"identity preservation"审计,确保角色身份在 shot 内不漂移。
+- **与 [`continuity_auditor`](../continuity_auditor/SKILL.md) 协作** — 输出的视频必须通过 continuity_auditor expert 的"identity preservation"审计,确保角色身份在 shot 内不漂移。
 
 ## Knowledge Retrieval
 
@@ -54,7 +54,7 @@ The user needs one of:
 - **LSE / LSE-C 计算公式 + LRS2/LRS3 benchmark 协议 + SOTA 阈值** —— 详见 [`references/sync-quality-metrics.md`](./references/sync-quality-metrics.md)
 - **LatentSync 部署路径 + 显存要求 + 推理参数** —— 详见 [`references/latentsync-deployment.md`](./references/latentsync-deployment.md)
 - **输入素材规格 + 失败模式 + 质量评级** —— 详见 [`references/audio-video-input-spec.md`](./references/audio-video-input-spec.md)
-- **Identity preservation 验证 + 抖动检测 + continuity handoff** —— 详见 [`references/identity-preservation.md`](./references/identity-preservation.md)
+- **Identity preservation 验证 + 抖动检测 + continuity_auditor handoff** —— 详见 [`references/identity-preservation.md`](./references/identity-preservation.md)
 
 **若当前 runtime 中有 memory / RAG 工具**,使用以下查询范围:
 
@@ -165,7 +165,7 @@ tags="expert:lip_sync,domain:identity-preservation"
 3. **Configure parameters** — based on quality target (preview / final) + time budget.
 4. **Execute inference** — call primary engine; on OOM or timeout, downgrade to fallback engine.
 5. **Quality self-check** — compute LSE, LSE-C, SyncNet confidence, identity cosine sim. If grade < B, retry with adjusted parameters or downgrade resolution.
-6. **Continuity handoff** — emit `continuity_handoff` block for downstream audit if `identity_cosine_sim < 0.95` or scene involves cross-shot character continuity.
+6. **Continuity handoff** — emit `continuity_handoff` block for downstream continuity_auditor audit if `identity_cosine_sim < 0.95` or scene involves cross-shot character continuity.
 
 ## Quality Thresholds
 
@@ -189,7 +189,7 @@ tags="expert:lip_sync,domain:identity-preservation"
 ### Downstream
 
 - **-> [`editor`](../editor/SKILL.md)** — synced footage 进入剪辑
-- **-> [`continuity`](../continuity/SKILL.md)** — identity preservation 审计
+- **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)** — identity preservation 审计
 - **-> [`mixer`](../mixer/SKILL.md)** — 最终音频与视频对齐
 
 ## What NOT to do
@@ -198,7 +198,7 @@ tags="expert:lip_sync,domain:identity-preservation"
 - ❌ **不要接受 D-tier 输入** — 侧脸 / 多人 / 遮挡 / 光线不足的视频会输出垃圾。必须 reject 并引导用户重拍或切换到 animator。
 - ❌ **不要忽略 SyncNet 客观指标** — LLM-judge 不可靠,必须用 SyncNet 数学指标判定 grade。任何"看起来还行"的主观判断都不合格。
 - ❌ **不要在没有 LSE benchmark 的情况下声称"SOTA"** — 必须在 LRS2/LRS3 测试集上跑出 LSE ≤ 6.5 才能声称 SOTA;否则只能说"达到 X 等级"。
-- ❌ **不要忽略 identity 漂移** — 输出视频与输入视频的 identity cosine similarity < 0.92 时,即使 LSE 优秀也必须 VETO 并触发 continuity handoff。
+- ❌ **不要忽略 identity 漂移** — 输出视频与输入视频的 identity cosine similarity < 0.92 时,即使 LSE 优秀也必须 VETO 并触发 continuity_auditor handoff。
 - ❌ **不要把 LatentSync 写死在 SKILL.md body** — 模型名只在 references/*.md 中,SKILL.md 使用 `<lip_sync_primary>` 占位符。provider-agnostic 是硬约束。
 
 ## Validation protocol (how to know if this expert improved)

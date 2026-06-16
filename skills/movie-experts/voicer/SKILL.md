@@ -30,7 +30,7 @@ The user needs to generate character dialogue audio, create voice profiles, synt
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
 | [`references/cn-tts-model-matrix.md`](./references/cn-tts-model-matrix.md) | 选择 TTS provider 或 替换 phantom CosyVoice 前 | Hermes 6-provider 能力矩阵(MiniMax / ElevenLabs / Voxtral / Gemini / Edge / NeuTTS)+ per-character 推荐 + 5s voice cloning sample 协议 + CosyVoice phantom 替换 mapping + TTS prompt 工程 5 大原则 + per-platform TTS divergence |
-| [`references/character-voice-consistency.md`](./references/character-voice-consistency.md) | 验证 voice identity 跨 shot/episode 一致性 前 | Speaker embedding cosine similarity 3 层验证 + voice cloning 4-tier 协议 + per-character voice baseline 数据结构 + cross-episode voice arc 协议 + 与 mixer / continuity handoff |
+| [`references/character-voice-consistency.md`](./references/character-voice-consistency.md) | 验证 voice identity 跨 shot/episode 一致性 前 | Speaker embedding cosine similarity 3 层验证 + voice cloning 4-tier 协议 + per-character voice baseline 数据结构 + cross-episode voice arc 协议 + 与 mixer / continuity_auditor handoff |
 
 ## Knowledge Retrieval
 
