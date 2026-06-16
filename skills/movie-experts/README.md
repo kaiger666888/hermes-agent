@@ -36,7 +36,7 @@ Integrated **102-book Chinese film production library** (`/home/kai/Downloads/10
 | `screenwriting-chinese-and-supplementary.md` | 芦苇 / 维基·金 / 刘天赐 / 编剧策略 / 奥班农 / 温斯顿 | screenplay |
 | `cinematography-masterclass-and-grammar.md` | 阿里洪 / 100 手法 / 拉片子 / 拆解好电影 / 21 位大师 | cinematographer, editor |
 | `lighting-equipment-and-design.md` | 照明器材 / 影视光线艺术 / 镜头在说话 / 狼图腾 | cinematographer, colorist |
-| `editing-sound-post.md` | 剪辑之道 / 魅力剪辑 / 音效圣经 / 视听 / 王竞六讲 | editor, foley, composer, documentary_maker |
+| `editing-sound-post.md` | 剪辑之道 / 魅力剪辑 / 音效圣经 / 视听 / 王竞六讲 | editor, audio_pipeline, documentary_maker |
 | `production-chinese-and-low-budget.md` | 拍电影 / 制片手册 / 创意制片 / 好莱坞模式 / 英国基础 / 预算手册 | production |
 | `animation-disney-system.md` | 迪士尼的艺术 / 影视动画剧本赏析 | animation_studio |
 
@@ -68,11 +68,7 @@ Cross-references to project corpus added for:
 | [`visual_executor`](./visual_executor/SKILL.md) | 视觉执行专家 | Unified FLUX 2 image gen (drawer sub-step) + Hermes-catalog video gen (animator sub-step) — merged Phase 14 per v2.0 PRFP DAG §4.8 | 5 (Phase 5 light × 2 + Phase 14 merge) |
 | [`colorist`](./colorist/SKILL.md) | 色彩专家 | CxSxZ 28-combination color intent + LUT design + Bellantoni color psychology | 5 (Phase 3 deep) |
 | [`editor`](./editor/SKILL.md) | 剪辑专家 | FxRxT editing matrix + Murch Rule of Six + 180° axis compliance | 5 (Phase 3 deep) |
-| [`composer`](./composer/SKILL.md) | 配乐专家 | MusicGen-Large 4 mode + Chion audio-vision 5 modes + emotion_curve sync | 2 (Phase 5 light) |
-| [`foley`](./foley/SKILL.md) | 拟音专家 | Stable Audio Open 1.0 (replaces phantom AudioLDM-2) + 7D parametric + BBC 21-cat taxonomy | 2 (Phase 5 light) |
-| [`spatial_audio`](./spatial_audio/SKILL.md) | 空间音频专家 | Dolby Atmos Bed+Objects + 6D encoding + HRTF binaural + 5 immersive patterns | 2 (Phase 5 light) |
-| [`mixer`](./mixer/SKILL.md) | 混音专家 | Senior Mixing Secrets + LUFS per-platform + dialogue ducking + EQ carving | 2 (Phase 5 light) |
-| [`voicer`](./voicer/SKILL.md) | 配音专家 | Multi-provider TTS (MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS, replaces phantom CosyVoice) + speaker embedding | 2 (Phase 5 light) |
+| [`audio_pipeline`](./audio_pipeline/SKILL.md) | 音频管线专家 | Unified 6-sub-step audio production: voicer (TTS) + lip_sync (audio-driven sync) + composer (music/score) + foley (SFX) + mixer (mastering) + spatial_audio (3D encoding). Merged Phase 15 per v2.0 PRFP DAG §4.9. | 2-4 (Phase 5 light × 5 + Phase 7A-2 lip_sync benchmark) |
 | [`continuity_auditor`](./continuity_auditor/SKILL.md) | 连续性专家 | 4-dimension cross-shot audit (face/wardrobe/color/object) + eyeline match + 180° axis | 2 (Phase 5 light) |
 
 ### 4 New Experts (Phase 1-5)
@@ -89,7 +85,6 @@ Cross-references to project corpus added for:
 | Expert | Chinese Name | Role | Validation Protocol | Refs |
 |--------|--------------|------|---------------------|------|
 | [`script_auditor`](./script_auditor/SKILL.md) | 剧本审计专家 | 5-dimension quantitative script audit (narrative / emotion / hook / character / completion-forecast) BEFORE production. Decoupled from screenplay (screenplay writes, script_auditor audits) | Pearson correlation between predicted & actual 完播率 ≥ 0.65 on 100-script labeled corpus | 5 |
-| [`lip_sync`](./lip_sync/SKILL.md) | 唇形同步专家 | Audio-driven lip sync (LatentSync v1.5/v1.6) producing synced video from (footage + audio) pair. Decoupled from voicer (voicer synthesizes audio, lip_sync aligns audio to footage) | LSE / LSE-C / SyncNet confidence on **LRS2 / LRS3 international-standard benchmark** (SOTA target LSE ≤ 5.5) | 4 |
 | [`character_designer`](./character_designer/SKILL.md) | 角色设计专家 | Character Bible 2.0 authoring with 4D-Anchor (front/3-quarter/side/back) + layered STYLE_PREFIX (CORE/IDENTITY/VARIANCE) + consistency stress test. Decoupled from visual_executor (visual_executor generates images, character_designer defines identity contract) | CLIP-I / DINO-I cross-scene similarity ≥ 0.80 on 30-character × 7-image corpus | 4 |
 | [`storyboard_designer`](./storyboard_designer/SKILL.md) | 分镜设计专家 | Scene → per-shot Storyboard JSON decomposition with camera params + 4D anchoring (depth/identity/lighting/temporal) + extension-chain end_frames. Decoupled from cinematographer (cinematographer defines rules, storyboard_designer applies them) | Shot count accuracy / shot size distribution KL / rhythm curve DTW vs professional ground truth on 50-script corpus | 4 |
 | [`creative_source`](./creative_source/SKILL.md) | 创意源头专家 | Story Kernel mining from 6 social strata (institutional / technological / demographic / spatial / intergenerational / psychosocial). DAG root — upstream of style_genome. Sources: Bourdieu / Foucault / Giddens + Lefebvre + Han Byung-Chul | Strata resonance Pearson / Bourdieu field accuracy / unspeakability AUC on 100-topic labeled corpus | 4 |
@@ -174,28 +169,17 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
                 │                 │
                 ▼                 ▼
        ┌───────────────┐  ┌───────────────┐
-       │   lip_sync    │  │  voicer       │
-       │   唇形同步     │  │  配音 (TTS)    │
-       │ (LSE/LSE-C)   │  │               │
+       │  colorist /   │  │ audio_pipeline│ ◄──── continuity_auditor (parallel audit)
+       │  editor       │  │ 音频管线      │
+       │               │  │ (voicer/lip_ │
+       │               │  │  sync/composer│
+       │               │  │  /foley/mixer│
+       │               │  │  /spatial)   │
        └───────┬───────┘  └───────┬───────┘
                │                  │
                └──────────┬───────┘
                           │
                           ▼
-                ┌──────────────────┐
-                │  colorist /      │
-                │  editor /        │
-                │  composer / foley│
-                │  / spatial_audio │
-                └────────┬─────────┘
-                         │
-                         ▼
-                ┌─────────────────┐
-                │     mixer       │ ◄──── continuity_auditor (parallel audit)
-                │     混音         │
-                └────────┬────────┘
-                         │
-                         ▼
                 ┌─────────────────┐
                 │   FINAL OUTPUT  │
                 │  (短剧 / 微电影)  │
@@ -205,11 +189,11 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
 **Key DAG properties (v2 with Phase 7 + 8):**
 - **New root:** `creative_source` (no upstream; mines Story Kernel from social strata) — replaces style_genome as DAG root
 - **Quality loop:** `screenplay` ↔ `script_auditor` iterate until target audit band
-- **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by visual_executor / lip_sync / continuity_auditor
+- **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by visual_executor / audio_pipeline (lip_sync sub-step) / continuity_auditor
 - **Bridge nodes:** `storyboard_designer` fills cinematographer → visual_executor gap with concrete Storyboard JSON
-- **Audio-visual lock:** `voicer` produces audio → `lip_sync` aligns to footage (decoupled, composable)
-- **Bottleneck nodes:** `screenplay` (after style) / `visual_executor` (after intent) / `lip_sync` (after audio + footage) / `mixer` (after all audio)
-- **Audit nodes:** `continuity_auditor` (parallel to mixer) + `script_auditor` (pre-production) verify consistency
+- **Audio-visual lock:** `audio_pipeline` (voicer sub-step) produces audio → `audio_pipeline` (lip_sync sub-step) aligns to footage (now intra-expert handoff; still decoupled, composable)
+- **Bottleneck nodes:** `screenplay` (after style) / `visual_executor` (after intent) / `audio_pipeline` (after all audio + footage) — single node now subsumes lip_sync + mixer bottleneck roles
+- **Audit nodes:** `continuity_auditor` (parallel to audio_pipeline) + `script_auditor` (pre-production) verify consistency
 - **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
 - **Phase 8 verticals (cross-cutting):** `theory_critic` / `documentary_maker` / `animation_studio` are NOT in the linear pipeline — they are **consultative experts** invoked when the pipeline encounters their domain (theory analysis, documentary-style, animation). They draw from `_shared/project-corpus/` (102-book library).
 
@@ -369,22 +353,23 @@ skills/movie-experts/
 ├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md (Phase 4)
 ├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md (Phase 3 deep)
 ├── compliance_gate/     SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
-├── composer/           SKILL.md + references/{musicgen-workflow,chion-audio-vision,bgm-and-song-creation}.md + LICENSE.md (Phase 5 + Phase 7C increment)
+├── audio_pipeline/     SKILL.md + references/{voicer/{cn-tts-model-matrix,character-voice-consistency,tts-emotion-prosody-control},lip_sync/{sync-quality-metrics,latentsync-deployment,audio-video-input-spec,identity-preservation},composer/{musicgen-workflow,chion-audio-vision,bgm-and-song-creation},foley/{stable-audio-open,sound-effect-taxonomy,sound-effects-prompt-engineering},mixer/{mixing-secrets-small-studio,lufs-standards},spatial_audio/{dolby-atmos-workflow,immersive-sound-design}}.md + {voicer,lip_sync,composer,foley,mixer,spatial_audio}/LICENSE.md + GAP-REPORT.md (Phase 5 + Phase 7A-2 + Phase 15 merge)
+├── composer/           SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — references/ + GAP-REPORT.md preserved archival
 ├── continuity_auditor/ SKILL.md + references/{cross-shot-auditing,eyeline-match-protocol}.md + LICENSE.md (Phase 5)
 ├── drawer/             SKILL.md (Phase 14 redirect stub) — references/ + GAP-REPORT.md preserved archival
 ├── editor/             SKILL.md + references/{murch,classical,montage,fxrxt,cn-cutting}.md + LICENSE.md (Phase 3 deep)
-├── foley/              SKILL.md + references/{stable-audio-open,sound-effect-taxonomy,sound-effects-prompt-engineering}.md + LICENSE.md (Phase 5 + Phase 7C increment)
+├── foley/              SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — references/ + GAP-REPORT.md preserved archival
 ├── hook_retention/     SKILL.md + references/{three-second-hooks,conflict-escalation,paywall-design,vertical-pacing}.md + LICENSE.md (Phase 2)
-├── mixer/              SKILL.md + references/{mixing-secrets-small-studio,lufs-standards}.md + LICENSE.md (Phase 5)
+├── mixer/              SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — references/ + GAP-REPORT.md preserved archival
 ├── performer/          SKILL.md + references/{stanislavski-prepares,meisner-truth}.md + LICENSE.md (Phase 5)
 ├── production/         SKILL.md + references/{casting-lora-spec,wardrobe-per-scene,lighting-intent-layer,gpu-render-budget,asset-reuse-plan}.md + LICENSE.md (Phase 5)
 ├── scene_builder/      SKILL.md + references/{blender-previz-workflow,architectural-storytelling}.md + LICENSE.md (Phase 5)
 ├── screenplay/         SKILL.md + references/{save-the-cat,mckee,cn-shortdrama,emotion-curve-academic,dialogue-craft}.md + LICENSE.md (Phase 3 deep)
-├── spatial_audio/      SKILL.md + references/{dolby-atmos-workflow,immersive-sound-design}.md + LICENSE.md (Phase 5)
+├── spatial_audio/      SKILL.md (Phase 15 redirect stub — folded_into audio_pipeline) — references/ preserved archival
 ├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis,art-direction-methodology}.md + LICENSE.md (Phase 3 deep + Phase 7C increment)
-├── voicer/             SKILL.md + references/{cn-tts-model-matrix,character-voice-consistency,tts-emotion-prosody-control}.md + LICENSE.md (Phase 5 + Phase 7C increment)
+├── voicer/             SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — references/ + GAP-REPORT.md preserved archival
 ├── script_auditor/     SKILL.md + references/{narrative-structure-audit,emotion-arc-audit,hook-strength-audit,character-network-audit,completion-rate-forecast}.md + LICENSE.md (Phase 7A-1 NEW)
-├── lip_sync/           SKILL.md + references/{sync-quality-metrics,latentsync-deployment,audio-video-input-spec,identity-preservation}.md + LICENSE.md (Phase 7A-2 NEW)
+├── lip_sync/           SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — _eval/ regression suite preserved archival
 ├── character_designer/ SKILL.md + references/{4d-anchor-system,layered-style-prefix,consistency-stress-test,character-bible-schema}.md + LICENSE.md (Phase 7B-1 NEW)
 ├── storyboard_designer/ SKILL.md + references/{shot-decomposition-rules,camera-params-dictionary,4d-anchoring-params,storyboard-schema}.md + LICENSE.md (Phase 7B-2 NEW)
 ├── creative_source/    SKILL.md + references/{strata-guide,story-kernel-schema,multi-strata-resonance,unspeakability-protocol}.md + LICENSE.md (Phase 7B-3 NEW)
@@ -445,7 +430,7 @@ If you build on this suite, please cite:
 ---
 
 *Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7).*
-*v2 = 22 experts (14 original + 4 Phase 1-5 + 5 Phase 7 − 1 Phase 14 visual_executor merge), all RAG-aware, all phantom refs stripped.*
+*v2 = 17 experts (14 original + 4 Phase 1-5 + 5 Phase 7 − 1 Phase 14 visual_executor merge − 5 Phase 15 audio_pipeline merge), all RAG-aware, all phantom refs stripped.*
 *Total ref corpus: ~80 files (~1.8MB cited fair-use content).*
 *5 Phase 7 experts carry independent validation protocols (no LLM-judge required).*
 *Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
@@ -456,7 +441,7 @@ If you build on this suite, please cite:
 
 **5 new experts** with independent validation protocols:
 - `script_auditor` — 5-dim quantitative script audit (Pearson vs actual 完播率)
-- `lip_sync` — audio-driven lip sync (LRS2/LRS3 international benchmark, LSE/LSE-C objective metrics)
+- `audio_pipeline` (lip_sync sub-step) — audio-driven lip sync (LRS2/LRS3 international benchmark, LSE/LSE-C objective metrics)
 - `character_designer` — CharacterBible 2.0 authoring (CLIP-I/DINO-I cross-scene consistency)
 - `storyboard_designer` — Scene → Storyboard JSON decomposition (shot count accuracy / rhythm DTW)
 - `creative_source` — Story Kernel mining from 6 social strata (Bourdieu field accuracy / unspeakability AUC)
@@ -465,9 +450,9 @@ If you build on this suite, please cite:
 - `_shared/cognitive-resonance-metrics.md` (NEW) — 4-scale evaluation rubric from 1st-director doctrine
 - `_shared/quality-rubric.md` (NEW) — 6-dim publish-gate rubric from movie-gate doctrine
 - `style_genome/references/art-direction-methodology.md` (NEW) — from kais-art-direction
-- `composer/references/bgm-and-song-creation.md` (NEW) — from kais-bgm + kais-song-agent
-- `foley/references/sound-effects-prompt-engineering.md` (NEW) — from kais-sound-effects-agent
-- `voicer/references/tts-emotion-prosody-control.md` (NEW) — from kais-TTS-agent
+- `audio_pipeline/references/composer/bgm-and-song-creation.md` (NEW) — from kais-bgm + kais-song-agent
+- `audio_pipeline/references/foley/sound-effects-prompt-engineering.md` (NEW) — from kais-sound-effects-agent
+- `audio_pipeline/references/voicer/tts-emotion-prosody-control.md` (NEW) — from kais-TTS-agent
 - `visual_executor/references/animator/camera-execution-and-degradation.md` (NEW) — from kais-camera + kais-shooting-script + kais-evolink
 
 **Decoupling principle:** All Phase 7 experts are pure nodes (no orchestration). Each owns a vertical capability with clear I/O schema + benchmark + objective metrics. The 5 new experts follow the project constraint: "每个专家 skill 专精自己的方向,目标是在每个专精方向的产出做到可迭代进步,可独立评估,有数据集可验证自己是否有提升."
