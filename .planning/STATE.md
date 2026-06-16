@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1
-milestone_name: Movie-Experts Suite v2 (MESV2)
-status: Awaiting next milestone
-last_updated: "2026-06-15T15:30:31.463Z"
-last_activity: 2026-06-15 — Milestone v1 completed and archived
+milestone: v2.0
+milestone_name: Pipeline Redesign from First Principles
+status: planning
+last_updated: "2026-06-16T12:45:37.608Z"
+last_activity: 2026-06-16
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: Milestone v1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-15 — Milestone v1 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-16 — Milestone v2.0 started
 
 ### Progress
 
