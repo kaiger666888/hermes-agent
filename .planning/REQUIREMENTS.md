@@ -12,7 +12,7 @@
 ### RENAME — Expert Rename(2 reqs)
 
 - [x] **RENAME-01**: `continuity` expert 改名为 `continuity_auditor`,更新 SKILL.md frontmatter `name` + `expert_id` + `metadata.hermes.expert_id` + `metadata.hermes.related_skills` 协作图(双向 edge 同步)。保留 `continuity` 作为 alias(per FOUND-08 backward-compat)。
-- [ ] **RENAME-02**: `compliance_marketing` expert 改名为 `compliance_gate`,聚焦 pure compliance(分离 marketing 到独立 ref 或 sub-skill)。保留 `compliance_marketing` 作为 alias。
+- [x] **RENAME-02**: `compliance_marketing` expert 改名为 `compliance_gate`,聚焦 pure compliance(分离 marketing 到独立 ref 或 sub-skill)。保留 `compliance_marketing` 作为 alias。
 
 ### MERGE — Expert Merge(2 reqs)
 
@@ -74,7 +74,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RENAME-01 | 13 | Complete |
-| RENAME-02 | 13 | Pending |
+| RENAME-02 | 13 | Complete |
 | MERGE-01 | 14 | Pending |
 | MERGE-02 | 15 | Pending |
 | NEW-01 | 16 | Pending |
