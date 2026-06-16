@@ -376,7 +376,7 @@ UK filmmaking beginner's authoritative guide
   1. Dream = IP choice
   2. Script = screenplay expert output
   3. Pre-prod = style_genome + scene_builder
-  4. Generation = drawer + animator
+  4. Generation = visual_executor (drawer + animator sub-steps)
   5. Post = editor + composer + mixer
   6. Release = platform-specific export
   7. Review = analytics + iteration

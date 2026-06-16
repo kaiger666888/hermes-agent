@@ -71,10 +71,10 @@ For vendor-specific model / API names that MUST appear in SKILL.md body (e.g., w
 
 | Placeholder | Resolves to (Phase 3+ refs) | Used by |
 |-------------|----------------------------|---------|
-| `<video_gen_primary>` | veo3.1, kling-v3-4k (vertical 短剧 capable) | animator |
-| `<video_gen_preview>` | ltx-2.3, pixverse-v6 (cheap preview tier) | animator |
-| `<image_gen_primary>` | FLUX 2 Klein 9B (Hermes default via fal) | drawer |
-| `<image_gen_fast>` | Z-Image Turbo (fastest tier) | drawer |
+| `<video_gen_primary>` | veo3.1, kling-v3-4k (vertical 短剧 capable) | visual_executor (animator sub-step) |
+| `<video_gen_preview>` | ltx-2.3, pixverse-v6 (cheap preview tier) | visual_executor (animator sub-step) |
+| `<image_gen_primary>` | FLUX 2 Klein 9B (Hermes default via fal) | visual_executor (drawer sub-step) |
+| `<image_gen_fast>` | Z-Image Turbo (fastest tier) | visual_executor (drawer sub-step) |
 | `<audio_gen_primary>` | Stable Audio Open 1.0 (foley/SFX default) | foley |
 | `<music_gen_primary>` | MusicGen-large (open-source music default) | composer |
 | `<tts_primary>` | MiniMax / ElevenLabs (Hermes-native) or CosyVoice 3.0 (user-deployed) | voicer |

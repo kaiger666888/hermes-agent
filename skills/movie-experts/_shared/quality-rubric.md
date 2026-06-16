@@ -10,7 +10,7 @@
 
 A 6-dimension pre-publish scoring rubric (total 100 points) for AI-generated 短剧 / 微电影. Use this file as the **publish-gate evaluation layer** — separate from `_shared/cognitive-resonance-metrics.md` (which is the **creation-process evaluation layer**). The two files are complementary: cognitive-resonance guides creation-time craft decisions; this rubric guides publish-time go/no-go decisions.
 
-**Why this lives in `_shared/`:** the 6 dimensions are co-owned by multiple experts. `hook_retention` owns dimension 1, `screenplay` + `editor` own dimension 2, `drawer` + `animator` + `colorist` own dimension 3, `compliance_marketing` owns dimensions 4 + 6, `production` owns dimension 5. Any expert's judge_prompt can reference specific sub-criteria below.
+**Why this lives in `_shared/`:** the 6 dimensions are co-owned by multiple experts. `hook_retention` owns dimension 1, `screenplay` + `editor` own dimension 2, `visual_executor` + `colorist` own dimension 3, `compliance_marketing` owns dimensions 4 + 6, `production` owns dimension 5. Any expert's judge_prompt can reference specific sub-criteria below.
 
 ---
 
@@ -20,7 +20,7 @@ A 6-dimension pre-publish scoring rubric (total 100 points) for AI-generated 短
 |---|---|---|---|
 | 1 | 黄金3秒钩子 / Golden 3-second hook | 25 | `hook_retention` |
 | 2 | 内容结构与节奏 / Content structure & rhythm | 20 | `screenplay` + `editor` |
-| 3 | AIGC 真实感 / AIGC realism (de-artificialization) | 20 | `drawer` + `animator` + `colorist` |
+| 3 | AIGC 真实感 / AIGC realism (de-artificialization) | 20 | `visual_executor` + `colorist` |
 | 4 | 标题与封面 / Title & cover | 15 | `compliance_marketing` |
 | 5 | 时长适配 / Duration fit | 10 | `production` |
 | 6 | 互动潜力 / Engagement potential | 10 | `compliance_marketing` |
@@ -192,7 +192,7 @@ platform_presets:
 
 - `hook_retention` SKILL.md: cite Dimension 1 taxonomy + zero-delay principle
 - `screenplay` references: cite Dimension 2 heartbeat-curve 20-30s threshold
-- `drawer` + `animator` + `colorist` references: cite Dimension 3 over-polish anti-patterns
+- `visual_executor` + `colorist` references: cite Dimension 3 over-polish anti-patterns
 - `compliance_marketing` references: cite Dimensions 4 + 6 + platform presets
 - `production` references: cite Dimension 5 optimal-duration table
 
