@@ -154,25 +154,25 @@ Plans:
 
 ### Phase 18: Validation + Documentation + Collaboration Graph Update
 
-**Goal:** A reader can verify (a) 21 active expert_id inventory (16 DAG pipeline-roles + 5 aliases from rename/merge), (b) updated 21-expert collaboration DAG matching v2.0 PRFP topology, (c) updated README + glossary + known-external-models.yaml reflecting Phase 13-17 changes, and (d) `skills-mapping.yaml` sign_off_status: signed_off across all entries.
+**Goal:** A reader can verify (a) reconciled expert_id inventory — 31 SKILL.md files decomposed as 15 active DAG pipeline-roles (canonical 16 minus the unresolved `quality_gate` gap per VALIDATE-D1) + 3 active non-DAG verticals + 3 deprecated + 10 redirect stubs per FOUND-08 (see VALIDATION-REPORT.md; original 21 = 16 + 5 aliases estimate reconciled to on-disk reality), (b) updated 21-expert collaboration DAG matching v2.0 PRFP topology, (c) updated README + glossary + known-external-models.yaml reflecting Phase 13-17 changes, and (d) `skills-mapping.yaml` sign_off_status: signed_off across all entries.
 
 **Depends on:** Phase 13-17 (all rename/merge/new/deprecate operations complete)
 
 **Requirements:** VALIDATE-01, VALIDATE-02, DOC-01, DOC-02
 
 **Success Criteria:**
-1. `grep -r 'expert_id:' skills/movie-experts/ | wc -l` returns 21 (16 active + 5 aliases); no orphan IDs
+1. `find skills/movie-experts -maxdepth 2 -name 'SKILL.md' | grep -v '_eval\|_shared' | wc -l` returns 31, decomposed as: 15 active DAG pipeline-roles (canonical 16 minus the unresolved `quality_gate` gap — DEFECT VALIDATE-D1 in VALIDATION-REPORT.md) + 3 active non-DAG verticals (`documentary_maker`, `animation_studio`, `production`) + 3 deprecated (`performer`, `scene_builder`, `storyboard_designer`) + 10 redirect stubs preserving legacy expert_id per FOUND-08; no orphan IDs. (Original v3.0 estimate was 21 = 16 active + 5 aliases; reconciled to actual on-disk inventory per Phase 18-01 VALIDATION-REPORT.md. The 21 figure undercounted redirect stubs — 10, not 5 — and omitted 3 active non-DAG verticals + 3 deprecated-but-present experts. Per CONTEXT D-06 no-silent-sign-off, the original 21-target discrepancy is surfaced here, not silently erased.)
 2. `skills-mapping.yaml` all entries have `sign_off_status: signed_off`
 3. `skills/movie-experts/README.md` updated: 26-expert → 21-expert inventory; 18-expert collaboration DAG → v2.0 PRFP topology Mermaid (per `01-NODE-DAG.md` §1.5)
 4. `_shared/glossary.md` updated with new terms (visual_executor, audio_pipeline, prompt_injector, continuity_auditor, compliance_gate)
 5. `_shared/known-external-models.yaml` updated with Phase 8 §2.17 dated annex models
-6. FOUND-08 frozen rule compliance verified: zero silent renames; all aliases explicit
-7. Backward compat verified: old expert_id references still resolve via aliases
+6. FOUND-08 frozen rule compliance verified: zero silent renames; all aliases explicit. Per VALIDATION-REPORT.md §FOUND-08 Compliance Audit (verdict: 13/13 migrations PASS).
+7. Backward compat verified: old expert_id references still resolve via aliases. Per VALIDATION-REPORT.md §Backward Compatibility Verification (verdict: 13/13 legacy IDs resolve, VALIDATE-02 PASS).
 
 **Plans:** 3/3 plans defined
 
 Plans:
-- [ ] 18-01-PLAN.md — Validation + reconciliation (VALIDATION-REPORT.md inventory classification + FOUND-08 audit + backward-compat verification + ROADMAP §18 #1 reconciliation; VALIDATE-01/02)
+- [x] 18-01-PLAN.md — Validation + reconciliation (VALIDATION-REPORT.md inventory classification + FOUND-08 audit + backward-compat verification + ROADMAP §18 #1 reconciliation; VALIDATE-01/02) — COMPLETE 2026-06-17 (commit a594047fd)
 - [ ] 18-02-PLAN.md — Documentation finalization (README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + reconciled inventory table + footer count; glossary.md 5 new-expert term verification; known-external-models.yaml Phase 8 §2.17 dated annex; DOC-01/02) — depends on 18-01
 - [ ] 18-03-PLAN.md — Sign-off + close (skills-mapping.yaml all entries signed_off + visual_executor/audio_pipeline revisit_in_phase resolved; REQUIREMENTS + STATE + ROADMAP updates for v3.0 milestone close; 18-VERIFICATION.md per-criterion verdicts; VALIDATE-01/02 + DOC-01/02) — depends on 18-01 + 18-02
 
