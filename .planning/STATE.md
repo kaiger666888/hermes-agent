@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: planning
-last_updated: "2026-06-16T15:51:34.217Z"
-last_activity: 2026-06-16
+status: Executing
+last_updated: "2026-06-17T00:00:00.000Z"
+last_activity: 2026-06-17 — Phase 13 Plan 01 complete (continuity → continuity_auditor)
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -28,23 +28,25 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-16 — Milestone v3.0 started
+Phase: 13 (Expert Rename + Alias Scaffolding) — In Progress
+Plan: 13-01 complete; 13-02 next (compliance_marketing → compliance_gate)
+Status: Executing Phase 13
+Last activity: 2026-06-17 — Plan 13-01 (continuity → continuity_auditor) complete
 
 ### Progress
 
 ```
 v1 milestone: [██████████] 100% Complete (Phases 0-6, shipped 2026-06-15)
 
-v2.0 PRFP milestone:
-  Phase 7  [          ] 0% Not started (bottleneck; HIGH research load — Musk-method primary-source verification)
-  Phase 8  [          ] 0% Not started (blocked by 7)
-  Phase 9  [          ] 0% Not started (parallel w/ 8, unblocks on 7 node IDs)
-  Phase 10 [          ] 0% Not started (parallel w/ 8, unblocks on 7 AI-limits definition)
-  Phase 11 [          ] 0% Not started (blocked by 8+9+10)
-  Phase 12 [          ] 0% Not started (blocked by 11)
+v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12, shipped 2026-06-16)
+
+v3.0 Skills-to-DAG Alignment milestone:
+  Phase 13 [█         ] 33% In Progress (13-01 done: continuity→continuity_auditor; 13-02 + 13-03 pending)
+  Phase 14 [          ] 0% Not started (depends on 13)
+  Phase 15 [          ] 0% Not started (depends on 13)
+  Phase 16 [          ] 0% Not started (depends on 13)
+  Phase 17 [          ] 0% Not started (depends on 13)
+  Phase 18 [          ] 0% Not started (depends on 13-17)
 ```
 
 ### Phase Statuses (v2.0 PRFP)
@@ -89,6 +91,15 @@ v2.0 PRFP milestone:
 | Coverage count = 52 (not 51) | REQUIREMENTS.md flagged a -1 for "HANDOFF-09/HANDOFF-01 overlap" — on review, these are distinct REQs (handoff contract vs comparison analyses). All 52 mapped. | Pending — noted in ROADMAP.md coverage section |
 | Critical path 7 → 8 → 11 → 12 (not 7 → 8 → 9 → 10 → 11 → 12) | Phases 9 and 10 run parallel with 8 once Phase 7 produces node IDs / AI-limits; they do NOT extend the critical path | Pending |
 
+### Decisions (v3.0 — Phase 13)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Backward-compat rename pattern: new dir + redirect stub + `metadata.hermes.aliases` | FOUND-08 zero-silent-rename rule requires explicit alias declaration; redirect stub preserves historical transcript references | Applied 2026-06-17 in plan 13-01 (continuity → continuity_auditor) |
+| Composer excluded from continuity_auditor consumer set | `composer/SKILL.md` never had `continuity` in `related_skills`; plan over-listed based on "invisible continuity" English noun | Documented in 13-01-SUMMARY §Deviations; rename correctly applied to all 16 actual consumers |
+| `_eval/baseline/` snapshots NOT renamed | Frozen regression baselines must preserve point-in-time expert_id for eval harness integrity | Documented in 13-01-SUMMARY §Deviations; only active SKILL.md consumers renamed |
+| lip_sync JSON output field names (`continuity_handoff`, `needs_continuity_audit`) preserved | These are data field names in the output schema, not expert_id references; renaming would be an API-shape change | Documented in 13-01-SUMMARY §Deviations; plan action 5 scope respected |
+
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
@@ -117,9 +128,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Roadmap for v2.0 PRFP written by /gsd:new-project roadmapper. 6 phases (7-12), 52/52 requirements mapped, critical path 7 → 8 → 11 → 12 with parallel 9+10 alongside 8.
-**Next action:** `/gsd:plan-phase 7` — likely needs `--research-phase` flag for Musk-method primary-source verification (PITFALLS §5 Open Question #4) and epistemic-status framework.
-**Hand-off note:** Phase 7 is the intellectual bottleneck of the entire milestone. Skipping or rushing it invalidates everything downstream (PITFALLS §1 — first-principles theater is the #1 risk). Recommend Phase 7 be planned with HIGH research depth.
+**Last action:** Phase 13 Plan 01 executed (2026-06-17) — continuity → continuity_auditor rename complete. New expert dir + redirect stub + 16-consumer edge sync + English-noun/metric preservation. Commits 473014e02 + 1e41cf11e.
+**Next action:** Plan 13-02 — Rename `compliance_marketing` → `compliance_gate` (parallel pattern to 13-01; 11-consumer edge sync). After 13-02, plan 13-03 closes out with `skills-mapping.yaml` sign_off + README/glossary updates.
+**Hand-off note:** Phase 13 is the bottleneck for v3.0 — establishes the rename + alias pattern reused by Phases 14-17 (merge / new / deprecate). 13-01 has validated the pattern; 13-02 should be straightforward (same pattern, smaller consumer set).
 
 ---
 
