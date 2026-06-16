@@ -36,9 +36,9 @@ Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 1
 
 ### Active
 
-<!-- v1 closed 2026-06-15. No active requirements until next milestone is planned via /gsd-new-milestone -->
+<!-- v2.0 in planning — REQ-IDs assigned after step 9 of /gsd-new-milestone. See REQUIREMENTS.md. -->
 
-(None — milestone v1 closed. Next milestone TBD.)
+Milestone **v2.0 — Pipeline Redesign from First Principles (PRFP)** is being scoped. Requirements TBD via this workflow; see `.planning/REQUIREMENTS.md` once written.
 
 ### Deferred to operator (acknowledged at v1 close)
 
@@ -119,15 +119,25 @@ See `.planning/STATE.md` § Deferred Items for the canonical list.
 | 项目位置:直接在 `hermes-agent` 仓库的 `skills/movie-experts/` 下 | 不另起仓库;作为 Hermes 主仓库子系统;`/gsd:new-project` 把整个 hermes-agent 仓库当项目初始化(已与用户确认) | ✓ Good — co-located; .planning/ tracks project state |
 | 现有 14 的 expert_id 与 related_skills 协作图保持向后兼容 | 现有用户的工作流不应被破坏;新增专家接入而非重写协作图 | ✓ Good — FOUND-08 frozen rule honored across all phases; verified at Phase 1 VERIFICATION SC-4 |
 
-## Next Milestone Goals
+## Current Milestone: v2.0 — Pipeline Redesign from First Principles (PRFP)
 
-v1 closed 2026-06-15. Next milestone goals TBD via `/gsd-new-milestone`.
+**Goal:** 从第一性原理出发(忽略现有 kais-movie-agent 8 phases 和 hermes movie-experts 26 skills 的历史包袱),推导出 kais-movie-agent 的新工作流节点集 —— 每节点明确**核心任务 + I/O 契约 + AIGC 转化点 + 传统经验锚点**,作为后续双 repo 实施的理论蓝本。
 
-Candidate seeds (carry from v1 deferred items + research):
-- Live-run statistical GO/NO-GO evidence (operator-executed; budgets N≥20 prompts × ≥2 judges × 18 experts)
-- Automated corpus ingestion pipeline (v1 was manual curation; v2 candidates: web-DOI fetcher, fair-use verifier)
-- Production-execution orchestrator (was v2 candidate per v1 scope note; chains experts into runnable pipeline)
-- Cross-expert workflow demos (end-to-end 短剧 / 微电影 generation walkthroughs)
+**Target features(本次里程碑只产出设计文档,不实施任何代码重构):**
+
+1. **第一性原理推导记录** —— 从"观众最终要拿到什么 / 短剧为什么生死在前 3 秒 / 微电影质量由什么决定 / AI 真正能提效的环节在哪 / AI 不能替代什么"这种根本问题出发,逐步推导到最简必要的节点集;Musk-style 还原→推导(非类比)。
+2. **工作流节点流程设计** —— 节点 DAG + 每节点核心任务 + I/O 契约 + 节点间依赖与产物传递路径。
+3. **传统经验锚点对照** —— 每节点溯源到 102 本书(`_shared/project-corpus/` 9 ref + `/home/kai/Downloads/100+本影视剪辑书/` 原始 repo)里的传统工序 / 技巧 / 范例。
+4. **LLM 创意凝练专题** —— 单独子文档:大模型如何产出**有创意且逻辑自洽**的故事框架(用户特别强调的洞察层;记录:创意的本质、自洽性的检验机制、LLM 凝练的 prompt 策略、fail modes)。
+5. **双 repo 交接说明** —— 设计如何分别指导 hermes-agent 的 skills 演化(后续里程碑对齐)+ kais-movie-agent 的 pipeline 重构(后续在 kais-movie-agent/.planning/ 那边再开对应 phase)。
+
+**Key context:**
+
+- **节点设计从 0 推**:不预设现有 8 phases 和 26 skills,但产出后会跟它们做**对照分析**(用于识别覆盖缺口和 AIGC 转化机会,非实施)。
+- **物理位置:双 repo 协作**。本里程碑的 .planning/ 写在 hermes-agent(因为 movie-experts 是 kais-movie-agent 的知识层,设计文档作为交接件自然放这里);后续 kais-movie-agent 那边自己开 phase 执行实施。
+- **范围严格收口**:本次里程碑交付**仅设计文档**,不动 hermes-agent/skills/ 任何 SKILL.md / refs,不动 kais-movie-agent/lib/ 任何 .js / .py。
+- **马斯克第一性原理**贯穿:每个节点都要能回答"为什么是它而不是别的";每个 AIGC 转化点都要能回答"这个转化对最终用户价值的边际贡献是什么"。
+- **大模型创意凝练洞察**作为独立维度贯穿设计:不只是"用 AI 生成 X",而是"如何让 AI 凝练出 X 的最小可行结构"。
 
 ## Evolution
 
@@ -147,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 after v1 milestone close*
+*Last updated: 2026-06-16 — started milestone v2.0 (PRFP — Pipeline Redesign from First Principles) via /gsd-new-milestone*
