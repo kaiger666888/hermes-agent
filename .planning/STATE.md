@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: executing
-last_updated: "2026-06-17T00:00:00.000Z"
+status: ready_to_plan
+last_updated: 2026-06-16T17:47:04.409Z
 last_activity: 2026-06-17 — Phase 15 Plan 03 complete (audio_pipeline close-out docs: README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge; 6 audio expert_ids collapsed to 1 across cross-cutting docs)
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 10
-  completed_plans: 10
-  percent: 60
-stopped_at: Phase 15 complete (3/3) — ready for Phase 16 (prompt_injector new)
+  completed_plans: 9
+  percent: 50
+stopped_at: Phase 15 complete (3/3) — ready to discuss Phase 16
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,14 +25,14 @@ stopped_at: Phase 15 complete (3/3) — ready for Phase 16 (prompt_injector new)
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 15 — audio pipeline merge (5 audio experts → audio_pipeline with sub_steps)
+**Current focus:** Phase 16 — new ai native expert (prompt_injector)
 
 ## Current Position
 
-Phase: 15
-Plan: 15-03 complete (3/3) — Phase 15 COMPLETE; next is Phase 16 (prompt_injector new)
-Status: Executing
-Last activity: 2026-06-17
+Phase: 16
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-16
 
 ### Progress
 
