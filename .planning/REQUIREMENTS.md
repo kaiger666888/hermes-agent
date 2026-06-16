@@ -25,9 +25,9 @@
 
 ### DEPRECATE — Expert Deprecation(3 reqs)
 
-- [ ] **DEPRECATE-01**: `performer` expert deprecate。理由(per `06-COMPARISON-VS-26-SKILLS.md`):表演真实折叠进 character_designer(voice + behavioral tics)+ screenplay(dialogue subtext),无独立节点必要。处理方式:SKILL.md 标 `status: deprecated` + redirect 注释指向 character_designer + screenplay;保留 expert_id 文件以免破坏向后兼容(FOUND-08)。
-- [ ] **DEPRECATE-02**: `scene_builder` expert deprecate。理由:场景设计折叠进 cinematographer(mise-en-scène as composition_lock 子任务)+ style_genome。处理方式同上。
-- [ ] **DEPRECATE-03**: `storyboard_designer` expert deprecate。理由(per Phase 7 §3.4 D3.4):storyboard 折叠进 cinematographer composition_lock。处理方式同上。
+- [x] **DEPRECATE-01**: `performer` expert deprecate。理由(per `06-COMPARISON-VS-26-SKILLS.md`):表演真实折叠进 character_designer(voice + behavioral tics)+ screenplay(dialogue subtext),无独立节点必要。处理方式:SKILL.md 标 `status: deprecated` + redirect 注释指向 character_designer + screenplay;保留 expert_id 文件以免破坏向后兼容(FOUND-08)。
+- [x] **DEPRECATE-02**: `scene_builder` expert deprecate。理由:场景设计折叠进 cinematographer(mise-en-scène as composition_lock 子任务)+ style_genome。处理方式同上。
+- [x] **DEPRECATE-03**: `storyboard_designer` expert deprecate。理由(per Phase 7 §3.4 D3.4):storyboard 折叠进 cinematographer composition_lock。处理方式同上。
 
 ### VALIDATE — Frozen Rule + Backward Compat(2 reqs)
 
@@ -78,9 +78,9 @@
 | MERGE-01 | 14 | Complete |
 | MERGE-02 | 15 | Complete |
 | NEW-01 | 16 | Complete |
-| DEPRECATE-01 | 17 | Pending |
-| DEPRECATE-02 | 17 | Pending |
-| DEPRECATE-03 | 17 | Pending |
+| DEPRECATE-01 | 17 | Complete |
+| DEPRECATE-02 | 17 | Complete |
+| DEPRECATE-03 | 17 | Complete |
 | VALIDATE-01 | 18 | Pending |
 | VALIDATE-02 | 18 | Pending |
 | DOC-01 | 18 | Pending |

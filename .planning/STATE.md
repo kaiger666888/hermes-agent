@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: ready_to_plan
-last_updated: 2026-06-16T18:05:27.558Z
-last_activity: 2026-06-17 — Phase 16 COMPLETE (prompt_injector NEW AI-native expert fully integrated: Plan 16-01 created SKILL.md + 4 refs + bidirectional edges; Plan 16-02 close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
+status: executing
+last_updated: 2026-06-17T00:00:00.000Z
+last_activity: 2026-06-17 — Phase 17 Plan 01 COMPLETE (3 experts deprecated: performer + scene_builder + storyboard_designer marked status:deprecated with FOUND-08 preservation; 8 consumer SKILL.md related_skills rewired to inheritance targets; body prose annotated with Phase 17 redirects)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 67
-stopped_at: Phase 16 complete (2/2) — ready to discuss Phase 17
+  total_plans: 12
+  completed_plans: 12
+  percent: 73
+stopped_at: Phase 17 plan 1/2 complete (17-01 done; 17-02 close-out docs remaining)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,14 +25,14 @@ stopped_at: Phase 16 complete (2/2) — ready to discuss Phase 17
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 17 — deprecate 3 candidates (performer / scene_builder / storyboard_designer)
+**Current focus:** Phase 17 — deprecate 3 candidates (performer / scene_builder / storyboard_designer) — Plan 1/2 done
 
 ## Current Position
 
 Phase: 17
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-16
+Plan: 01 complete (17-02 close-out docs remaining)
+Status: Executing
+Last activity: 2026-06-17
 
 ### Progress
 
@@ -46,7 +46,7 @@ v3.0 Skills-to-DAG Alignment milestone:
   Phase 14 [██████████] 100% Complete (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 done: consumer edge sync across 15 SKILL.md; 14-03 done: README + corpus tree + DAG + _shared/ docs close-out)
   Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
   Phase 16 [██████████] 100% Complete (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 done: close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
-  Phase 17 [          ] 0% Not started (deprecate 3 — UNBLOCKED, Phase 16 done)
+  Phase 17 [█████░░░░░] 50% Plan 1/2 done (17-01 done: 3 experts deprecated [performer / scene_builder / storyboard_designer] with status:deprecated + FOUND-08 preservation + 8-consumer related_skills rewired to inheritance targets; 17-02 close-out docs pending — README inventory + corpus tree + DAG + footer + glossary + skills-mapping.yaml sign_off)
   Phase 18 [          ] 0% Not started (validate + docs — depends on 13-17)
 ```
 
@@ -163,6 +163,17 @@ v3.0 Skills-to-DAG Alignment milestone:
 | Glossary entry placed under new 'Phase 16 additions' H2 section | Matches Phase 14 ('## Phase 14 additions') + Phase 15 ('## Phase 15 additions') H2 section pattern; end-of-file placement with dedicated section header | Applied 2026-06-17 in plan 16-02 |
 | Top-of-file README Status line updated v2 → v3.0 | Pre-existing Status line was stale ('v2 complete — 26 experts') after Phases 13-15; updated to 'v3.0 in progress — 18 active expert_ids' to keep document internally consistent with new footer count | Applied 2026-06-17 in plan 16-02 |
 
+### Decisions (v3.0 — Phase 17)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Deprecation pattern: keep dir + extend frontmatter + insert body notice (NOT redirect stub) | Phase 17 deprecation is distinct from Phase 13-15 rename/merge: deprecated expert's body content remains fully readable for FOUND-08 backward compatibility. No directory rename, no redirect stub, no aliases field needed. Additive frontmatter: status: deprecated + metadata.hermes.{deprecated, deprecated_reason, inheritance_targets} | Applied 2026-06-17 in plan 17-01 |
+| Self-reference collapse rule: when a target expert IS the deprecated expert's inheritance target AND the target lists the deprecated ID in its own related_skills, just REMOVE the deprecated ID (no add of self-reference) | character_designer listed performer (its own performer-inheritance source), cinematographer listed scene_builder, style_genome listed scene_builder — adding self-references would be nonsensical post-deprecation | Applied 2026-06-17 in plan 17-01 across character_designer + cinematographer + style_genome + screenplay (screenplay IS performer's dialogue-subtext target) |
+| Body-prose annotation strategy: (Phase 17 v3.0: was X) suffix or (replaces deprecated Phase 17 X) prefix | Preserves operational handoff context while making deprecation visible at every mention site. Choice (b) annotation preferred for Collaboration bullets (preserves handoff contract); choice (a) replace preferred for DAG strings (forward-looking) | Applied 2026-06-17 in plan 17-01 across 8 consumer SKILL.md files |
+| `scene_builder_handoff.json` artifact filename in cinematographer body PRESERVED | Stable artifact contract name; renaming would change the artifact schema. Phase 17 v3.0 annotation documents that the file now feeds cinematographer's internal composition_lock sub-task | Applied 2026-06-17 in plan 17-01 in cinematographer/SKILL.md line 99 |
+| animation_studio deviation (Rule 2): plan listed animation_studio as consumer to check but no related_skills entry; animation_studio had BOTH `scene_builder` bullet in multi-line related_skills AND 2 body prose mentions | Plan files_modified listed animation_studio but action section claimed "storyboard_designer consumers: zero external consumers (SKIP)". Actual audit found animation_studio needed scene_builder rewire. Applied same collapse rule: scene_builder → cinematographer. 8 consumers rewired total (plan narrative said 7-10) | Applied 2026-06-17 in plan 17-01 |
+| Zero storyboard_designer external consumers CONFIRMED | Plan narrative claimed "storyboard_designer consumers: zero external consumers (grep returned empty)"; final grep verified zero consumer SKILL.md files list storyboard_designer in related_skills. storyboard_designer was deeply nested in v1.5 DAG but every collaborator referred to it via body prose, never via related_skills edge. SKIPPED as planned | Documented 2026-06-17 in plan 17-01 |
+
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
@@ -191,9 +202,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 16 Plan 02 executed (2026-06-17) — close-out documentation complete. README.md updated with Phase 16 inventory section (prompt_injector row with Chinese name 提示注入专家 + role + ref count + source citation) + prompt_injector node in ASCII DAG diagram (two-line multi-line box form between storyboard_designer and visual_executor) + AI-native prompt assembly bullet in Key DAG properties + prompt_injector/ row in corpus tree + footer count 17 → 18 with self-documenting arithmetic. _shared/glossary.md updated with prompt_injector H3 bilingual entry under new Phase 16 additions section. skills-mapping.yaml prompt_injector entry signed_off (sign_off_status + signed_off_at: 2026-06-17 + signed_off_by: phase-16) + action_for_v21 repurposed to FULFILLED-in-v3.0 completion record. Commits 179030a4e + 11454d246.
-**Next action:** `/gsd:plan-phase 17` for deprecations (performer / scene_builder / storyboard_designer — all 3 UNBLOCKED now that Phase 16 is done) OR `/gsd:plan-phase 18` for validation + docs (VALIDATE-01 will audit signed_off on all skills-mapping.yaml entries including the new prompt_injector sign-off). Phase 16 is COMPLETE — all 6 ROADMAP §16 success criteria satisfied.
-**Hand-off note:** Phase 16 COMPLETE (2/2 plans). prompt_injector expert fully integrated into all canonical documentation surfaces. Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete — Phase 16 done, so Phase 17 is the only remaining blocker.
+**Last action:** Phase 17 Plan 01 executed (2026-06-17) — 3 expert deprecations complete at file level. performer + scene_builder + storyboard_designer SKILL.md each received: status: deprecated (top-level frontmatter) + metadata.hermes.{deprecated: true, deprecated_reason: <CN prose citing skills-mapping.yaml>, inheritance_targets: <per-expert>} + prominent `> ⚠️ DEPRECATED (Phase 17 v3.0, 2026-06-17)` blockquote notice immediately after H1. FOUND-08 preserved: original expert_id + full body content intact (no deletion, no summarize-as-stub). Consumer related_skills edges rewired across 8 consumer SKILL.md files (character_designer, screenplay, cinematographer, style_genome, visual_executor, audio_pipeline, production, animation_studio) — zero stale deprecated IDs in any consumer related_skills list (verified). Body prose mentions of deprecated experts in 8 consumers annotated with (Phase 17 v3.0: was X) or (replaces deprecated Phase 17 X). Zero storyboard_designer external consumers confirmed. Commits d8cda9140 + 2d8169e31.
+**Next action:** `/gsd:plan-phase 17` for Plan 17-02 close-out docs (README inventory DEPRECATED markers + corpus tree + DAG diagram showing 3 deprecated experts removed from active path + footer count 18 → 15 active + 3 deprecated + skills-mapping.yaml sign_off for performer/scene_builder/storyboard_designer) OR `/gsd:plan-phase 18` for canonical 21-expert validation + docs (Phase 17 plan 17-02 is the last close-out blocker).
+**Hand-off note:** Phase 17 plan 1/2 done. DEPRECATE-01/02/03 implemented at file level (3 SKILL.md deprecated, 8 consumers rewired). Plan 17-02 (close-out docs: README + corpus tree + DAG + footer + glossary + skills-mapping.yaml sign_off) is the remaining Phase 17 deliverable. Phase 18 (finalization) gated on Phase 17 complete — Plan 17-02 is the only remaining Phase 17 blocker.
 
 ---
 

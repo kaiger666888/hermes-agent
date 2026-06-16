@@ -144,10 +144,10 @@ Plans:
 4. Each deprecated SKILL.md retains original expert_id + content (FOUND-08 backward compat)
 5. `metadata.hermes.deprecated: true` + `metadata.hermes.deprecated_reason: <CN prose>` per deprecation rationale
 
-**Plans:** 2/2 plans created
+**Plans:** 1/2 plans complete
 
 Plans:
-- [ ] 17-01-PLAN.md — Mark 3 experts deprecated (frontmatter `status: deprecated` + `metadata.hermes.{deprecated, deprecated_reason, inheritance_targets}` + body notice; FOUND-08 content preserved) + rewire consumer `related_skills` edges to inheritance targets (Wave 1)
+- [x] 17-01-PLAN.md — Mark 3 experts deprecated (frontmatter `status: deprecated` + `metadata.hermes.{deprecated, deprecated_reason, inheritance_targets}` + body notice; FOUND-08 content preserved) + rewire consumer `related_skills` edges to inheritance targets (Wave 1) — COMPLETE 2026-06-17 (commits d8cda9140 + 2d8169e31)
 - [ ] 17-02-PLAN.md — Close-out: README inventory + corpus tree + DAG diagram + footer count + _shared/glossary.md deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates (Wave 2, depends on 17-01)
 
 ---
