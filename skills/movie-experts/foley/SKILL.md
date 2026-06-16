@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, foley, sound-effects, physical-audio, impact-sync, sound-design]
-    related_skills: [animator, performer, scene_builder, composer, mixer, spatial_audio, continuity_auditor]
+    related_skills: [visual_executor, performer, scene_builder, composer, mixer, spatial_audio, continuity_auditor]
     expert_id: foley
     metrics: [material_credibility, impact_sync_accuracy, force_consistency, spectral_clarity]
 ---
@@ -159,7 +159,7 @@ tags="expert:foley,domain:sound-effect-taxonomy"
 
 ## Collaboration
 
-- **<- animator**: video clips (action audit input)
+- **<- visual_executor**: video clips (action audit input)
 - **<- performer**: force, speed, contact point parameters
 - **<- scene_builder**: material annotations (floor, object materials)
 - **<- composer**: beat timeline (rhythm alignment)

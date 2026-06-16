@@ -12,8 +12,7 @@ metadata:
     tags: [movie, animation, disney, 2d, 3d, stop-motion, pixar, cross-cultural-adaptation, mulan, hero-journey, musical-storytelling, character-design, color-script, voice-casting, leica-reel]
     related_skills:
       - screenplay          # Animation script structure
-      - drawer              # Character design / concept art
-      - animator            # Animation execution
+      - visual_executor    # Character design / concept art + animation execution
       - colorist            # Color script
       - scene_builder       # 3D scene construction
       - composer            # Musical storytelling
@@ -25,7 +24,7 @@ metadata:
 
 # Animation Production Expert (动画制作专家)
 
-Specialist for animation production pipeline, Disney system methodology, and cross-cultural adaptation (East Asian / folk tale to global animation). Complements `drawer` (stills), `animator` (motion), `composer` (music) by providing the structural / methodological framework.
+Specialist for animation production pipeline, Disney system methodology, and cross-cultural adaptation (East Asian / folk tale to global animation). Complements `visual_executor` (stills + motion), `composer` (music) by providing the structural / methodological framework.
 
 ## When to use this skill
 
@@ -46,8 +45,7 @@ Invoke this expert when:
 | [`_shared/project-corpus/animation-disney-system.md`](../_shared/project-corpus/animation-disney-system.md) | 任何动画制作前 | 迪士尼 4 阶段体系(早期事业 / 动画长片 / 实景拍摄 / 魔幻王国) + 12 阶段流程 + 跨文化改编(花木兰)+ 歌舞叙事 + 搭档喜剧 |
 | [`_shared/project-corpus/README.md`](../_shared/project-corpus/README.md) §动画 | 查找动画原书时 | 项目内迪士尼艺术 + 影视动画经典剧本赏析索引 |
 | [`../screenplay/references/save-the-cat-beat-sheet.md`](../screenplay/references/save-the-cat-beat-sheet.md) | 设计动画剧本结构 | Snyder 15-beat 适配动画长片 |
-| [`../drawer/SKILL.md`](../drawer/SKILL.md) | 角色设计 | FLUX + LoRA + IP-Adapter |
-| [`../animator/SKILL.md`](../animator/SKILL.md) | 动画执行 | veo3.1 / kling-v3-4k / pixverse-v6 |
+| [`../visual_executor/SKILL.md`](../visual_executor/SKILL.md) | 角色设计 + 动画执行 | FLUX + LoRA + IP-Adapter (drawer sub-step) / veo3.1 / kling-v3-4k / pixverse-v6 (animator sub-step) |
 | [`../colorist/SKILL.md`](../colorist/SKILL.md) | 色彩脚本 | 色彩心理学 + LUT 设计 |
 
 ## Role & Philosophy
@@ -173,15 +171,14 @@ voice_casting:
 ### For AI 短剧 adopting animation aesthetics
 1. Standard workflow steps 1-3
 2. Compress to 短剧 runtime (60-180s)
-3. Use AI tools (drawer, animator) for character / scene
+3. Use AI tools (visual_executor) for character / scene
 4. Skip traditional animation stages 8-9 (no voice casting; TTS via voicer)
 5. Focus on color script and shot composition
 
 ## Integration with Other Experts
 
 - **`screenplay`**: Adapted screenplay with musical numbers + sidekick comedy
-- **`drawer`**: Character design / concept art / model sheets
-- **`animator`**: Animation execution (veo3.1, kling-v3-4k, etc.)
+- **`visual_executor`**: Character design / concept art / model sheets (drawer sub-step) + Animation execution (veo3.1, kling-v3-4k, etc.) (animator sub-step)
 - **`colorist`**: Color script + per-scene LUT
 - **`scene_builder`**: 3D scene construction for 3D animation
 - **`composer`**: Musical numbers composition
@@ -200,8 +197,7 @@ Both books are in `_shared/project-corpus/`. Fair Use paraphrasing per project c
 ## Cross-References
 
 - [`../screenplay/SKILL.md`](../screenplay/SKILL.md) — Screenplay expert
-- [`../drawer/SKILL.md`](../drawer/SKILL.md) — Drawing expert
-- [`../animator/SKILL.md`](../animator/SKILL.md) — Animation expert
+- [`../visual_executor/SKILL.md`](../visual_executor/SKILL.md) — Visual executor expert (drawing + animation sub-steps)
 - [`../colorist/SKILL.md`](../colorist/SKILL.md) — Color expert
 - [`../scene_builder/SKILL.md`](../scene_builder/SKILL.md) — 3D scene expert
 - [`../composer/SKILL.md`](../composer/SKILL.md) — Music expert

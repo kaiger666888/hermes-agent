@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, continuity, consistency, face-matching, color-check, cross-shot, eyeline-match, axis-continuity]
-    related_skills: [drawer, animator, colorist, style_genome, screenplay, cinematographer, production]
+    related_skills: [visual_executor, colorist, style_genome, screenplay, cinematographer, production]
     expert_id: continuity_auditor
     aliases: [continuity]
     metrics: [face_similarity, color_consistency, style_uniformity]
@@ -66,7 +66,7 @@ tags="expert:continuity_auditor,domain:eyeline-match-protocol"
 
 - `continuity_report.json` per scene: pass/fail per dimension, deviation scores
 - Annotated diff images for failed checks (current vs reference)
-- Correction prompts for drawer/animator to fix inconsistencies
+- Correction prompts for visual_executor to fix inconsistencies
 
 ## Key Parameters
 
@@ -127,12 +127,11 @@ tags="expert:continuity_auditor,domain:eyeline-match-protocol"
 
 ## Collaboration
 
-- **<- drawer**: first_frame + production frames
-- **<- animator**: video frame sequences (keyframe sampling)
+- **<- visual_executor**: first_frame + production frames + video frame sequences (keyframe sampling)
 - **<- colorist**: CxSxZ color intent encoding
 - **<- style_genome**: style genome reference vector
 - **<- screenplay**: scene descriptions (tolerance judgment)
-- **-> drawer/animator**: correction_prompt for failed frames
+- **-> visual_executor**: correction_prompt for failed frames
 - **-> editor**: continuity_pass mark (gate for proceeding)
 
 ## What NOT to do

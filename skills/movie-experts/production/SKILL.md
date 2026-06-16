@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, production, character-lora, wardrobe, lighting-intent, gpu-budget, asset-reuse, 制作管理]
-    related_skills: [performer, drawer, animator, scene_builder, continuity_auditor, colorist, compliance_gate, cinematographer, theory_critic, documentary_maker]
+    related_skills: [performer, visual_executor, scene_builder, continuity_auditor, colorist, compliance_gate, cinematographer, theory_critic, documentary_maker]
     expert_id: production
     metrics: [character_id_consistency, wardrobe_continuity, lighting_intent_match, budget_adherence, asset_reuse_rate]
 ---
@@ -21,7 +21,7 @@ AI-relevant production management specialist for 短剧 / 微电影 — owns **c
 
 ## When to use this skill
 
-The user needs to plan character casting (LoRA training), specify wardrobe per scene, design lighting intent across shots, allocate GPU/render budget across an episode or season, or design asset reuse strategy to minimize cost. Typically invoked early in production (before drawer / animator) to define the asset pipeline.
+The user needs to plan character casting (LoRA training), specify wardrobe per scene, design lighting intent across shots, allocate GPU/render budget across an episode or season, or design asset reuse strategy to minimize cost. Typically invoked early in production (before visual_executor) to define the asset pipeline.
 
 ## References
 
@@ -73,7 +73,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - 3-point lighting intent + AI prompt token translation
 - Total budget allocation(character LoRA + image gen + video gen + audio + re-take buffer)
 - Asset library schema + batch generation planning + reuse rate tracking
-- Cross-expert coordination(performer / voicer / continuity_auditor / colorist / cinematographer / drawer / animator)
+- Cross-expert coordination(performer / voicer / continuity_auditor / colorist / cinematographer / visual_executor)
 
 ## Output Format
 
@@ -151,7 +151,7 @@ tags="expert:production,domain:asset-reuse-plan"
 4. **Lighting Intent** — Per scene, define 3-point setup + AI prompt tokens
 5. **Budget Allocation** — Compute total budget per asset category + re-take buffer
 6. **Asset Library Plan** — Define naming convention + batch generation 4-phase schedule
-7. **Cross-Expert Coordination** — Hand off to performer (behavior) / voicer (voice) / continuity_auditor (verification) / colorist (color grading) / cinematographer (shot intent) / drawer (image gen) / animator (video gen)
+7. **Cross-Expert Coordination** — Hand off to performer (behavior) / voicer (voice) / continuity_auditor (verification) / colorist (color grading) / cinematographer (shot intent) / visual_executor (image + video gen)
 8. **Budget Tracking** — Per episode, update budget_tracking.json + verify reuse rate targets met
 9. **Post-production Audit** — Verify asset reuse rates + budget adherence + continuity_auditor pass
 
@@ -176,8 +176,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - **-> continuity_auditor**: wardrobe + lighting + character ID verification protocol
 - **-> colorist**: lighting_mood + color_temp baseline for color grading
 - **-> cinematographer**: lighting consistency with shot_intent
-- **-> drawer**: lighting prompt tokens + character LoRA + wardrobe reference
-- **-> animator**: I-frame assets for video generation
+- **-> visual_executor**: lighting prompt tokens + character LoRA + wardrobe reference + I-frame assets for video generation
 - **-> compliance_gate**: wardrobe + casting compliance pre-distribution review
 
 ## What NOT to do
@@ -193,6 +192,6 @@ tags="expert:production,domain:asset-reuse-plan"
 
 ## Pipeline Position
 
-production sits **early** in the production DAG — after screenplay + style_genome, before drawer / animator:
+production sits **early** in the production DAG — after screenplay + style_genome, before visual_executor:
 
-`screenplay + style_genome → production (LoRA / wardrobe / lighting / budget / assets) → (cinematographer + drawer + animator + performer + voicer + composer + foley) → editor + colorist + continuity_auditor → mixer → final`
+`screenplay + style_genome → production (LoRA / wardrobe / lighting / budget / assets) → (cinematographer + visual_executor + performer + voicer + composer + foley) → editor + colorist + continuity_auditor → mixer → final`

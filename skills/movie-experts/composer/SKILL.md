@@ -155,5 +155,5 @@ tags="expert:composer,domain:chion-audio-vision"
 - Don't generate wall-to-wall music (scenes need breathing room)
 - Don't occupy the 2000-5000Hz zone (dialogue territory)
 - Don't compress beyond 4:1 (kills film scoring dynamics)
-- Don't run MusicGen alongside drawer/animator on single GPU
+- Don't run MusicGen alongside visual_executor on single GPU
 - Don't ignore editor's cut points (coupled beats must align)
