@@ -90,6 +90,7 @@
 - v3.0 requirements: **12 total** (RENAME × 2 + MERGE × 2 + NEW × 1 + DEPRECATE × 3 + VALIDATE × 2 + DOC × 2)
 - Mapped to phases: **12 / 12** ✓
 - Unmapped: **0**
+- Completed: **12 / 12** ✓ (v3.0 milestone closed 2026-06-17)
 
 **Per-phase summary:**
 
@@ -105,4 +106,4 @@
 ---
 
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-16 — v3.0 requirements traceability populated (12/12 mapped to 6 phases 13-18)*
+*Last updated: 2026-06-17 — v3.0 milestone closed; all 12 requirements Complete*
