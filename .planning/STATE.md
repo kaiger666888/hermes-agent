@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: ready_to_plan
-last_updated: 2026-06-17T00:00:00.000Z
-last_activity: 2026-06-17 — Phase 15 Plan 01 complete (audio_pipeline merged expert created: 6 sub_steps [voicer, lip_sync, composer, foley, mixer, spatial_audio]; 5 merged_into stubs + 1 folded_into stub for spatial_audio per disposition D-1; 23 ref files migrated to 6 sub-folders; GAP-REPORT consolidated)
+status: executing
+last_updated: "2026-06-17T00:00:00.000Z"
+last_activity: 2026-06-17 — Phase 15 Plan 02 complete (audio_pipeline consumer edge sync: 11 SKILL.md updated with audio_pipeline in related_skills + body prose sync; 2 deviations: animation_studio audit miss + production/colorist omitted from plan files_modified but had stranded references)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 33
-stopped_at: Phase 15 Plan 01 complete (1/3) — ready for 15-02 (consumer edge sync)
+  total_plans: 9
+  completed_plans: 9
+  percent: 50
+stopped_at: Phase 15 Plan 02 complete (2/3) — ready for 15-03 (close-out docs)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,7 +30,7 @@ stopped_at: Phase 15 Plan 01 complete (1/3) — ready for 15-02 (consumer edge s
 ## Current Position
 
 Phase: 15
-Plan: 15-01 complete (1/3); next is 15-02 (consumer edge sync)
+Plan: 15-02 complete (2/3); next is 15-03 (close-out docs)
 Status: Executing
 Last activity: 2026-06-17
 
@@ -44,7 +44,7 @@ v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12
 v3.0 Skills-to-DAG Alignment milestone:
   Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
   Phase 14 [██████████] 100% Complete (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 done: consumer edge sync across 15 SKILL.md; 14-03 done: README + corpus tree + DAG + _shared/ docs close-out)
-  Phase 15 [███       ] 33% In progress (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 pending: consumer edge sync; 15-03 pending: close-out docs)
+  Phase 15 [██████    ] 67% In progress (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 pending: close-out docs)
   Phase 16 [          ] 0% Not started (prompt_injector NEW — UNBLOCKED, depends on 15)
   Phase 17 [          ] 0% Not started (deprecate 3 — UNBLOCKED, depends on 16)
   Phase 18 [          ] 0% Not started (validate + docs — depends on 13-17)
@@ -137,6 +137,10 @@ v3.0 Skills-to-DAG Alignment milestone:
 | RAG tag prefix migration: `expert:{voicer\|lip_sync\|composer\|foley\|mixer\|spatial_audio},domain:X` → `expert:audio_pipeline,sub:{voicer\|lip_sync\|composer\|foley\|mixer\|spatial_audio},domain:X` | Preserves domain axis while introducing sub-step scoping for query precision; matches Phase 14 migration pattern | Applied 2026-06-17 in plan 15-01 |
 | Version bumps on all 6 redirect stubs | Records the merge event in version history (voicer 1.2.0, lip_sync 1.1.0, composer 1.2.0, foley 1.1.0, mixer 1.2.0, spatial_audio 1.2.0); distinct from Phase 14 which kept drawer/animator versions unchanged in their stubs | Applied 2026-06-17 in plan 15-01 |
 | Plan narrative "21 ref files" miscount NOT propagated | The plan narrative says "21 ref files (3+4+3+3+2+2 + 6 LICENSEs)" but the actual file list in `<files>` and `<verify>` enumerates 23 files; file list was the source of truth and was followed exactly; SUMMARY documents the discrepancy | Documented 2026-06-17 in plan 15-01 SUMMARY §Deviations |
+| Phase 15 Plan 02 audit incompleteness (Rule 2): production + colorist omitted from `<files_modified>` | Plan enumerated 9 consumer SKILL.md but the actual corpus contained 11 with stranded audio references. production had `**-> voicer**` + 4 audio IDs in DAG pipeline string + audio_pipeline lists production (bidirectional edge needed); colorist had `**-> mixer**` (body-only, directional edge). Applied same edge sync rules to both; plan's own "zero stranded references" success criterion made this load-bearing | Applied 2026-06-17 in plan 15-02 |
+| Phase 15 Plan 02 animation_studio audit miss (Rule 1) | Plan `<interfaces>` claimed "animation_studio: NONE in related_skills per audit — body prose only"; actual file had `- composer` + `- voicer` as explicit multi-line related_skills entries. Same deviation pattern as Phase 14's animation_studio drawer/animator miss. Applied collapse rule: both → single `- audio_pipeline` line | Applied 2026-06-17 in plan 15-02 |
+| Sub-step annotation strategy extended from Phase 14 (visual_executor drawer/animator) to Phase 15 (audio_pipeline 6 sub-steps) | Every body reference that previously named a specific audio expert now carries `(composer sub-step)` / `(voicer sub-step)` / `(lip_sync sub-step)` / `(foley sub-step)` / `(mixer sub-step)` inline. Artifact paths use dotted form (`audio_pipeline.composer.coupled_beat.json`) for path-like references. Preserves operational routing context lost in N→1 collapse | Applied 2026-06-17 in plan 15-02 |
+| DAG pipeline string consolidation: `-> mixer -> final` suffix folds INTO audio_pipeline | style_genome + production had pipeline strings ending `... -> mixer -> final`. Post-merge, mixer is an internal sub-step of audio_pipeline, so the suffix becomes `-> final` directly (mixer is not a downstream peer). Avoids ambiguous duplicate `audio_pipeline` entries in non-array DAG-string context | Applied 2026-06-17 in plan 15-02 |
 
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
@@ -166,9 +170,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 15 Plan 01 executed (2026-06-17) — audio_pipeline merged expert created. New `skills/movie-experts/audio_pipeline/SKILL.md` declares top-level `sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]` (6-item array — extends Phase 14's 2-item sub_steps field). `metadata.hermes.aliases: [voicer, lip_sync, composer, foley, mixer, spatial_audio]` declared per FOUND-08. `metadata.hermes.related_skills` = exact 8-item external union `[screenplay, performer, editor, production, visual_executor, continuity_auditor, style_genome, scene_builder]` (audio-pipeline self-refs + internal audio edges dropped). Body has 6 `## Sub-step:` H2 sections in pipeline order voicer→lip_sync→composer→foley→mixer→spatial_audio. `## Spatial Audio Disposition` H2 documents the D-1 fold decision + rationale + rejected alternative + `folded_into` stub status (ROADMAP §15 criterion #2). Sub-step: Lip Sync opens with NODE-09 explicit-sub-step note (ROADMAP §15 criterion #5). All 6 predecessors' intra-audio Collaboration bullets rewritten as internal-handoff notes. 23 ref files migrated verbatim to `references/{voicer,lip_sync,composer,foley,mixer,spatial_audio}/` sub-folders. GAP-REPORT.md consolidates 5 predecessor GAP-REPORTs + 1 placeholder for lip_sync. 6 old audio SKILL.md files replaced with redirect stubs (5 `status: merged_into` + 1 `status: folded_into` for spatial_audio). Commits b4d9646c0 + 36941fe06.
-**Next action:** `/gsd:plan-phase 15` (continue with plan 15-02) or `/gsd:execute-phase 15` to plan + execute consumer edge sync across 9+ consumer SKILL.md files. ROADMAP §15 criteria 1, 2, 3, 5 satisfied; criterion 4 (old audio expert dirs preserved) partly satisfied at source-expert level. Bidirectional consumer edge sync (criterion 4 full satisfaction) is the job of plan 15-02.
-**Hand-off note:** Phase 15 IN PROGRESS — 1/3 plans done. audio_pipeline merged expert created + predecessor stubs in place. Next: 15-02 (consumer edge sync across NON-audio consumers referencing old audio expert_ids) + 15-03 (close-out docs: README inventory + corpus tree + DAG + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus). Phase 16 (prompt_injector new), Phase 17 (deprecations) remain UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
+**Last action:** Phase 15 Plan 02 executed (2026-06-17) — audio_pipeline consumer edge sync complete. 11 non-audio consumer SKILL.md files updated (9 enumerated in plan + 2 deviation discoveries: production + colorist). Every consumer's `metadata.hermes.related_skills` array that previously listed any of {voicer, lip_sync, composer, foley, mixer, spatial_audio} now lists a single deduplicated `audio_pipeline` entry. visual_executor + production got add-edge treatment (audio_pipeline lists them, they now list audio_pipeline back). colorist got body-only update (directional edge — audio_pipeline does NOT list colorist). Every body prose reference (markdown links, Collaboration bullets with sub-step annotations, JSON literals, JSON artifact paths like `audio_pipeline.composer.coupled_beat.json`, DAG pipeline strings collapsing 6 audio nodes → 1, narrative pair references) updated. Directional edge D-7 preserved (hook_retention → audio_pipeline one-way). Phase 13 (continuity_auditor, compliance_gate) + Phase 14 (visual_executor, drawer/animator sub-steps) tokens preserved intact. Commit 35dd7c705.
+**Next action:** `/gsd:plan-phase 15` (continue with plan 15-03) or `/gsd:execute-phase 15` to plan + execute close-out docs (README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus updates for the audio_pipeline merge). ROADMAP §15 criteria 1, 2, 3, 4, 5 all satisfied after 15-02. 15-03 satisfies criteria 6 (README inventory updated) + 7 (corpus tree updated).
+**Hand-off note:** Phase 15 IN PROGRESS — 2/3 plans done. audio_pipeline merged expert + predecessor stubs (15-01) + consumer edge sync (15-02) complete. Next: 15-03 (close-out docs). Phase 16 (prompt_injector new), Phase 17 (deprecations) remain UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
 
 ---
 
