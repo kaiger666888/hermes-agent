@@ -1,807 +1,808 @@
-# Architecture Patterns: RAG-Augmented Movie-Experts Suite v2
+# Architecture Research: Pipeline Redesign from First Principles (v2.0 PRFP)
 
-**Domain:** Skill-based RAG architecture inside a markdown-only skill system
-**Researched:** 2026-06-15
-**Overall confidence:** HIGH (based on direct reading of existing skills, memory plugin source, and codebase conventions)
+**Domain:** Design-document architecture for a cross-repo pipeline handoff (hermes-agent skills layer + kais-movie-agent execution layer)
+**Researched:** 2026-06-16
+**Overall confidence:** HIGH (grounded in direct reads of `.planning/PROJECT.md`, both repo READMEs, V8-ARCHITECTURE.md, V2-REFACTOR-PLAN.md, INTEGRATION.md, the 26-skill inventory, the v1 ARCHITECTURE.md, and the 102-book corpus index)
+
+---
 
 ## Executive Summary
 
-The Hermes skill system has a deliberately narrow contract: **a skill is a markdown file injected as a user message**. The LLM in the conversation loop then autonomously decides which tools to call (file read, memory search, etc.) based on the instructions in that markdown. This shapes every architectural decision for RAG-augmented skills:
-
-- Static `references/*.md` files are surfaced by **listing them in a References table inside SKILL.md** and pointing the agent to them with inline pointers like "see `references/foo.md` for X". The agent uses its existing `read_file`-style tool to read them on demand. No new code is needed; the skill prompt is the API.
-- Optional memory-plugin RAG is invoked by **referencing tool names** (`mem0_search`, `memory`) in conditional language inside SKILL.md. The memory plugin already injects a system-prompt block announcing its presence, so the LLM knows when the tool is available. SKILL.md prompts should use defensive phrasing: "If memory search is available, query for X; otherwise rely on refs."
-- Cross-expert collaboration is **declarative YAML** (`metadata.hermes.related_skills`). Adding an expert = new directory + new edges in upstream/downstream `related_skills` lists. There is no runtime orchestration; the graph is documentation plus (future) a worker `/decide` router.
-- The eval harness is a **standalone Python script** under `scripts/` per skill. It is NOT registered with Hermes' tool registry; it is a developer-side benchmark, not a user-facing tool.
-
-This means the architecture for RAG-augmented skills is almost entirely **content architecture** — the layout of directories, the phrasing of prompts, the structure of reference files — rather than runtime architecture. The load-bearing work happens at authoring time.
-
-## Recommended Architecture
-
-### High-Level Skill Layout (18-expert suite)
-
-```
-skills/movie-experts/
-├── README.md                          # Top-level suite overview (NEW in DOC-01)
-├── _shared/                           # (optional v2) cross-expert refs
-│   ├── glossary.md                    # EN<->CN term dictionary
-│   └── encoding-matrices.md           # 5D, CxSxZ, FxRxT, ... reference
-├── screenplay/
-│   ├── SKILL.md
-│   ├── references/                    # NEW in REFS-A
-│   │   ├── narrative-structure.md     # 3-act micro-structure, beat sheets
-│   │   ├── dialogue-craft.md          # subtext, vernacular, "show don't tell"
-│   │   ├── emotion-curve-design.md
-│   │   ├── short-drama-hooks.md       # 短剧-specific: 3-second hooks
-│   │   └── PAYWALL.md                 # cliffhanger / 卡点 patterns (CN-primary)
-│   ├── prompts/                       # NEW in EVAL-01
-│   │   ├── 01-three-act-structure.yaml
-│   │   ├── 02-subtext-dialogue.yaml
-│   │   └── 03-emotion-curve.yaml
-│   └── reports/                       # NEW in EVAL-01 (gitignored output)
-│       └── .gitkeep
-├── cinematographer/                   # NEW expert (EXPERT-CINE)
-│   ├── SKILL.md
-│   ├── references/
-│   │   ├── shot-grammar.md            # 景别/视角/构图
-│   │   ├── axis-rules.md              # 180° rule, 30° rule, match cut
-│   │   ├── vertical-screen-framing.md # 竖屏 specific framing
-│   │   └── camera-motion-catalog.md
-│   ├── prompts/
-│   └── reports/
-├── hook_retention/                    # NEW expert (EXPERT-HOOK)
-│   ├── SKILL.md
-│   ├── references/
-│   │   ├── three-second-hooks.md
-│   │   ├── conflict-escalation.md
-│   │   ├── paywall-design.md          # 付费卡点 patterns
-│   │   └── vertical-pacing.md
-│   ├── prompts/
-│   └── reports/
-├── production/                        # NEW expert (EXPERT-PROD)
-│   ├── SKILL.md
-│   ├── references/
-│   │   ├── casting-notes.md           # 选角
-│   │   ├── costume-makeup-props.md    # 服化道
-│   │   ├── lighting-setup.md
-│   │   └── scheduling-call-sheet.md   # 统筹/拍摄计划
-│   ├── prompts/
-│   └── reports/
-├── compliance_marketing/              # NEW expert (EXPERT-COMPLI)
-│   ├── SKILL.md
-│   ├── references/
-│   │   ├── cn-content-rules.md        # 中国短剧合规清单
-│   │   ├── platform-specs-douyin.md
-│   │   ├── platform-specs-kuaishou.md
-│   │   ├── platform-specs-miniprogram.md
-│   │   └── viral-element-catalog.md   # 爆款元素
-│   ├── prompts/
-│   └── reports/
-├── [12 other existing experts, each gaining references/ + prompts/ + reports/ subdirs]
-└── _eval/                             # Top-level shared eval harness (alternative layout)
-    ├── runner.py
-    ├── judge_prompt.md
-    ├── snapshot.py                    # captures "before" SKILL.md state
-    └── README.md
-```
-
-### Two Layout Choices for Eval Harness
-
-**Option A (recommended): central `_eval/` at suite root.** The eval runner knows how to walk all 18 experts. Each expert keeps only `prompts/` (input fixtures) locally; reports go to `_eval/reports/<expert>/`. This avoids duplicating runner.py 18 times.
-
-**Option B: per-expert `scripts/runner.py`.** Each expert has its own copy. More boilerplate, but each expert becomes self-contained and portable (could be moved to `optional-skills/` without dragging a shared harness).
-
-**Recommendation: Option A** because (1) the judge prompt and snapshot logic are shared, (2) the 14 existing experts share an identical evaluation pattern (LLM-as-judge double-blind), and (3) Hermes' own `scripts/` directory already centralizes developer tooling.
-
-### Component Boundaries
-
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| `SKILL.md` | Declarative expert identity + workflow + quality thresholds + RAG invocation instructions | Parsed by `agent/skill_utils.parse_frontmatter`; body injected as user message |
-| `references/*.md` | Static curated knowledge corpus (Chinese-primary, EN glossary) | Read by the LLM via `read_file` tool on demand; surfaced via References table in SKILL.md |
-| `prompts/*.yaml` | Eval benchmark fixtures (input + expected dimensions) | Consumed by `_eval/runner.py`; never read by the runtime LLM |
-| `_eval/runner.py` | Double-blind LLM-as-judge: invoke skill with "before" prompt, invoke with "after" prompt, judge | Calls Hermes via subprocess or HTTP; writes to `_eval/reports/` |
-| `_eval/snapshot.py` | Captures pre-refactor SKILL.md state into `_eval/baseline/<expert>/SKILL.md` | Run once before REFACTOR-A begins; idempotent |
-| `_shared/glossary.md` | Cross-expert EN<->CN term dictionary to keep translations consistent | Read by any expert; linked from each SKILL.md |
-| Memory plugin (existing, untouched) | Optional vector RAG via `mem0_search` / `memory` tools | Activated by user config; LLM sees its tool schemas at runtime |
-
-### Data Flow: A RAG-Augmented Skill Invocation
-
-```
-1. User invokes /screenplay (or worker /decide routes to it)
-2. agent/skill_commands._load_skill_payload reads screenplay/SKILL.md,
-   parses YAML frontmatter, injects body as user message
-3. agent/conversation_loop.run_conversation sends to LLM
-4. LLM, following instructions in SKILL.md body:
-   a. Reads references/short-drama-hooks.md via read_file tool  ← static RAG
-   b. (Conditional) Calls mem0_search("screenplay style preferences")
-      IF memory plugin is configured                            ← optional RAG
-   c. Falls back gracefully if mem0_search is absent
-      (system prompt block from memory plugin is missing,
-       so LLM knows the tool doesn't exist)
-   d. Generates script.json per Output Format spec
-5. Downstream /scene_builder invocation sees screenplay's output
-   in conversation history (if same session) or via explicit
-   file passing
-```
+This milestone is unusual: the deliverable is **only design documents, no code**. The "architecture" question is therefore not "what code do we write" but "what is the canonical structure of the design deliverable, how is it represented, how does it hand off to two downstream repos, and in what order should the design work itself be done." Every recommendation below answers one of those four questions.
 
-**Critical insight:** The skill author does NOT need to write Python to make RAG work. The author writes prompt language that (a) tells the LLM which references to consult and when, and (b) defensively mentions memory-plugin tools by name so the LLM uses them when available. This is a **prompt-engineering architecture**, not a runtime architecture.
+Three load-bearing constraints shape every decision:
 
-## Patterns to Follow
+1. **Dual-repo handoff** — The design lives in `hermes-agent/.planning/` (because movie-experts is the knowledge layer), but must produce non-binding contracts readable by both `hermes-agent/skills/movie-experts/` (26 skills, knowledge/RAG layer) and `kais-movie-agent/` (separate repo with its own `.planning/`, execution/orchestration layer). The design must NOT mutate either repo. Both downstream consumers will open their own future milestones to act on it.
 
-### Pattern 1: References Table at Top of SKILL.md
+2. **First-principles derivation is the load-bearing section, not the DAG** — PROJECT.md is explicit: nodes are derived "from 0" (ignoring existing 8 phases + 26 skills), with Musk-style reasoning traces. This means the derivation record is the **epistemic anchor**; the DAG, the per-node specs, the corpus traceability, and the comparisons are all *consequences* of that derivation. Section ordering and review cadence must reflect this — a node that cannot be defended from first principles cannot survive, regardless of how neatly it slots into a DAG.
 
-**What:** A markdown table immediately after the "## When to use" section listing every file in `references/` with a one-line description and trigger.
+3. **The design must be machine-derivable AND human-reviewable** — Downstream consumers will (a) auto-generate skill-gap reports, (b) auto-generate phase-migration matrices, (c) run governance checks ("does this node have a first-principles defense? a corpus citation? an AIGC-justification?"). This mandates a structured canonical format (YAML/JSON) for the machine-derivable parts, layered under human-readable prose. Pure markdown alone is insufficient; pure schema alone is hostile to derivation review.
 
-**Why:** The LLM scans the SKILL.md body linearly. A table at the top is the highest-signal way to say "these files exist, read them when X".
+The rest of this document is organized around the 7 sub-questions in the milestone brief.
 
-**Example** (adapted from `skills/creative/manim-video/SKILL.md:229`):
+---
 
-```markdown
-## References
+## 1. Design Document Structure (Canonical Layout)
 
-| File | When to Read | Contents |
-|------|--------------|----------|
-| `references/narrative-structure.md` | Before drafting any scene | 3-act micro-structure compression, beat sheet templates for 60-180s runtime |
-| `references/dialogue-craft.md` | Before writing dialogue | Subtext ratio rules, vernacular register, banned expository patterns |
-| `references/short-drama-hooks.md` | Before writing the opening scene | 短剧-specific 3-second hook patterns, cold-open templates |
-| `references/PAYWALL.md` | When user requests 短剧 / 付费剧 | Cliffhanger (卡点) placement, paywall frequency by platform |
+### Recommended Section Order
 
-**Read the relevant reference BEFORE drafting.** Do not generate from training data alone — the references encode industry conventions that differ from generic screenplay advice.
-```
+The order is **derivation-first, integration-last**. Every downstream section must be defensible by walking backward to the derivation record. Skipping ahead (e.g., drafting the DAG before the first-principles pass) is the single largest risk to this milestone's integrity.
 
-### Pattern 2: Defensive Memory-Plugin Invocation
+| # | Section | Purpose | Depends On |
+|---|---------|---------|------------|
+| 0 | **README.md** (suite-level index) | Single entry point. Lists every artifact, its current review status, who the downstream consumer is, and how to navigate. | — (skeleton only at Phase 0; full version in Phase E) |
+| 1 | **00-FIRST-PRINCIPLES.md** | The Musk-style reasoning trace. Starts from irreducible questions ("What does the viewer ultimately receive?", "Why do 短剧 live or die in 3 seconds?", "What can AI actually accelerate?", "What can AI never replace?"). Derives a candidate minimal node set as the **conclusion** of the trace — never the starting point. | — |
+| 2 | **01-NODE-DAG.md** | The DAG as a deliverable artifact. Includes the canonical diagram AND a pointer to the machine-readable `nodes.yaml`. Documents node adjacency, edge semantics (forward artifact / feedback / consultative), and bottlenecks. | §1 (derivation must produce the candidate node set first) |
+| 3 | **02-NODE-SPECS.md** | Per-node spec sheet. Each node: core task / I/O contract / AIGC transformation point / traditional anchor / first-principles defense link / corpus citation link. This is the densest, longest section. | §1 + §2 (specs apply to derived nodes only) |
+| 4 | **03-CORPUS-TRACEABILITY.md** | The 102-book → node coverage matrix. For each node: which books inform it, which chapter/concept, with a "coverage strength" rating. For each book: which nodes it informs, with a "source relevance" rating. Bidirectional. | §3 (specs name the corpus anchors; this section back-links them) |
+| 5 | **04-LLM-CREATIVE-DISTILLATION.md** | Standalone deep-dive (user explicitly required as separate dimension). Covers: definition of creativity in narrative, the self-consistency check mechanism, LLM distillation prompt strategy, fail modes, evaluation hooks. Not node-specific — it is a horizontal concern that cuts across nodes. | §1 (must align with the first-principles definition of what AI can/can't do) |
+| 6 | **05-COMPARISON-VS-8-PHASES.md** | Non-binding delta analysis vs kais-movie-agent's existing 8 phases. Output: coverage map (which new nodes are covered, partially covered, missing), with **recommendation framework** (parallel-run / cutover / per-node refactor) — not an implementation plan. | §2 + §3 (must compare derived nodes against existing phases) |
+| 7 | **06-COMPARISON-VS-26-SKILLS.md** | Non-binding mapping vs hermes-agent's 26 movie-experts. Output: node → skill(s) coverage map, skill gap identification (nodes with no skill), skill redundancy identification (multiple skills per node), recommendation framework (merge / split / rename / relocate) — non-binding. | §2 + §3 (must compare derived nodes against existing skills) |
+| 8 | **07-HANDOFF-PLAN.md** | Dual-repo handoff contract. For each downstream repo: (a) what they receive, (b) what they're expected to produce in their own future milestone, (c) what's strictly out of scope, (d) versioning & living-doc governance pointer. | All prior sections (handoff depends on all artifacts being stable) |
+| 9 | **nodes.yaml** + **edges.yaml** + **corpus-trace.yaml** | Machine-readable canonical schema (see §2 below). Single source of truth that the markdown sections render from. | §1-§4 |
 
-**What:** Phrasing in SKILL.md that uses memory-plugin tools **if and only if** they are available, with explicit fallback to static refs.
+### Additional Sections the Brief Did Not Mention (Recommended)
 
-**Why:** The memory plugin's `system_prompt_block()` (`plugins/memory/mem0/__init__.py:230`) only injects its "Use mem0_search..." line when configured. If the plugin isn't configured, the LLM has no `mem0_search` tool in its schema and the SKILL.md prompt should not hard-require it. Defensive phrasing lets the same SKILL.md work in both configurations.
+| Additional Section | Why Needed |
+|--------------------|-----------|
+| **08-GOVERNANCE.md** | Living-doc rules. Required because the design will evolve. Documents: when a node addition requires explicit re-derivation; when an AIGC transformation update requires showing marginal value delta; review cadence; who has authority to merge changes; changelog format. |
+| **09-OPEN-QUESTIONS.md** | Known unknowns that the design cannot resolve within this milestone. Forces honest gap-reporting rather than papering over ambiguity. Feeds forward into the downstream repos' research phases. |
+| **10-CHANGELOG.md** | Append-only change log for the design itself (NOT the downstream repos). Every node addition / spec revision / corpus-link update gets a dated entry. This is the audit trail the milestone brief asks for in §6. |
 
-**Example** (concrete block to embed in SKILL.md):
+### Physical Location in Repo
 
-```markdown
-## Knowledge Retrieval
+**Recommended:** `.planning/research/v2-pipeline-design/`
 
-This expert draws on two knowledge sources. Always use (1); use (2) if available.
+Rationale:
+- The milestone's `.planning/research/` is the natural research output location. The v1 research files already live there.
+- A subdirectory (rather than flat files) keeps the v2 design artifacts grouped and makes the handoff contract easier to reference ("see `.planning/research/v2-pipeline-design/`") without polluting the existing 5 research files.
+- Alternative considered: `.planning/milestones/v2-design/` — rejected because the v2 milestone is not yet archived (per STATE.md, status is `planning`) and the design IS the research output of the milestone, not a post-hoc archive.
 
-### 1. Static references (always available)
+### Structure Rationale Summary
 
-Before generating any output, read the relevant files from `references/`
-listed in the References table above. These are curated industry knowledge
-and override generic assumptions from training data.
+- **00-FIRST-PRINCIPLES first** because every later section is downstream of it. Reading the design top-to-bottom must mirror the reasoning path.
+- **Node specs (02) and corpus trace (03) interleaved by reference, not by duplication** — the spec sheet cites corpus anchors by ID; the traceability matrix back-links to nodes. This avoids the v1 mistake of duplicating the related_skills adjacency list in multiple places.
+- **LLM creative distillation (04) as a peer section, not embedded in node specs** — it is a horizontal concern (cuts across multiple nodes) and the user explicitly called it out as an independent insight layer.
+- **Comparisons (05, 06) come AFTER derivation** because the design is supposed to ignore the existing 8 phases and 26 skills when deriving. Comparing too early contaminates the first-principles pass.
+- **Handoff plan (07) last among markdown sections** because it requires every prior artifact to be stable. Handing off a half-derived node set is worse than useless.
+- **YAML/JSON schema files (09) underlie markdown** — the markdown renders FROM the schema, never the reverse. Single source of truth.
 
-### 2. Memory plugin (optional, if `mem0_search` or `memory` tool is in your tool list)
+---
 
-If the `mem0_search` tool is available in your current tool set, query it
-for relevant context BEFORE drafting:
+## 2. Node DAG Representation (Format Decision)
 
-- `mem0_search("screenplay style preferences for this user")`
-- `mem0_search("prior screenplay decisions in this project")`
+### Alternatives Considered
 
-If only the built-in `memory` tool is available, use:
+| Option | Pro | Con | Verdict |
+|--------|-----|-----|---------|
+| **A. Markdown table only** | Maximum human readability; no tooling | Not machine-parseable; handoff requires manual transcription; graph operations (reachability, cycle detection) impossible | Insufficient |
+| **B. Mermaid diagram only** | Renders as a visual graph in GitHub/most MD viewers; widely understood syntax | Not all consumers render Mermaid; hard to encode per-node metadata (I/O contracts, AIGC points); weak for diffing | Insufficient alone |
+| **C. YAML schema only** | Full structure; machine-parseable; diff-friendly; can encode arbitrary metadata | Hostile to derivation review (a YAML file doesn't tell the story of WHY a node exists) | Insufficient alone |
+| **D. Custom JSON schema** | Same as YAML plus stricter validation | Verbose; comments require out-of-band mechanism; less readable in PR diffs than YAML | Rejected — YAML with `#` comments wins |
+| **E. **RECOMMENDED: Hybrid — YAML canonical + Mermaid render + Markdown spec** | **Single source of truth (YAML) → machine-derivable → renders to Mermaid (visual) + Markdown (prose). Three audiences, one source.** | Requires a small generator (10-50 lines Python or Node) to render Mermaid + Markdown from YAML. **This generator is the only "code" allowed in this design-only milestone** — it is a developer tool, NOT shipped to downstream consumers. | **CHOSEN** |
 
-- `memory(action="read", target="memory")` to retrieve stored notes.
+### Chosen Format: Hybrid (YAML canonical + Mermaid render + Markdown spec)
 
-If neither tool is present, skip this step silently — the static references
-are sufficient. Do NOT mention to the user that memory tools are unavailable.
-```
+**Why hybrid wins:**
 
-**Why this works:** The LLM sees its tool schema at runtime. If `mem0_search` isn't there, the conditional ("if available in your current tool set") evaluates false in the LLM's reasoning, and it proceeds with static refs only. No crash, no confused user-facing message.
+1. **The downstream consumers need both.** kais-movie-agent needs to programmatically diff "new nodes vs existing 8 phases" — that requires structured data, not prose. hermes-agent skills team needs to discuss "should this node map to `cinematographer` or split into two skills?" — that requires prose, not JSON. Hybrid serves both.
 
-### Pattern 3: Bilingual Sections with EN Structure, CN Body
+2. **The first-principles derivation is fundamentally prose.** A YAML file cannot capture the reasoning trace that defends a node's existence. The prose spec is where the defense lives; the YAML is the indexable, machine-checkable summary.
 
-**What:** SKILL.md keeps YAML frontmatter and H2 section headings in English (for parser compatibility and Hermes community convention). Body paragraphs under each heading are bilingual: EN summary sentence first, then CN explanatory paragraph with examples.
+3. **Reviewability.** A PR that adds a node touches one YAML entry (canonical), regenerates the Mermaid + Markdown (mechanical), and the human reviewer reads the Markdown spec section to evaluate the derivation. The YAML diff makes "what changed" obvious; the Markdown diff is the human-readable consequence.
 
-**Why:** The Hermes skill loader (`agent/skill_utils.parse_frontmatter`) expects English YAML keys. The CONVENTIONS.md note (line 54) explicitly says "双语策略是 EN 结构 + CN 描述与示例". Mixing CN into YAML keys would break discovery.
+4. **Versionability.** YAML diffs cleanly in git. Mermaid + Markdown are generated artifacts — their diffs are noisy but they are derived, not authored.
 
-**Example** (concrete SKILL.md section):
-
-```markdown
-## Style Rules / 风格规则
-
-### Narrative Standards / 叙事标准
-
-English: Every scene must establish a clear dramatic question within the first 2 seconds. The opening hook must resolve or subvert by the closing scene.
-
-中文:每个场景必须在最初 2 秒内确立明确的戏剧问题。开场钩子必须在结尾场景中得到回应或反转。短剧(60-180 秒)的节奏比电影更紧凑——观众滑动屏幕的速度决定了一切。
-
-**Example / 示例:**
-- EN: A character says "I'll come back for you" in scene 1 → returns (or doesn't) in scene 8.
-- CN: 角色在场景 1 说出「我会回来找你」→ 在场景 8 中回归(或未回归),形成呼应。
-```
-
-### Pattern 4: Reference File Anatomy
-
-**What:** Each `references/*.md` file follows a fixed anatomy so the LLM can extract value predictably.
-
-**Why:** Consistent structure → LLM learns the pattern after reading one file → faster retrieval on subsequent reads.
-
-**Template** (every reference file):
-
-```markdown
-# [Topic Title] / [中文标题]
-
-**Source:** [Book / paper / platform guide / practitioner interview]
-**Copyright:** [Public domain / fair-use excerpt / licensed / original]
-**Last verified:** YYYY-MM-DD against [source version/edition]
-
-## When to Read This
-
-[One paragraph: trigger conditions. "Read this when the user asks for X, or when Y appears in the upstream screenplay output."]
-
-## Core Principles
-
-[Bullet list of 3-7 principles. Each principle is a one-line rule followed by a 2-3 sentence explanation.]
-
-## Concrete Patterns
-
-[3-5 named patterns with examples. Each pattern: name, when to use, example (EN+CN where relevant).]
-
-## Anti-Patterns
-
-[What NOT to do, with reasoning. LLMs respond well to "don't do X because Y".]
-
-## Cross-References
-
-[Links to other reference files in the same skill, or to other experts' refs. "For platform-specific paywall placement, see `../hook_retention/references/paywall-design.md`."]
-```
-
-### Pattern 5: Eval Prompt Fixture Format
-
-**What:** Each eval prompt is a YAML file with structured fields so the runner can iterate them uniformly.
-
-**Why:** The double-blind judge needs (a) the user-facing input, (b) the dimensions to score on, (c) the expected reference answer or rubric. YAML keeps this auditable.
-
-**Template** (`prompts/01-three-act-structure.yaml`):
+### Canonical YAML Schema (`nodes.yaml`)
 
 ```yaml
+# Canonical node schema. Single source of truth.
+# Markdown sections (01-NODE-DAG.md, 02-NODE-SPECS.md) render FROM this file.
+schema_version: 1
+milestone: v2.0-PRFP
+last_updated: 2026-06-16
+
+nodes:
+  - id: story_kernel_mining           # snake_case, stable identifier
+    name: Story Kernel Mining          # human-readable
+    name_cn: 故事内核挖掘               # bilingual
+    phase_category: pre_production     # one of: pre_production / production / post_production / distribution / cross_cutting
+    derivation_anchor:                 # link back to first-principles section
+      section: "00-FIRST-PRINCIPLES.md#why-mine-a-kernel-before-style"
+      one_line_defense: >
+        The viewer ultimately receives a story, not a style. Mining a resonant
+        kernel before locking style prevents aesthetic-first work that lacks
+        emotional payload.
+    core_task: >
+      Extract the smallest narrative unit (Story Kernel) that carries the
+      emotional/thematic payload the audience will ultimately receive.
+    io_contract:
+      consumes:
+        - artifact: user_intent_brief
+          schema_ref: schemas/user-intent-brief.json   # optional
+          from: user_or_upstream_node
+      produces:
+        - artifact: story_kernel.json
+          schema_ref: schemas/story-kernel.json
+          consumed_by: [style_definition, screenplay_draft, hook_design]
+    aigc_transformation:
+      point: extraction-and-compression
+      mechanism: >
+        LLM compresses multi-source inputs (audience signal, social strata
+        analysis, theme) into a 1-paragraph Story Kernel.
+      marginal_value: >
+        Reduces 2-4 hours of human thematic brainstorming to ~10 minutes of
+        LLM-assisted extraction + human review.
+      fail_modes:
+        - "Hallucinated resonance: LLM invents social-strata connection not supported by input"
+        - "Compression loss: 1-paragraph kernel drops the irreducible tension"
+    traditional_anchor:
+      source_type: book                # book / paper / interview / platform_guide
+      corpus_ids: ["Andrew-formalism", "Bazin-realism", "Field-screenplay"]
+      chapter_or_concept: "主题陈述 / Premise"
+      human_practice: >
+        Traditional screenwriting doctrine requires a one-sentence premise
+        before any scene is written (Field, McKee).
+    corpus_trace:                       # see §4 below — back-links the traceability matrix
+      strong: ["-017-Field", "-019-McKee", "-021-Bourdieu"]
+      supporting: ["-031-Bazin", "-032-Tarkovsky"]
+    first_principles_pass: true         # governance flag — has this node been derived, not copied?
+    status: derived                     # derived / proposed / under_review / accepted
+    review_gates: [derivation, corpus_citation, aigc_justification]
+```
+
+**Schema design principles:**
+
+- `id` is stable and snake_case. Downstream consumers MUST treat it as opaque identifier.
+- `derivation_anchor.section` makes the first-principles defense **machine-checkable** (governance lint can verify every node has a non-empty anchor).
+- `corpus_trace` uses corpus IDs (book IDs from `_shared/project-corpus/README.md` index), not free text — so the traceability matrix can be cross-validated.
+- `review_gates` enumerates which validations have passed. Governance rule: a node cannot move from `proposed` to `accepted` without all three gates passing.
+- `io_contract.consumes.artifact` and `produces.artifact` use kebab-case artifact names. These become the vocabulary of `edges.yaml`.
+
+### Canonical Edge Schema (`edges.yaml`)
+
+```yaml
+schema_version: 1
+edges:
+  - from: story_kernel_mining
+    to: style_definition
+    type: forward_artifact              # forward_artifact / feedback_loop / consultative / audit
+    artifact: story_kernel.json
+    rationale: >
+      Style must serve the kernel; defining style first risks aesthetic without
+      emotional anchor.
+  - from: hook_design
+    to: screenplay_draft
+    type: feedback_loop                 # bidirectional
+    artifact: hook_rewrite_notes.json
+    rationale: >
+      Hook design and screenplay iterate — hooks require rewrite opportunities
+      and screenplay drafts surface new hook placement points.
+```
+
+**Edge types are deliberately constrained to 4 values** so downstream consumers can reason about them:
+- `forward_artifact` — linear pipeline step
+- `feedback_loop` — bidirectional iteration
+- `consultative` — optional cross-cutting consultation (Phase 8 theory_critic pattern)
+- `audit` — parallel verification (continuity / script_auditor pattern)
+
+### Mermaid Rendering
+
+Generated from `nodes.yaml` + `edges.yaml` by a 30-line script. Three views:
+
+1. **Pipeline view** (topological, phase_category-grouped) — answers "what runs when"
+2. **Feedback view** (only `feedback_loop` + `audit` edges) — answers "where does iteration happen"
+3. **Corpus coverage view** (nodes colored by corpus_trace.strong count) — answers "which nodes have weak literary backing"
+
+Mermaid is the *rendered* layer; the canonical graph is in YAML.
+
+### Markdown Spec Section (02-NODE-SPECS.md)
+
+Each node gets a ~150-300 word block, generated from the YAML entry but **augmented with prose** the YAML cannot carry:
+
+```markdown
+## Node: Story Kernel Mining (故事内核挖掘)
+
+**Status:** derived · **Phase:** pre-production · **First-principles defense:** [see §00#why-mine-a-kernel]
+
+### Core Task
+
+[Prose expansion of `core_task`. 2-3 sentences. This is where the design argues
+WHY this task exists as a discrete node, not a sub-step of another node.]
+
+### I/O Contract
+
+**Consumes:** user_intent_brief (from user or upstream)
+**Produces:** story_kernel.json — consumed by [style_definition, screenplay_draft, hook_design]
+
+[Artifact schema reference: `schemas/story-kernel.json`]
+
+### AIGC Transformation
+
+[Prose expansion. Includes the fail modes inline with mitigation notes.
+Crucially: this section must answer "what does the AI do that the human
+couldn't do faster manually?" If the answer is "nothing," the node shouldn't
+exist as an AIGC node.]
+
+### Traditional Anchor
+
+[Prose explanation of which traditional craft step this node corresponds to.
+Cites corpus IDs. Argues that the AIGC transformation is a *compression* of
+the traditional step, not a *substitution*. Substitution nodes require extra
+justification — the design should be skeptical of any node that claims to
+fully replace human craft.]
+
+### Coverage Strength
+
+**Corpus:** 3 strong citations, 2 supporting. Coverage: STRONG.
+If coverage is WEAK (0-1 strong citations), flag for follow-up.
+```
+
+### Why not just Mermaid in markdown
+
+Mermaid is good for **visualization** but bad for **diff, machine-query, and metadata**. The handoff contract requires downstream consumers to ask questions like "list all nodes with corpus coverage < 2 strong citations" — that is a 5-line query against YAML, and a multi-minute grep against rendered Mermaid.
+
+### Why not a real graph DB / D2 / Graphviz
+
+Overkill. The node count is in the 10-25 range (per PROJECT.md: "minimal necessary node set"). YAML + Mermaid handles this trivially. Graphviz would be a defensible alternative for the rendered layer if Mermaid's layout becomes cramped, but Mermaid is rendered natively by GitHub and most MD viewers — Graphviz requires an external rendering step.
+
 ---
-id: screenplay-01-three-act-structure
-expert: screenplay
-skill_invocation: /screenplay
-difficulty: medium
-bilingual: true          # runner will run both EN and CN variants
-input:
-  en: |
-    Write a 90-second short drama script about a mother discovering
-    her daughter's secret social media account. Output script.json.
-  cn: |
-    写一段 90 秒的短剧剧本:母亲发现女儿的秘密社交账号。
-    输出 script.json。
-dimensions:
-  - name: narrative_tension
-    weight: 0.30
-    rubric: |
-      Score 0.0-1.0. Does the script maintain rising tension across
-      all scenes? Penultimate scene should be near 1.0.
-  - name: dialogue_naturalness
-    weight: 0.30
-    rubric: |
-      Score 0.0-1.0. Is the dialogue plausible for the character's
-      age and background? No expository "as you know" lines.
-  - name: emotional_arc
-    weight: 0.25
-    rubric: |
-      Score 0.0-1.0. Are there >=3 distinct emotional phases per scene?
-      Does the peak land in the 70-85% runtime window?
-  - name: short_drama_hook
-    weight: 0.15
-    rubric: |
-      Score 0.0-1.0. Does the opening scene hook within 3 seconds?
-      (短剧-specific; does not apply to generic screenplay rubrics.)
-thresholds:
-  production_minimum:
-    narrative_tension: 0.80
-    dialogue_naturalness: 0.85
-    emotional_arc: 1.0    # "Complete" per SKILL.md
-    short_drama_hook: 0.75
+
+## 3. Integration Strategy with movie-experts Skills (Non-Binding Handoff)
+
+This is a **handoff contract, not a refactor plan**. The design produces recommendations; the skills team's future milestone decides whether to act on them.
+
+### Mapping Format (`skills-mapping.yaml`)
+
+The design emits a structured mapping file in `.planning/research/v2-pipeline-design/skills-mapping.yaml`:
+
+```yaml
+schema_version: 1
+binding: non_binding_recommendation      # HARD constraint — never auto-applied
+last_updated: 2026-06-16
+
+mappings:
+  - node_id: story_kernel_mining
+    candidate_skills:
+      - skill_id: creative_source
+        coverage: primary               # primary / partial / adjacent / none
+        rationale: >
+          creative_source already mines Story Kernel from 6 social strata.
+          This node is essentially a re-statement of creative_source's core task.
+        recommendation: align           # align / merge / split / rename / relocate / new
+        confidence: high
+      - skill_id: style_genome
+        coverage: adjacent
+        rationale: >
+          style_genome defines 5D style vectors, not kernels. Adjacency only.
+        recommendation: none
+        confidence: high
+
+  - node_id: scene_assembly             # hypothetical example
+    candidate_skills:
+      - skill_id: scene_builder
+        coverage: partial
+        rationale: >
+          scene_builder covers spatial/3D scene construction but NOT the
+          storyboard-to-render handoff this node requires.
+        recommendation: split_or_extend
+        confidence: medium
+        gap_note: >
+          Gap: no current skill owns the "storyboard JSON → rendered still"
+          transition cleanly. character_designer + drawer overlap but neither
+          owns it.
+```
+
+### Skill Gap Identification
+
+For each node where all `candidate_skills` have `coverage: none` or `partial`, the mapping emits a `gap_note`. Aggregated gap report (generated section in 06-COMPARISON-VS-26-SKILLS.md):
+
+```markdown
+## Skill Gaps (Nodes Without Clean Skill Coverage)
+
+| Node | Closest Skill | Gap | Recommendation |
+|------|---------------|-----|----------------|
+| scene_assembly | scene_builder, character_designer, drawer (3 partial) | No skill owns the storyboard→render transition | Either extend scene_builder OR create new skill `scene_assembler` |
+```
+
+### Skill Redundancy Identification
+
+For each node where 2+ skills have `coverage: primary`, the mapping flags redundancy. The v1 26-skill suite has known overlaps (per the v1 README DAG: `cinematographer` ↔ `scene_builder` ↔ `storyboard_designer` all touch spatial framing). The design surfaces these but **does not force consolidation** — that's the skills team's call.
+
+### Recommendation Framework
+
+| Recommendation | When to Emit | What It Means |
+|----------------|--------------|---------------|
+| `align` | Skill already matches node cleanly | No action needed; just confirm alignment |
+| `extend` | Skill covers most of node but missing 1-2 facets | Add references / metrics to existing skill |
+| `merge` | 2+ skills redundantly cover one node | Consider consolidating (skills team decides) |
+| `split` | One skill covers parts of 2+ nodes | Consider decomposing (skills team decides) |
+| `rename` | Skill name misleads about its role | Cosmetic |
+| `relocate` | Skill is in wrong category | Cosmetic |
+| `new` | No skill covers node at all | New skill needed (skills team decides priority) |
+| `none` | Skill is unrelated to node | No recommendation |
+
+**Hard rule:** All entries carry `binding: non_binding_recommendation`. The design document NEVER claims "skill X must be renamed" — it says "the mapping suggests rename; skills team to decide in their own milestone."
+
+### Handoff Ceremony
+
+When the design is finalized:
+
+1. `skills-mapping.yaml` is committed to `.planning/research/v2-pipeline-design/`.
+2. The 06-COMPARISON-VS-26-SKILLS.md section is generated from it.
+3. A pointer is added to `skills/movie-experts/README.md` (Phase 9 of the design milestone): "Future skills reorganization should consult `.planning/research/v2-pipeline-design/skills-mapping.yaml`".
+4. **No skill files are touched.** The skills team opens their own milestone when ready.
+
 ---
+
+## 4. Integration Strategy with kais-movie-agent (Non-Binding Handoff)
+
+Same pattern as §3 — non-binding contract, but the downstream consumer is a different repo with its own `.planning/`.
+
+### Mapping Format (`kais-migration-matrix.yaml`)
+
+The design emits:
+
+```yaml
+schema_version: 1
+binding: non_binding_recommendation
+last_updated: 2026-06-16
+
+phase_mappings:
+  - design_node_id: story_kernel_mining
+    existing_phase:                    # kais-movie-agent's existing 8 phases
+      - phase_id: 1_requirement
+        coverage: partial
+        rationale: >
+          Existing Phase 1 (需求确认) captures surface requirements but does
+          NOT do Story Kernel mining. Kernel mining is a deeper upstream step.
+      - phase_id: 2_art_direction
+        coverage: none
+    lib_module_mapping:                # kais-movie-agent/lib/*.js
+      - module: lib/1st-director.js
+        coverage: partial
+        rationale: >
+          1st-director.js produces 四维蓝图 — adjacent to kernel but not the
+          same artifact.
+      - module: lib/ai-scorer.js
+        coverage: none
+    migration_recommendation: extend_phase_1
+    migration_rationale: >
+      Cheapest path: extend existing Phase 1 to include kernel mining, rather
+      than adding a new phase that breaks the 8-phase rhythm. New helper
+      module `lib/kernel-miner.js` would slot under Phase 1.
+    migration_cost_estimate: medium    # small / medium / large
+    confidence: medium
 ```
 
-### Pattern 6: Eval Runner Architecture
+### Phase Mapping (Existing 8 Phases vs New Nodes)
 
-**What:** A standalone Python script that lives at `skills/movie-experts/_eval/runner.py`. It is NOT registered with `tools/registry.py` — it is a developer tool, not an agent tool.
-
-**Why:** Eval runs are offline benchmarks, not in-conversation tool calls. Registering it would expose benchmark scaffolding to the production agent, which is wrong.
-
-**Runner pseudocode:**
-
-```python
-# skills/movie-experts/_eval/runner.py
-"""
-Double-blind LLM-as-judge eval harness for movie-experts suite.
-
-Usage:
-    python runner.py --expert screenplay --prompt-id 01
-    python runner.py --all                  # run every prompt for every expert
-    python runner.py --compare baseline/after   # diff two snapshots
-
-Outputs:
-    _eval/reports/<expert>/<prompt-id>_<timestamp>.json
-    _eval/reports/summary.md                 # aggregated table
-"""
-
-def run_one(expert: str, prompt_file: Path, variant: str) -> dict:
-    """
-    variant: "baseline" or "refactored"
-      - baseline: invoke the snapshot SKILL.md from _eval/baseline/<expert>/
-      - refactored: invoke the current SKILL.md from skills/movie-experts/<expert>/
-
-    Returns: {output: str, judge_scores: dict, elapsed_s: float}
-    """
-    # 1. Spawn hermes CLI (or HTTP API) in a clean session
-    # 2. Inject the skill variant + the user input from prompt_file
-    # 3. Capture the model's output
-    # 4. Send output to a separate judge model with the rubric
-    # 5. Return structured scores
-    ...
-
-def main():
-    experts = ["screenplay", "scene_builder", ..., "cinematographer", ...]
-    for expert in experts:
-        for prompt_file in (Path(expert) / "prompts").glob("*.yaml"):
-            baseline = run_one(expert, prompt_file, variant="baseline")
-            refactored = run_one(expert, prompt_file, variant="refactored")
-            # Double-blind: judge sees "Response A" and "Response B", not which is which
-            verdict = judge_double_blind(
-                rubric=prompt_file["dimensions"],
-                response_a=baseline["output"],
-                response_b=refactored["output"],
-            )
-            write_report(expert, prompt_file.stem, baseline, refactored, verdict)
-```
-
-**Critical detail — the "before" snapshot:** Before any REFACTOR-A work begins, run `snapshot.py` once. It copies every current `SKILL.md` into `_eval/baseline/<expert>/SKILL.md`. The runner then has a stable "before" to compare against, regardless of how many times the refactored version changes during development.
-
-### Pattern 7: Cross-Expert Reference Linking
-
-**What:** Reference files in one expert can link to reference files in another expert using relative paths.
-
-**Why:** Some knowledge is shared (e.g., the 5D style genome belongs to `style_genome`, but `colorist` needs to reference its color dimensions). Duplicating breaks single-source-of-truth.
-
-**Example** (from `skills/movie-experts/colorist/references/color-theory.md`):
-
-```markdown
-## Cross-References
-
-- For how color dimensions map to the 5D style genome, see
-  `../style_genome/references/genome-decomposition.md`.
-- For how color intent flows into scene_builder's lighting setup, see
-  `../scene_builder/references/lighting-setup.md`.
-```
-
-## Updated related_skills Graph (18 Experts)
-
-### Existing 14-Expert Graph (from current SKILL.md files)
+The existing 8 phases (per V2-REFACTOR-PLAN.md and INTEGRATION.md) are:
 
 ```
-style_genome ──┬── screenplay ──┬── scene_builder ──┬── drawer
-               │                 │                   ├── animator
-               ├── colorist      ├── editor ─────────┼── voicer
-               ├── editor        ├── performer       ├── composer
-               ├── composer      ├── continuity      ├── foley
-               ├── scene_builder ├── voicer          ├── spatial_audio
-               ├── performer     ├── mixer           └── mixer
-               └── continuity    └── composer
-
-performer ──── (most-connected: 8 edges)
-scene_builder  (9 edges)
-foley ──────── (7 edges)
-editor ─────── (6 edges)
+1. requirement → 2. art-direction → 3. character → 4. scenario
+  → 5. voice → 6. storyboard → 7. scene → 8. camera
+  → (post-production implied)
 ```
 
-### New 4-Expert Integration
+(V8-ARCHITECTURE.md says there's also a 20-step pipeline variant. The design treats both as "existing" — non-binding either way.)
 
-#### Cinematographer (`cinematographer`)
+For each new design node, the migration matrix answers:
+- **Coverage:** which existing phase(s) already do this work?
+- **Gap:** what's missing?
+- **Migration path:** `extend_phase_N` / `add_new_phase` / `split_phase_N` / `parallel_run` / `cutover`
+- **Cost:** small (config change) / medium (new lib module) / large (new phase + pipeline restructure)
 
-**Contract:** Sits between `scene_builder` (which outputs 3D camera constraints) and `animator` (which executes 2D camera motion). Cinematographer translates spatial blocking into shot language (景别/视角/构图).
+### Migration Strategy Framework
 
-**Edges to add:**
-- `cinematographer.related_skills: [scene_builder, animator, editor, screenplay, continuity, drawer, hook_retention]`
-- Update `scene_builder.related_skills` to add `cinematographer`
-- Update `animator.related_skills` to add `cinematographer`
-- Update `editor.related_skills` to add `cinematographer` (axis rules)
+| Strategy | When to Recommend | Risk |
+|----------|-------------------|------|
+| `parallel_run` | New node is orthogonal to existing flow (e.g., theory_critic consultation) | Low — no existing flow disrupted |
+| `per_node_refactor` | New node maps to extending one existing phase | Low — isolated change |
+| `cutover` | New node fully replaces an existing phase (e.g., if first-principles derivation eliminates a phase) | High — must run both during transition |
+| `phase_reorder` | New node requires moving an existing phase (e.g., audio-before-storyboard per V2-REFACTOR-PLAN change #2) | Medium — affects downstream contracts |
+| `add_new_phase` | New node has no existing counterpart | Low if additive; medium if it changes total count |
 
-**Collaboration block in cinematographer/SKILL.md:**
-```markdown
-## Collaboration
+**Hard rule:** The design does NOT prescribe which strategy to use. It enumerates the trade-offs. The kais-movie-agent team's future milestone decides.
 
-- **<- scene_builder**: camera_constraints.json (3D camera paths), scene blocking
-- **<- screenplay**: per-scene dramatic intent (which moment needs close-up vs wide)
-- **-> animator**: shot_list.json with framing + camera motion intent per shot
-- **-> editor**: axis data + match-cut opportunities (180° rule compliance)
-- **-> drawer**: framing references per shot (which subject occupies which third)
-- **-> hook_retention**: shot pacing hints (which shots are "hook shots" for 3-second openings)
-```
+### Handoff Ceremony (kais-movie-agent side)
 
-**Why this contract:** `scene_builder` currently produces `camera_constraints.json` (raw 3D math). `animator` consumes it as motion directives. The gap is **shot language** — the cinematographer's job is to decide "this moment is a medium close-up, eye-level, rule-of-thirds left" and hand that to animator as a framing intent. This is a layer of abstraction that currently doesn't exist.
+1. `kais-migration-matrix.yaml` is committed in **hermes-agent** (design lives here).
+2. A short pointer README is added at the top of the matrix: "This file is a non-binding handoff to kais-movie-agent. kais-movie-agent's team should copy or reference this file into their own `.planning/` when they open the migration milestone."
+3. The handoff plan section (07-HANDOFF-PLAN.md) explicitly states: "kais-movie-agent is a separate repo. This design does NOT modify kais-movie-agent/lib/* or kais-movie-agent/skills/*. Migration is a future milestone owned by that repo."
+4. **No kais-movie-agent files are touched from this milestone.**
 
-#### Hook & Retention (`hook_retention`)
+---
 
-**Contract:** Bidirectional feedback loop with screenplay (rewrite hooks) and editor (pacing for retention). Also receives shot pacing hints from cinematographer.
+## 5. Build Order for Design Deliverables (Phase Decomposition)
 
-**Edges to add:**
-- `hook_retention.related_skills: [screenplay, editor, cinematographer, compliance_marketing, composer]`
-- Update `screenplay.related_skills` to add `hook_retention`
-- Update `editor.related_skills` to add `hook_retention`
-- Update `compliance_marketing.related_skills` to add `hook_retention`
+This is the **internal** build order for THIS milestone (the design work itself), not the downstream implementation order.
 
-**Collaboration block in hook_retention/SKILL.md:**
-```markdown
-## Collaboration
-
-- **<- screenplay**: full script.json (to evaluate hook strength, identify paywall points)
-- **<- cinematographer**: shot pacing hints (which shots are hook-capable)
-- **<- editor**: rough cut (to measure actual pacing vs intended retention curve)
-- **-> screenplay**: hook_retention_notes.json — rewrite suggestions for opening 3 seconds,
-  cliffhanger placement markers (卡点 positions), conflict escalation beats
-- **-> editor**: pacing_adjustments.json — where to tighten cuts, where to let breath
-- **-> compliance_marketing**: paywall timestamps (where 短剧 platform will insert paywall)
-- **-> composer**: retention-curve sync points (where music should swell for re-engagement)
-```
-
-**Why this contract:** Retention is a feedback loop, not a forward pass. The hook expert reviews the screenplay's draft, suggests rewrites, and also reviews the editor's rough cut to suggest pacing changes. This is the first bidirectional expert in the suite.
-
-#### Production (`production`)
-
-**Contract:** Coordinates pre-production: casting (with performer), location (with scene_builder), scheduling (with continuity).
-
-**Edges to add:**
-- `production.related_skills: [performer, scene_builder, continuity, screenplay, style_genome]`
-- Update `performer.related_skills` to add `production` (casting notes flow into performer)
-- Update `continuity.related_skills` to add `production` (scheduling constraints)
-
-**Collaboration block in production/SKILL.md:**
-```markdown
-## Collaboration
-
-- **<- screenplay**: scene list, character list, location requirements
-- **<- style_genome**: visual style constraints (which wardrobe palette fits the genre)
-- **-> performer**: casting_notes.json — character physical/emotional requirements,
-  age range, vocal register, chemistry requirements
-- **-> scene_builder**: location_brief.json — which locations need building vs location-scouting
-- **-> continuity**: shooting_schedule.json — shot order optimized for location/actor availability
-```
-
-#### Compliance & Marketing (`compliance_marketing`)
-
-**Contract:** Reviews screenplay (for forbidden topics) and editor (for platform-specific cuts).
-
-**Edges to add:**
-- `compliance_marketing.related_skills: [screenplay, editor, hook_retention, style_genome]`
-- Update `screenplay.related_skills` to add `compliance_marketing`
-- Update `editor.related_skills` to add `compliance_marketing`
-
-**Collaboration block in compliance_marketing/SKILL.md:**
-```markdown
-## Collaboration
-
-- **<- screenplay**: full script (for forbidden-topic review per CN content rules)
-- **<- editor**: final cut (for platform-specific duration limits, aspect ratio)
-- **<- hook_retention**: paywall timestamps (to align with platform 短剧 payment cadence)
-- **-> screenplay**: compliance_notes.json — flagged lines/scenes to revise, with suggested alternatives
-- **-> editor**: platform_cuts.json — per-platform duration targets (抖音 60s, 快手 90s, 小程序剧 3min/ep)
-- **-> hook_retention**: viral_elements.json — which viral tropes the platform currently rewards
-```
-
-### Full 18-Expert Graph (Adjacency List)
-
-| Expert | related_skills (post-v2) |
-|--------|--------------------------|
-| style_genome | screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity, production, compliance_marketing |
-| screenplay | style_genome, scene_builder, editor, performer, composer, hook_retention, compliance_marketing |
-| scene_builder | screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity, cinematographer, production |
-| drawer | screenplay, continuity, colorist, animator, style_genome, cinematographer |
-| animator | drawer, scene_builder, editor, performer, colorist, continuity, cinematographer |
-| colorist | screenplay, style_genome, drawer, continuity, animator |
-| editor | screenplay, animator, composer, voicer, continuity, mixer, cinematographer, hook_retention, compliance_marketing |
-| composer | screenplay, editor, style_genome, mixer, foley, spatial_audio, hook_retention |
-| performer | screenplay, continuity, scene_builder, editor, drawer, animator, voicer, style_genome, production |
-| foley | animator, performer, scene_builder, composer, mixer, spatial_audio, continuity |
-| spatial_audio | scene_builder, foley, voicer, composer, mixer, editor, continuity |
-| mixer | voicer, composer, foley, spatial_audio, editor, continuity |
-| voicer | screenplay, performer, editor, mixer, spatial_audio |
-| continuity | drawer, animator, colorist, style_genome, screenplay, production |
-| **cinematographer** (NEW) | scene_builder, animator, editor, screenplay, continuity, drawer, hook_retention |
-| **hook_retention** (NEW) | screenplay, editor, cinematographer, compliance_marketing, composer |
-| **production** (NEW) | performer, scene_builder, continuity, screenplay, style_genome |
-| **compliance_marketing** (NEW) | screenplay, editor, hook_retention, style_genome |
-
-### Graph Invariants (must hold after v2)
-
-1. **Symmetry is NOT required.** `screenplay` listing `hook_retention` does not require `hook_retention` to list `screenplay` back. The graph is directed (`A depends on B` ≠ `B depends on A`). However, where collaboration is genuinely bidirectional (hook_retention ↔ screenplay), both edges should exist.
-2. **No new `expert_id` collisions.** The four new IDs (`cinematographer`, `hook_retention`, `production`, `compliance_marketing`) must not match any existing `expert_id` in the 14-expert set. Verified: none collide.
-3. **Backward compatibility.** Existing 14 experts' `expert_id` values are unchanged. The 14 experts gain new entries in their `related_skills` arrays but no removals. A workflow that previously invoked `screenplay → scene_builder` still works.
-4. **Snake_case naming.** New expert directory names use snake_case to match `scene_builder`, `style_genome` convention. Multi-word names: `hook_retention`, `compliance_marketing` (not `hook-retention` or `hookRetention`).
-
-## Bilingual Content Architecture
-
-### Decision Matrix
-
-| Artifact | Primary Language | Secondary | Rationale |
-|----------|------------------|-----------|-----------|
-| YAML frontmatter (keys, values) | English | — | Parser expects English keys; `expert_id`, `metrics` are identifiers |
-| `description` field in YAML | English (one line) | — | Used by `skills_list` for discovery; English for Hermes community compatibility |
-| H1, H2 section headings | English | CN in parens | `# Screenplay Expert (剧本专家)` — matches existing 14-expert convention |
-| Body paragraphs | English summary + CN explanation | — | EN structure for parser/community; CN carries the actual industry knowledge for 短剧主场 |
-| Reference files (`references/*.md`) | Chinese primary | EN glossary at top | Short-drama industry knowledge is overwhelmingly Chinese-source; forcing EN would lose nuance |
-| Eval prompts (`prompts/*.yaml`) | Bilingual (`input.en`, `input.cn`) | — | Runner tests both language paths; some short-drama patterns only surface in CN prompts |
-| Eval reports (`reports/*.json`) | English (machine-generated) | — | For developer consumption; structured data, not prose |
-
-### Bilingual Reference File Pattern
-
-```markdown
-# 短剧钩子设计 / Short-Drama Hook Design
-
-**Source:** 短剧编剧实战手册 (2024 ed.) + 抖音/快手 creator interviews
-**Copyright:** Fair-use excerpt + original synthesis
-**Last verified:** 2026-06-15
-
-## EN Glossary / 术语对照
-
-| EN | 中文 | Notes |
-|----|------|-------|
-| Hook | 钩子 | First 3 seconds of a short drama |
-| Paywall cliffhanger | 付费卡点 | The moment a paywall appears mid-episode |
-| Retention curve | 留存曲线 | % of viewers still watching at second N |
-| Cold open | 冷开场 | Pre-title-sequence hook |
-
-## When to Read This / 何时阅读
-
-Read when the user requests a 短剧 (short drama), 竖屏短剧 (vertical short drama),
-or any video under 180 seconds targeting 抖音/快手/小程序剧 platforms.
-
-阅读时机:当用户请求创作短剧、竖屏短剧,或任何 180 秒以内、面向抖音/快手/小程序剧平台的视频时。
-
-## Core Principles / 核心原则
-
-**1. 三秒生死 (3-Second Life-or-Death)**
-The first 3 seconds determine whether 80% of viewers scroll past. The hook
-must present conflict, mystery, or visceral emotion immediately — no establishing
-shots, no slow fades.
-
-前三秒决定 80% 观众是否划走。钩子必须立即呈现冲突、悬念或强烈情绪——
-不能用建立镜头,不能慢淡入。
-
-**Example / 示例:**
-- ❌ Bad: 开场是城市夜景空镜,慢慢推近到主角窗户。
-- ✅ Good: 开场第一帧就是主角在哭,手里攥着一张离婚证。
-
-...
-```
-
-## Eval Harness Structure
-
-### File Layout (Option A: centralized)
+### Dependency DAG (Critical Path Analysis)
 
 ```
-skills/movie-experts/
-├── _eval/
-│   ├── README.md                    # How to run evals
-│   ├── runner.py                    # Main entry point
-│   ├── judge_prompt.md              # System prompt for the judge model
-│   ├── snapshot.py                  # One-shot: capture baseline SKILL.md state
-│   ├── baseline/                    # gitignored after first capture
-│   │   └── <expert>/SKILL.md
-│   ├── reports/                     # gitignored output
-│   │   ├── <expert>/
-│   │   │   └── <prompt-id>_<timestamp>.json
-│   │   └── summary.md               # Aggregated comparison table
-│   └── requirements.txt             # httpx, pyyaml (judge calls via HTTP)
-├── screenplay/
-│   └── prompts/                     # Input fixtures live WITH the expert
-│       ├── 01-three-act-structure.yaml
-│       ├── 02-subtext-dialogue.yaml
-│       └── 03-emotion-curve.yaml
-├── [other experts with their own prompts/]
-└── .gitignore                       # ignores _eval/baseline/, _eval/reports/
+Phase A: First-Principles Derivation
+   │
+   │ (produces: candidate node set as output)
+   ▼
+Phase B: Node DAG + Per-Node Spec      ───┐
+   │                                       │
+   │ (depends on: Phase A's node set)      │
+   ▼                                       │
+   ├─── Phase C: 102-Book Corpus Trace ────┤  (Phase C can start in parallel
+   │    (depends on: Phase B's node ids)   │   once Phase B has node IDs,
+   │                                       │   even before B's specs finalize)
+   │                                       │
+   ▼                                       │
+Phase D: LLM Creative Distillation Deep-Dive  (depends on Phase A's definition
+   │                                       │     of "what AI can/can't do";
+   │                                       │     otherwise independent)
+   │                                       │
+   ▼                                       │
+Phase E: Cross-Comparisons + Handoff Plan ◄┘  (depends on B + C + D all stable)
+   │
+   ▼
+Phase F: Governance + Open Questions + Changelog  (finalization)
 ```
 
-**Why prompts/ live with each expert but runner.py is centralized:** Prompts are domain knowledge (the screenplay expert knows what makes a good screenplay test case). The runner is infrastructure (knows how to invoke Hermes and call a judge). Mixing them would couple domain changes to infra changes.
+### Phase-by-Phase Breakdown
 
-### Judge Prompt Skeleton (`_eval/judge_prompt.md`)
-
-```markdown
-You are a double-blind judge evaluating two AI-generated movie production outputs.
-
-You will see:
-- A user request (the task)
-- A scoring rubric with dimensions and weights
-- Response A (you do not know which model/system produced this)
-- Response B (you do not know which model/system produced this)
-
-Score EACH dimension for EACH response independently on the scale described
-in the rubric. Do not let your score on one dimension influence another.
-
-Then declare which response is stronger overall, or "TIE" if they are within
-0.05 of each other on the weighted total.
-
-Output JSON:
-{
-  "response_a": { "<dimension>": <score>, ... },
-  "response_b": { "<dimension>": <score>, ... },
-  "weighted_total_a": <float>,
-  "weighted_total_b": <float>,
-  "winner": "A" | "B" | "TIE",
-  "rationale": "<2-3 sentences explaining the key differentiator>"
-}
-
-Do NOT mention which response you prefer in your rationale until after
-the JSON block. Stay neutral.
-```
-
-### Snapshot Protocol
-
-**Before REFACTOR-A begins (one-time):**
-
-```bash
-cd skills/movie-experts
-python _eval/snapshot.py --capture
-# Creates _eval/baseline/<expert>/SKILL.md for all 14 existing experts
-# Commits the baseline to git as a tagged commit: "eval-baseline-v1"
-git add _eval/baseline/
-git commit -m "chore(eval): capture pre-refactor baseline for double-blind eval"
-git tag eval-baseline-v1
-```
-
-**After REFACTOR-A + REFS-A (per-expert, incremental):**
-
-```bash
-python _eval/runner.py --expert screenplay --all-prompts
-# Outputs to _eval/reports/screenplay/<timestamp>.json
-# Compares current screenplay/SKILL.md against _eval/baseline/screenplay/SKILL.md
-```
-
-**Why snapshot before refactor, not after:** The baseline is the "before" state. If we snapshot after refactor, we lose the comparison point. The PROJECT.md requirements (`EVAL-01`) explicitly call for before/after double-blind scoring.
-
-## Suggested Build Order with Rationale
-
-The PROJECT.md lists 9 active work items. Their dependencies dictate a phase order:
-
-```
-Phase 0: Foundation
-├── DOC-01 (partial: top-level README skeleton, collaboration graph draft)
-│   Rationale: Need a written graph before updating related_skills in code.
-│   Partial because the full README needs eval results to be credible.
-└── EVAL-01 (skeleton: snapshot.py + runner.py + judge_prompt.md)
-    Rationale: The eval harness MUST exist before REFACTOR-A so we can
-    measure improvement. Building it first also forces concrete prompt
-    fixtures, which surface ambiguities in expert contracts early.
-
-Phase 1: Audit
-└── AUDIT-01 (GAP-REPORT.md for each of 14 experts)
-    Depends on: nothing.
-    Produces: per-expert gap report identifying (a) prompt improvement points,
-    (b) metric revisions, (c) reference topics needed.
-    Rationale: REFACTOR-A without an audit is guesswork. The audit tells us
-    WHAT to change in each SKILL.md.
-
-Phase 2: Refactor + Refs (parallel tracks per expert)
-├── REFACTOR-A (per-expert, after its AUDIT-01 entry)
-├── REFS-A (per-expert, after its AUDIT-01 entry)
-└── CORPUS-01 (feeds REFS-A: curates the actual reference content)
-    Ordering: CORPUS-01 must produce source material before REFS-A can
-    format it into references/*.md. But CORPUS-01 can run in parallel
-    with REFACTOR-A since they touch different files.
-
-Phase 3: New Experts (after Phase 2 stabilizes contracts)
-├── EXPERT-CINE (cinematographer)
-├── EXPERT-HOOK (hook_retention)
-├── EXPERT-PROD (production)
-└── EXPERT-COMPLI (compliance_marketing)
-    Depends on: Phase 2 must complete for the experts they integrate with.
-    Cinematographer needs scene_builder and animator refactored first
-    (to know their new contract). Hook & Retention needs screenplay's
-    rewrite hooks in place. Compliance needs screenplay and editor stable.
-    Production is least dependent (mostly additive) and can start earlier.
-
-Phase 4: Verification + Docs
-├── EVAL-01 (full run: every expert, every prompt, before/after comparison)
-├── BILINGUAL-01 (final pass: verify CN/EN consistency across all 18 experts)
-└── DOC-01 (complete: top-level README with collaboration graph, RAG usage,
-    eval results summary)
-    Depends on: all prior phases. The README cites eval numbers and the
-    final 18-expert graph.
-```
-
-### Dependency Reasoning
-
-| Work Item | Depends On | Blocks | Notes |
-|-----------|------------|--------|-------|
-| DOC-01 (partial) | — | Phase 0 graph draft | Skeleton only; full version in Phase 4 |
-| EVAL-01 (skeleton) | — | REFACTOR-A measurement | Must exist before refactor to capture baseline |
-| AUDIT-01 | EVAL-01 skeleton (for prompt fixtures) | REFACTOR-A, REFS-A | Audit informs what to change |
-| CORPUS-01 | AUDIT-01 (knows what topics to curate) | REFS-A | Curation takes longest; start early |
-| REFACTOR-A | AUDIT-01, EVAL-01 baseline snapshot | New expert integration | Per-expert; can be parallelized |
-| REFS-A | AUDIT-01, CORPUS-01 | — | Per-expert; parallel with REFACTOR-A |
-| EXPERT-CINE | REFACTOR-A for scene_builder, animator | DOC-01 final | Needs new contracts in place |
-| EXPERT-HOOK | REFACTOR-A for screenplay, editor | DOC-01 final | Bidirectional integration |
-| EXPERT-PROD | REFACTOR-A for performer, continuity (light dep) | DOC-01 final | Can start earlier if needed |
-| EXPERT-COMPLI | REFACTOR-A for screenplay, editor | DOC-01 final | Reviews downstream output |
-| EVAL-01 (full) | All REFACTOR-A + all new experts | DOC-01 final | The credibility anchor |
-| BILINGUAL-01 | All content written | DOC-01 final | Consistency pass |
-| DOC-01 (full) | Everything | — | Final deliverable |
+| Phase | Deliverable | Depends On | Blocks | Parallelizable? | Est. Effort |
+|-------|-------------|------------|--------|-----------------|-------------|
+| **A** | `00-FIRST-PRINCIPLES.md` | — | B, D | No (everything waits on this) | Large (this is the hardest intellectual work) |
+| **B** | `01-NODE-DAG.md` + `02-NODE-SPECS.md` + `nodes.yaml` + `edges.yaml` | A | C, E | Partially — once A produces candidate node IDs, B can begin; B's specs can be refined in parallel with C | Large |
+| **C** | `03-CORPUS-TRACEABILITY.md` + `corpus-trace.yaml` | B (node IDs only — does not need full specs) | E | YES — full parallel with B-spec-finalization and D | Medium (mechanical mapping against 102-book index) |
+| **D** | `04-LLM-CREATIVE-DISTILLATION.md` | A (definition of AI limits) | E | YES — full parallel with B and C | Medium |
+| **E** | `05-COMPARISON-VS-8-PHASES.md` + `06-COMPARISON-VS-26-SKILLS.md` + `skills-mapping.yaml` + `kais-migration-matrix.yaml` + `07-HANDOFF-PLAN.md` | B + C + D all stable | F | No — depends on all prior | Medium |
+| **F** | `08-GOVERNANCE.md` + `09-OPEN-QUESTIONS.md` + `10-CHANGELOG.md` + `README.md` (final) | E | — | No | Small |
 
 ### Critical Path
 
-The longest dependency chain is:
 ```
-EVAL-01 skeleton → AUDIT-01 → CORPUS-01 → REFS-A (screenplay)
-                                       ↘
-                                        REFACTOR-A (screenplay) → EXPERT-HOOK → EVAL-01 (full) → DOC-01
+A → B → E → F
 ```
 
-CORPUS-01 is the bottleneck. Curation of 4 source types × 18 experts is the largest single work item. Recommend splitting CORPUS-01 by source type (not by expert) so that the screenplay-relevant slice of all 4 sources can land first, unblocking EXPERT-HOOK.
+Phases C and D run alongside B. Phase A is the bottleneck — nothing else starts until the first-principles pass produces a candidate node set.
+
+### Why Phase A Cannot Be Parallelized
+
+PROJECT.md is explicit: "节点设计从 0 推". Every other section is a consequence of the derivation. If B, C, D start before A's candidate node set exists, they will be reworking against a moving target — guaranteed rework cost.
+
+### Why Phase C (Corpus Trace) CAN Start Before B Finishes
+
+C only needs the **node IDs and one-line descriptions**, not the full specs. As soon as Phase A produces a candidate node list, C can begin mapping each node ID to corpus books. If B later refines a node's spec, C's mapping for that node may need minor adjustment — but the bulk of the work is already done.
+
+### Why Phase D (LLM Distillation) Is Independent
+
+D is a horizontal concern. It depends on Phase A's definition of what AI can/cannot do (which is part of the first-principles pass), but it does not depend on any specific node. Once A's "AI limits" section is drafted, D can run in full parallel with B and C.
+
+### Recommended Build Order
+
+```
+Week 1: Phase A (full focus — no parallel work)
+Week 2: Phase B (primary) + Phase C (parallel, kicks off once node IDs exist) + Phase D (parallel)
+Week 3: Phase B finalization + Phase C finalization + Phase D finalization
+Week 4: Phase E (cross-comparisons + handoff) — requires B+C+D stable
+Week 5: Phase F (governance + open questions + README) — finalization
+```
+
+**Hard rule:** No phase begins before its dependencies are stable. "Stable" means: committed to `.planning/research/v2-pipeline-design/` with a CHANGELOG entry, not "drafted in someone's head."
+
+---
+
+## 6. Traceability + Audit Trail
+
+Each node must be defensible from three angles:
+1. **First-principles defense** — Why does this node exist? (answered in §00)
+2. **Traditional anchor** — Which traditional craft step does it compress or replace? (answered in §02 spec, with corpus citation)
+3. **AIGC justification** — What does AI do here that the human couldn't do faster? (answered in §02 spec)
+
+### Encoding (Machine-Readable)
+
+Every node entry in `nodes.yaml` MUST have non-empty:
+
+```yaml
+derivation_anchor:
+  section: "00-FIRST-PRINCIPLES.md#<anchor>"
+  one_line_defense: "..."
+corpus_trace:
+  strong: [...]                        # MUST have ≥1 entry for accepted status
+  supporting: [...]
+aigc_transformation:
+  marginal_value: "..."                # MUST be non-empty
+  fail_modes: [...]                    # MUST have ≥1 entry
+review_gates: [derivation, corpus_citation, aigc_justification]
+status: derived | proposed | under_review | accepted
+```
+
+### Encoding (Human-Readable)
+
+Each node's spec section in `02-NODE-SPECS.md` opens with three tagged lines:
+
+```markdown
+## Node: <Name> (<CN Name>)
+
+**🅰 First-principles:** [link to §00 anchor] — [one-line defense]
+**📚 Traditional anchor:** [corpus IDs] — [one-line human-practice summary]
+**⚡ AIGC justification:** [one-line marginal value statement]
+```
+
+These three lines are the audit trail at-a-glance. A reviewer can scan the entire 02-NODE-SPECS.md in 60 seconds and identify any node missing one of the three defenses.
+
+### Governance Lint (Developer Tool)
+
+A 30-line Python script (the only "code" in this milestone) validates:
+
+```python
+# .planning/research/v2-pipeline-design/scripts/validate_design.py
+def validate(nodes_yaml_path: str):
+    nodes = yaml.safe_load(open(nodes_yaml_path))
+    failures = []
+    for node in nodes["nodes"]:
+        if node["status"] == "accepted":
+            if not node.get("derivation_anchor", {}).get("section"):
+                failures.append(f"{node['id']}: missing derivation_anchor")
+            if not node.get("corpus_trace", {}).get("strong"):
+                failures.append(f"{node['id']}: missing corpus strong citation")
+            if not node.get("aigc_transformation", {}).get("marginal_value"):
+                failures.append(f"{node['id']}: missing AIGC marginal value")
+            if "derivation" not in node.get("review_gates", []):
+                failures.append(f"{node['id']}: derivation gate not passed")
+            # ... etc
+    return failures
+```
+
+This script runs as a pre-commit hook in `.planning/research/v2-pipeline-design/`. It does NOT run in either downstream repo.
+
+### Audit Trail for Reviewers
+
+When a reviewer questions "why does node X exist?", the audit path is:
+
+1. Open `02-NODE-SPECS.md`, find node X
+2. Click the `🅰 First-principles` link → jumps to the derivation section in §00
+3. Read the prose defense
+4. If unsatisfied, check `📚 Traditional anchor` corpus IDs → opens `_shared/project-corpus/README.md` for source-book metadata
+5. If still unsatisfied, check `⚡ AIGC justification` — is the marginal value real or hand-wavy?
+6. If still unsatisfied, the node should be `status: under_review`, not `accepted`
+
+This is the "future implementers (and reviewers) can sanity-check any node" requirement from the brief.
+
+---
+
+## 7. Living-Doc Governance Rules
+
+The design will evolve after this milestone closes. Downstream repos will surface gaps. New corpus books may be added. The 102-book corpus itself will get corrections.
+
+### Hard Governance Rules
+
+| Rule | Trigger | Required Action |
+|------|---------|-----------------|
+| **G1: Node addition requires re-derivation** | A new node is proposed | The proposing PR MUST add an entry to §00-FIRST-PRINCIPLES.md defending the node from first principles. A node without a derivation section cannot be merged. |
+| **G2: Node deletion requires impact analysis** | An existing `accepted` node is proposed for removal | The PR MUST enumerate (a) which downstream nodes consume its output artifact, (b) what the migration path is for each consumer. |
+| **G3: AIGC transformation update requires marginal-value delta** | The `aigc_transformation.marginal_value` of a node is changed | The PR MUST show the old vs new marginal value statement and explain what changed (new model capability? new fail mode discovered?). Cosmetic edits to wording don't trigger this; substantive edits do. |
+| **G4: Corpus citation change requires source verification** | A `corpus_trace.strong` entry is added/removed | The PR MUST cite the specific book ID + chapter from `_shared/project-corpus/README.md`. Fabricated citations block the PR. |
+| **G5: Status transitions require all gates** | A node moves between `proposed` → `under_review` → `accepted` | Each transition requires the corresponding `review_gates` to be checked. `accepted` requires all three gates (`derivation`, `corpus_citation`, `aigc_justification`) to pass. |
+| **G6: Edge type changes require contract update** | An edge's `type` changes (e.g., `forward_artifact` → `feedback_loop`) | The PR MUST update the I/O contracts of both endpoints — feedback loops require both endpoints to declare bidirectional artifact exchange. |
+| **G7: All changes logged in CHANGELOG.md** | Any PR touching the design | Append-only entry in `10-CHANGELOG.md` with date, node/edge/corpus ID affected, and one-line description. |
+
+### Review Cadence
+
+| Cadence | Activity |
+|---------|----------|
+| **Per PR** | Governance lint runs (G1-G7) |
+| **Per downstream consumer milestone close** | The downstream repo (hermes-agent skills OR kais-movie-agent) opens an issue in this design doc's repo when their milestone reveals a design gap. Design maintainers triage — is it a node missing? a spec ambiguity? a corpus gap? |
+| **Quarterly** | Full design review: re-walk §00 to confirm the first-principles assumptions still hold (especially the "what AI can/can't do" section — model capabilities drift fast). |
+| **Per new corpus book** | When a new book is added to `_shared/project-corpus/`, design maintainers check whether any node's `corpus_trace` should be updated. |
+
+### Authority Model
+
+| Role | Authority |
+|------|-----------|
+| Design maintainer (this milestone's owner) | Approves PRs to the design doc. Sole authority over §00 (first-principles). |
+| Hermes skills team | Consults on §06 (skills mapping). Can object to a recommendation; cannot unilaterally change it. |
+| kais-movie-agent team | Consults on §05 (phase mapping). Same constraint. |
+| Anyone | Can open issues proposing changes. PRs require design maintainer approval. |
+
+### Versioning
+
+The design doc uses semantic-ish versioning:
+
+- **Major** (`v2 → v3`): First-principles derivation substantially revised; node set changed by >30%.
+- **Minor** (`v2.0 → v2.1`): New node added or existing node spec substantially revised.
+- **Patch** (`v2.0.0 → v2.0.1`): Corpus citation update, edge type clarification, typo fix.
+
+Version lives in `nodes.yaml` `schema_version` + a top-level `design_version` field. CHANGELOG entry per change.
+
+---
+
+## Component Boundaries (This Milestone's Deliverable Artifacts)
+
+| Component | Responsibility | Format | Consumed By |
+|-----------|----------------|--------|-------------|
+| `00-FIRST-PRINCIPLES.md` | Epistemic anchor; Musk-style derivation | Markdown prose | All other sections; reviewers; downstream consumers doing traceability audits |
+| `nodes.yaml` | Canonical node schema (single source of truth) | YAML | Renderers (Mermaid, Markdown); governance lint; downstream consumers |
+| `edges.yaml` | Canonical edge schema | YAML | Renderers; downstream consumers |
+| `corpus-trace.yaml` | Bidirectional book↔node mapping | YAML | Renderer for `03-CORPUS-TRACEABILITY.md`; governance lint |
+| `01-NODE-DAG.md` | Human-readable DAG overview + Mermaid renders | Markdown (generated) | Reviewers; downstream teams |
+| `02-NODE-SPECS.md` | Per-node spec with 3-line audit header per node | Markdown (mostly generated, prose-augmented) | Reviewers; downstream teams |
+| `03-CORPUS-TRACEABILITY.md` | Coverage matrix in prose form | Markdown (generated from YAML) | Reviewers; corpus maintainers |
+| `04-LLM-CREATIVE-DISTILLATION.md` | Horizontal deep-dive on LLM creativity | Markdown prose (hand-authored) | All node spec authors; reviewers |
+| `05-COMPARISON-VS-8-PHASES.md` | Non-binding delta vs kais-movie-agent phases | Markdown (generated from `kais-migration-matrix.yaml`) | kais-movie-agent team's future milestone |
+| `06-COMPARISON-VS-26-SKILLS.md` | Non-binding mapping vs hermes skills | Markdown (generated from `skills-mapping.yaml`) | hermes skills team's future milestone |
+| `07-HANDOFF-PLAN.md` | Dual-repo handoff contract | Markdown prose | Both downstream teams |
+| `08-GOVERNANCE.md` | Living-doc rules (G1-G7) | Markdown prose | All future contributors |
+| `09-OPEN-QUESTIONS.md` | Known unknowns | Markdown | Downstream teams' research phases |
+| `10-CHANGELOG.md` | Append-only audit log | Markdown | All contributors |
+| `README.md` | Entry point | Markdown | Everyone |
+| `scripts/validate_design.py` | Governance lint | Python | Pre-commit hook; CI |
+
+---
+
+## Data Flow: How a Design Change Propagates
+
+```
+[Author proposes node addition]
+    │
+    ▼
+[1] Author adds node entry to nodes.yaml
+    │
+    ├─ derivation_anchor.section MUST point to a new anchor in 00-FIRST-PRINCIPLES.md
+    │   └─ Author adds that anchor to 00-FIRST-PRINCIPLES.md (G1)
+    │
+    ├─ corpus_trace.strong MUST have ≥1 entry from corpus-trace.yaml
+    │   └─ Author updates corpus-trace.yaml with new book→node mapping (G4)
+    │
+    ├─ aigc_transformation.marginal_value MUST be non-empty
+    │
+    └─ status: proposed (cannot be accepted until all 3 review_gates pass)
+    │
+    ▼
+[2] Author runs scripts/validate_design.py
+    │
+    ├─ PASS → continue
+    └─ FAIL → fix issues
+    │
+    ▼
+[3] Author regenerates derived artifacts:
+    │   ├─ 01-NODE-DAG.md (Mermaid render)
+    │   ├─ 02-NODE-SPECS.md (spec section for new node)
+    │   └─ 03-CORPUS-TRACEABILITY.md (matrix row)
+    │
+    ▼
+[4] Author appends to 10-CHANGELOG.md (G7)
+    │
+    ▼
+[5] PR opened. Reviewers check:
+    │   ├─ Does the first-principles derivation in §00 actually defend the node?
+    │   ├─ Is the corpus citation real (not fabricated)?
+    │   ├─ Is the AIGC marginal value non-trivial?
+    │   └─ Does the new node break any existing edges/contracts?
+    │
+    ▼
+[6] Design maintainer merges (or rejects with rationale)
+    │
+    ▼
+[7] Downstream consumers (skills team / kais team) see the CHANGELOG entry
+    │
+    └─ They decide whether to act on it in their own future milestone.
+       This design doc does NOT auto-trigger downstream changes.
+```
+
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Python Code in SKILL.md
+### Anti-Pattern 1: Designing the DAG Before the First-Principles Pass
 
-**What:** Embedding Python in the SKILL.md body to "automate" RAG queries.
-**Why bad:** Hermes skills are pure markdown. The loader (`agent/skill_utils.parse_frontmatter`) extracts the body as a string and injects it as a user message. Any Python would be inert text, not executable. Worse, it would confuse the LLM into thinking it should call interpreter tools.
-**Instead:** Use prompt language. "Read `references/foo.md`" is the API. The LLM has a `read_file` tool already.
+**What people do:** Start by sketching the pipeline graph ("obviously we need a screenplay node, a scene node, ...").
+**Why it's wrong:** PROJECT.md is explicit: nodes are derived from first principles, not by analogy to existing pipelines. Skipping the derivation produces a node set that looks reasonable but cannot be defended under scrutiny. When a downstream consumer asks "why does this node exist?", the answer will be "because the existing 8-phase pipeline has one like it" — which is exactly the contamination the milestone is supposed to avoid.
+**Do this instead:** Write §00-FIRST-PRINCIPLES.md to completion FIRST. The candidate node set falls out as the conclusion of the reasoning trace, never the starting point.
 
-### Anti-Pattern 2: Hard-Requiring Memory Plugin Tools
+### Anti-Pattern 2: Authoring Markdown Specs Without Underlying YAML
 
-**What:** Writing "You MUST call `mem0_search` before drafting" in SKILL.md.
-**Why bad:** If the memory plugin isn't configured, `mem0_search` isn't in the tool schema. The LLM will either hallucinate the call or refuse to proceed. Either way, the skill breaks for users without the plugin.
-**Instead:** Use conditional phrasing: "If `mem0_search` is available in your tools, query for X. Otherwise rely on the static references." The LLM's tool schema is the source of truth.
+**What people do:** Write `02-NODE-SPECS.md` directly in markdown, deferring the YAML schema "until later".
+**Why it's wrong:** Markdown specs without an underlying canonical schema drift. Two sections start describing the same node differently. Governance lint cannot run ("is every node covered?"). Downstream consumers cannot programmatically query the design. The handoff contract becomes "read 200 pages of markdown" instead of "consume this YAML."
+**Do this instead:** YAML first, always. Markdown renders FROM YAML. Prose augmentation happens in the rendered markdown but the canonical fields stay in YAML.
 
-### Anti-Pattern 3: Duplicating Reference Content Across Experts
+### Anti-Pattern 3: Binding Recommendations to Downstream Repos
 
-**What:** Copying `style_genome`'s 5D matrix explanation into `colorist`'s refs.
-**Why bad:** Drift. When the 5D matrix evolves, the copy becomes stale. Two sources of truth.
-**Instead:** Use relative-path cross-references: `../style_genome/references/genome-decomposition.md`. The LLM can follow these links.
+**What people do:** The design says "skill X MUST be renamed to Y" or "kais-movie-agent MUST add a new phase."
+**Why it's wrong:** This design is non-binding by explicit milestone scope (PROJECT.md: "范围严格收口:本次里程碑交付仅设计文档"). Binding recommendations exceed scope and will be rejected by the downstream teams as overreach. Worse, they short-circuit the downstream teams' own first-principles processes.
+**Do this instead:** All recommendations carry `binding: non_binding_recommendation`. Use language like "the mapping suggests," "the design recommends," "downstream team to decide in their own milestone."
 
-### Anti-Pattern 4: Registering Eval Runner as a Hermes Tool
+### Anti-Pattern 4: One-Shot Derivation Without Iteration
 
-**What:** Calling `registry.register(name="eval_runner", ...)` in `_eval/runner.py`.
-**Why bad:** Exposes developer-only benchmark scaffolding to the production agent. Users would see an `eval_runner` tool they didn't ask for. The eval harness is offline tooling, not an in-conversation capability.
-**Instead:** Keep `_eval/runner.py` as a standalone script invoked from the shell. The leading underscore in `_eval/` signals "internal" per Python convention; Hermes' skill loader won't discover it as a skill directory anyway (it scans for `SKILL.md`, not `_eval/`).
+**What people do:** Write §00 in one pass, declare it done, move to §01.
+**Why it's wrong:** First-principles derivation is iterative. The candidate node set produced in round 1 will look different after corpus traceability (§3) reveals which nodes have weak literary backing, and after LLM-distillation deep-dive (§4) reveals which AIGC transformations are overstated.
+**Do this instead:** Treat §00 as living. Allow it to be revised during Phases B-E. The CHANGELOG captures each revision.
 
-### Anti-Pattern 5: Breaking Backward Compatibility on Existing expert_id Values
+### Anti-Pattern 5: Treating LLM Distillation as a Section Per Node
 
-**What:** Renaming `scene_builder` to `scene_builder_v2` during refactor.
-**Why bad:** Existing user workflows that invoke `/scene_builder` break. The `related_skills` arrays in other experts point to the old name.
-**Instead:** Keep all 14 `expert_id` values unchanged. Refactor happens in-place. The version field in YAML frontmatter (`version: 1.0.0` → `version: 2.0.0`) is the versioning signal, not the ID.
+**What people do:** Embed "how does LLM help this node" inside each node's spec section.
+**Why it's wrong:** The user explicitly required this as a separate dimension. The patterns (prompt strategy, self-consistency check, fail modes) are horizontal — they recur across nodes. Duplicating them per-node produces drift and prevents the deep-dive the user asked for.
+**Do this instead:** §04-LLM-CREATIVE-DISTILLATION.md is a standalone section. Each node spec has an `aigc_transformation` block that cites §04 patterns by name, not by re-explaining them.
 
-### Anti-Pattern 6: Single-Pass Bilingual Translation
+### Anti-Pattern 6: Skipping the Open Questions Section
 
-**What:** Writing all SKILL.md content in English first, then translating to Chinese in a separate pass at the end.
-**Why bad:** Short-drama industry knowledge is Chinese-primary. Translating EN→CN at the end produces stilted, unnatural Chinese that loses domain nuance (e.g., 卡点, 爆款, 投流 are untranslatable without context).
-**Instead:** Write CN-primary content for short-drama-specific sections (hooks, paywalls, compliance). Write EN-primary for universal craft sections (camera grammar, color theory). Use the bilingual section pattern (Pattern 3 above) to interleave.
+**What people do:** Paper over ambiguities to make the design look complete.
+**Why it's wrong:** Downstream consumers WILL hit those ambiguities in their own milestones. If the design pretended they were resolved, the downstream team wastes time rediscovering them and may distrust the entire design doc.
+**Do this instead:** §09-OPEN-QUESTIONS.md is mandatory. Every "we don't know yet" gets an entry. This is honesty, not weakness.
 
-## Scalability Considerations
+### Anti-Pattern 7: Mixing Design Authority with Implementation Authority
 
-| Concern | At 14 experts | At 18 experts (v1 target) | At 30+ experts (hypothetical v2) |
-|--------|---------------|---------------------------|----------------------------------|
-| related_skills graph density | Average ~5 edges per node | Average ~6 edges per node | Becomes unwieldy; consider grouping experts into clusters |
-| Reference corpus size | ~14 × 5 files = 70 files | ~18 × 5 files = 90 files | Needs index file (`_shared/index.md`) for navigation |
-| Eval runtime | ~14 × 3 prompts × 2 variants = 84 runs | ~18 × 3 × 2 = 108 runs | Parallelize runner; consider sampling prompts |
-| SKILL.md size per expert | ~130 lines (current) | ~180 lines (post-refactor) | Risk of prompt bloat; extract more into refs |
-| Cross-expert ref maintenance | Manual link checking | Manual + CI lint recommended | Automated link checker in `_eval/` |
+**What people do:** Design maintainer also owns the skills refactor or the kais-movie-agent migration.
+**Why it's wrong:** Conflicts of interest. The design maintainer might inflate recommendations to make their own downstream work easier. Or the downstream teams might resent "the design told us what to do."
+**Do this instead:** Different people where possible. The design maintainer owns the design doc ONLY. The skills team owns skills. The kais team owns kais-movie-agent. Each party can raise issues on the others' repos, but no one unilaterally changes another's artifacts.
 
-For v1 (18 experts), the architecture holds without structural changes. For v2 (30+), consider:
-- Clustering experts into sub-suites (`pre-production/`, `production/`, `post-production/`, `distribution/`) with intra-cluster and inter-cluster `related_skills`
-- A top-level `_shared/` directory for cross-cutting refs (glossary, encoding matrices, style genome)
-- Automated dead-link detection in CI
+---
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| hermes-agent `skills/movie-experts/` | One-way pointer from design doc to skills README. Design emits `skills-mapping.yaml`; skills team's future milestone reads it. | Design NEVER modifies skill files in this milestone. |
+| kais-movie-agent `.planning/` | One-way pointer from hermes-agent design to kais-movie-agent's future milestone. Design emits `kais-migration-matrix.yaml`; kais team copies/refs it. | Design NEVER modifies kais-movie-agent files in this milestone. |
+| `_shared/project-corpus/` (102-book index) | Read-only. Design cites corpus IDs from the existing index; does not modify the index. | If design reveals corpus gaps, those become entries in §09-OPEN-QUESTIONS.md, not changes to the corpus. |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| §00 (first principles) ↔ §02 (node specs) | Derivation anchor links | §02 cites §00 by anchor; §00 does not know about §02 |
+| §02 (specs) ↔ §03 (corpus trace) | Mutual citation via corpus IDs and node IDs | Both reference the same canonical `nodes.yaml` + `corpus-trace.yaml` |
+| §02 (specs) ↔ §04 (LLM distillation) | §02's `aigc_transformation` block cites §04 patterns by name | §04 is horizontal; §02 is vertical |
+| §02 (specs) ↔ §05 (kais comparison) | §05 maps design nodes to existing phases | One-way derivation: §05 reads §02, never the reverse |
+| §02 (specs) ↔ §06 (skills comparison) | §06 maps design nodes to existing skills | One-way derivation: §06 reads §02 |
+| All sections ↔ §10 (changelog) | Append-only audit trail | Every substantive change logs to §10 |
+
+---
+
+## Scaling Considerations
+
+| Concern | At 10-15 nodes (expected v2 output) | At 25-30 nodes (hypothetical expansion) | At 50+ nodes (unlikely) |
+|---------|--------------------------------------|------------------------------------------|--------------------------|
+| YAML reviewability | Single-file review; clear diffs | Consider splitting `nodes.yaml` by phase_category | Mandatory split; index file required |
+| Mermaid rendering | Native in GitHub | Mermaid handles up to ~30 nodes; layout becomes dense | Switch to Graphviz or sub-graphs |
+| Corpus trace matrix | 10×102 = 1020 cells, fits in one markdown table | 25×102 = 2550 cells, needs grouping | Interactive matrix; static markdown insufficient |
+| First-principles defense length | ~3000-5000 words for §00 | ~8000-12000 words; needs sectioning | Likely needs to split into multiple derivation docs |
+| Downstream handoff ceremony | Single PR to add pointer in skills README + kais planning | Multiple PRs (per category) | Per-phase ceremonies |
+
+For v2.0 (target: 10-15 nodes per first-principles derivation), the architecture holds without structural changes. The single-YAML-canonical approach is sufficient.
+
+---
 
 ## Sources
 
-- **Direct file reads (HIGH confidence):**
-  - `skills/movie-experts/screenplay/SKILL.md` — existing expert structure
-  - `skills/movie-experts/scene_builder/SKILL.md` — camera/spatial concerns, multi-edge related_skills
-  - `skills/creative/comfyui/SKILL.md` — references table + scripts invocation pattern
-  - `skills/creative/manim-video/SKILL.md` — references table + bilingual-friendly structure
-  - `skills/research/research-paper-writing/SKILL.md` — references linking pattern
-  - `agent/memory_provider.py` — MemoryProvider ABC interface, system_prompt_block contract
-  - `plugins/memory/__init__.py` — memory plugin discovery, one-active-provider limit
-  - `plugins/memory/mem0/__init__.py` — tool schemas (mem0_search, mem0_profile, mem0_conclude), system_prompt_block content
-  - `tools/memory_tool.py:707` — built-in `memory` tool registration
-  - `.planning/codebase/ARCHITECTURE.md` — skill invocation flow, system prompt tiers
-  - `.planning/codebase/CONVENTIONS.md` — SKILL.md schema, bilingual strategy, naming
-  - `.planning/PROJECT.md` — requirements, constraints, key decisions
+### Primary (HIGH confidence — direct source reads)
 
-- **Codebase observations (HIGH confidence):**
-  - `git show 4290ab2` — confirmed the 14 experts are pure markdown, no Python
-  - `grep related_skills` across all 14 experts — produced the adjacency list in this doc
-  - `ls skills/creative/comfyui/{references,scripts}` — confirmed references/ + scripts/ coexistence pattern
-  - `find skills -name references -type d` — found 20 skills with references folders, validating the pattern is established
+- `/data/workspace/hermes-agent/.planning/PROJECT.md` — milestone v2.0 brief, scope constraints, first-principles directive, dual-repo handoff requirement
+- `/data/workspace/hermes-agent/.planning/MILESTONES.md` — v1 close-out context (18 experts shipped, what's deferred)
+- `/data/workspace/hermes-agent/.planning/STATE.md` — current v2.0 planning state
+- `/data/workspace/hermes-agent/skills/movie-experts/README.md` — 26-skill inventory, production DAG, RAG usage guide (baseline for §6 skills mapping)
+- `/data/workspace/kais-movie-agent/README.md` — 8-phase pipeline + lib/ structure + sketch-control sub-pipeline (baseline for §5 kais mapping)
+- `/data/workspace/kais-movie-agent/INTEGRATION.md` — V1.0 GPU integration state, 13 functions, LLM migration to hermes-agent
+- `/data/workspace/kais-movie-agent/docs/V8-ARCHITECTURE.md` — OpenClaw Agent pure-driver architecture, 20-step pipeline, gold-team direct connection
+- `/data/workspace/kais-movie-agent/docs/V2-REFACTOR-PLAN.md` — 7 core changes (AI 熔断 / audio-driven storyboard / character assetization / art-bible lock / preview cutover / on-demand scene / structured 运镜), V2 phase ordering
+- `/data/workspace/kais-movie-agent/lib/phases/index.js` — phase handlers + Hermes defaults (shows existing phase IDs and parameter surfaces)
+- `/data/workspace/hermes-agent/skills/movie-experts/_shared/project-corpus/README.md` — 102-book corpus index, MinerU conversion path, per-category book counts
+- `/data/workspace/hermes-agent/.planning/research/ARCHITECTURE.md` (v1) — 18-expert collaboration DAG, related_skills graph invariants, eval harness structure (informs §6 skills mapping approach)
+- `/data/workspace/hermes-agent/.planning/research/SUMMARY.md` (v1) — 15 key findings, recommended build order, phase ordering rationale (informs this milestone's phase decomposition)
+
+### Secondary (MEDIUM-HIGH confidence — codebase observations)
+
+- `ls /data/workspace/kais-movie-agent/lib/` — confirmed 30+ lib modules (1st-director, ai-scorer, asset-bus, prompt-injector, shot-list-parser, etc.) informing the lib-module mapping in §4
+- `ls /data/workspace/hermes-agent/skills/movie-experts/_shared/project-corpus/` — confirmed 14 ref files + README + INTEGRATION-REPORT informing corpus traceability approach in §4
+
+### Methodological (HIGH confidence — established practice)
+
+- YAML-as-canonical + Markdown-as-rendered pattern: standard in API spec ecosystems (OpenAPI, AsyncAPI). Verified by direct knowledge — this is the dominant pattern for design docs that need both machine-deriability and human review.
+- Mermaid for rendered graph diagrams: native render support in GitHub since 2022. Standard for design docs in markdown-first repos.
+- First-principles derivation as design epistemic anchor: aligns with milestone brief's "Musk-style" directive.
+- Non-binding handoff contracts: standard pattern for cross-team / cross-repo design handoffs (RFC process in IETF, ADR pattern in software architecture).
+
+---
+
+*Architecture research for: Pipeline Redesign from First Principles (v2.0 PRFP) — design document structure, integration, and build order*
+*Researched: 2026-06-16*

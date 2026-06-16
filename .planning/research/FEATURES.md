@@ -1,353 +1,520 @@
-# Features Research — AI Short-Drama Skill Suite
+# Feature Research — v2.0 PRFP Pipeline Node Set
 
-**Domain:** AI short-drama (短剧 / 竖屏短剧) and micro-film (微电影) creation suite
-**Researched:** 2026-06-15
-**Overall confidence:** MEDIUM — built on codebase evidence + China short-drama industry knowledge (2024-2026); regulatory items have HIGH confidence from official sources cited inline; some 2026 platform-specific cuts are LOW until verified per-platform.
+**Domain:** AIGC-native 短剧 / 微电影 production pipeline — node-set DESIGN DOCS only (no implementation)
+**Researched:** 2026-06-16
+**Overall confidence:** MEDIUM-HIGH — traditional film workflow grounded in 102-book corpus (HIGH); AIGC-native pattern claims drawn from ComfyUI/LangGraph ecosystem knowledge + general industry awareness, not project-specific benchmarks (MEDIUM).
 
-## Summary
-
-The current 14-expert suite covers the **craft layer** of traditional film production (writing, drawing, animating, editing, color, sound, performance) but is missing the **language layer** (cinematography / 运镜), the **retention layer** (hook design + paid cliffhangers, the actual economic engine of 短剧), the **production-management layer** (casting, wardrobe, lighting, scheduling), and the **distribution-and-compliance layer** (中国 监管 + 平台规则 + 海报/trailer). This file categorizes every candidate capability for the 4 new experts and lists concrete knowledge gaps + named references for the 14 existing experts. Bilingual authoring pattern recommendation: keep EN for the YAML/metadata/coding-matrix schema and for English-canonical technical terms (LUT, L-cut, foley, Mise-en-scène), use CN for all narrative/descriptive prose, examples, refs, and any 短剧 cultural context that has no good English equivalent (钩子 / 卡点 / 爆款 / 完播率).
-
-## Capability Areas
-
-### 1. Cinematography / 运镜 (NEW — EXPERT-CINE)
-
-The existing `scene_builder` covers *camera blocking feasibility* (where the camera can physically go) and `editor` covers *axis rule compliance at cut time*, but no expert owns the **camera language itself** — shot grammar, lens choice as narrative device, and movement vocabulary. This is the gap.
-
-**Table stakes (must have for v1):**
-- Shot size vocabulary (景别): ECU/CU/MCU/MS/MLS/WS/EWS with narrative intent mapping (e.g., ECU = emotional disclosure, WS = powerlessness / scale)
-- Angle vocabulary (视角): eye-level, low (power), high (vulnerability), dutch/tilt (unease), overhead/god's-eye (fate), POV
-- Composition systems: rule of thirds, golden ratio, center framing (symmetry = Wes Anderson / control), leading lines, headroom, nose-room, 180° / 30° rules
-- Lens language: wide (24mm, distortion + intimacy), normal (35-50mm), tele (85-135mm, compression + voyeurism), anamorphic cues, focal length as emotion
-- Camera movement vocabulary: static / pan / tilt / dolly / truck / pedestal / crane / handheld / steadicam / gimbal / whip-pan / zoom-in-(slow push)/zoom-out
-- Match cut design (graphic match, action match, idea match — Eisensteinian)
-- Mise-en-scène checklist (blocking, depth staging, foreground framing)
-- 180° axis ownership (currently duplicated in editor — needs handoff boundary documented)
-- Vertical-format (9:16) composition rules: safe zones for 抖音/快手 UI overlays, top-thirds for titles, bottom for captions, center-screen subject priority
-
-**Differentiators (set this expert apart):**
-- AI-native lens constraints: what focal lengths render reliably in current diffusion/video models (e.g., 35-85mm are robust; extreme wide/tele often break), `scene_builder` feasibility handoff
-- "Camera move → prompt token" mapping for video gen models (Runway / Kling / Sora / Veo): dolly-in ↔ "slow push-in", handheld ↔ "shaky cam, documentary feel"
-- Movement-emotion dictionary (slow push = realization, pull-out = abandonment, whip-pan = energy cut, static = dread) — pairs with `screenplay.emotion_curve` and `editor.FxRxT`
-- Match-cut pre-planning that emits shot pairs to `screenplay` for setup and `editor` for transition marker
-- Vertical vs horizontal framing co-design (cross-post to both 抖音 9:16 and B站 16:9)
-- Director lens signatures table (Deakins long takes, Lubezki natural light wide, Kubrick symmetric center + zoom) feeding back into `style_genome` director profile
-
-**Anti-features (explicitly do NOT build):**
-- Real-time camera tracking / motion-control hardware integration — out of scope (pure skill + refs)
-- Physical camera spec sheet generator (sensor size, codec, bitrate) — irrelevant to AI pipeline, leave to live-action tools
-- VR / 360° / volumetric cinematography — different domain, separate project
-- Re-implementing the 180° axis check that `editor` already owns — declare the handoff boundary instead (CINE owns *intent*, EDITOR owns *compliance*)
-- Auto-blocking in 3D — that stays in `scene_builder`; CINE emits *intent*, scene_builder emits *feasibility*
-
-**AI-specific concerns to address:**
-- **Negative space asymmetry**: diffusion models tend to center subjects; CINE must override with explicit composition tokens
-- **Lens distortion reliability**: wide-angle distortion often fails or over-fisheyes in current models — flag as risk
-- **Movement continuity across cuts**: video gen produces per-clip; camera moves that span cuts (e.g., continuous dolly through edit) need pre-negotiated prompts
-- **Match-cut feasibility**: AI models cannot reliably produce a graphic match across two independently generated clips — CINE must flag when match cuts need budget for multiple takes
+> **Scope clarification.** This is NOT user-facing product feature research. It answers: *which nodes should appear in a from-scratch AIGC film pipeline DAG, what should each node be accountable for, and what node-design temptations are wrong?*
+> Mapping per milestone context:
+> - **Table stakes** = nodes every AIGC film pipeline must contain
+> - **Differentiators** = nodes that distinguish a first-principles-derived pipeline from a copy-of-traditional-workflow pipeline
+> - **Anti-features** = node-design temptations that are wrong (over-decomposition, AI-as-drop-in, redundant gates)
 
 ---
 
-### 2. Hook & Retention / 钩子设计 (NEW — EXPERT-HOOK, 短剧-specific)
+## Executive Framing
 
-This is the **economic engine** of 小程序剧 / 竖屏短剧. The existing `screenplay` has a vague "opening hook within first 3 seconds" rule and an emotion curve, but no structured retention craft. Without this expert, the suite produces *cinematically correct but commercially dead* content for the China 短剧 market.
+Two design philosophies are in tension:
 
-**Table stakes (must have for v1):**
-- 3-second hook taxonomy (情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩) with prompt templates for each
-- Escalation pacing curve (阶梯式升级): each 30-60s segment must raise stakes, escalate conflict, introduce a new reversal
-- 击中点 / 爽点 design — the moment of emotional payoff (打脸 / 反转 / 复仇 / 真相揭露 / 双向奔赴) and its placement rule
-- 付费卡点 / cliffhanger placement (typically at episode-end of mini-program drama, ~90 sec mark for 抖音 single-episode)
-- 完播率 (completion rate) optimization: 1.5x pace rule, every 10s a micro-hook, no >3s dead air
-- 转发 (share) triggers: emotional resonance + social currency — relatable conflicts, status reveals, "send this to a friend who..."
-- 留存 (retention) design: 下集预告 hook at end, 角色陪伴感 building
-- 竖屏节奏: faster cut density than horizontal (research suggests 1.5-2x editor's `cuts_per_second` default)
-- BGM-driven hooks: 配乐 drop / lyric-synced moments — pairs with `composer.coupled_beat`
-- 字幕 design language (大字标题党 / 关键词加粗 / emoji-flavored captions)
+1. **Imitation of traditional** = take the pre-prod / prod / post-prod workflow and replace each human role with an LLM call. Produces a 30-node pipeline that mirrors the 102-book corpus's工序 but doesn't exploit what AIGC changes structurally.
+2. **First-principles derivation (Musk-style)** = start from "what does the viewer need to receive", "where does 短剧 live-or-die (3 seconds)", "what can AI actually compress", "what can AI not replace". Derive minimal necessary node set.
 
-**Differentiators (set this expert apart):**
-- 爆款公式 (hit formulas) by platform:
-  - 抖音剧: 男频 = 赘婿逆袭 / 战神归来 / 重生复仇; 女频 = 豪门虐恋 / 闺蜜背叛 / 替身白月光
-  - 快手剧: more 草根 / 接地气, emotional realism > fantasy
-  - 小程序剧 (WeChat / 独立 App): longer (1-3 min episodes), 付费卡点 at min 3-5 of 10 ep, higher ARPU tolerance for 大尺度 / 强冲突
-- 付费率 optimization: 付费卡点 selection (which emotional peak to cliffhang), 付费节奏 (free first 5-10 episodes → first cliffhanger → daily release cadence)
-- 击中点 density meter: counting 爽点 per minute (typical hit 短剧: 1 爽点 per 30-45s)
-- Emotional curve extensions beyond `screenplay.emotion_curve`: 爽点 spike detection, 虐点 trough detection, 卡点 cliffhanger markers — output format compatible with `screenplay.emotion_curve` schema
-- Reverse-engineering: given a reference爆款 clip, decompose its 钩子 structure into a template
-- A/B variant generation: produce 2-3 hook variants for the same setup (different 钩子 type)
-- Predictive metrics estimation (LOW confidence, mark as v2): rough regression from script features → predicted 完播率 / 转发率 / 付费率 bands
-
-**Anti-features (explicitly do NOT build):**
-- Actual metric measurement / platform API integration — out of scope, no platform data access
-- Real-time bidding / ad placement inside content — different problem
-- Audience demographic targeting beyond broad 男频/女频/老年向 splits — needs platform data, out of scope
-- Plagiarism / 直接抄爆款 — provide structural templates, not literal copying (also 合规 risk)
-- Auto-translating 爆款 across platforms without cultural adaptation — each platform has distinct audience norms
-
-**Metrics this expert owns:**
-- `hook_strength` (predicted 3-second retention probability, 0-1)
-- `escalation_density` (爽点/minute)
-- `cliffhanger_strength` (predicted 付费转化, 0-1)
-- `pacing_variance` (rhythm diversity — flat = boring)
+The research below enumerates candidates under BOTH philosophies so the roadmapper can pick. The selection criteria in §5 and the anti-features in §6 push toward (2).
 
 ---
 
-### 3. Production Management / 制作管理 (NEW — EXPERT-PROD)
+## 1. Traditional Film Workflow — Canonical Stages (from 102-book corpus)
 
-Existing 14 experts are all **production-execution** (how to make a shot). None covers **production-management** (how to plan and resource the work). This expert fills that.
+This is the raw material any first-principles derivation must either justify keeping, justify eliminating, or justify merging.
 
-**Table stakes:**
-- 选角 (casting) — character breakdown → actor type spec (age range / 体型 / 气质 / 表演特长); feeds `performer` for character consistency
-- 服化道 (costume / makeup / props) — per-character wardrobe, makeup design (gender/age/era/职业), key props list
-- 灯光 design plan (key/fill/rim per scene) — currently scattered in `scene_builder`; PROD owns the *intent*, scene_builder owns *execution*
-- 拍摄计划 (shooting schedule) — shot list grouped by setup, day breakdown for live-action, scene-package breakdown for AI
-- 资源调度 (resource scheduling) — GPU/render budget allocation across drawer/animator/scene_builder, asset reuse plan
-- 统筹 (production coordination) — dependencies between experts, handoff checkpoints, blocking issues
+### 1.1 Universal stages (every film, every format, every era)
 
-**AI-relevant table stakes (subset that applies to AI pipeline):**
-- 选角 for AI = **character LoRA / reference image spec** — feeds `performer.style_genome` and `drawer` for character consistency
-- 服化道 for AI = **per-scene character wardrobe spec** (consistency across shots, feeds `continuity`)
-- 灯光 intent = currently in `colorist.lighting_mood` + `scene_builder`; PROD unifies the *intent layer*
-- 资源调度 for AI = **GPU/render budget allocation** (the most scarce resource in this pipeline)
-- Asset reuse plan (which props/scenes/characters can be reused across shots/episodes — major cost saver)
+Drawn from the corpus index at `skills/movie-experts/_shared/project-corpus/README.md`. Each stage has a cited source.
 
-**Live-action-only table stakes (lower v1 priority, mark for v2):**
-- Real-world location scouting
-- Crew roles (DP, gaffer, grip, sound mixer, script supervisor)
-- Equipment rental / camera package
-- Per-day call sheets, talent schedules, weather contingencies
-- Insurance, permits, union rules
+| Stage (CN/EN) | Corpus Source (Project ID / Title) | Universal? |
+|---|---|---|
+| **创意/选题 (Idea mining)** | 《创意制片完全手册》(070);芦苇《白鹿原》七易其稿笔记 (【白鹿原】) | YES — every film starts from "what story" |
+| **剧本 (Screenplay)** | 菲尔德《电影剧本写作基础》(-017);麦基《故事》(-026);奥班农《剧本结构设计》(069);维基·金《21天搞定电影剧本》(009);芦苇/刘天赐 | YES — even 无情节 (Antonioni, -004) is a script decision |
+| **角色 (Character)** | 斯坦尼《演员的自我修养》(-058);斯特拉·阿德勒《表演的艺术》(062);乌塔·哈根《尊重表演艺术》(048) | YES — every film has кто (who) |
+| **分镜/导演 (Storyboard / Directing)** | 阿里洪《电影语言的语法》(-025/037);卡茨《电影镜头设计》(006);《场面调度》(012);马梅《导演功课》(-008);van Sijll《电影化叙事100手法》(-035) | YES — even improv documentary has framing decisions |
+| **摄影/光线 (Cinematography / Lighting)** | 《影视光线艺术》(-063);《电影照明器材与操作》(044);《光影创作课》(076);《镜头在说话》(007) | YES — every film encodes space visually |
+| **美术/场景 (Production design)** | 《狼图腾:视觉设计与叙事语言》(【狼图腾】);《电影特技模型制作》(061) | YES — even a blank-wall film has production design (= "blank wall" was designed) |
+| **表演 (Performance)** | 同 4 | YES for live-action/animation; NO for pure 漫剧/AI-still formats |
+| **剪辑 (Editing)** | 默奇《剪辑之道》(071);傅正义《电影电视剪辑学》(-010);《魅力·剪辑》 | YES — assembly is universal |
+| **声音 (Sound design / mix)** | 《音效圣经》(032);希翁《视听:幻觉的构建》(060) | YES — even silent film has sound (= silence is mixed) |
+| **音乐 (Music)** | (no dedicated book in corpus — covered in editing-sound-post.md ref) | YES — even no-music is a music decision |
+| **色彩 (Color)** | 《光影创作课》(076) part 2;第五代摄影 color theory per `lighting-equipment-and-design.md` | YES for color film; NO for monochrome |
+| **理论/批评 (Theory / Critique)** | 巴赞《电影是什么》(-019/-020);塔可夫斯基《雕刻时光》(-022);Andrew《经典电影理论导论》(-045);戴锦华《电影批评》(-024) | NO — only for "serious" work; 短剧 often skips |
 
-**Differentiators (set this expert apart):**
-- AI-budget-aware scheduling: optimize shot order to minimize `drawer` / `animator` re-renders (most expensive ops); batch shots sharing the same scene package
-- Character-LoRA cost estimation: each new character = LoRA training time + storage; advise on reuse vs new
-- Wardrobe-change optimization: minimize costume changes within a shoot day (each change = re-prompt + re-render)
-- Cross-episode asset amortization (esp. for 小程序剧 with 10-100 episodes): when to invest in reusable assets vs one-shot
-- Render-farm / GPU-pool allocation model — though this may belong in a separate infrastructure concern; mark as edge
+### 1.2 Genre/format-specific stages (NOT universal)
 
-**Anti-features:**
-- Real-world crew management — leave for live-action production software
-- Real budgeting in money terms — too dependent on local rates; stick to *relative* cost (LoRA hours, GPU-hours, render-hours)
-- Permit / insurance / legal entity — out of scope, belongs to compliance + business layer
-- Re-implementing `scene_builder` asset pipeline — PROD owns *plan*, scene_builder owns *execution*
+| Stage | Applies to | Corpus Source |
+|---|---|---|
+| **拟音 (Foley)** | Live-action + animation with hard effects | 《音效圣经》 |
+| **空间音频 (Spatial audio)** | Dolby Atmos / VR / immersive | (corpus does not cover) |
+| **配音/配音导演 (Voice direction)** | Animation / dubbed / 短剧 with TTS | (not in corpus as standalone) |
+| **唇形同步 (Lip sync)** | Live-action with re-dubbing; AI-driven characters | (post-corpus practice) |
+| **连续性 (Script supervisory)** | Multi-shot / multi-episode live-action | 《导演创作完全手册》(053) |
+| **制片管理 (Production management)** | Any non-trivial production (>1 person) | 《电影制片手册》(-029);《好莱坞模式》(057);《影视预算手册》(074) |
+| **合规 (Compliance)** | China 短剧 as of 2026-04-01;broadcast anywhere | (regulatory, not in corpus) |
+| **宣发 (Distribution / marketing)** | Anything that needs an audience | 《创意制片完全手册》(070) part 3 |
+| **运镜/摄影机运动 (Camera movement)** | 竖屏短剧 (essential for 完播率); feature film | 《场面调度》(012);cinematographer refs |
+| **钩子/留存 (Hook & retention)** | 短剧 / 小程序剧 / 任何平台分发内容 | (post-corpus practice) |
 
----
+### 1.3 Format-specific observations
 
-### 4. Compliance & Distribution / 合规与宣发 (NEW — EXPERT-COMPLI, China-specific)
-
-This is a **hard regulatory requirement** for any 短剧 distributed in China as of 2026-04-01. Without this expert, the suite produces content that cannot legally be distributed. HIGH confidence on regulatory items.
-
-**Table stakes (regulatory — HIGH confidence):**
-- **AI 漫剧 (AI-generated manga-style drama) regulatory compliance** — as of 2026-04-01, 国家广电总局 requires 网络微短剧 classification and content review for AI-generated content; 备案号 required for any paid / broadcast distribution (verify exact scope, but direction is HIGH confidence)
-- **广电总局 网络微短剧 备案** — 备案号 acquisition workflow, 所需材料清单, 分类标识 (重点/普通/其他), 时长 (≤30分钟 for 微短剧 category) and episode structure rules
-- **网信办 生成合成内容标识 (《人工智能生成合成内容标识办法》, effective 2025-09-01)** — mandatory visible + invisible watermarking / metadata labeling for AI-generated content
-- **先审后播 (review-before-broadcast)** for 小程序剧 platforms
-- **平台规则差异** by platform:
-  - 抖音 短剧: 短剧类目准入, 内容审核标准, 流量分级
-  - 快手 短剧: 类似但审核尺度略宽 (verify current)
-  - 微信小程序剧: 备案要求更严, 付费机制限制
-  - B站 / 小红书 / 微博: 各有规则
-- **内容审核 红线** (universal): 涉政 / 涉黄 / 涉暴 / 涉赌 / 民族宗教 / 未成年人保护 / 虚假宣传 / 不良价值观 — concrete checklist
-- **未成年人保护**: 不得诱导未成年消费, 适龄提示
-- **付费合规**: 收费公示, 自动续费规则, 退款政策
-
-**Table stakes (宣发 — distribution support):**
-- 海报 (poster) generation spec — feeds `drawer` for static key-art output
-- Trailer / 片花 generation spec — feeds `editor` for 15-30s cut
-- 平台裁剪 (platform tailoring): 抖音版 / 快手版 / 小程序剧版 differences in length, hook placement, 卡点 position
-- 标题党 / 副标题 / 封面文案 patterns
-- 关键词 SEO for 平台 search
-
-**Differentiators:**
-- **AI 漫剧专项合规 checklist** — since AI 漫剧 is a newly regulated category (2026), few tools explicitly handle this; explicit compliance advisor is a real differentiator
-- **平台差异化合规矩阵** — single source of truth for what's allowed on each platform
-- **爆款元素识别 + 合规避险** dual analysis: which 爆款 elements are also 合规 risk (大尺度 / 强冲突 often overlaps with 审核风险)
-- **付费卡点 + 付费合规 co-design** with `EXPERT-HOOK`: where the cliffhanger is legal to charge for
-- **AI-content 标识 automation** — generate the required watermarking / metadata / visible labels spec
-- **备案材料自动生成** — draft 备案 application docs from `script.json`
-- **审核预检 (pre-review)** — LLM-based 预审 that flags potential 红线 issues before submission (HIGH value, reduces rejection rate)
-- **降级方案** — if content is rejected, what to cut / modify to pass without losing core 爆款 value
-
-**Anti-features:**
-- **法律咨询 / 替代律师** — explicit disclaimer: this is a checklist tool, not legal advice; complex cases need actual lawyers
-- **代备案服务** — out of scope, that's a service business
-- **跨平台自动分发** (auto-upload) — out of scope (API complexity + 平台 TOS)
-- **追踪平台规则变更的实时更新** — v1 uses manually curated knowledge base; real-time monitoring is v2+
-- **规避监管** — explicitly support compliance, never *circumvent* (this is also a safety/ethical line)
-
-**Critical risk note:** 2026 AI 漫剧 regulation is **new and evolving**. Rules may change quarterly. All refs MUST have a "verified as of YYYY-MM-DD" stamp and a refresh cadence (recommend quarterly audit).
+- **微电影 (micro-film, 5-30 min):** follows traditional feature workflow compressed in time. McKee three-act applies. Theory-critic matters more than for 短剧.
+- **竖屏短剧 (vertical 短剧, 60-90s/ep, 10-100 eps):** 钩子 + 卡点 + 爽点 drive survival; traditional 剧本 structure collapses. *Hook & retention is the structural equivalent of 剧本 for this format.*
+- **AI 漫剧 (manga-style AI drama):** 表演 collapses into 角色设计 (no live actor); 唇形同步 becomes load-bearing; 拟音 becomes optional.
 
 ---
 
-### 5. Existing 14 Expert Enhancement Opportunities (RAG refs)
+## 2. AIGC-Native Pipeline Patterns
 
-For each existing expert, the gap is the same: **prompt describes mechanism (how to do X) but lacks industry experience (what good X actually looks like)**. RAG refs should be hand-curated markdown distillations of authoritative sources.
+What changes structurally when AI does the work? Distinguish from traditional workflow patterns.
 
-| Expert | Knowledge Gaps (concrete) | Suggested Refs (named) | Priority |
-|--------|---------------------------|------------------------|----------|
-| **screenplay** | Currently cites "Hauge compression" without source; no Save the Cat / McKee / 短剧-specific beat sheet; no dialogue craft references | *Save the Cat!* (Snyder), *Story* (McKee), *The Foundations of Screenwriting* (Field), 短剧 beat sheet (3秒钩子 + 每30秒一击中点), 《故事》翻译版, 拆解 100 部爆款短剧 beat 模板 | **High** |
-| **drawer** | Style references are abstract; no concrete cinematographer/illustrator reference library; no model-specific prompt patterns | Cinematographer reference set (Deakins / Lubezki / Khondji shot libraries), Studio Ghibli color scripts, 当前 diffusion 模型 prompt 工程实践 (Perlin noise / negative prompts / ControlNet refs), 短剧封面美学 (大字 / 高对比 / 强冲突) | High |
-| **animator** | No animation principles reference; no Disney 12 principles; no motion-library; no current video-gen-model behavior notes | Disney 12 Principles of Animation (Johnston & Thomas), *The Animator's Survival Kit* (Williams), 当前 video gen models (Runway Gen-3 / Kling / Veo / Sora) behavior notes (运动幅度 / 一致性 / 多镜头), 12帧循环 vs 24帧 | High |
-| **editor** | Cites 180° rule + L/J-cut but no montage theory; no Pudovkin / Eisenstein; no 短剧-specific cut rate data | *The Technique of Film Editing* (Reisz & Millar), Eisenstein montage essays, Pudovkin constructive editing, Walter Murch *In the Blink of an Eye* (Rule of Six), 短剧平均切镜频率 (1.5-2x 横屏剧), 抖音爆款平均镜头时长数据 | **High** |
-| **colorist** | Has 28 color combos but no famous-film LUT case studies; no 色彩心理学 system; no 调色软件实操 | *If It's Purple, Someone's Gonna Die* (Bellantoni) — color-psychology classic, *Color Correction Look Book* (Hurkman), DaVinci Resolve 调色节点实践, 经典影片 LUT 案例库 (Blade Runner 2049 orange-cyan, Mad Max desert, Moonlight blue-night), 色彩心理学跨文化差异 (中国 vs 西方 颜色含义) | **High** |
-| **composer** | Has coupled_beat concept but no film scoring theory; no theme/leitmotif craft; no genre score conventions | *On the Track* (Karlin & Wright), *The Complete Guide to Game Audio* (scope overlap), film composer case studies (Zimmer / Williams / Reznor), 短剧 BGM 公式 (情绪堆叠 / 静默-爆发 / 经典曲改编), 版权音乐 vs 原创 tradeoffs | Medium |
-| **performer** | Has ExBxSxP matrix but no acting theory; no Meisner / Stanislavski; no 表演 in 短剧 context (夸张 vs 收敛) | *An Actor Prepares* (Stanislavski), Meisner technique, *Respect for Acting* (Hagen), 短剧表演特点 (情绪外放 / 微表情特写适配竖屏 / 配音 vs 同期), AI 数字人表演约束 (uncanny valley / 微表情生成限制) | Medium |
-| **scene_builder** | Has FxSxA matrix but no Mise-en-scène theory; no real production design references | *Mise-en-scène* analyses (Gibbs), production design case studies (蛋头先生 / 韦斯·安德森对称美学), 3D 场景资产库 (SketchFab / Poly Haven 公开素材), Blender 场景搭建最佳实践 | Medium |
-| **foley** | Has 7D system but no actual foley art reference; no sound design theory | *The Sound Effects Bible* (Viers), *Audio-Vision* (Chion), classic foley case studies (Star Wars lightsaber / Jurassic breath), 拟音师工作流 ( Foley vs hard effects vs design ), 公开音效素材库 (Freesound / BBC Sound Effects) | Medium |
-| **spatial_audio** | No spatial audio theory; no Dolby Atmos case studies; no immersive audio reference | Dolby Atmos music/film guidelines, *Immersive Sound* (Rumsey), Ambisonics theory, VR/360 audio case studies, headphones-vs-speakers mixing tradeoffs | Low (specialized) |
-| **mixer** | Has LUFS targets but no mixing craft theory; no genre mix conventions | *Mixing Secrets for the Small Studio* (Senior), *The Mixing Engineer's Handbook* (Owsinski), 平台 loudness 规范 (Spotify -14 LUFS / 抖音 / Apple Music), 对白混音清晰度优先级 (短剧对白 > BGM > 拟音) | Medium |
-| **voicer** | No voice direction theory; no casting-for-voice principles; no TTS model-specific notes | *Voice-Over Voice Actor* (Yousefian & Crum), 配音导演工作流, 当前 TTS / voice cloning 模型 (ElevenLabs / CosyVoice / GPT-SoVITS) 行为与边界, 短剧配音特点 (情绪激烈 / 语速快 / 方言加成) | Medium |
-| **continuity** | Has deviation detection but no script supervisor craft reference | *The Film Director's Team* (script supervisory chapter), script supervisor workflow ( lined script / facing pages / continuity report ), 短剧连续性挑战 (多集角色一致性 / 服装记忆 / 道具追踪) | Medium |
-| **style_genome** | Has director archive (5 names) but tiny; no genre conventions library; no blending case studies | 扩充导演档案库 to 30-50 名 (东西方兼顾: 王家卫 / 张艺谋 / 是枝裕和 / 奉俊昊 + Nolan / Villeneuve / Fincher / Anderson), 类型片风格基因 (科幻 / 古装 / 都市 / 武侠 / 短剧特有的"爽剧风"), 跨导演混搭案例 (Blade Runner 2049 = Villeneuve × Deakins × sci-fi) | **High** |
+### 2.1 Where AI COMPRESSES traditional multi-stage work into single nodes
 
-**Cross-cutting gaps to address in multiple experts:**
-- **短剧-specific data** is universally thin — most existing knowledge is feature-film-oriented. Need 短剧-pacing / 短剧-color / 短剧-cut-rate empirical data refs.
-- **AI generation model behavior notes** are needed across drawer/animator/voicer — what current models do well/poorly, prompt patterns that work, failure modes.
-- **Cross-cultural color/sound meaning** — current 28-color system and emotion mappings are Western-leaning; need Chinese audience variations (e.g., 红色 in China = 喜庆/吉利, in Western thriller = 危险/血腥).
+| Traditional multi-stage | Compressed AIGC node | Mechanism | Risk |
+|---|---|---|---|
+| 故事构思 + 大纲 + 剧本 + 剧本医生 | **story-kernel generator** | LLM one-shot from idea + structural formula | Logic self-consistency may be lost (creative_source validation protocol addresses this) |
+| 角色设计 + 试妆 + 选角 + 化妆 | **character-bible author** | 4D-anchor reference image + LoRA spec | Identity consistency becomes a separate verification node (cannot be folded) |
+| 分镜 + 场面调度 + 镜头语言 + 拍摄 | **shot-intent + storyboard-JSON** | LLM emits structured JSON with shot_size / movement / lens / angle | "Camera move → prompt token" mapping must be a separate node (gen-model-dependent) |
+| 摄影指导 + 摄影师 + 灯光师 + 美术 | **visual-generation node** | Diffusion model ingests prompt + reference | Style/identity lock requires separate consistency nodes (cannot be folded) |
+| 剪辑 + 调色 + 混音 + 拟音 | **post-farm** (parallel) | Each is a distinct capability; may run in parallel | Audio-video lock becomes explicit handoff (not implicit) |
+| 海报 + 预告片 + SEO 标题 | **distribution-cut generator** | LLM variants + editor clip extraction | 平台 compliance tailoring becomes per-platform fork |
+
+### 2.2 Where AI EXPANDS traditional single-stage into multi-node loops
+
+These are the structural reasons a first-principles pipeline may have MORE nodes than traditional at certain stages:
+
+| Traditional single stage | Expanded AIGC sub-nodes | Why expansion is necessary |
+|---|---|---|
+| **角色一致性** (continuity of one character) | (a) character-bible (b) LoRA training (c) reference-image injection (d) cross-scene similarity verification (e) re-prompt loop | Diffusion models are stochastic; without explicit lock + verify loop, character drifts across cuts. Cannot collapse. |
+| **剧本质量** (script quality) | (a) screenplay writer (b) script-auditor (5-dim quantitative) (c) revision loop | LLM writing is inconsistent; quantitative audit gates catch what human script-doctors would. Decoupling writer from auditor removes self-grading bias. |
+| **镜头意图→视频** (camera intent → video) | (a) cinematographer (intent) (b) storyboard-designer (structured shot list) (c) prompt-injector (translate intent → model tokens) (d) video-gen executor (e) preview (f) final | Each translation loses information; explicit nodes preserve traceability + early failure detection. The camera-preview / camera-final split is the AIGC-native equivalent of "rough cut / final cut". |
+| **音频-视频对齐** (audio-video lock) | (a) voicer (b) lip-sync (c) audio-video alignment verifier | TTS audio and generated video are independent streams; alignment is now an explicit node, not an implicit production step. |
+| **风格一致性** (style consistency) | (a) style-genome (definition) (b) art-direction (asset) (c) per-shot prompt injection (enforcement) (d) style drift verifier | Diffusion model prompts drift; a style must be defined once, encoded as a reusable asset, and verified per shot. |
+
+### 2.3 Agent-orchestration patterns observed in AIGC tooling
+
+From research on ComfyUI workflows + LangGraph + plan-and-execute agents:
+
+| Pattern | Source | When it applies | Caution |
+|---|---|---|---|
+| **Node graph (DAG)** | ComfyUI; Blender shader graph | Visual asset pipelines; deterministic data flow | Tempting to over-decompose into 100 micro-nodes; resist |
+| **Planner-Executor-Critic** | LangGraph plan-and-execute; Reflexion pattern | Creative generation tasks where output quality varies | The critic must be measurable, not vibes — otherwise just noise |
+| **Human-in-the-loop gate** | LangGraph HITL; review-platform in kais-movie-agent | High-stakes irreversible decisions (character lock, final delivery) | Each gate multiplies latency; only where cost-of-error > cost-of-delay |
+| **Stateful workflow with checkpointing** | LangGraph checkpointing; kais-movie-agent `.pipeline-state.json` | Long-running pipelines that may fail mid-run | Essential for resume; not a creative decision, an infra decision |
+| **Tool dispatch** | MCP; Hermes tool registry | Nodes that need to call external models | Should be invisible at the design-doc layer |
+
+**Key distinction from traditional workflow patterns:** AIGC pipelines are **stateful graphs with feedback loops**, whereas traditional film workflows are **linear with implicit feedback** (e.g., editor tells DP to reshoot). The DAG formalism is correct; what must be designed carefully is *where the loops live*.
+
+### 2.4 Video-gen chain variants
+
+Two distinct AIGC-native patterns for visual generation, with different node implications:
+
+| Pattern | Examples | Node implication |
+|---|---|---|
+| **Shot-by-shot (Runway/Pika/Sora-style)** | Generate per-shot from prompt + reference; stitch in editor | Requires shot-decomposition node, character-lock node, per-shot prompt-injector node |
+| **Direct long-form (Wan/LTX-style)** | Generate longer continuous clip from one prompt | Reduces shot-decomposition overhead but introduces temporal-consistency node (currently unreliable) |
+
+For 短剧/微电影 in 2026, **shot-by-shot is the mature pattern**. Direct long-form is a research bet.
 
 ---
 
-### 6. Bilingual Authoring Patterns
+## 3. Node Candidates Enumeration
 
-**Recommendation:** **EN structure + CN descriptive prose + mixed-language technical vocabulary.** This is the pattern already emerging in existing SKILL.md files (e.g., "Screenplay Expert (剧本专家)" as title, EN description, but capable of CN operation).
+Grouped by phase. ≥30 candidates listed. For each: traditional工序 mapping / AIGC enabler / merge-split-eliminate candidacy.
 
-**Table stakes for bilingual SKILL.md:**
+**Legend:** ⭐=table-stakes (universal) / 🔷=differentiator (first-principles-derived) / 🚫=anti-feature candidate (likely wrong)
 
-| Layer | Language | Why |
-|-------|----------|-----|
-| YAML frontmatter (name, description, tags) | EN | Hermes ecosystem convention, English-only tooling parses it |
-| `metadata.hermes.*` (expert_id, metrics, related_skills) | EN (snake_case identifiers) | Machine-readable keys |
-| Coding matrix names (FxRxT, CxSxZ, ExBxSxP) | EN abbreviations + CN gloss in parenthesis once | Concise + accessible |
-| Section headers (## Role, ## Workflow, ## What NOT to do) | EN | Consistency across suite, English-first community |
-| Body prose (philosophy, explanations) | EN primary + CN where cultural context warrants | EN for global readability, CN for 短剧 cultural specifics |
-| Examples | **CN primary** (target market is China) | Examples must reflect actual 短剧 language |
-| `references/*.md` | **CN primary**, key terms in EN | Source material is mostly Chinese (短剧 industry, China regulatory docs) |
-| Forbidden patterns / prohibitions | EN with CN-specific items in CN | EN base + local nuance |
+### 3.1 Pre-Production (idea → script → character → shot-plan)
 
-**When EN makes sense (use English):**
-- Technical terms with no good Chinese equivalent or where EN is canonical: LUT, foley, L-cut, J-cut, Mise-en-scène, key/fill/rim light, ControlNet, LoRA, HDRI, PBR
-- Coding-matrix dimension names where abbreviation is standard: F (Frame), R (Rhythm), T (Transition), CxSxZ
-- Tool / framework / model names: Blender, DaVinci Resolve, ElevenLabs, Runway, Kling
-- Metadata, identifiers, machine-readable fields
+| # | Node candidate | Maps to traditional | AIGC enabler | Merge / Split / Eliminate |
+|---|---|---|---|---|
+| 1 ⭐ | **creative-source / story-kernel** | 选题 + 创意制片 (070) | LLM compresses social-strata analysis to single structural_formula (see creative_source SKILL.md) | KEEP — DAG root |
+| 2 ⭐ | **style-genome / art-direction** | 风格定位 + 美术指导 (【狼图腾】) | 5D style vector + LUT-able color anchor | KEEP — defines reusable asset |
+| 3 ⭐ | **screenplay** | 剧本 (菲尔德/麦基/芦苇) | LLM scene-level generation | KEEP — but see split candidates |
+| 4 🔷 | **script-auditor (5-dim quantitative)** | 剧本医生 (informal) | LLM-as-judge with Pearson-validated metric | SPLIT from screenplay — self-grading bias removed |
+| 5 ⭐ | **character-bible / character-designer** | 角色设计 + 选角 + 服化道 (斯坦尼/阿德勒) | 4D-anchor + LoRA spec + consistency stress test | KEEP — identity contract for all downstream |
+| 6 🔷 | **hook-retention / commercial engine** | (none traditional; 短剧-specific) | Marker schema for 钩子/爽点/卡点 mechanically consumed by editor/screenplay | KEEP — for 竖屏短剧 this REPLACES part of screenplay's role |
+| 7 ⭐ | **cinematographer (shot intent)** | 摄影指导 + 场面调度 (012/006) | Movement-emotion dictionary + lens-as-narrative | KEEP — defines intent |
+| 8 🔷 | **storyboard-designer (structured JSON)** | 分镜师 (《电影语言的语法》) | LLM emits shot_size/movement/lens/angle JSON | KEEP — bridge between intent and execution |
+| 9 🔷 | **theory-critic (consultative)** | 理论批评 (巴赞/塔可夫斯基/戴锦华) | LLM applies theoretical framework as diagnostic | OPTIONAL — vertical, not in linear pipeline |
+| 10 🔷 | **compliance-pre-check** | (none traditional; regulatory new) | LLM 红线 scan before production | KEEP — must gate before costly generation |
+| 11 🚫 | *outline-writer as separate node* | 大纲 | LLM can produce scene-level directly | ELIMINATE — fold into screenplay |
+| 12 🚫 | *episode-breakdown as separate node* | 分集 | For 短剧 this is part of screenplay/hook-retention | ELIMINATE — fold into hook-retention |
+| 13 🚫 | *audience-analysis as separate node* | 受众研究 | LLM can be a sub-routine of screenplay | MERGE into screenplay input |
+| 14 🔷 | **topic-curatorial scan** (creative_source daily-scan mode) | (none) | Cron-triggered LLM scan of social data | OPTIONAL — for high-volume production studios |
 
-**When CN makes sense (use Chinese):**
-- 短剧 cultural concepts with no good EN equivalent: 钩子 (hook is a weak translation — 短剧钩子 is denser), 卡点 (literally "card point" — meaning paid cliffhanger, no EN term), 爆款, 击中点, 完播率, 转化率, 爽点, 虐点, 男频, 女频, 赘婿, 战神, 替身, 白月光, 复仇, 反转, 打脸
-- Regulatory terms: 备案号, 先审后播, 网络微短剧, 网信办, 广电总局, 内容审核, 红线, 未成年人保护, 适龄提示
-- All descriptive prose, narrative examples, refs sourced from Chinese-language material
-- Cultural context where English translation loses meaning (e.g., explaining why 赘婿 genre works in China)
+### 3.2 Production (shot-plan → visual → motion)
 
-**Anti-pattern (do NOT do):**
-- **Fully translating everything to EN** — loses 短剧 cultural specificity and reads unnaturally
-- **Fully translating everything to CN** — breaks Hermes ecosystem compatibility, harder for English-only contributors
-- **Mixing languages mid-sentence randomly** — apply consistent layer-based rules
-- **Translating 短剧-specific terms to literal EN** ("赘婿" → "live-in son-in-law" loses the cultural resonance) — keep CN + parenthetical gloss on first use
+| # | Node candidate | Maps to traditional | AIGC enabler | Merge / Split / Eliminate |
+|---|---|---|---|---|
+| 15 ⭐ | **scene-builder (3D previz / feasibility)** | 美术 + 场景搭建 (scene_builder) | Blender + architectural storytelling | KEEP — feasibility check |
+| 16 ⭐ | **drawer (still keyframe)** | 摄影 + 灯光 + 美术 (combined) | Diffusion model with reference + LoRA | KEEP — bottleneck node |
+| 17 ⭐ | **animator (video gen)** | 摄影机 + 表演 + 剪辑 (combined) | Video diffusion (Runway/Kling/Sora/Veo) | KEEP — bottleneck node |
+| 18 🔷 | **prompt-injector (intent → model tokens)** | (none traditional) | Auto-prefix art-bible + character + scene refs | KEEP — load-bearing for consistency |
+| 19 🔷 | **camera-preview (low-param verifier)** | 试拍 / dailies | video_preview_fast mode | KEEP — cheap-fail loop |
+| 20 🔷 | **performer (acting intent)** | 表演 (斯坦尼) | Emotion intent for character animation | CONDITIONAL — only if live-action/animation; not for 漫剧 |
+| 21 🔷 | **production (resource scheduling)** | 制片管理 (057/074) | GPU budget + LoRA reuse + wardrobe-consistency plan | KEEP — AI-specific PROD subset |
+| 22 🚫 | *colorist as separate node at this stage* | 调色 (post) | LUT applied at drawer/animator prompt | DEFER color to post — applying mid-gen causes rework |
+| 23 🚫 | *asset-reuse as separate node* | Asset management | Part of production node | MERGE into production |
+| 24 🔷 | **wardrobe-consistency-verifier** | 服化道连续性 | CLIP-I/DINO-I check per shot | KEEP — AIGC-specific consistency loop |
 
-**Layered template recommendation:**
-```markdown
+### 3.3 Post-Production (audio + visual + composite)
+
+| # | Node candidate | Maps to traditional | AIGC enabler | Merge / Split / Eliminate |
+|---|---|---|---|---|
+| 25 ⭐ | **voicer (TTS)** | 配音 | Multi-provider TTS (MiniMax/ElevenLabs/etc.) | KEEP |
+| 26 🔷 | **lip-sync (audio→video alignment)** | (none traditional; re-dub only) | LatentSync; LSE/LSE-C benchmarked | KEEP — AIGC-native node |
+| 27 ⭐ | **editor** | 剪辑 (默奇/傅正义) | LLM cut-decision + ffmpeg | KEEP |
+| 28 ⭐ | **colorist** | 调色 (076 part 2) | LUT design + Bellantoni color psychology | KEEP |
+| 29 ⭐ | **composer (BGM)** | 配乐 | MusicGen / Suno / licensed library | KEEP |
+| 30 ⭐ | **foley** | 拟音 (《音效圣经》) | Stable Audio Open; BBC 21-cat taxonomy | KEEP |
+| 31 🔷 | **spatial-audio (immersive)** | 空间音频 | Dolby Atmos bed+objects | OPTIONAL — only if target platform is Atmos |
+| 32 ⭐ | **mixer** | 混音 | LUFS per-platform + ducking | KEEP — final audio node |
+| 33 🔷 | **continuity-auditor (cross-shot)** | 场记 + 连续性 | 4-dim CLIP/DINO verifier | KEEP — runs parallel to mixer |
+| 34 🚫 | *separate dialogue-mixer vs music-mixer* | Mix roles | Single mixer node handles both | MERGE into mixer |
+
+### 3.4 Delivery (composite + compliance + distribute)
+
+| # | Node candidate | Maps to traditional | AIGC enabler | Merge / Split / Eliminate |
+|---|---|---|---|---|
+| 35 ⭐ | **compositor (ffmpeg final)** | 后期合成 | ffmpeg concat + transition | KEEP |
+| 36 🔷 | **quality-gate (multi-dim scorer)** | (none; v1 invention) | LLM-judge + objective metrics (LSE, CLIP-I, Pearson) | KEEP — must be quantitative, not vibes |
+| 37 ⭐ | **compliance-final (备案 + 标识)** | 合规 (regulatory new) | AI-generated-content labeling automation | KEEP — legal blocker for CN distribution |
+| 38 🔷 | **distribution-cut variants** | 平台裁剪 | Per-platform fork: 抖音/快手/小程序剧/B站 | KEEP — multi-platform fork |
+| 39 🔷 | **poster + trailer generator** | 海报 + 片花 | Drawer for poster; editor for trailer | KEEP |
+| 40 🚫 | *auto-upload as a node* | 分发 | API integration | ANTI-FEATURE — TOS risk, out of scope |
+| 41 🚫 | *real-time metrics ingest as a node* | 数据回流 | Platform API | ANTI-FEATURE — out of scope, not creative |
+
+### 3.5 Count check
+
+**41 candidates enumerated across 4 phases** (≥30 quality gate met). Of these:
+- ⭐ table-stakes: ~22 (universal must-haves)
+- 🔷 differentiators: ~14 (first-principles-derived)
+- 🚫 anti-feature: ~5 (eliminate/merge candidates)
+
 ---
-name: cinematographer  # EN
-description: "..."  # EN
-metadata:
-  hermes:
-    tags: [...]  # EN
-    expert_id: cinematographer  # EN
----
 
-# Cinematographer Expert (运镜专家 / 摄影指导)
+## 4. Per-Node Declaration Contract — Schema Proposal
 
-[EN opening paragraph: what this expert does, why it exists]
+User specified: 核心任务 + I/O + AIGC 转化点 + 传统经验锚点. Additional fields proposed below, each with rationale.
 
-## Role & Philosophy (角色与理念)
+```yaml
+node_id: <stable_snake_case>            # e.g., screenplay, hook_retention
+node_name_cn: <中文名>
+node_name_en: <English name>
+phase: pre_production | production | post_production | delivery
 
-[CN paragraph: industry context — why 镜头语言 matters for 短剧 specifically]
+# === User-specified fields (mandatory) ===
+core_task: |
+  # 核心任务 — One sentence: what this node single-handedly owns.
+  # If two nodes could plausibly own it, the boundary is wrong.
+inputs:                                  # I/O contract — input side
+  - name: <artifact_name>
+    schema_ref: <path or schema_id>
+    required: true | false
+    from_node: <node_id> | "user" | "external"
+outputs:                                 # I/O contract — output side
+  - name: <artifact_name>
+    schema_ref: <path or schema_id>
+    consumed_by: [<node_id>, ...]
+aigc_transformation_point: |
+  # AIGC 转化点 — Where exactly does AI add value vs the traditional approach?
+  # Must answer: what marginal value does AI contribute here?
+  # If the answer is "AI just does what a human did faster", this node is suspect.
+traditional_experience_anchor: |
+  # 传统经验锚点 — Cite specific book/章节/技法 from 102-book corpus or
+  # industry practice. Format: 《书名》(Project ID) §章节 → 传统工序.
+  # If no anchor exists (e.g., compliance-pre-check), say so explicitly.
 
-## Core Capabilities (核心能力)
-
-[EN bullets with CN examples inline]
-
-## Example: 钩子镜头设计 (Hook Shot Design)
-
-[CN example block, terms in CN, technical specs in EN notation]
-
-## References
-
-- [CN-language refs in CN]
-- [EN-language refs in EN]
+# === Proposed additional fields ===
+success_criteria:                        # How to know this node succeeded
+  - metric: <metric_name>
+    target: <value>
+    validation: quantitative | qualitative | human_review
+    source_ref: <benchmark or rubric>
+fail_modes:                              # Known failure patterns
+  - mode: <name>
+    detection: <signal>
+    fallback: <strategy>
+fallback_strategy: |                     # What to do if node fails entirely
+  # e.g., degrade to placeholder, retry with different model, escalate to human
+dependencies:                            # Hard dependencies on other nodes
+  requires: [<node_id>, ...]             # Must complete before this node starts
+  enhances: [<node_id>, ...]             # Improves quality of those nodes if present
+  conflicts: [<node_id>, ...]            # Mutually exclusive or ordering-constrained
+complexity_class: trivial | prompt_only | multi_step | loop_with_critic | external_call
+iteration_protocol: |                    # For loop_with_critic nodes
+  # How many retries, what triggers a retry, what is the exit condition
+ai_capability_assumption: |
+  # What AI capability does this node assume? Mark stability:
+  #   stable_2026 — reliable across providers (e.g., LLM scene-writing)
+  #   evolving — capability is real but model-dependent (e.g., long-form video gen)
+  #   research_bet — not production-ready (e.g., autonomous theory-critic)
+non_ai_alternative: |                    # What if AI is unavailable?
+  # Manual fallback or simplified version; reveals whether node is truly necessary
+rationale_for_existence: |               # The first-principles justification
+  # Why this node and not another arrangement?
+  # Must reference user value or AIGC marginal contribution, not historical precedent
+provenance:                              # Audit trail
+  source_book_refs: [<Project ID>, ...]
+  related_skill: <hermes skill name> | none  # Existing 26-expert mapping
+  kais_phase_equivalent: <phase id> | none    # Existing 11-phase mapping
 ```
 
+### 4.1 Field rationale
+
+| Field | Why mandatory | Why not optional |
+|---|---|---|
+| `core_task` (user-spec) | Without single-sentence ownership, nodes overlap | Defining ownership forces first-principles thinking |
+| `inputs` / `outputs` (user-spec) | Without I/O contract, DAG composition fails silently | Pipeline reliability depends on this |
+| `aigc_transformation_point` (user-spec) | Without this, node is just "AI does what human did" — anti-feature territory | Forces honest accounting of AI's marginal value |
+| `traditional_experience_anchor` (user-spec) | Without anchor, the node floats free of domain knowledge | Ensures RAG corpus integration |
+| `success_criteria` (NEW) | Without measurable success, the node cannot be improved iteratively | Per project constraint: "可迭代进步,可独立评估" |
+| `fail_modes` (NEW) | AIGC pipelines fail in characteristic ways; documenting prevents silent degradation | Per kais-movie-agent degraded-mode design |
+| `fallback_strategy` (NEW) | Required by kais-movie-agent's 降级-first principle | Without fallback, node is brittle |
+| `dependencies` (NEW) | Required for DAG ordering | Roadmapper needs this |
+| `complexity_class` (NEW) | Different node classes need different phase treatments | Trivial nodes can be batched; loop_with_critic needs own phase |
+| `ai_capability_assumption` (NEW) | Some capabilities are research bets; flagging prevents over-engineering | Project risk management |
+| `non_ai_alternative` (NEW) | If no fallback, node is essential; if trivial fallback, node is suspect | Anti-feature filter |
+| `rationale_for_existence` (NEW) | The Musk first-principles gut-check | Without this, the node set drifts toward imitation-of-traditional |
+
 ---
 
-## Feature Dependencies
+## 5. First-Principles Node-Set Selection Criteria
+
+A node set is "first-principles-derived" (not "imitation-of-traditional") iff it satisfies all 7 criteria. Each is testable.
+
+| # | Criterion | Test | Failure mode |
+|---|---|---|---|
+| **C1** | **User-value-anchored existence** | Each node's `rationale_for_existence` references *user value or AIGC marginal contribution*, not "this is a traditional film工序". | Imitation pipeline fails C1 — its nodes cite McKee/Field as justification, not user need. |
+| **C2** | **AIGC transformation measurability** | Each node's `aigc_transformation_point` names a *measurable* delta (cost reduction, latency reduction, quality lift, capability not previously possible). | Vague transformations ("AI makes it better") fail C2. |
+| **C3** | **Compression-justified or expansion-justified** | For each node, explicitly state whether it COMPRESSES traditional multi-stage into one (§2.1) or EXPANDS traditional single-stage into multi (§2.2). If neither, justify why. | Inherited-from-traditional nodes with no transformation fail C3. |
+| **C4** | **Independent evaluability** | Each node has at least one `success_criteria` metric that can be computed without subjective judgment (Pearson, LSE, CLIP-I, KL divergence, DTW, etc.). Per project constraint. | "Vibes-only" nodes fail C4. |
+| **C5** | **Single ownership (non-overlapping)** | No two nodes own the same `core_task`. If they appear to, the boundary must be intent-vs-execution or definition-vs-verification (decoupling principle from Phase 7 README). | Overlapping nodes (e.g., cinematographer + storyboard_designer both "design shots") must declare boundary or merge. |
+| **C6** | **Decoupled I/O contract** | Each node's `inputs` and `outputs` are machine-readable schemas, not free-form text. The DAG can be statically type-checked. | Implicit handoffs ("editor reads director's mind") fail C6. |
+| **C7** | **Loop placement explicit** | Every feedback loop is documented (which node feeds back to which, what triggers the loop, what exits it). No implicit loops. | "Editor tells DP to reshoot" as an informal channel fails C7. |
+
+**Quality gate for the node set:** All 7 must hold. A node failing one criterion is not necessarily wrong — it must be either fixed or explicitly justified as exception with documented reason.
+
+---
+
+## 6. Anti-Features Catalog — AIGC Pipeline Design Wrong-Turns
+
+Concrete wrong-turns observed in AIGC pipeline design practice. ≥8 entries per quality gate.
+
+| # | Anti-feature | What goes wrong | Why it's tempting | What to do instead |
+|---|---|---|---|---|
+| **AF-1** | **Over-decomposition: 100+ micro-nodes** | DAG becomes unmaintainable; latency multiplies; each node adds friction; debugging impossible | ComfyUI/Blender-graph aesthetic; "more nodes = more sophisticated" belief | Apply C1 + C5: each node must own a distinct user-value unit. Aim for 20-30 nodes, not 100. |
+| **AF-2** | **AI as drop-in replacement for human role** | Loses AIGC structural advantages; produces "traditional workflow but slower and dumber" | "Screenwriter → AI Screenwriter" feels safe and intuitive | Apply C3: explicitly compress or expand. E.g., AI screenplay + AI script-auditor as decoupled pair (not "AI script-doctor"). |
+| **AF-3** | **Missing critic/reviewer in creative loops** | LLM self-grading bias; quality drift undetected; no iteration signal | "Trust the model" assumption; saves a node | Per C4: every creative generation node needs a paired verification node with quantitative metric. |
+| **AF-4** | **Conflating "more nodes = more sophisticated"** | Pipeline grows cargo-cult complexity without user value | Engineer aesthetics; "we have 26 skills, must be 30 nodes" | Apply C1 ruthlessly. Each node must earn its place. |
+| **AF-5** | **Premature optimization for specific gen models** | Locks pipeline to one provider; becomes obsolete when model updates | "Runway works best with X prompt format" hard-coded | Use provider-agnostic placeholders (see `_shared/RAG-INVOCATION-PATTERN.md`); isolate model-specific knowledge in refs/. |
+| **AF-6** | **Redundant gates (multiple quality-bars of the same kind)** | Latency multiplies; gates disagree; user confusion | "More quality checks = safer" intuition | One quality-gate per artifact, with multi-dim scoring inside, not multiple gates in series. |
+| **AF-7** | **Treating consistency as an afterthought** | Character/style/wardrobe drift across shots; viewer perceives "wrong"; costly rework | Consistency is implicit in human production; easy to forget | Per §2.2: consistency is a first-class node set (character-bible + LoRA + verifier loop). |
+| **AF-8** | **Ignoring audio-video lock until late** | Lip-sync failure becomes visible only at final composite; expensive to fix | Audio and video are generated by different models; easy to silo | Per Phase 7 lip_sync decoupling: voicer + lip_sync + alignment-verifier as explicit node cluster. |
+| **AF-9** | **Auto-distribution / auto-upload nodes** | TOS violations; brittle to platform API changes; legal risk | "End-to-end automation" feels like the goal | Distribution node produces artifacts + specs; upload is operator action (out of scope per v1 PROJECT.md). |
+| **AF-10** | **Real-time metrics ingest as a creative-loop input** | Latency feedback is wrong timescale for content iteration; introduces noise | "Data-driven creativity" buzzword | Per-作品 metrics inform NEXT project's creative-source node, not current loop. |
+| **AF-11** | **Live-action-only nodes in an AI pipeline** | Wastes design surface on irrelevant工序 (location scouting, crew scheduling, permits) | Inheritance from traditional production-management books (057/074) | Per PROD-07 from v1: production node covers only AI-relevant subset. |
+| **AF-12** | **Theory-critic as a blocking gate in the linear pipeline** | Kills 短剧 throughput; theory is for serious film, not 短剧 | "All films deserve theoretical rigor" stance | Theory-critic is a consultative vertical (Phase 8 design), invoked on demand, not in linear DAG. |
+
+---
+
+## Feature Dependencies (Node-Candidate DAG)
 
 ```
-EXPERT-COMPLI (compliance gate, can reject script)
-  ↓ blocks
-EXPERT-HOOK (needs approved script)
-  ↓ feeds
-screenplay (gets 爽点 / 卡点 / 钩子 markers in emotion_curve)
-  ↓
-EXPERT-CINE (camera language for each shot, given emotional intent)
-  ↓
-scene_builder (camera feasibility check on CINE intent)
-editor (axis check on CINE output)
-  ↓
-[drawer/animator/colorist/composer pipeline]
-
-EXPERT-PROD (parallel, plans resources for all of above)
+                USER INTENT
+                    │
+                    ▼
+        ┌──────────────────────┐
+        │  creative_source     │ ◄──── (daily-scan mode: topic_curatorial)
+        │  (story-kernel)      │
+        └──────────┬───────────┘
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │  style_genome         │ ◄──── theory_critic (consultative, optional)
+        │  (5D style vector)    │
+        └──────────┬───────────┘
+                   │
+        ┌──────────┼──────────┐
+        ▼          ▼          ▼
+   screenplay  hook_retention  compliance_pre_check
+   (剧本)     (商业引擎)       (红线预扫)
+        │          │          │
+        └──────────┼──────────┘
+                   │
+                   ▼
+            script_auditor ◄── (loops back to screenplay if < threshold)
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │  character_designer   │
+        │  (CharacterBible 2.0) │
+        └──────────┬───────────┘
+                   │
+                   ▼
+            cinematographer
+                   │
+                   ▼
+            storyboard_designer
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+   scene_builder performer  production
+       │           │       (resource plan)
+       └─────┬─────┘
+             │
+             ▼
+         drawer  ◄──── (prompt-injector feeds)
+             │
+             ▼
+         animator ◄──── camera-preview (loops back on fail)
+             │
+       ┌─────┴─────┐
+       ▼           ▼
+    voicer      lip_sync ◄── (audio-video alignment)
+       │           │
+       └─────┬─────┘
+             │
+             ▼
+   ┌─────────────────────────────┐
+   │ colorist / editor / composer │
+   │   foley / spatial_audio      │ ◄──── continuity_auditor (parallel)
+   └──────────┬──────────────────┘
+              │
+              ▼
+           mixer
+              │
+              ▼
+          compositor
+              │
+              ▼
+        quality_gate ◄── (multi-dim scorer; loops back on fail)
+              │
+              ▼
+   ┌──────────────────────────┐
+   │ compliance_final          │
+   │ distribution_cut_variants │
+   │ poster + trailer          │
+   └──────────────────────────┘
 ```
 
-**Key handoffs to design:**
-- `EXPERT-CINE` → `scene_builder`: CINE emits camera *intent* (lens, move, framing); scene_builder emits *feasibility* (can the 3D scene support this) → loopback if infeasible
-- `EXPERT-CINE` → `editor`: CINE emits shot grammar; editor uses for cut decisions and axis check (the existing 180° check in editor must declare CINE as upstream owner of axis *intent*)
-- `EXPERT-HOOK` → `screenplay`: HOOK emits 钩子/爽点/卡点 markers that screenplay must encode into `emotion_curve[]` (extend schema)
-- `EXPERT-HOOK` ↔ `EXPERT-COMPLI`: cliffhanger placement must satisfy 付费合规 (some 卡点 cannot legally be paywalls)
-- `EXPERT-PROD` ↔ all: bidirectional — PROD plans based on all experts' outputs, all experts may flag resource conflicts back to PROD
-- `EXPERT-COMPLI` is the **gate** — runs first (preliminary) and last (final pre-distribution check)
+### Dependency notes
 
-## MVP Recommendation
+- **`screenplay` requires `creative_source` + `style_genome`:** Without story-kernel and style, screenplay writes into a vacuum.
+- **`script_auditor` enhances `screenplay`:** Decoupled writer/auditor per Phase 7A-1 (self-grading bias removed).
+- **`hook_retention` requires `compliance_pre_check`:** 卡点 placement must satisfy 付费合规 (some 卡点 cannot be paywalls).
+- **`character_designer` requires `screenplay`:** Character identity derives from story.
+- **`storyboard_designer` requires `cinematographer`:** Cinematographer defines rules; storyboard_designer applies them per Phase 7B-2.
+- **`drawer` + `animator` require `character_designer` + `scene_builder`:** Identity contract + scene feasibility.
+- **`lip_sync` requires `voicer` + `animator`:** Audio and video must both exist before alignment.
+- **`quality_gate` loops back to multiple upstream nodes:** Failure routes depend on which dimension failed (story → screenplay; visual → drawer; audio → mixer).
+- **`theory_critic` is consultative:** Not in linear DAG; invoked when pipeline encounters its domain (per Phase 8 design).
+- **`compliance_final` is a hard gate:** Cannot bypass for CN distribution.
 
-**v1 priority (build first):**
-1. `EXPERT-COMPLI` (regulatory blocker — without this, nothing ships legally)
-2. `EXPERT-HOOK` (commercial engine — without this, 短剧 content is dead on arrival)
-3. RAG enhancement for `screenplay`, `editor`, `colorist`, `style_genome` (4 highest-impact existing experts)
-4. `EXPERT-CINE` (camera language — needed for craft quality but not a blocker)
+---
 
-**Defer to v1.5 / v2:**
-- `EXPERT-PROD` (production management — more value for studios scaling output; for early v1 the user can hand-coordinate)
-- RAG for low-priority existing experts (`spatial_audio`, `continuity`, `foley` — specialized, lower leverage)
-- Predictive metric estimation in HOOK (needs platform data, mark as future)
-- Live-action-only features in PROD
+## MVP Node Set Definition (For the Design-Docs Milestone)
 
-**Anti-feature for v1:**
-- Automated 平台 API integration (TOS + complexity risk)
-- Real-time regulatory monitoring (quarterly manual audit is sufficient)
-- Cross-platform auto-distribution
+The v2.0 PRFP milestone produces DESIGN DOCS ONLY — not implementation. The "MVP" here is the *minimum complete node set that the design docs must cover*.
 
-## Open Questions
+### Must-document nodes (P1) — table stakes + critical differentiators
 
-- **Q1 (HIGH priority)**: 2026-04-01 AI 漫剧 regulatory specifics — what exactly triggers 备案? Threshold (revenue / episode count / platform)? Need to verify against current 广电总局 notices.
-- **Q2 (MEDIUM)**: 短剧 pacing data — is "1.5-2x horizontal cut rate" actually backed by empirical studies, or is it industry folklore? Need real benchmarks from 抖音 爆款.
-- **Q3 (MEDIUM)**: Current video gen model behavior — what focal lengths / camera moves do Runway Gen-3 / Kling / Veo / Sora reliably support as of 2026-06? Affects what `EXPERT-CINE` can recommend.
-- **Q4 (LOW)**: Cross-platform 合规 matrix accuracy — are 抖音 / 快手 / 微信小程序 rules stable enough to encode, or do they shift monthly?
-- **Q5 (LOW)**: Should `EXPERT-HOOK` predict metrics or only *structure* hooks? Prediction needs validation data; structure is safer for v1.
-- **Q6 (LOW)**: Bilingual refs copyright — Chinese 短剧 case studies are largely paywalled / proprietary; how much can be quoted under fair use vs needs original distillation?
+- [ ] **creative_source** — DAG root; first-principles test case 1
+- [ ] **style_genome** — defines reusable asset
+- [ ] **screenplay** — must own 剧本 task
+- [ ] **script_auditor** — differentiator (decoupled critic)
+- [ ] **character_designer** — identity contract
+- [ ] **hook_retention** — first-principles test case 2 (商业引擎)
+- [ ] **cinematographer** — shot intent
+- [ ] **storyboard_designer** — structured bridge
+- [ ] **drawer** — visual bottleneck
+- [ ] **animator** — motion bottleneck
+- [ ] **prompt_injector** — AIGC-native consistency mechanism
+- [ ] **voicer** + **lip_sync** — audio-video lock
+- [ ] **editor** + **colorist** + **composer** + **foley** + **mixer** — post cluster
+- [ ] **continuity_auditor** — consistency verifier
+- [ ] **quality_gate** — quantitative gate
+- [ ] **compliance_pre_check** + **compliance_final** — regulatory gates
+- [ ] **distribution_cut_variants** + **poster** + **trailer** — delivery
 
-## Confidence Assessment
+### Should-document nodes (P2) — when present, enrich design
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Cinematography capabilities | HIGH | Established film craft, stable knowledge |
-| Hook & Retention capabilities | MEDIUM | 短剧 industry knowledge is real but fast-moving |
-| Compliance (regulatory existence) | HIGH | Official Chinese government sources |
-| Compliance (specific thresholds) | MEDIUM | New 2026 AI 漫剧 rules, details still emerging |
-| Production Management | HIGH for craft / LOW for live-action specifics | Live-action is large domain, v1 focuses on AI-relevant subset |
-| Existing expert enhancement | MEDIUM-HIGH | Gaps are clear; specific book refs are HIGH confidence |
-| Bilingual pattern | HIGH | Pattern already emerging in codebase |
+- [ ] **scene_builder** — may be folded into storyboard_designer for AI-only pipelines
+- [ ] **performer** — only if animation/live-action; skip for 漫剧
+- [ ] **production** — AI-relevant subset (resource plan)
+- [ ] **camera_preview** — AIGC-native cheap-fail loop
+- [ ] **theory_critic** — consultative vertical
+
+### Defer or eliminate (P3)
+
+- [ ] **topic_curatorial scan** — for high-volume studios; v1 creative_source manual mode is enough
+- [ ] **spatial_audio** — only if Atmos target
+- [ ] **auto-upload / metrics ingest** — anti-features AF-9, AF-10
+
+---
+
+## Competitor / Reference Approach Analysis
+
+| Approach | How they organize | Our approach |
+|---|---|---|
+| **ComfyUI node graph** | Visual DAG, dozens of micro-nodes per workflow; user-assembled | We aim for ~25 nodes, not user-assembled; pre-defined for 短剧/微电影 domain |
+| **LangGraph plan-and-execute** | Planner agent + executor agents + critic loop | We adopt the pattern at the *pipeline* level, not within each node |
+| **Runway/Pika/Sora shot-by-shot** | Per-shot prompt + reference | We adopt this as the production pattern; storyboard_designer emits the shot list |
+| **Wan/LTX direct long-form** | One prompt → long video | Research bet; not MVP; flagged in `ai_capability_assumption` |
+| **Traditional 102-book workflow** | Pre-prod → prod → post, human roles | Source of `traditional_experience_anchor` per node; not the structural template |
+| **kais-movie-agent v1 (11 phases)** | Linear pipeline with review gates | Audit comparison; first-principles derivation should produce something different — the v1 phases are inherited, not derived |
+| **Hermes movie-experts v2 (26 skills)** | Collaborative DAG with consultative verticals | Audit comparison; skills are not nodes (skills are capability surfaces; nodes are DAG positions with I/O contracts) |
+
+**Critical distinction for the design docs:** A Hermes *skill* (e.g., `screenplay`) is a capability surface with refs and prompts. A pipeline *node* is a DAG position with an I/O contract. The 26 skills are candidate implementations for nodes — the node set is what gets designed first, the skill-to-node mapping comes after.
+
+---
 
 ## Sources
 
-- **Codebase evidence (HIGH)**: `/data/workspace/hermes-agent/skills/movie-experts/{screenplay,editor,colorist,scene_builder,style_genome}/SKILL.md`
-- **Project requirements (HIGH)**: `/data/workspace/hermes-agent/.planning/PROJECT.md`
-- **Chinese 短剧 industry knowledge (MEDIUM)**: General industry awareness 2024-2026 of 抖音剧 / 快手剧 / 小程序剧 ecosystem; 爆款公式 widely documented in industry media
-- **Regulatory (HIGH for existence, MEDIUM for specifics)**: 国家广电总局 微短剧 备案 framework (well-established); 网信办 《人工智能生成合成内容标识办法》 effective 2025-09-01 (verifiable official source); 2026 AI 漫剧 regulation newly in force — verify exact provisions against current official notices during implementation
-- **Film craft references (HIGH)**: All cited books (Save the Cat, Story, In the Blink of an Eye, Animator's Survival Kit, Sound Effects Bible, etc.) are well-known canonical works in their domains
-- **Gaps**: No WebSearch performed (time-boxed). Some specific 2026 platform rule details and current video-gen-model behavior specs should be verified with WebSearch during phase-specific research.
+### Project-internal (HIGH confidence)
+
+- **102-book corpus index:** `/data/workspace/hermes-agent/skills/movie-experts/_shared/project-corpus/README.md`
+- **26-expert inventory:** `/data/workspace/hermes-agent/skills/movie-experts/README.md`
+- **Existing 11-phase pipeline:** `/data/workspace/kais-movie-agent/docs/WORKFLOW.md` + `/data/workspace/kais-movie-agent/docs/ARCHITECTURE_AND_WORKFLOW.md`
+- **First-principles test case 1 (creative_source):** `/data/workspace/hermes-agent/skills/movie-experts/creative_source/SKILL.md`
+- **First-principles test case 2 (hook_retention):** `/data/workspace/hermes-agent/skills/movie-experts/hook_retention/SKILL.md`
+- **Theory-critic vertical:** `/data/workspace/hermes-agent/skills/movie-experts/theory_critic/SKILL.md`
+- **Project context v2.0 PRFP:** `/data/workspace/hermes-agent/.planning/PROJECT.md` (Current Milestone section)
+- **v1 FEATURES.md (audit carryover):** `/data/workspace/hermes-agent/.planning/research/FEATURES.md`
+
+### External (MEDIUM confidence — general ecosystem awareness)
+
+- [LangGraph: Agent Orchestration Framework for Reliable AI Agents](https://www.langchain.com/langgraph) — graph-based agent orchestration
+- [ComfyUI Video Generation Pipeline: Features, Models & Optimization](https://comfyui.org/en/video-generation-pipeline-features-models-optimization) — multi-functional video gen workflow
+- [How to Build, Run, and Scale High-Quality Creator Workflows in ComfyUI (NVIDIA)](https://developer.nvidia.com/blog/how-to-build-run-and-scale-high-quality-creator-workflows-in-comfyui/) — production-ready ComfyUI patterns
+- [ComfyUI-R1: Exploring Reasoning Models for Workflow Generation](https://arxiv.org/html/2506.09790v1) — automated workflow composition via reasoning
+- [Shot-by-Shot Timeline for AI Filmmaking (r/comfyui)](https://www.reddit.com/r/comfyui/comments/1u30hf0/im_building_a_shotbyshot_timeline_for_ai/) — practitioner building exactly the shot-by-shot pattern we describe
+
+### Confidence assessment
+
+| Area | Confidence | Why |
+|------|------------|-----|
+| Traditional workflow stages (from corpus) | HIGH | Cited directly from 102-book index |
+| Node candidate enumeration | MEDIUM-HIGH | Synthesized from corpus + existing 26-expert + 11-phase + AIGC ecosystem knowledge |
+| AIGC-native compression/expansion patterns | MEDIUM | Drawn from industry practice; not project-benchmarked |
+| First-principles selection criteria (C1-C7) | MEDIUM | Derived from project constraints + Musk-style reduction; not externally validated |
+| Anti-features catalog | HIGH | Each grounded in observed AIGC practice; specific examples given |
+| Per-node declaration schema | MEDIUM | Proposal; needs roadmapper + executor validation before adoption |
+
+### Gaps to address in later phases
+
+- **Node-count target validation:** Is ~25 the right count, or should it be 15 / 35? Phase-specific research needed.
+- **AIGC transformation measurability (C2):** Specific metrics per node need definition during node-design phases.
+- **AI capability stability (2026 snapshot):** Which `ai_capability_assumption` entries are `stable_2026` vs `evolving` vs `research_bet`? Needs current model survey.
+- **Theory-critic integration point:** Confirmed consultative (per Phase 8), but the trigger condition for invocation needs design.
+- **Loop exit conditions:** Every `loop_with_critic` node needs explicit max-iterations + exit signal; defer to per-node design phase.
+
+---
+*Feature research for: v2.0 PRFP pipeline node-set design (AIGC-native 短剧 / 微电影 production).*
+*Researched: 2026-06-16.*
