@@ -96,7 +96,7 @@ Plans:
 4. Old 5 audio expert directories preserved with `status: merged_into` + redirect
 5. lip_sync explicitly added as sub-step (was implicit in v1; new DAG makes it explicit per Phase 8 §2.9 NODE-09 critic pairing)
 
-**Plans:** 3/3 plans complete — PHASE 15 COMPLETE
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 15-01-PLAN.md — Create audio_pipeline/ with merged SKILL.md (sub_steps + aliases + unioned related_skills + Spatial Audio Disposition section + lip_sync NODE-09 note) + 6 sub-folder refs + consolidated GAP-REPORT + 6 redirect stubs (5 merged_into + 1 folded_into for spatial_audio) (Wave 1)
