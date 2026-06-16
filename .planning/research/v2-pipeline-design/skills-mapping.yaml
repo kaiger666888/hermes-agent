@@ -1,6 +1,7 @@
 # skills-mapping.yaml — new DAG node ↔ v1 hermes-agent expert mapping
 # Per HANDOFF-02 + FOUND-08 frozen rule
 # Binding: non_binding_recommendation per HANDOFF-01
+# Phase 18 v3.0 finalization (2026-06-17): all migration entries signed_off; production deferred per FUTURE-09.
 
 schema_version: design-2026-06-16-prfp
 binding: non_binding_recommendation
@@ -15,52 +16,88 @@ frozen_rule: FOUND-08  # v1 expert_ids cannot be silently renamed
 mappings:
 
   # === 1:1 preserved (9) ===
+  # Phase 18 finalizes 1:1 preserved entries with sign_off for ROADMAP §18 #2
+  # completeness; these entries required no migration action but benefit from
+  # explicit sign-off for audit traceability.
   - new_node: creative_source
     v1_expert_id: creative_source
     mapping_type: one_to_one_preserved
     notes: "Direct mapping;no rename;no merge"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: style_genome
     v1_expert_id: style_genome
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: screenplay
     v1_expert_id: screenplay
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: script_auditor
     v1_expert_id: script_auditor
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: character_designer
     v1_expert_id: character_designer
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: cinematographer
     v1_expert_id: cinematographer
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: editor
     v1_expert_id: editor
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: colorist
     v1_expert_id: colorist
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: hook_retention
     v1_expert_id: hook_retention
     mapping_type: one_to_one_preserved
     form_specific: short_drama
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: quality_gate
     v1_expert_id: quality_gate
     mapping_type: one_to_one_preserved
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   - new_node: theory_critic
     v1_expert_id: theory_critic
     mapping_type: one_to_one_preserved
     location: consultative
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
 
   # === 1:1 renamed (2) — requires skills team sign-off ===
   - new_node: continuity_auditor
@@ -87,6 +124,10 @@ mappings:
     mapping_type: n_to_one_merged
     merge_rationale: "Phase 7 §4.8 + PITFALLS §2.1: consistency context unified; specialization loss acceptable"
     revisit_in_phase: "Phase 11 handoff review — may revisit split if specialization > consistency"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
+    revisit_resolution: "Phase 11 v2.0 PRFP handoff review complete (2026-06-16); no split recommended — specialization gain did not exceed consistency loss per PITFALLS §2.1. Signed off in Phase 18 v3.0."
 
   - new_node: audio_pipeline
     v1_expert_ids: [voicer, composer, foley, mixer, spatial_audio]
@@ -94,6 +135,10 @@ mappings:
     merge_rationale: "Phase 7 §4.9 + PITFALLS §2.6: 5-task compression; consistency context unified"
     sub_steps_preserved: [voicer, lip_sync, composer, foley, mixer]
     revisit_in_phase: "Phase 11 handoff review"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-18
+    revisit_resolution: "Phase 11 v2.0 PRFP handoff review complete (2026-06-16); no split recommended — 5-task compression rationale per PITFALLS §2.6 upheld. Signed off in Phase 18 v3.0."
 
   # === NEW (1) — AI-native, no v1 precedent ===
   - new_node: prompt_injector
@@ -141,6 +186,7 @@ not_in_new_dag:
     disposition: deferred
     rationale: "Production management out of v2.0 PRFP scope (pipeline design, not production execution)"
     final_decision_milestone: future
+    v3_0_disposition: "deferred is the final v3.0 state; FUTURE-09 owns production expert resolution in a future milestone. No sign_off action required for v3.0 close (no migration was performed)."
 
 # ============================================
 # FOUND-08 frozen rule compliance check
