@@ -31,8 +31,8 @@
 
 ### VALIDATE — Frozen Rule + Backward Compat(2 reqs)
 
-- [ ] **VALIDATE-01**: FOUND-08 frozen rule compliance check — 所有保留的 expert_id 不变量维护;rename + merge 显式 mapping 记录在 `.planning/research/v2-pipeline-design/skills-mapping.yaml`(已有,本里程碑 sign_off 状态从 `pending` → `signed_off`);deprecate 不静默。验证方法:grep 26 → 21 个 active expert_id(16 pipeline-roles + 5 alias 兼容 + 3 deprecated-but-present)。
-- [ ] **VALIDATE-02**: Backward compatibility alias — 所有 rename / merge / deprecate 操作保留旧 expert_id 作为 alias(`metadata.hermes.aliases: [old_id]`)。验证方法:现有创作者 workflow 不破坏;旧 expert_id 引用仍能找到对应 SKILL.md。
+- [x] **VALIDATE-01**: FOUND-08 frozen rule compliance check — 所有保留的 expert_id 不变量维护;rename + merge 显式 mapping 记录在 `.planning/research/v2-pipeline-design/skills-mapping.yaml`(已有,本里程碑 sign_off 状态从 `pending` → `signed_off`);deprecate 不静默。验证方法:grep 26 → 21 个 active expert_id(16 pipeline-roles + 5 alias 兼容 + 3 deprecated-but-present)。**Audited PASS 2026-06-17 in Phase 18-01 VALIDATION-REPORT.md §FOUND-08 Compliance Audit (13/13 migrations PASS, zero silent renames). Note: actual on-disk count reconciled to 31 SKILL.md files (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs); original 21-target was an estimate that undercounted stubs + omitted non-DAG verticals — see VALIDATION-REPORT.md §Reconciliation Arithmetic.**
+- [x] **VALIDATE-02**: Backward compatibility alias — 所有 rename / merge / deprecate 操作保留旧 expert_id 作为 alias(`metadata.hermes.aliases: [old_id]`)。验证方法:现有创作者 workflow 不破坏;旧 expert_id 引用仍能找到对应 SKILL.md。**Audited PASS 2026-06-17 in Phase 18-01 VALIDATION-REPORT.md §Backward Compatibility Verification (13/13 legacy expert_ids resolve via successor aliases or preserved redirect stubs; zero stranded references).**
 
 ### DOC — Documentation + Collaboration Graph(2 reqs)
 
@@ -81,8 +81,8 @@
 | DEPRECATE-01 | 17 | Complete |
 | DEPRECATE-02 | 17 | Complete |
 | DEPRECATE-03 | 17 | Complete |
-| VALIDATE-01 | 18 | Pending |
-| VALIDATE-02 | 18 | Pending |
+| VALIDATE-01 | 18 | Complete |
+| VALIDATE-02 | 18 | Complete |
 | DOC-01 | 18 | Pending |
 | DOC-02 | 18 | Pending |
 

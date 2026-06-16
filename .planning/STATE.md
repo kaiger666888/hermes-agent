@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: ready_to_plan
-last_updated: 2026-06-16T18:23:47.430Z
-last_activity: 2026-06-17 — Phase 17 Plan 02 COMPLETE (close-out docs: README inventory + DAG diagram + footer count + glossary deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates). Phase 17 fully complete; Phase 18 (validate + docs) is the only remaining v3.0 phase.
+last_updated: 2026-06-17T18:33:08Z
+last_activity: 2026-06-17 — Phase 18 Plan 01 COMPLETE (VALIDATION-REPORT.md audit + ROADMAP §18 reconciliation: 31 SKILL.md files = 15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs; VALIDATE-01 PASS + VALIDATE-02 PASS; 2 defects surfaced for 18-03: VALIDATE-D1 missing quality_gate + VALIDATE-D2 stale README count). Phase 18 plans 02 + 03 remain.
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
-  percent: 83
-stopped_at: Phase 17 complete (2/2) — ready to discuss Phase 18
+  total_plans: 14
+  completed_plans: 14
+  percent: 86
+stopped_at: Phase 18 Plan 01 complete (1/3) — ready to plan 18-02 or 18-03
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +30,9 @@ stopped_at: Phase 17 complete (2/2) — ready to discuss Phase 18
 ## Current Position
 
 Phase: 18
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-16
+Plan: 01 complete (18-02 + 18-03 remain)
+Status: In progress
+Last activity: 2026-06-17
 
 ### Progress
 
@@ -47,7 +47,7 @@ v3.0 Skills-to-DAG Alignment milestone:
   Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
   Phase 16 [██████████] 100% Complete (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 done: close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
   Phase 17 [██████████] 100% Complete (17-01 done: 3 experts deprecated [performer / scene_builder / storyboard_designer] with status:deprecated + FOUND-08 preservation + 8-consumer related_skills rewired to inheritance targets; 17-02 done: close-out docs — README inventory + DAG diagram + footer count + glossary deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates)
-  Phase 18 [          ] 0% Not started (validate + docs — depends on 13-17; Phase 17 complete unblocks Phase 18)
+  Phase 18 [███       ] 33% In progress (18-01 done: VALIDATION-REPORT.md — 31 SKILL.md files classified 15+3+3+10; FOUND-08 audit 13/13 PASS; backward-compat 13/13 PASS; ROADMAP §18 #1 reconciled to 31 with 21-discrepancy surfaced per CONTEXT D-06; DEFECT VALIDATE-D1 [missing quality_gate] + VALIDATE-D2 [stale README count] deferred to 18-03)
 ```
 
 ### Phase Statuses (v2.0 PRFP)
@@ -207,9 +207,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 17 Plan 02 executed (2026-06-17) — close-out documentation complete. README.md received a new "3 Deprecated Experts (Phase 17 — 2026-06-17)" inventory sub-section (3-row table with targets + rationale) + inline DEPRECATED markers on the 3 existing inventory rows (performer + scene_builder in 14 Original Experts; storyboard_designer in 5 New Experts Phase 7) + DAG diagram updated (storyboard_designer bridge node removed, 3-way branch collapsed to standalone production, cinematographer box annotated with composition_lock sub-task absorbing deprecated experts, "Deprecated (Phase 17)" legend note added) + Status line + footer count updated to "18 expert_ids in codebase (15 active + 3 deprecated)". Glossary received 6 inline "(deprecated Phase 17 → <target>)" annotations across 6 body-prose mentions. skills-mapping.yaml signed off 3 not_in_new_dag entries (performer, scene_builder, storyboard_designer) with action_for_v21 FULFILLED prose + sign_off_status: signed_off + signed_off_at: 2026-06-17 + signed_off_by: phase-17; production entry unchanged (deferred). Commits 1bec1f530 + f38d8c254.
-**Next action:** `/gsd:plan-phase 18` for canonical 21-expert validation + docs (Phase 17 fully complete; Phase 18 unblocked). Phase 18 covers VALIDATE-* + DOC-* requirements — final reconciliation of expert inventory to canonical 16 DAG pipeline-roles + 5 aliases, plus cross-doc consistency validation.
-**Hand-off note:** Phase 17 COMPLETE (plans 17-01 + 17-02 both done). DEPRECATE-01/02/03 fully implemented + documented + signed off. Traceability chain complete: ROADMAP §17 → REQUIREMENTS DEPRECATE-01/02/03 → skills-mapping.yaml signed_off → README inventory → glossary. Phase 18 (finalization: validate + docs) is the only remaining v3.0 phase.
+**Last action:** Phase 18 Plan 01 executed (2026-06-17) — VALIDATION-REPORT.md published at .planning/phases/18-validation-documentation/VALIDATION-REPORT.md as the canonical audit artifact for VALIDATE-01 + VALIDATE-02. Classified all 31 SKILL.md files into 4 buckets: 15 active DAG (canonical 16 minus quality_gate gap) + 3 active non-DAG (documentary_maker, animation_studio, production) + 3 deprecated (Phase 17) + 10 redirect stubs (FOUND-08 preservation). FOUND-08 Compliance Audit: 13/13 migrations PASS (zero silent renames/merges/folds/deprecations). Backward Compatibility Verification: 13/13 legacy expert_ids resolve via aliases or preserved stubs (VALIDATE-02 PASS). ROADMAP §18 #1 reconciled: original 21 = 16 + 5 aliases estimate replaced with the audited 31 = 15+3+3+10 decomposition; original 21-target discrepancy surfaced explicitly per CONTEXT D-06 no-silent-sign-off. ROADMAP §18 #6 + #7 now reference VALIDATION-REPORT.md as canonical audit artifact. Two defects surfaced for plan 18-03: VALIDATE-D1 (missing quality_gate expert directory — canonical DAG has 16 nodes but on-disk reality is 15) + VALIDATE-D2 (README Status line stale at "18 expert_ids"). Commits a594047fd + 27378b1aa.
+**Next action:** `/gsd:plan-phase 18 --plan 02` for documentation finalization (README.md Mermaid DAG + reconciled inventory table + glossary 5-new-term verification + known-external-models.yaml Phase 8 §2.17 dated annex; DOC-01 + DOC-02). Plan 18-02 consumes VALIDATION-REPORT.md as source-of-truth.
+**Hand-off note:** Phase 18 Plan 01 COMPLETE (1/3). VALIDATE-01 + VALIDATE-02 verdicts PASS in VALIDATION-REPORT.md; the 21-vs-31 discrepancy is no longer hidden. Plans 18-02 (docs finalization) + 18-03 (sign-off + close) remain; both depend on 18-01's audit artifact.
 
 ---
 
