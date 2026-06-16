@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, production, character-lora, wardrobe, lighting-intent, gpu-budget, asset-reuse, 制作管理]
-    related_skills: [performer, visual_executor, scene_builder, continuity_auditor, colorist, compliance_gate, cinematographer, theory_critic, documentary_maker]
+    related_skills: [performer, visual_executor, scene_builder, continuity_auditor, colorist, compliance_gate, cinematographer, audio_pipeline, theory_critic, documentary_maker]
     expert_id: production
     metrics: [character_id_consistency, wardrobe_continuity, lighting_intent_match, budget_adherence, asset_reuse_rate]
 ---
@@ -73,7 +73,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - 3-point lighting intent + AI prompt token translation
 - Total budget allocation(character LoRA + image gen + video gen + audio + re-take buffer)
 - Asset library schema + batch generation planning + reuse rate tracking
-- Cross-expert coordination(performer / voicer / continuity_auditor / colorist / cinematographer / visual_executor)
+- Cross-expert coordination(performer / audio_pipeline (voicer sub-step) / continuity_auditor / colorist / cinematographer / visual_executor)
 
 ## Output Format
 
@@ -151,7 +151,7 @@ tags="expert:production,domain:asset-reuse-plan"
 4. **Lighting Intent** — Per scene, define 3-point setup + AI prompt tokens
 5. **Budget Allocation** — Compute total budget per asset category + re-take buffer
 6. **Asset Library Plan** — Define naming convention + batch generation 4-phase schedule
-7. **Cross-Expert Coordination** — Hand off to performer (behavior) / voicer (voice) / continuity_auditor (verification) / colorist (color grading) / cinematographer (shot intent) / visual_executor (image + video gen)
+7. **Cross-Expert Coordination** — Hand off to performer (behavior) / audio_pipeline (voicer sub-step) (voice) / continuity_auditor (verification) / colorist (color grading) / cinematographer (shot intent) / visual_executor (image + video gen)
 8. **Budget Tracking** — Per episode, update budget_tracking.json + verify reuse rate targets met
 9. **Post-production Audit** — Verify asset reuse rates + budget adherence + continuity_auditor pass
 
@@ -172,7 +172,7 @@ tags="expert:production,domain:asset-reuse-plan"
 - **<- scene_builder**: spatial constraints (camera blocking + sight lines) affecting lighting feasibility
 - **<- compliance_gate**: wardrobe + casting compliance (CN censorship rules)
 - **-> performer**: character behavior consistency (ExBxSxP matrix) for LoRA training data
-- **-> voicer**: character voice consistency (speaker embedding target) for LoRA + I-frame coordination
+- **-> audio_pipeline (voicer sub-step)**: character voice consistency (speaker embedding target) for LoRA + I-frame coordination
 - **-> continuity_auditor**: wardrobe + lighting + character ID verification protocol
 - **-> colorist**: lighting_mood + color_temp baseline for color grading
 - **-> cinematographer**: lighting consistency with shot_intent
@@ -194,4 +194,4 @@ tags="expert:production,domain:asset-reuse-plan"
 
 production sits **early** in the production DAG — after screenplay + style_genome, before visual_executor:
 
-`screenplay + style_genome → production (LoRA / wardrobe / lighting / budget / assets) → (cinematographer + visual_executor + performer + voicer + composer + foley) → editor + colorist + continuity_auditor → mixer → final`
+`screenplay + style_genome → production (LoRA / wardrobe / lighting / budget / assets) → (cinematographer + visual_executor + performer + audio_pipeline) → editor + colorist + continuity_auditor → final`

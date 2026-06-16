@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, visual_executor, colorist, editor, composer, scene_builder, performer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
+    related_skills: [screenplay, visual_executor, colorist, editor, audio_pipeline, scene_builder, performer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
@@ -108,7 +108,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 | visual_executor | composition + color + light_shadow | 3D |
 | colorist | color + light_shadow | 2D |
 | editor | rhythm | 1D |
-| composer | sound | 1D |
+| audio_pipeline (composer sub-step) | sound | 1D |
 | scene_builder | composition + light_shadow | 2D |
 | performer | rhythm + sound | 2D |
 
@@ -170,7 +170,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - visual_executor: composition + color + light_shadow directly
 - colorist: color + light_shadow dimensions
 - editor: rhythm dimension (editing density)
-- composer: sound dimension (score density)
+- audio_pipeline (composer sub-step): sound dimension (score density)
 - scene_builder: composition + light_shadow dimensions
 - performer: rhythm + sound dimensions (performance pacing)
 
@@ -207,7 +207,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - **-> visual_executor**: composition + color + light_shadow signals
 - **-> colorist**: color + light_shadow signals
 - **-> editor**: rhythm signal
-- **-> composer**: sound signal
+- **-> audio_pipeline (composer sub-step)**: sound signal
 - **-> scene_builder**: composition + light_shadow signals
 - **-> performer**: rhythm + sound signals
 - **-> continuity_auditor**: style_genome.json as consistency audit baseline
@@ -224,4 +224,4 @@ tags="expert:style_genome,domain:cn-director-analysis"
 ## Pipeline Position
 
 Style Genome is the **root expert** in the production DAG:
-`style_genome -> screenplay -> (scene_builder, performer) -> (visual_executor, voicer, colorist, editor, composer, foley, spatial_audio, continuity_auditor) -> mixer -> final`
+`style_genome -> screenplay -> (scene_builder, performer) -> (visual_executor, audio_pipeline, colorist, editor, continuity_auditor) -> final`

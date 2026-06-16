@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, screenplay, script, dialogue, narrative, emotion-curve]
-    related_skills: [style_genome, scene_builder, editor, performer, composer, compliance_gate, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
+    related_skills: [style_genome, scene_builder, editor, performer, audio_pipeline, compliance_gate, hook_retention, cinematographer, theory_critic, animation_studio, documentary_maker]
     expert_id: screenplay
     metrics: [narrative_tension, dialogue_naturalness, emotional_arc]
 ---
@@ -223,7 +223,7 @@ tags="expert:screenplay,domain:dialogue-craft"
 - **-> scene_builder**: scenes[] with camera-ready descriptions, `lighting_mood`
 - **-> editor**: shot_count estimates, rhythm intent, cross-reference IDs
 - **-> performer**: emotion per shot, character psychology annotations
-- **-> composer**: `sound_mood` per scene, coupled_beat hints
+- **-> audio_pipeline (composer sub-step)**: `sound_mood` per scene, coupled_beat hints
 - **-> hook_retention**: 输出 `emotion_curve.hooks[]` / `payoffs[]` / `cliffhangers[]` 供 HOOK marker 对齐验证(双向 edge —— HOOK 设计 marker,screenplay 消费 marker,形成闭环)
 
 ## What NOT to do

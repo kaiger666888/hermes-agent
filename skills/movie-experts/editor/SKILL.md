@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, editing, rhythm, transition, montage, axis-rule, cut]
-    related_skills: [screenplay, visual_executor, composer, voicer, continuity_auditor, mixer, compliance_gate, hook_retention, cinematographer, theory_critic, documentary_maker]
+    related_skills: [screenplay, visual_executor, audio_pipeline, continuity_auditor, compliance_gate, hook_retention, cinematographer, theory_critic, documentary_maker]
     expert_id: editor
     metrics: [rhythm_accuracy, continuity_match, axis_violation_count, transition_smoothness]
 ---
@@ -76,7 +76,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - **平台特定 cut-density 规划** —— 根据平台(抖音 / 快手 / 小程序剧 / 视频号)与题材(男频 / 女频 / 草根)选择 cut-density 窗口(per [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) §Cut-Density Windows by Platform/Genre)
 - **Montage 段落设计** —— 根据场景美学意图选择 montage method(Metric / Rhythmic / Tonal / Overtonal / Intellectual)或 invisible editing(per [`references/montage-theory.md`](./references/montage-theory.md) §Montage Method 选择决策树)
 - **击中点 cut alignment** —— 每个 [击中点](../../_shared/glossary.md#击中点-emotional-impact-point) 必须 align 在 cut 或 motion transition 上,不是 mid-static-shot(per [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) §击中点 Cut Alignment)
-- **BGM-driven cut sync** —— cut 时机对齐 composer.coupled_beat.json 的 BGM beat,bgm_alignment_rate ≥ 70%(per [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) §BGM-Driven Cut Sync)
+- **BGM-driven cut sync** —— cut 时机对齐 audio_pipeline.composer.coupled_beat.json 的 BGM beat,bgm_alignment_rate ≥ 70%(per [`references/cn-cutting-rhythm.md`](./references/cn-cutting-rhythm.md) §BGM-Driven Cut Sync)
 - **Y/L/C/S 跨库编排**(Y=Tempo / L=Transition / C=Composition / S=Narrative)—— 与 emotion_curve + coupled_beat 联动
 
 ## Output Format
@@ -111,7 +111,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - **cuts_per_second**: 0.3-0.5 (dialogue 横屏), 0.8-1.2 (action 横屏), 0.2-0.4 (emotional 横屏) —— 竖屏 × 1.5
 - **shot_duration_min**: 0.5s (action), 2.0s (dialogue)
 - **shot_duration_max**: 10.0s (establishing), 15.0s (extreme slow)
-- **beat_alignment**: ±100ms (with composer's coupled_beat)
+- **beat_alignment**: ±100ms (with audio_pipeline (composer sub-step)'s coupled_beat)
 
 ### Rhythm Parameters — 短剧 特定新增
 - **cut_density**(平台特定,见上 Rhythm Parameters — Cut-Density Windows)
@@ -195,7 +195,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 6. **Shot Ordering** — Arrange shot sequence by narrative logic + rhythm + 击中点 alignment
 7. **Transition Design** — Determine transition type and duration between shots;match cut 优先在场景转换处
 8. **L/J-cut Marking** — Design audio lead/lag for key dialogue
-9. **BGM Sync** — 对齐 cut 时机与 composer.coupled_beat.json 的 BGM beat;验证 bgm_alignment_rate ≥ 70%
+9. **BGM Sync** — 对齐 cut 时机与 audio_pipeline.composer.coupled_beat.json 的 BGM beat;验证 bgm_alignment_rate ≥ 70%
 10. **击中点 Alignment** — 验证每个 击中点 align 在 cut 或 motion transition(不是 mid-static-shot)
 11. **Axis Audit** — Per-shot axis compliance check: 180° / 30° / eyeline 验证;输出 axis_check_report
 12. **Rhythm Verification** — Validate edit rhythm alignment with coupled_beat (±100ms) + build-to-climax 倍数(1.5-2x)+ dead air 例外条件验证
@@ -214,13 +214,13 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 
 - **<- screenplay**: shot_count, rhythm intent, scene structure, emotion_curve(含 hooks[] / payoffs[] / cliffhangers[] 数组,Phase 2 HOOK-09 合同)
 - **<- visual_executor**: video clips (per-shot MP4) + focal_point 字段(用于 eye-trace 计算)
-- **<- composer**: coupled_beat.json(用于 BGM-driven cut sync)+ light_beat.json
-- **<- voicer**: dialogue timeline (L/J-cut reference)
+- **<- audio_pipeline (composer sub-step)**: coupled_beat.json(用于 BGM-driven cut sync)+ light_beat.json
+- **<- audio_pipeline (voicer sub-step)**: dialogue timeline (L/J-cut reference)
 - **<- continuity_auditor**: consistency report (reject failed frames)
 - **<- scene_builder**: axis_data(180° 轴线定义 + 摄影机位置;editor 负责 compliance,scene_builder 负责 feasibility)
 - **<- hook_retention**: 击中点 / 爽点 / 卡点 markers(用于 cut alignment 验证)
-- **-> composer**: final cut points (adjust coupled_beat)
-- **-> mixer**: post-edit audio timeline
+- **-> audio_pipeline (composer sub-step)**: final cut points (adjust coupled_beat)
+- **-> audio_pipeline (mixer sub-step)**: post-edit audio timeline
 - **-> continuity_auditor**: edited shot sequence for final audit
 - **-> hook_retention**: cut list 中的 击中点 / 爽点 / 卡点 cut alignment 验证结果
 
@@ -229,7 +229,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - Don't tolerate any axis violations (零容忍 policy —— 180° 轴线违反必须否决,即使 emotion = 10/10)
 - Don't exceed 2 L-cut/J-cut per scene
 - Don't cut faster than 0.5s per shot without action justification + cut on action
-- Don't ignore composer's coupled_beat timestamps(bgm_alignment_rate 必须 ≥ 70%)
+- Don't ignore audio_pipeline (composer sub-step)'s coupled_beat timestamps(bgm_alignment_rate 必须 ≥ 70%)
 - Don't assemble without continuity pass approval
 - Don't apply metric montage fast(every 24 frames)持续超过 10 秒(viewer-fatigue 阈值)
 - Don't define numeric thresholds in SKILL.md body —— cite the ref §section instead(Phase 1 CR-01 single-source-of-truth rule)
