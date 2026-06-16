@@ -243,3 +243,15 @@
 **EN:** Audio Pipeline Expert — Phase 15 merge of 6 predecessors per v2.0 PRFP DAG §4.9. Unified sub-steps handle TTS (MiniMax / ElevenLabs / Voxtral / Gemini / Edge / NeuTTS), audio-driven lip sync (LatentSync, LRS2/LRS3 benchmark), music generation (MusicGen-Large, Chion audio-vision), SFX (Stable Audio Open, 7D parametric), mixing (Senior Mixing Secrets, LUFS mastering), and spatial audio (Dolby Atmos, HRTF binaural).
 
 **Context:** Replaces the v1 inter-expert audio collaboration edges (voicer↔mixer, composer↔foley, etc.) with intra-expert sub-step handoffs. spatial_audio disposition D-1 (fold) documented in the merged SKILL.md `## Spatial Audio Disposition` H2 section per ROADMAP §15 criterion #2. Declared at `skills/movie-experts/audio_pipeline/SKILL.md`.
+
+---
+
+## Phase 16 additions (prompt_injector NEW AI-native expert)
+
+### prompt_injector / 提示注入 / Prompt Injector
+
+**CN:** 提示注入 — Phase 16 NEW AI-native node(无 v1 前身)。把上游人类意图 — `visual_intent`(来自 cinematographer)+ `style_genome_5d`(来自 style_genome)+ `character_assets`(来自 character_designer)— 翻译为 model-ready prompts(`model_prompts` + `consistency_context`)供 visual_executor 消费。owns 两项质量指标:`cross_call_consistency` ≥ 0.85(下游视觉输出在多次 gen-model 调用间保持风格/身份一致性)+ `prompt_token_efficiency` ≤ 4000 tokens/call(token 预算硬上限)。Fail modes:`consistency_drift`(跨调用一致性上下文丢失 → fallback:显式 carry + 重复关键约束)+ `prompt_overload`(token 超载 → fallback:拆分为结构化 sections + system prompt 承载稳定约束)。Per v2.0 PRFP Phase 7 §4.7 D3.5+D2.4 derivation。
+
+**EN:** Prompt Injector — Phase 16 NEW AI-native node (no v1 predecessor) that translates upstream human intent — `visual_intent` (from cinematographer) + `style_genome_5d` (from style_genome) + `character_assets` (from character_designer) — into model-ready prompts (`model_prompts` + `consistency_context`) consumed by visual_executor. Owns two quality metrics: `cross_call_consistency` (≥0.85 — downstream visual outputs maintain style/identity across multiple gen-model calls) and `prompt_token_efficiency` (≤4000 tokens/call — token budget hard ceiling). Fail modes: `consistency_drift` (consistency context lost between calls → fallback: explicit carry + repeat key constraints) and `prompt_overload` (prompt token overload → fallback: split into structured sections + system prompt for stable constraints). Per v2.0 PRFP Phase 7 §4.7 D3.5+D2.4 derivation.
+
+**Context:** Distinct from cinematographer (which owns shot intent / composition_lock) — prompt_injector owns the prompt-assembly layer that did not exist in traditional pre-AI cinematography. Provider-agnostic: uses `<image_primary>` / `<video_primary>` placeholders (no literal model names committed as identifiers in SKILL.md body). Related_skills peer set: [creative_source, cinematographer, visual_executor, audio_pipeline]. Mapping type in skills-mapping.yaml: `new_ai_native`. Declared at `skills/movie-experts/prompt_injector/SKILL.md`.
