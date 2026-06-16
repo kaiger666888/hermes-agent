@@ -1,228 +1,226 @@
 # Project Research Summary
 
-**Project:** RAG-augmented movie-expert skill suite (movie-experts v2)
-**Domain:** Brownfield skill enhancement inside Hermes Agent — markdown-only skill experts for AI 短剧 (short drama) and 微电影 (micro-film) creation
-**Researched:** 2026-06-15
-**Confidence:** HIGH overall (4/4 research files HIGH or MEDIUM-HIGH grounded in direct codebase reads + cross-checked external docs)
+**Project:** Movie-Experts Suite v2 — Milestone **v2.0 PRFP** (Pipeline Redesign from First Principles)
+**Domain:** Design-doc derivation — first-principles reconstruction of the kais-movie-agent AIGC 短剧/微电影 pipeline node set (delivers DESIGN DOCS ONLY, zero implementation code, dual-repo handoff)
+**Researched:** 2026-06-16
+**Confidence:** HIGH overall (4 research files triangulate cleanly on corpus, methodology, and risk; primary disagreements are framing, not facts)
+
+> **Note:** This SUMMARY supersedes the v1 research synthesis (2026-06-15). v1 research files (STACK/FEATURES/ARCHITECTURE/PITFALLS) have been overwritten in place with v2.0 PRFP-scoped research; v1 carryover audit is captured inside STACK.md.
 
 ---
 
 ## Executive Summary
 
-This project is a **content-architecture effort, not a runtime-architecture effort**. The Hermes skill system has a deliberately narrow contract: a skill is a markdown file whose body is injected as a user message, and the conversation-loop LLM autonomously calls tools (`read_file`, `fact_store`, `mem0_search`) based on prompt instructions. There is no skill-side Python, no runtime orchestration, and no per-skill namespace. RAG augmentation therefore happens almost entirely at **authoring time** — through (a) curated static `references/*.md` files surfaced via a References table at the top of each `SKILL.md`, and (b) provider-agnostic prompt language that defensively invokes the memory plugin (`fact_store` via `holographic`, or `mem0_search`) when available and gracefully degrades to bundled refs otherwise. The architecture is mature and the patterns are well-documented in existing `skills/creative/{manim-video,p5js,comfyui}` siblings — meaning execution risk is concentrated in **corpus curation quality, ref accuracy, and eval methodology**, not in framework plumbing.
+This milestone is unusual: the deliverable is **design documents, not code**. It is a first-principles (Musk-style) derivation of a new AIGC film-pipeline node set that will eventually hand off to two downstream repos (`hermes-agent/skills/movie-experts/` for the knowledge/RAG layer; `kais-movie-agent/` for the execution/orchestration layer). The four research files converge on a clear shape for the work: a derivation-first design-document suite, anchored to a verified 102-book corpus, represented as YAML-canonical + Markdown-rendered, with strict non-binding handoff contracts.
 
-The recommended approach is a **strictly sequenced hybrid RAG rollout**: (1) AUDIT first to fix the verified-shipped phantom references (`animator` emits `model: wan22_video` which does NOT exist in `plugins/video_gen/`; `performer` advertises a fabricated "168K controlled tokens" claim) before any new work, (2) build a hand-rolled MT-Bench-style double-blind eval harness (~200 lines, no new deps) and snapshot baseline, (3) ship the four new experts in compliance-first order (`EXPERT-COMPLI` is a hard legal gate per the 2025-09-01 网信办 AI 标识办法 and 2026-04-01 AI 漫剧 备案 regime), then `EXPERT-HOOK` (the commercial engine of 小程序剧 / 竖屏短剧), then the four highest-impact existing experts gain RAG refs (`screenplay`, `editor`, `colorist`, `style_genome`), followed by `EXPERT-CINE` and the remaining work.
+The recommended approach is **derivation-first, integration-last**. Phase A (first-principles derivation producing a candidate node set) is the bottleneck — nothing else may start until it produces a defensible candidate node list. Once that exists, three streams run in parallel: node DAG + per-node specs (Phase B), 102-book corpus traceability (Phase C), and the LLM-creative-distillation deep-dive (Phase D). Cross-comparisons and the dual-repo handoff (Phase E) cannot begin until B+C+D are stable. Finalization (governance, open-questions, README) closes the milestone (Phase F). The critical path is **A → B → E → F**.
 
-The single biggest delivery risk is **over-reach**: 18-expert parallel execution will collapse under corpus-curation load and GLM context-budget pressure (already demonstrated this session — 2 of 4 parallel mappers failed). Mitigation is ruthless phasing: never more than 2 GLM-heavy skills in flight per phase, never more than 4 experts in a single phase, hard time-box the eval harness, and enforce a go/no-go gate after the first REFACTOR batch rather than committing to all 18 upfront. The second-biggest risk is **LLM-as-judge invalidity** — without mandatory both-orderings (positional bias is 45%), N ≥ 20, a panel of 2+ judges, and ablation against the no-RAG baseline, every "improvement" claim is noise.
+The headline risk — flagged unanimously across PITFALLS, STACK, and FEATURES — is **first-principles theater**: producing a doc that *sounds* like Musk-style derivation but is actually analogy and vibes dressed in reductionist language, which is worse than honest intuition because it feels unchallengeable. The single most load-bearing deliverable is therefore the structural rigor of the derivation log itself: per-node `derivation` fields, epistemic-status tagging (physical / psychological / platform-algorithmic / tool-capability), explicit steelman-the-elimination sections, an alternatives-considered log, and a contingent-vs-validated-invariant classification. The second-largest risk is **design-impl drift across the two repos** — the design will be stale by the time kais-movie-agent implements unless the handoff phase explicitly addresses baseline-ref, impl-cheatsheet, ownership matrix, and a date-stamped versioning scheme.
 
 ---
 
 ## Key Findings
 
-Top findings across all four research files, tagged by source. Ordered by roadmap impact.
+### Recommended "Stack" (NOT code — source materials + methodologies)
 
-1. **[PITFALLS] Phantom model references are already shipping in v1 (P0 BLOCKER).** Verified by direct `ls plugins/video_gen/` (contains only `fal` and `xai`): `animator/SKILL.md` emits `model: wan22_video` which will fail at execution time. `performer/SKILL.md` line 3 advertises a fabricated "168K controlled performance tokens" claim. AUDIT-01 MUST run a reference-verification pass FIRST; otherwise the entire suite's credibility collapses when refs propagate the same phantom IDs downstream.
+This milestone ships ZERO code. The "stack" is the corpus + canon that node-design phases cite. STACK.md confirms physical locations by direct filesystem inspection.
 
-2. **[FEATURES] EXPERT-COMPLI is a hard legal gate, not a nice-to-have.** The 2025-09-01 网信办 《人工智能生成合成内容标识办法》 mandates visible + invisible AI-content labeling; the 2026-04-01 AI 漫剧 备案 regime requires 备案号 for any paid / broadcast distribution. Without this expert, content generated by the suite **cannot legally distribute in China**. HIGH confidence on regulatory existence; MEDIUM on exact thresholds (still emerging).
+**Source corpus (HIGH confidence — direct `ls` verified):**
+- **102-book MinerU-converted film library** (`/home/kai/Downloads/100+本影视剪辑书/converted/` — 102 books, ~9.7M CN chars, 16 MinerU-classified categories) — answers "what is the irreducible human craft of cinema?"
+- **Pre-synthesized 6-stage skill corpus** (`…/skills-影视创作/{00-orchestrator,01-剧本,02-分镜,03-拍摄,04-后期,05-制片,06-理论批评,case-studies}/` — 95+ files) — the "prior synthesis" first-principles must deliberately diverge from or build on
+- **Already-integrated hermes corpus** (`skills/movie-experts/_shared/project-corpus/` — 14 files including README + INTEGRATION-REPORT + 12 content refs) — concentrated answers to theory + craft + producing questions; 9 of 12 ready to cite without re-mining
+- **kais-movie-agent historical architecture** V1→V8 (`/data/workspace/kais-movie-agent/docs/{ARCHITECTURE_AND_WORKFLOW,WORKFLOW,V2-REFACTOR-PLAN,v6-architecture-notion,V8-ARCHITECTURE}.md` + 15 kais-* sub-skills) — the "what was tried" dataset; first-principles must explicitly question inherited assumptions (linearity, JSON asset bus, 20-step granularity, full-LLM-orchestration)
 
-3. **[STACK] Hermes enforces a hard single-external-vector-provider limit.** `MemoryManager.add_provider()` rejects any second non-builtin provider. Skills CANNOT choose their provider — the user already picked one at agent init. **All skills must emit provider-agnostic RAG instructions** (name tools conditionally: "if `fact_store` is in your toolset…"); hard-coding `mem0_search` breaks for `holographic` users and vice versa.
+**Methodology canon (MEDIUM-HIGH confidence — web-verified June 2026):**
+- **Musk first-principles** (Kevin Rose 2012 Foundation interview; Isaacson 2023 biography) — the headline method mandated by milestone brief
+- **Aristotle φυσικαὶ ἀρχαί** (Physics I; Metaphysics Δ) — the philosophical root; distinguishes "more knowable to us" (analogy) from "more knowable by nature" (foundational truth)
+- **TRIZ contradiction matrix** (Altshuller; 40 inventive principles, IEEE-verified "20 of 40 cover 75%") — contradiction-resolution lens when node-design surfaces trade-offs
+- **Jobs-style subtractive reduction** (complementary to first-principles — derive then prune)
 
-4. **[STACK] Per-skill namespace is a soft filter, not a DB feature.** No native namespace isolation exists. The only mechanism is the free-string `tags` field (`tags="expert:<expert_id>,domain:<topic>"`). The `category` enum is locked at 4 values (`user_pref`/`project`/`tool`/`general`) at the tool-schema layer — custom values like `movie:cinematographer` will be rejected. Skills must encode their `expert_id` into `tags` and filter at the prompt level.
+**LLM-creative-story research (MEDIUM-HIGH confidence — 8 peer-reviewed/arXiv refs):**
+- Plot-hole detection benchmark (arXiv 2504.11900), ConStory-Bench (2603.05890), CONFACTCHECK (ACL 2025) — the "自洽性检验机制" evidence base
+- Survey on LLMs for Story Generation (EMNLP 2025 Findings), Learning to Reason for Long-Form (OpenReview), Awesome-Story-Generation (GitHub) — the "创意凝练 prompt 策略" evidence base
+- Creator-Centric Methods (ACM), Scaffolding the Story (IASDR) — supports "AI assists, doesn't replace creative intent"
 
-5. **[STACK] Verified current Hermes backend catalog contradicts existing skill refs.** Image: ships **FLUX 2** (`fal-ai/flux-2/klein/9b` is the default at `tools/image_generation_tool.py:372`), not FLUX 1.x with `euler_a` / `dpmpp_2m` samplers as `drawer/SKILL.md` claims. Video: ships `ltx-2.3`, `pixverse-v6`, `veo3.1`, `seedance-2.0`, `kling-v3-4k`, `happy-horse` — no Wan family. TTS: ships MiniMax, ElevenLabs, Mistral Voxtral, Gemini, Edge, NeuTTS — no CosyVoice. Foley: should cite **Stable Audio Open 1.0** (not AudioLDM-2). Music: MusicGen-large remains the open-source default.
+### Expected Features (Node-Design Decisions to Scope)
 
-6. **[STACK] Eval harness is a hand-rolled ~200-line Python script, no new deps.** Uses only `openai`, `pyyaml`, `jinja2` — all already in Hermes. Lives at `skills/movie-experts/_eval/runner.py` (NOT registered in tool registry — eval is offline developer tooling). Implements MT-Bench position-swap pattern: every prompt runs in both A/B and B/A orderings, disagreement = tie.
+FEATURES.md enumerated 41 candidate nodes grouped into 4 phases. The roadmapper should treat these as a working palette, not a final set.
 
-7. **[ARCHITECTURE] The 18-expert `related_skills` graph is declarative YAML, not runtime orchestration.** Directed (symmetry NOT required). Existing 14 `expert_id` values are FROZEN — refactor happens in-place, version goes 1.x → 2.x in frontmatter. Adding an expert = new directory + new edges. The four new IDs (`cinematographer`, `hook_retention`, `production`, `compliance_marketing`) verified collision-free against existing set.
+**Table stakes — universal nodes every AIGC film pipeline must contain (~22 candidates):**
+- **creative_source** (DAG root, story-kernel mining) — answers "what does the audience ultimately receive?"
+- **style_genome, screenplay, character_designer** — define reusable identity/style assets
+- **cinematographer, storyboard_designer, drawer, animator** — visual intent → execution chain
+- **voicer + lip_sync** — audio-video lock (AIGC-native explicit alignment node)
+- **editor, colorist, composer, foley, mixer** — post-production cluster (runs in parallel where possible)
+- **quality_gate (multi-dim quantitative scorer), compliance_pre_check + compliance_final, distribution_cut_variants, poster + trailer** — delivery
+- **prompt_injector (intent → model tokens)** — AIGC-native consistency mechanism (load-bearing)
+- **continuity_auditor (cross-shot)** — AIGC-specific consistency verifier
 
-8. **[FEATURES] EXPERT-HOOK is the commercial engine of 短剧.** Without structured retention craft (3-second hook taxonomy, 付费卡点 placement, 爽点 density, 爆款公式 per platform), the suite produces **cinematically correct but commercially dead** content. This expert owns the bidirectional feedback loop with `screenplay` (hook rewrites) and `editor` (pacing for retention).
+**Differentiators — first-principles-derived nodes that distinguish the new pipeline from inherited traditional workflow (~14 candidates):**
+- **script_auditor (5-dim quantitative, decoupled from screenplay)** — removes self-grading bias
+- **hook_retention (commercial engine)** — for 竖屏短剧 this REPLACES part of screenplay's role
+- **camera_preview (low-param cheap-fail loop)** — AIGC-native equivalent of "rough cut / final cut" split
+- **theory_critic (consultative vertical, NOT in linear DAG)** — serious-film vertical only
+- **topic_curatorial scan** — for high-volume production studios (defer)
 
-9. **[PITFALLS] Positional bias is REAL and LARGE (45% preference flip).** Verified via MT-Bench / Chatbot Arena lineage. A naive "always present enhanced-version-first" eval is statistically invalid. Mandatory: both orderings + CoT judge + (recommended) cross-model panel + judge temperature pinned at 0.
+**Anti-features — wrong-turns the design must reject (≥12 catalogued):**
+- **AF-1 Over-decomposition** (100+ micro-nodes; "more nodes = more sophisticated" belief). Soft node-count budget: **8-15 per PITFALLS §2.6, with ≤25 as a hard ceiling**
+- **AF-2 AI as drop-in replacement for human roles** ("AI Screenwriter" without compression/expansion justification)
+- **AF-3 Missing critic/reviewer in creative loops** (every generation node needs a paired verifier with quantitative metric)
+- **AF-5 Premature optimization for specific gen models** (hard-coding Sora/Kling/Veo — capability-spec must be canonical; model names only in dated annex)
+- **AF-9 Auto-distribution / auto-upload nodes** (TOS risk, out of scope)
+- **AF-12 Theory-critic as a blocking gate in linear pipeline** (kills 短剧 throughput; must be consultative)
 
-10. **[PITFALLS] GLM overload is already demonstrated.** 2 of 4 parallel mappers failed in this session's milestone context. NEVER run more than 2 GLM-heavy skills in parallel during REFACTOR. Sequential per-expert refactor is preferred.
+**Selection criteria (the C1-C7 test from FEATURES §5 — all 7 must hold for a node set to qualify as "first-principles-derived"):**
+1. User-value-anchored existence (rationale references user value, not "this is a traditional工序")
+2. AIGC transformation measurability (measurable delta: cost / latency / quality / capability)
+3. Compression-justified or expansion-justified (per node, explicitly)
+4. Independent evaluability (≥1 quantitative success metric per node)
+5. Single ownership (non-overlapping core_tasks)
+6. Decoupled I/O contract (machine-readable schemas, statically type-checkable DAG)
+7. Loop placement explicit (every feedback loop documented with trigger + exit condition)
 
-11. **[ARCHITECTURE] Snapshot before refactor, not after.** `_eval/snapshot.py` must run ONCE before REFACTOR-A begins, capturing the 14 existing SKILL.md files into `_eval/baseline/<expert>/SKILL.md`, tagged `eval-baseline-v1`. The runner compares current (refactored) state against this baseline. If we snapshot after, we lose the comparison point.
+### Architecture Approach
 
-12. **[FEATURES] Bilingual pattern is "EN structure + CN descriptive prose + mixed technical vocabulary."** YAML keys/metadata/section headers in EN (parser + Hermes community convention); body prose EN-primary with CN where 短剧 cultural context warrants (钩子 / 卡点 / 爆款 / 男频 / 女频 are untranslatable without losing meaning); refs **CN-primary** with EN glossary at top (industry knowledge is Chinese-source).
+ARCHITECTURE.md prescribes a **derivation-first design-document suite** with three load-bearing constraints: (1) dual-repo non-binding handoff, (2) derivation record is the epistemic anchor (not the DAG), (3) machine-derivable AND human-reviewable — mandates YAML canonical schema + Markdown prose + Mermaid rendered views.
 
-13. **[PITFALLS] Copyright on 短剧 samples is a real lawsuit risk in CN (2024-2026 active enforcement).** CORPUS-01 must enforce license provenance PER-REF (not per-folder): creator-licensed samples need written permission in `refs/LICENSE/`; fair-use excerpts ≤ 30s with attribution; public-domain otherwise.
+**Major components (design deliverable artifacts):**
+1. **§00-FIRST-PRINCIPLES.md** — Musk-style derivation trace (the epistemic anchor)
+2. **nodes.yaml + edges.yaml + corpus-trace.yaml** — canonical schema (single source of truth)
+3. **§02-NODE-SPECS.md** — per-node spec sheets rendered from YAML, each with 3-line audit header (🅰 first-principles / 📚 traditional anchor / ⚡ AIGC justification)
+4. **§03-CORPUS-TRACEABILITY.md** — bidirectional 102-book ↔ node coverage matrix
+5. **§04-LLM-CREATIVE-DISTILLATION.md** — standalone horizontal deep-dive (user explicitly required as separate dimension)
+6. **§05 + §06 COMPARISON-VS-{8-PHASES,26-SKILLS}.md** — non-binding delta analyses (MUST come after derivation to avoid contamination)
+7. **§07-HANDOFF-PLAN.md** — dual-repo contract (skills-mapping.yaml + kais-migration-matrix.yaml)
+8. **§08-GOVERNANCE.md + §09-OPEN-QUESTIONS.md + §10-CHANGELOG.md** — living-doc rules, known unknowns, audit trail
 
-14. **[STACK] sqlite-vec is the v2 vector DB choice (deferred from v1).** v1 uses the holographic plugin's HRR + FTS5 hybrid (no new infrastructure). v2 upgrades to sqlite-vec — same SQLite file pattern, true learned embeddings replacing random-projection HRR. LanceDB is the fallback if multimodal (image+text) retrieval becomes a requirement.
+**Physical location recommended:** `.planning/research/v2-pipeline-design/` (subdirectory, not flat files, to group handoff artifacts and avoid polluting existing v1 milestone archive).
 
-15. **[FEATURES] EXPERT-CINE / EXPERT-PROD have explicitly documented scope boundaries vs. existing experts.** CINE owns 镜头语言 (semantics); `scene_builder` owns 空间布局 (geometry); `animator` owns 动态执行 (motion); `editor` owns 180° axis compliance. PROD owns 制作管理 (casting, scheduling, 服化道, GPU/render budget); does NOT touch camera/blocking (scene_builder) or shot continuity (continuity). Handoffs documented in ARCHITECTURE.md.
+**The ONLY code allowed in this milestone:** a ~30-line governance-lint script (`scripts/validate_design.py`) — developer tool only, NOT shipped to downstream consumers.
 
----
+### Critical Pitfalls (Top 5, consolidated from PITFALLS §"Top 5 Critical Risks")
 
-## Recommended Stack
+1. **First-principles theater (PITFALLS 1.1, 1.5, 1.6, 5.4)** — Derivation that is ex-post justification dressed in reductionist language. The entire milestone is wasted effort if this happens. *Mitigation: derivation-record phase enforces structural rigor — per-node `derivation` field, epistemic-status tagging, steelman-the-elimination section, alternatives-considered log. Warning signs: derivation section shorter than node-description; nodes in same order as existing 8 phases; word "obviously" in justifications.*
 
-The stack is bifurcated: a **content / authoring layer** (where all the real work happens) and a **runtime / infrastructure layer** (which is largely inherited from Hermes and untouched).
+2. **Design-impl drift across two repos (PITFALLS 3.1-3.5)** — Design doc stale by the time kais-movie-agent implements. v1 RETROSPECTIVE's "SUMMARY ↔ README drift" (Key Lesson 7) is the small-scale preview. *Mitigation: handoff doc includes `kais-movie-agent_baseline_ref` (git SHA), 1-2 page impl-cheatsheet annex, explicit ownership matrix (design-intent layer vs implementation layer), date-stamped versioning scheme.*
 
-**Content layer (project owns):**
-- **Static knowledge corpus:** Markdown refs at `skills/movie-experts/<expert>/references/*.md` — kebab-case filenames, one file per atomic domain, mandatory `troubleshooting.md`, fixed anatomy (Source → Copyright → Last-verified → When to Read → Core Principles → Concrete Patterns → Anti-Patterns → Cross-References).
-- **Provider-agnostic RAG invocation pattern:** Prompt language in SKILL.md `## Knowledge Retrieval` block listing "if `fact_store` is in your toolset, query for X with `tags="expert:<id>"`; otherwise rely on `references/*.md`". Defensive conditional phrasing is load-bearing.
-- **Eval harness:** Hand-rolled MT-Bench-style position-swap harness at `skills/movie-experts/_eval/runner.py`. Uses `openai` + `pyyaml` + `jinja2` only (no new deps). Outputs to gitignored `_eval/reports/<expert>/`. Judge temperature pinned at 0; both orderings always run; disagreement = tie.
+3. **Throwing out validated craft as "bias" (PITFALLS 1.2, 5.3)** — Discarding Murch / Field / 180° axis rule as "historical baggage." Musk's actual method discards *analogies with no physical basis*, not *validated invariants*. *Mitigation: corpus-anchor phase + assumption-classification (contingent vs validated-invariant) as required structural elements.*
 
-**Runtime layer (inherited from Hermes, untouched):**
-- **Default memory provider:** `holographic` (local SQLite + FTS5 + HRR, zero config, always available). Tools: `fact_store` (9 actions), `fact_feedback`. Retrieval pipeline: FTS5 candidates → Jaccard rerank → HRR similarity → trust-weighted scoring → optional temporal decay.
-- **Optional provider:** `mem0` (server-side semantic search, `MEM0_API_KEY`, circuit breaker: 5 fails → 120s pause). Tools: `mem0_profile`, `mem0_search` (top_k ≤ 50), `mem0_conclude`.
-- **Image gen backend:** FAL.ai. Default `fal-ai/flux-2/klein/9b` (FLUX 2 Klein 9B); production `fal-ai/flux-2-pro`. Also: Z-Image Turbo (fastest), Nano Banana Pro (Gemini), gpt-image-2 (3 tiers via OpenAI plugin), grok-imagine (xAI).
-- **Video gen backend:** FAL.ai only. Families: `veo3.1` / `kling-v3-4k` (both support 9:16 vertical for 短剧 — recommended), `ltx-2.3` (cheap), `pixverse-v6` (cheap), `seedance-2.0`, `happy-horse` (60-120s). **Wan2.2 is real on fal.ai but NOT in Hermes' `FAL_FAMILIES` catalog.** Wan 2.7 is the latest externally.
-- **TTS for CN 短剧:** MiniMax (strong CN + emotion control) or ElevenLabs (voice cloning for character consistency). CosyVoice 3.0 is SOTA for CN emotional TTS but requires local deployment outside Hermes — document in `voicer/references/cosyvoice-deployment.md` if used.
-- **Music:** MusicGen-large (open-source, no new dep, mature but stable). Foley/SFX: **Stable Audio Open 1.0** (replaces AudioLDM-2). Stable-Foley (arXiv:2412.15023) for video-synced foley is research-grade only.
+4. **Premature model-commitment (PITFALLS 1.3, 2.7)** — Hard-coding Sora/Kling/Veo into node specs guarantees staleness within 6-12 months. v1 already burned by this (`animator/SKILL.md` shipped phantom `wan22_video`). *Mitigation: capability-spec is canonical layer; model names appear only in dated annex with `verified_date` stamps. Node DAG must be valid even if every named model is swapped.*
 
-**What NOT to use:**
-- FLUX 1.x sampler parameters (`euler_a`, `dpmpp_2m`, `cfg=3.5-5.0`) — superseded by FLUX 2, parameter surface is different.
-- `wan22_video` / `wan22_video_turbo` IDs — DO NOT EXIST in Hermes.
-- `CosyVoice-300M (preview)` / `CosyVoice-300M-SFT` — v1 model IDs from 2024; latest is CosyVoice 3.0.
-- `AudioLDM-2` — research-era, superseded by Stable Audio Open.
-- Chroma / Qdrant / Pinecone as v1 vector DB — out of scope per PROJECT.md.
-- Ragas as primary eval harness — built for retrieval-pipeline metrics, not pairwise skill comparison.
-- Hard-coding `fact_store` tool name in skills — user might have `mem0` configured.
-- Single-run LLM-as-judge without position swap — statistically invalid.
-
----
-
-## Table Stakes (v1 Must-Have)
-
-These features MUST exist in v1 or the project fails its core mission.
-
-**Cross-suite foundational:**
-- AUDIT-01 + `scripts/verify_skill_references.py` that greps every model/tool name against actual `plugins/` inventory. AUDIT-01 BLOCKS on this script passing.
-- `_eval/` harness with snapshot baseline + position-swap runner + ablation (no-RAG baseline) comparison.
-- `_shared/glossary.md` EN↔CN term dictionary (load-bearing — without this, drift is guaranteed).
-- References table at top of every SKILL.md listing each ref with "When to Read" + "Contents" columns.
-- Defensive memory-plugin invocation block (graceful degradation when plugin not configured).
-- Frozen `expert_id` values for existing 14 experts (backward compat HARD RULE).
-
-**Per new expert (table stakes):**
-- **EXPERT-COMPLI:** AI 漫剧 备案 workflow, 网信办 AI 标识 automation spec, per-platform 审核矩阵 (抖音 / 快手 / 微信小程序 / B站), 内容审核 红线 checklist, 付费合规 rules, 未成年人保护, 海报 / trailer spec feeding downstream `drawer` + `editor`. All refs MUST carry `verified_date: YYYY-MM` stamp; quarterly refresh cadence.
-- **EXPERT-HOOK:** 3-second hook taxonomy (情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩), 阶梯式升级 pacing, 击中点 / 爽点 placement, 付费卡点 design, 完播率 optimization (1.5x pace rule, no >3s dead air), 转发 triggers, 竖屏 faster cut density, BGM-driven hook sync with `composer.coupled_beat`, 字幕 design language, per-platform 爆款公式 branching (抖音 / 快手 / 小程序剧 diverge).
-- **EXPERT-CINE:** Shot size vocabulary (景别) + angle vocabulary (视角) + composition systems (rule of thirds, 180° / 30° rules) + lens language + camera movement vocabulary + match-cut design + Mise-en-scène checklist + **9:16 vertical composition rules** (safe zones for 抖音/快手 UI overlays). AI-native lens constraints (which focal lengths render reliably in current diffusion/video models).
-- **EXPERT-PROD (v1.5 acceptable):** AI-relevant subset only — character LoRA / reference image spec, per-scene wardrobe spec feeding `continuity`, lighting intent layer, GPU/render budget allocation, asset reuse plan across shots/episodes. Live-action subset (crews, permits, insurance) DEFER to v2.
-
-**Per enhanced existing expert (top-4 priority):**
-- **screenplay + editor + colorist + style_genome** each gain 4-6 curated reference files with concrete, citable heuristics NOT in base model training. (See FEATURES.md table for named source list — Save the Cat, McKee, Murch's Rule of Six, Bellantoni's *If It's Purple*, expanded director archive 30-50 names.)
-
----
-
-## Differentiators (What Sets This Suite Apart)
-
-- **AI 漫剧专项合规 checklist + 备案材料自动生成** — Few tools explicitly handle the new (2026) AI 漫剧 regulatory category. Single source of truth for what's allowed on each platform.
-- **平台差异化合规矩阵** — one skill knows 抖音 vs 快手 vs 微信小程序 vs B站 divergence (审核尺度, 时长限制, 付费机制, 卡点 位置).
-- **爆款元素识别 + 合规避险 dual analysis** — flags where 大尺度 / 强冲突 爆款 elements overlap with 审核风险; offers 降级方案 to pass review without losing core 爽点.
-- **EXPERT-HOOK with 爆款公式 per platform branching** — 抖音 男频 (赘婿逆袭 / 战神归来 / 重生复仇) vs 女频 (豪门虐恋 / 闺蜜背叛 / 替身白月光); 快手 草根 接地气; 小程序剧 longer episodes with 付费卡点 at min 3-5 of 10 ep. No generic "universal hook formula".
-- **Camera-move → prompt-token mapping for video gen models** (CINE): dolly-in ↔ "slow push-in"; handheld ↔ "shaky cam, documentary feel". Movement-emotion dictionary (slow push = realization, pull-out = abandonment, whip-pan = energy cut).
-- **AI-budget-aware scheduling** (PROD): shot ordering that minimizes drawer / animator re-renders (most expensive ops); batch shots sharing scene package; character-LoRA cost estimation.
-- **Bidirectional feedback loop** (HOOK ↔ screenplay, HOOK ↔ editor): first experts in suite with true back-edge in `related_skills` graph. Retention is not a forward pass.
-- **Double-blind position-swap eval with ablation** baked into the project — every "is RAG worth it" claim is statistically defensible (both orderings, N ≥ 20, panel, no-RAG baseline).
-- **Cross-cultural color/sound meaning layer** — current 28-color system and emotion mappings are Western-leaning; refs add Chinese audience variations (红色 = 喜庆/吉利 in CN vs 危险/血腥 in Western thriller).
+5. **Creative-story node under-specified (PITFALLS 4.1-4.7)** — The user's headline emphasis ("有创意且逻辑自洽") maps to huge surface area. Hand-waving novelty, self-consistency, and platform-vs-art tension produces either random or cliché output. *Mitigation: LLM-creative sub-doc must operationally define creativity (novelty within inviolable constraints), specify consistency-context input + novelty-pressure mechanism, support template library (not single Save-the-Cat template), and address platform-vs-art tension explicitly.*
 
 ---
 
-## Watch Out For (Top Critical Risks)
+## Cross-File Conflicts Surfaced (Synthesis Recommendations)
 
-1. **Phantom model references already shipped (P0 BLOCKER).** `animator/SKILL.md` emits `model: wan22_video` which does not exist; `performer/SKILL.md` fabricates "168K controlled tokens". If propagated into refs and downstream experts, suite credibility collapses. **AUDIT-01 must run reference verification FIRST, before any new expert or any refactor.**
+The 4 research files are largely convergent, but they disagree on framing in 5 places. Below: the conflict, then the synthesizer's recommended position.
 
-2. **Copyright infringement on 短剧 samples (legal blocker).** CN 短剧 copyright enforcement is active 2024-2026 with multiple 高额判决. Per-ref LICENSE.md required; samples > 30s require written creator permission stored in repo.
+### Conflict 1: Node-count target
+- **STACK** (implicit): "minimum viable node set" — no number stated
+- **FEATURES**: MVP "must-document nodes (P1)" = 22+ candidates; target overall ~25-30 ("aim for ~25 nodes, not 100")
+- **ARCHITECTURE**: target 10-15 nodes ("per PROJECT.md: minimal necessary node set"); scaling table shows architecture holds without structural changes at 10-15
+- **PITFALLS**: soft node-count budget **8-15 for short-drama pipeline**, ≤25 hard ceiling; node count grows during design = smell
 
-3. **LLM-as-judge eval invalidity.** Without both orderings, N ≥ 20, panel of 2+, and ablation vs no-RAG baseline, every "improvement" claim is unfounded. Worse: PROJECT.md commits to "deep refactor not light enhancement" — if baseline eval shows experts are already adequate, the entire REFACTOR scope is unjustified.
+**Synthesis position:** Roadmapper should scope the milestone for **8-15 nodes** as the derivation target, with explicit justification required for each node beyond that ceiling. FEATURES.md's 41 candidates are a *palette to select from*, not a target. The C1-C7 selection criteria (esp. C1 user-value-anchored existence + C5 single ownership) are the filter that compresses 41 → 10-15. The MVP "P1 must-document" list of 22 should be interpreted as "candidates that must be *considered*" not "candidates that must *appear in the final DAG*."
 
-4. **18-expert parallel execution collapse.** GLM overload already demonstrated (2/4 mapper failures this session). NEVER parallelize all 18; cap at 2 GLM-heavy skills per phase.
+### Conflict 2: Phase structure for the design work itself
+- **STACK** (§3.3 + §6.2): recommends building node-design from corpus clusters (剧本创作 + 电影理论 + 导演表演 + 电影教材 + 前期分镜 + 剪辑后期 + high-value "其他")
+- **FEATURES** (§3): enumerates candidates by traditional-phase grouping (Pre-Production / Production / Post-Production / Delivery) — implies a phase-organized build
+- **ARCHITECTURE** (§5): explicit 6-phase decomposition A→F with critical path A→B→E→F and parallelism (C, D alongside B)
+- **PITFALLS** (Pitfall-to-Phase Mapping §): maps pitfalls to PROJECT.md's 5 target features (#1 derivation-record / #2 node-DAG / #3 corpus-anchor / #4 LLM-creative-subdoc / #5 handoff-doc) — implies a 5-phase structure
 
-5. **平台审核 non-compliance in generated 短剧.** EXPERT-COMPLI is a CN legal exposure surface. If it generates content violating 抖音/快手 rules, users face 账号封禁 / 内容下架 / 行政处罚. Refs MUST cite official platform guideline URLs + version dates; output MUST include "reviewed against <guideline version>" attestation.
+**Synthesis position (recommended for the roadmapper):** Adopt **ARCHITECTURE.md's 6-phase structure (A→F)** because (a) it is the only one with explicit critical-path + parallelism analysis, (b) it subsumes PITFALLS' 5-feature mapping (Phase A = feature #1 + part of #3; Phase B = feature #2 + #3; Phase D = feature #4; Phase E = feature #5 + the "comparison-vs-8-phases" deliverable PITFALLS calls out), (c) FEATURES' pre-prod/prod/post/delivery grouping is a *content taxonomy for the node-spec phase*, not a *work-decomposition*. STACK's corpus-cluster grouping is a *mining strategy for Phase C*, not a separate phase structure. See "Implications for Roadmap" below.
 
-6. **Backward-compat breaks on `expert_id` / `related_skills` graph.** Existing 14 `expert_id` values are FROZEN — refactor edits prompt body, metrics, thresholds, NEVER identifiers. `related_skills` additions OK; deletions require migration note.
+### Conflict 3: Should the corpus anchor come before or after node derivation?
+- **STACK** (§1.4): implies corpus informs the first-principles questions ("Pair this ref with… consider re-mining books…")
+- **FEATURES** (§1): "the raw material any first-principles derivation must either justify keeping, justify eliminating, or justify merging" — derivation is *upstream* of corpus citation
+- **ARCHITECTURE** (§5): Phase A (derivation) produces candidate node set → Phase B (specs) names corpus anchors → Phase C (traceability) back-links
+- **PITFALLS** (1.2): "the design throws out validated craft knowledge… treating them as bias to be cleansed" — implies corpus must be consulted during derivation
 
-7. **Refs become "Wikipedia summaries" with no citable specifics.** Each ref MUST contain ≥ 1 concrete heuristic / number / rule NOT in base model training (e.g., "抖音 完播率 drops at 7s for romance genre — front-load conflict before 5s"). Reject during PR review.
+**Synthesis position:** Derivation (Phase A) is *primary* — the candidate node set must fall out of the reasoning trace, not be imported from the corpus. BUT derivation must be corpus-aware: the first-principles questions in Phase A ("what can AI not replace?", "what determines microfilm quality?") reference corpus subsets per STACK §1.4. The corpus-anchor *traceability matrix* (Phase C) is then a downstream *verification* artifact — does each derived node actually have ≥1 corpus citation? If a derived node has 0 strong citations, either (a) the node is AIGC-native with no traditional precedent (justify explicitly), or (b) the derivation missed something (revisit Phase A). This resolves both the "throw out craft as bias" pitfall AND the "contamination" risk.
 
-8. **RAG masks weak prompts.** EVAL-01 MUST include ablation: (a) old SKILL no refs, (b) new SKILL no refs, (c) new SKILL + refs. If (b)→(c) gap < (a)→(b) gap, refs are theater — fix prompt first.
+### Conflict 4: Is theory_critic in the linear DAG?
+- **FEATURES** (§3.1 row 9): "OPTIONAL — vertical, not in linear pipeline"
+- **FEATURES** (§3 dependency notes): "theory_critic is consultative: Not in linear DAG; invoked when pipeline encounters its domain"
+- **PITFALLS** (AF-12 / 4.7): theory-critic as blocking gate is an anti-feature
+- **ARCHITECTURE**: edge type `consultative` is one of the 4 constrained edge types — explicitly supports this pattern
 
-9. **Memory plugin not configured → silent no-RAG.** Skills MUST include probing instruction that surfaces a warning "running in static-refs-only mode" rather than failing silently.
+**Synthesis position:** Triangulated — theory_critic is a **consultative vertical**, NOT in the linear DAG. Edge type is `consultative`. This is settled; the roadmapper does not need to relitigate it.
 
-10. **Bilingual translation drift.** Single source of truth: EN YAML canonical; CN prose must reference same metric IDs; CI lint verifies.
+### Conflict 5: How much should the design bind downstream repos?
+- **PROJECT.md**: "范围严格收口: 本次里程碑交付仅设计文档"
+- **ARCHITECTURE** (§3, §4, Anti-Pattern 3): "binding: non_binding_recommendation" hard rule; design NEVER modifies downstream files
+- **PITFALLS** (3.3): ownership matrix must be explicit — design-intent layer (hermes-agent) vs implementation layer (kais-movie-agent) vs co-owned DAG (changes require sign-off from both)
 
----
-
-## Recommended Build Order
-
-Seven phases. Rationale woven from cross-research synthesis. **Phase 0 is non-negotiable — nothing else starts until phantom refs are verified and baseline eval exists.**
-
-### Phase 0: AUDIT + Eval Skeleton (BLOCKER GATE)
-**Rationale:** Verified-shipped phantom refs (`wan22_video`, "168K tokens") will poison every downstream artifact if not fixed first. Eval harness must exist and snapshot baseline BEFORE any refactor, or no improvement claim is defensible.
-**Delivers:** `GAP-REPORT.md` per expert; `scripts/verify_skill_references.py` CI lint; `_eval/{runner.py,snapshot.py,judge_prompt.md}` skeleton; `_eval/baseline/<expert>/SKILL.md` snapshot tagged `eval-baseline-v1`; phantom refs stripped/rewritten.
-**Addresses:** AUDIT-01 + EVAL-01 skeleton + DOC-01 partial (collaboration graph draft).
-**Avoids:** Pitfall #1 (phantom refs), #3 (eval invalidity), #11 (snapshot-after-loses-baseline).
-**Cap:** ≤ 2 GLM-heavy operations in parallel (audit + harness build).
-
-### Phase 1: EXPERT-COMPLI (Legal Gate)
-**Rationale:** 2025-09-01 网信办 AI 标识办法 + 2026-04-01 AI 漫剧 备案 regime mean content CANNOT legally distribute without this expert. Per FEATURES.md: "EXPERT-COMPLI is the gate — runs first (preliminary) and last (final pre-distribution check)". Building it first means all subsequent experts have compliance constraints to design against.
-**Delivers:** `skills/movie-experts/compliance_marketing/` with SKILL.md + refs (`cn-content-rules.md`, `platform-specs-douyin.md`, `platform-specs-kuaishou.md`, `platform-specs-miniprogram.md`, `viral-element-catalog.md`); 5 eval prompts; integration into related_skills graph (edges to screenplay, editor, hook_retention, style_genome).
-**Addresses:** EXPERT-COMPLI table-stakes from FEATURES.md.
-**Avoids:** Pitfall #5 (平台审核 non-compliance).
-**Research flag:** Phase needs `/gsd:plan-phase --research-phase 1` to verify current (2026-Q2) 抖音/快手/视频号 published guideline versions and exact AI 漫剧 备案 threshold triggers.
-
-### Phase 2: EXPERT-HOOK (Commercial Engine)
-**Rationale:** Without structured retention craft, the suite produces cinematically correct but commercially dead 短剧 content. EXPERT-HOOK is the first bidirectional expert (↔ screenplay, ↔ editor) and its output schema feeds into `screenplay.emotion_curve` — building it before refactoring screenplay means screenplay refactor can absorb HOOK's schema extension natively.
-**Delivers:** `skills/movie-experts/hook_retention/` with SKILL.md + refs (`three-second-hooks.md`, `conflict-escalation.md`, `paywall-design.md`, `vertical-pacing.md`); per-platform 爆款公式 branching; bidirectional edges in related_skills.
-**Addresses:** EXPERT-HOOK table-stakes from FEATURES.md.
-**Avoids:** Pitfall — "Hook / retention mismatched to platform algorithm" (抖音 vs 快手 vs 小程序剧 diverge); "付费卡点 feels manipulative".
-**Research flag:** Phase needs `/gsd:plan-phase --research-phase 2` to validate whether "1.5-2x horizontal cut rate" for 短剧 is empirical or folklore, and to document current video gen model behavior (what focal lengths / camera moves Runway Gen-3 / Kling / Veo reliably support as of 2026-06).
-
-### Phase 3: Top-4 Existing Experts RAG (Highest Leverage)
-**Rationale:** `screenplay`, `editor`, `colorist`, `style_genome` are the four highest-impact existing experts per FEATURES.md priority callouts. Refactoring these four delivers the largest measurable quality improvement for the least corpus-curation cost. They are also upstream dependencies for EXPERT-CINE (next phase) — colorist and editor must be stable before CINE integrates.
-**Delivers:** Per-expert `references/` (4-6 files each, sourced from named books in FEATURES.md table — Save the Cat, Story, In the Blink of an Eye, If It's Purple, expanded director archive 30-50 names); RAG invocation blocks in SKILL.md; 3 eval prompts per expert; post-refactor eval comparison vs Phase 0 baseline.
-**Addresses:** REFACTOR-A + REFS-A + CORPUS-01 (for top-4 slice of 4 source types).
-**Avoids:** Pitfall #7 (refs become Wikipedia summaries), #8 (RAG masks weak prompts — mandatory ablation).
-**Standard patterns:** Reference file anatomy, References table, bilingual section pattern all documented in ARCHITECTURE.md — skip deep research.
-**Cap:** ≤ 2 of 4 experts in flight at once (GLM constraint). Sequential screenplay → editor → colorist → style_genome preferred.
-
-### Phase 4: EXPERT-CINE (Camera Language)
-**Rationale:** Needed for craft quality but not a blocker (COMPLI gates legality, HOOK gates commerce, the 14 existing experts cover basic craft). Depends on Phase 3 — `scene_builder` and `animator` (whom CINE integrates with) should have stable contracts.
-**Delivers:** `skills/movie-experts/cinematographer/` with SKILL.md + refs (`shot-grammar.md`, `axis-rules.md`, `vertical-screen-framing.md`, `camera-motion-catalog.md`); camera-move → prompt-token mapping for video gen models; edges to scene_builder, animator, editor, screenplay, continuity, drawer, hook_retention; explicitly documented handoff boundary (CINE owns intent; scene_builder owns feasibility; editor owns 180° compliance).
-**Addresses:** EXPERT-CINE table-stakes.
-**Avoids:** Pitfall — "EXPERT-CINE overlaps with scene_builder / animator" (boundary documented BEFORE writing SKILL.md per PITFALLS.md warning).
-**Standard patterns:** Same as Phase 3 (reference anatomy, bilingual, RAG invocation).
-
-### Phase 5: Remaining 10 Existing Experts RAG + EXPERT-PROD (v1.5)
-**Rationale:** Lower-leverage experts (`spatial_audio`, `continuity`, `foley`, `mixer`, `voicer`, `composer`, `performer`, `scene_builder`, `drawer`, `animator`) and EXPERT-PROD (production management — explicitly acceptable to defer to v1.5 per FEATURES.md). Go/no-go gate after Phase 3+4 eval results — if the top-4 RAG uplift is statistically insignificant, scrap this phase and redirect effort.
-**Delivers:** Per-expert `references/` (smaller scope — 2-4 files each, lower-priority books); `skills/movie-experts/production/` for PROD with AI-relevant subset only (casting, wardrobe, GPU budget, asset reuse — NOT live-action crews/permits/insurance).
-**Addresses:** Remaining REFACTOR-A + REFS-A + CORPUS-01 + EXPERT-PROD.
-**Avoids:** Pitfall — "RAG on skills that don't need it" (AUDIT-01 classifies each of 14 as needs-deep-refs / needs-light-refs / needs-no-refs; procedural skills like foley get minimal treatment).
-**Research flag:** Phase needs `/gsd:plan-phase --research-phase 5` for PROD-specific AI budget modeling (character-LoRA cost estimation, render-farm allocation heuristics — domain is emerging, sparse documentation).
-
-### Phase 6: Full Eval + Bilingual Pass + Top-Level README (DOC-01 Complete)
-**Rationale:** Runs full `_eval/runner.py --all` to produce the credibility anchor for the suite. Bilingual consistency pass across all 18 experts. Top-level `skills/movie-experts/README.md` cites eval numbers and the final 18-expert graph.
-**Delivers:** `_eval/reports/summary.md` aggregated comparison table (all 18 experts, both orderings, panel verdicts); `_shared/glossary.md` finalized; top-level README with collaboration graph + RAG usage + eval results.
-**Addresses:** EVAL-01 full + BILINGUAL-01 + DOC-01 complete.
-**Avoids:** Pitfall #10 (bilingual drift — single source: EN YAML canonical; CI lint verifies CN prose references same metric IDs).
+**Synthesis position:** Non-binding is settled. The handoff phase (Phase E) must produce: (a) `skills-mapping.yaml` + `kais-migration-matrix.yaml` with `binding: non_binding_recommendation`, (b) explicit ownership matrix, (c) baseline-ref + versioning scheme, (d) impl-cheatsheet annex. The design's job is to be useful enough that downstream teams WANT to act on it — not to compel them.
 
 ---
 
-## Phase Ordering Rationale
+## Implications for Roadmap
 
-- **AUDIT-before-refactor:** The codebase audit findings (STACK.md §3) prove phantom refs already ship in v1. Refactoring on top of phantom refs entrenches errors.
-- **EVAL-skeleton-before-refactor:** Architecture (§Snapshot Protocol) is explicit: snapshot baseline BEFORE REFACTOR-A begins. Without it, no before/after comparison exists.
-- **COMPLI-before-HOOK:** FEATURES.md is unambiguous — COMPLI is "the gate". HOOK can integrate paywall compliance constraints only after COMPLI defines them.
-- **HOOK-before-CINE:** HOOK emits 钩子/爽点/卡点 markers that CINE consumes for hook-shot design. HOOK also feeds screenplay's emotion_curve schema extension, which must be in place before CINE reads "which moment needs close-up vs wide".
-- **Top-4-RAG-before-remaining-10:** FEATURES.md priority matrix marks screenplay/editor/colorist/style_genome as **High** leverage; the rest are Medium. Concentrate effort where uplift is largest.
-- **GO/NO-GO gate after Phase 3+4:** If eval shows the top-4 RAG uplift is statistically insignificant (CI crosses 0), the entire REFACTOR-A scope is unjustified per PITFALLS.md warning. Cheaper to discover this after 4 experts than after 18.
-- **Cap of 2 GLM-heavy skills per phase:** PITFALLS.md flags demonstrated GLM overload (2/4 mapper failures). Sequential per-expert work preferred over parallel.
-- **PROD in v1.5:** FEATURES.md MVP explicitly defers PROD to v1.5 ("more value for studios scaling output; for early v1 the user can hand-coordinate").
+**Recommended phase structure (synthesizing ARCHITECTURE.md's A→F decomposition, validated against PITFALLS' pitfall-to-phase mapping and FEATURES' content taxonomy):**
 
----
+### Phase A: First-Principles Derivation
+**Rationale:** PROJECT.md is explicit ("节点设计从 0 推"). Every later section is a consequence of the derivation. Nothing else may start until Phase A produces a defensible candidate node set. This is the hardest intellectual work in the milestone.
+**Delivers:** `00-FIRST-PRINCIPLES.md` — the Musk-style reasoning trace, concluding with a candidate node set. Required structural elements per PITFALLS 1.x: per-node `derivation` field, epistemic-status tagging (physical / psychological / platform-algorithmic / tool-capability), steelman-the-elimination, alternatives-considered log, contingent-vs-validated-invariant classification, analogy-validity field per node.
+**Addresses:** Target feature #1 (first-principles derivation record). Avoids pitfalls 1.1, 1.5, 1.6, 5.1-5.4.
+**Must use:** STACK §4 (Musk + Aristotle + TRIZ methodology canon), STACK §1.4 (per-question corpus subsets — derivation is corpus-aware but corpus does not dictate the node set).
+**Critical-path position:** BOTTLENECK. No parallel work permitted.
 
-## Research Flags
+### Phase B: Node DAG + Per-Node Specs (primary)
+**Rationale:** Once Phase A produces candidate node IDs, the DAG can be drawn and specs drafted. Specs are the densest section. Phase B can begin in parallel with Phase C once node IDs exist.
+**Delivers:** `01-NODE-DAG.md` + `02-NODE-SPECS.md` + canonical `nodes.yaml` + `edges.yaml`. Each node spec follows FEATURES §4 schema (core_task / I/O / AIGC transformation point / traditional anchor + STACK additions: success_criteria, fail_modes, fallback_strategy, dependencies, complexity_class, ai_capability_assumption, non_ai_alternative, rationale_for_existence, cost_budget, latency_budget, model_horizon). Apply C1-C7 selection criteria to filter 41 candidates → 8-15 final nodes.
+**Addresses:** Target feature #2 (node DAG + I/O contracts + AIGC transformation points + traditional anchors). Avoids pitfalls 2.1-2.11.
+**Must use:** STACK §1-2 (corpus + hermes-integrated refs for traditional anchors), FEATURES §2 (AIGC-native compression/expansion patterns), FEATURES §3 (41-candidate palette).
+**Critical-path position:** On critical path. Partially parallelizable with C and D.
 
-**Needs `/gsd:plan-phase --research-phase N` during planning:**
-- **Phase 1 (EXPERT-COMPLI):** Verify current (2026-Q2) 抖音/快手/视频号 published content guideline versions; verify exact AI 漫剧 备案 threshold triggers (revenue / episode count / platform) against current 广电总局 notices; verify the single-external-vector-provider claim against `agent/memory_*.py` if it matters for COMPLI's RAG design.
-- **Phase 2 (EXPERT-HOOK):** Validate 短剧 pacing data ("1.5-2x horizontal cut rate" — empirical or folklore?); document current (2026-06) video gen model behavior — what focal lengths / camera moves Runway Gen-3 / Kling / Veo / Sora reliably support.
-- **Phase 5 (EXPERT-PROD):** AI budget modeling (character-LoRA cost estimation, render-farm allocation heuristics — emerging domain, sparse docs).
+### Phase C: 102-Book Corpus Traceability (parallel)
+**Rationale:** Corpus traceability can begin as soon as Phase A produces node IDs — does not need full specs. Runs in full parallel with B-spec-finalization and D. This is a verification artifact: does each derived node have ≥1 strong corpus citation?
+**Delivers:** `03-CORPUS-TRACEABILITY.md` + `corpus-trace.yaml` — bidirectional 102-book ↔ node matrix. Per-anchor tags required (PITFALLS 6.x): `applicable_form` (长片/微电影/短剧/universal), challenge-source engagement (≥1 corpus source that *disagrees* with the node's design), principle-vs-workflow separation, original-term preservation (汉字 alongside gloss).
+**Addresses:** Target feature #3 (传统经验锚点对照). Avoids pitfalls 1.2 (throwing out validated craft), 6.1-6.4 (cherry-picking, anachronism, genre conflation, translation loss).
+**Must use:** STACK §1 (102-book corpus physical locations + category breakdown), STACK §2 (already-integrated hermes corpus — 9 of 12 refs ready to cite directly).
+**Critical-path position:** Parallel with B and D. Must be stable before Phase E.
 
-**Standard patterns (skip research-phase):**
-- **Phase 0 (AUDIT + Eval Skeleton):** All patterns documented in STACK.md (memory plugin API surface), ARCHITECTURE.md (eval harness structure, snapshot protocol), PITFALLS.md (positional bias mitigations).
-- **Phase 3 (Top-4 RAG):** Reference file anatomy, References table pattern, bilingual section pattern, defensive memory-plugin invocation — all in ARCHITECTURE.md Patterns 1-7.
-- **Phase 4 (EXPERT-CINE):** Same standard patterns as Phase 3; cinematography knowledge is established and stable per FEATURES.md confidence table.
-- **Phase 6 (Eval + Bilingual + README):** All eval mechanics established in Phase 0; bilingual pattern documented in FEATURES.md §6 + ARCHITECTURE.md Pattern 3.
+### Phase D: LLM-Creative-Distillation Deep-Dive (parallel)
+**Rationale:** Horizontal concern — depends only on Phase A's definition of "what AI can/cannot do". Runs in full parallel with B and C.
+**Delivers:** `04-LLM-CREATIVE-DISTILLATION.md` — standalone deep-dive covering: (a) definition of creativity (novelty within inviolable constraints — not randomness), (b) self-consistency check mechanism (consistency-context input + logic-critic), (c) LLM distillation prompt strategy, (d) fail modes. Required design elements per PITFALLS 4.x: consistency-context input, novelty-pressure mechanism (with creative_source wiring), template library (not single template), platform-vs-art tension address.
+**Addresses:** Target feature #4 (LLM 创意凝练专题). Avoids pitfalls 4.1-4.7.
+**Must use:** STACK §5 (8 LLM-story-gen references mapped to sub-topics).
+**Critical-path position:** Parallel with B and C. Must be stable before Phase E.
+
+### Phase E: Cross-Comparisons + Dual-Repo Handoff
+**Rationale:** Cannot begin until B+C+D all stable (need final node set, corpus trace, and LLM-distillation patterns to compare against existing 8 phases / 26 skills). This is where design-impl-drift risk is highest — must produce explicit handoff artifacts.
+**Delivers:** `05-COMPARISON-VS-8-PHASES.md` + `06-COMPARISON-VS-26-SKILLS.md` + `07-HANDOFF-PLAN.md` + `skills-mapping.yaml` + `kais-migration-matrix.yaml`. Required handoff elements per PITFALLS 3.x: `kais-movie-agent_baseline_ref` (git SHA), 1-2 page impl-cheatsheet annex, ownership matrix (design-intent / implementation / co-owned-DAG), date-stamped versioning scheme (`design-2026-06-16-prfp` with `supersedes`/`superseded_by`), skill-DAG mapping table (preserve expert_ids per v1 FOUND-08 frozen rule), convergence log (where new DAG agrees with existing pipeline — justify agreement, not just divergence).
+**Addresses:** Target feature #5 (双 repo 交接说明) + PITFALLS' "comparison-and-gap-analysis" sub-deliverable. Avoids pitfalls 1.4 (divergence-for-divergence), 3.1-3.5.
+**Must use:** STACK §3 (kais V1-V8 evolution history as the "what was tried" dataset).
+**Critical-path position:** On critical path. Depends on B+C+D.
+
+### Phase F: Finalization (Governance + Open Questions + README)
+**Rationale:** Living-doc governance, known unknowns, audit trail, and entry-point README. Small in effort but load-bearing for downstream consumers.
+**Delivers:** `08-GOVERNANCE.md` (rules G1-G7 per ARCHITECTURE §7), `09-OPEN-QUESTIONS.md` (mandatory honesty about gaps — feeds downstream research phases), `10-CHANGELOG.md` (append-only audit trail), `README.md` (final suite-level index with 3-page executive summary per PITFALLS 7.3), `scripts/validate_design.py` (governance lint — the only code in the milestone).
+**Addresses:** PITFALLS 7.x (over-specifying, under-specifying, no exec summary, missing rationale, no versioning), ARCHITECTURE §7 (living-doc governance rules).
+**Must use:** v1 PROJECT.md `Key Decisions` table pattern (Decision/Rationale/Outcome) — v1 RETROSPECTIVE validated this; v2.0 must not regress.
+**Critical-path position:** On critical path. Final phase.
+
+### Phase Ordering Rationale
+- **A first** because PROJECT.md mandates derivation from first principles. Every other section is downstream of it. Starting elsewhere guarantees rework against a moving target.
+- **B+C+D parallel** because they have minimal interdependencies once Phase A produces node IDs (B needs full specs, C needs only IDs, D needs only the AI-limits definition).
+- **E after B+C+D** because comparisons and handoff require all design artifacts to be stable. Handing off a half-derived node set is worse than useless.
+- **F last** because finalization requires everything else committed with CHANGELOG entries.
+- This ordering avoids every Category 1 pitfall (derivation-first prevents first-principles theater) and every Category 3 pitfall (explicit handoff ceremony prevents design-impl drift).
+
+### Research Flags
+
+**Phases likely needing deeper research during planning:**
+- **Phase A (First-Principles Derivation):** HIGH research load — Musk-method primary-source verification (PITFALLS 5.x Open Question #4), epistemic-status tagging framework, steelman-the-elimination methodology. Recommend `/gsd:plan-phase --research-phase A` to verify Musk quotes against Isaacson biography before citing them.
+- **Phase B (Node DAG + Specs):** MEDIUM research load — current (2026-Q2) AI capability stability survey needed (FEATURES gap: "which `ai_capability_assumption` entries are stable_2026 vs evolving vs research_bet?"). Per-node cost/latency budgets need platform-economics validation (PITFALLS Open Question #1: actual cost ceiling for indie 短剧 episode).
+- **Phase D (LLM-Creative-Distillation):** MEDIUM research load — STACK §5 provides 8 references but phase-specific deep-dives into prompt-strategy subtopics may need Awesome-Story-Generation follow-ups.
+
+**Phases with standard / well-precedented patterns (skip research-phase):**
+- **Phase C (Corpus Traceability):** Mechanical mapping against 102-book index — the corpus is already verified by direct `ls` (STACK §1) and 9 of 12 hermes-integrated refs are ready to cite. No new research needed.
+- **Phase E (Handoff):** Non-binding handoff is a well-precedented pattern (RFC/ADR); ARCHITECTURE §3-4 prescribes the exact YAML schema. No new research needed.
+- **Phase F (Finalization):** v1 PROJECT.md `Key Decisions` pattern is the template; no new research needed.
 
 ---
 
@@ -230,68 +228,45 @@ Seven phases. Rationale woven from cross-research synthesis. **Phase 0 is non-ne
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Memory plugin internals verified by direct source read (`agent/memory_*.py`, `plugins/memory/{holographic,mem0}/__init__.py`); Hermes image/video backend catalogs verified by direct `ls` of `plugins/{image_gen,video_gen}/`; external AI tool versions WebSearch-verified June 2026. |
-| Features | MEDIUM-HIGH | Film craft and 短剧 industry knowledge confidence HIGH; regulatory existence HIGH; specific 2026 AI 漫剧 threshold details MEDIUM (rules still emerging); video gen model behavior specs MEDIUM (need verification). |
-| Architecture | HIGH | Built on direct reading of 14 existing SKILL.md files, memory plugin source, and 12 existing `skills/creative/*/references/` siblings. No inference — all patterns observed in production code. |
-| Pitfalls | HIGH | Phantom refs verified by direct `ls`; positional bias from well-documented MT-Bench research lineage; GLM overload demonstrated in-session; copyright and 平台审核 risks from active CN enforcement 2024-2026. |
+| Stack (corpus + methodology canon) | HIGH | STACK.md verified by direct filesystem inspection (`ls` of all corpus paths, file reads of all kais-movie-agent architecture docs). LLM-story-gen references are MEDIUM-HIGH (peer-reviewed, web-verified June 2026). |
+| Features (node-design decisions) | MEDIUM-HIGH | FEATURES.md synthesizes 41 candidates from corpus + existing 26-expert + 11-phase + AIGC ecosystem knowledge. AIGC-native compression/expansion patterns are MEDIUM (industry practice, not project-benchmarked). Selection criteria C1-C7 are MEDIUM (derived from project constraints + Musk reduction; not externally validated). |
+| Architecture (design-doc structure + handoff) | HIGH | ARCHITECTURE.md grounded in direct reads of PROJECT.md, both repo READMEs, V8-ARCHITECTURE, V2-REFACTOR-PLAN, INTEGRATION.md, 26-skill inventory, v1 ARCHITECTURE.md, 102-book corpus index. YAML-canonical + Markdown-rendered pattern is industry-standard (OpenAPI/AsyncAPI). |
+| Pitfalls (failure modes) | HIGH | PITFALLS.md grounded in v1 RETROSPECTIVE + actual PROJECT.md v2.0 scope + Musk/Isaacson method critique + AIGC pipeline literature. Each pitfall has concrete film/AIGC examples and warning signs. |
 
-**Overall confidence:** HIGH. The architecture is mature and patterns are observable in production code. Uncertainty concentrates in (a) exact 2026 AI 漫剧 备案 thresholds, (b) current video gen model behavior, (c) AI production budget heuristics — all flagged for phase-specific research.
+**Overall confidence:** HIGH. The 4 research files triangulate cleanly. The disagreements are framing-level (node-count target, phase-structure granularity), not fact-level. The synthesizer's recommendations above resolve all 5 cross-file conflicts.
 
 ### Gaps to Address
 
-- **AI 漫剧 备案 exact scope:** What triggers 备案? Revenue / episode count / platform threshold? Verify against current 广电总局 notices during Phase 1 planning.
-- **Current video gen model capabilities:** Which focal lengths / camera moves do Runway Gen-3 / Kling / Veo reliably support as of 2026-06? Affects what EXPERT-CINE can recommend. Phase 2 research.
-- **Hermes MemoryManager single-provider limit:** Is the limit truly hard, or is it a logged warning that allows override? Needs verification against `agent/memory_manager.py` before DOC-01 finalizes architecture description.
-- **Hermes ships FLUX 1.x or FLUX 2?** STACK.md says FLUX 2 (`fal-ai/flux-2/klein/9b` is `DEFAULT_MODEL` at line 372); drawer's LoRA workflow assumption depends on this — needs `plugins/image_gen/` inventory re-verification during Phase 0 AUDIT.
-- **"168K controlled tokens" claim origin:** Likely pure fabrication — strip in AUDIT-01. But verify it's not a typo for some real concept before deleting.
-- **CosyVoice integration path:** Document as user-deployed local service (outside Hermes) OR use MiniMax / ElevenLabs from built-in TTS registry. Phase 5 voicer research.
-- **Open-weight vs commercial judge panel composition:** Should EVAL-01 use open-weight panel (Qwen-Max, GLM, Yi) only, or include Claude / GPT-4o for diversity? Trade-off: cost vs bias-diversity. Phase 0 design decision.
-- **短剧 sample source with permissive license:** Public-domain 短剧 are rare; creator-licensed samples require outreach. Phase 1 CORPUS sub-task.
-- **Predictive metrics vs structural hooks:** Should EXPERT-HOOK predict 完播率 / 转发率 / 付费率, or only structure hooks? Prediction needs platform data (out of scope); structure is safer for v1. Phase 2 design decision.
+Gaps that cannot be resolved from research alone — flag for user input during requirements phase, or for phase-specific research during planning:
+
+- **Node-count target validation (FEATURES gap):** Is 8-15 (PITFALLS), ~25 (FEATURES), or 10-15 (ARCHITECTURE) the right count? Synthesizer recommends 8-15 as the derivation target with ≤25 hard ceiling; user confirmation requested during requirements phase.
+- **Actual cost ceiling for indie 短剧 episode in 2026 (PITFALLS Open Question #1):** Affects every node's `cost_budget` field. PITFALLS assumes ¥1000-10000; verify against current platform economics.
+- **Which 2026-Q2 短剧 platform conventions are stable vs volatile (PITFALLS Open Question #2):** Affects epistemic-status tagging. If 抖音 conventions are psychological (stable) rather than platform-algorithmic (volatile), node justifications change.
+- **Musk quote primary-source verification (PITFALLS Open Question #4):** Pitfalls 5.1-5.4 paraphrase Musk stories; exact wording must be verified against Isaacson biography before the design doc cites them. LOW confidence on exact wording; HIGH confidence on gist.
+- **Skill-DAG mapping: which of the 26 existing experts map cleanly vs need deprecation (PITFALLS Open Question #5):** Required for Phase E handoff; may surface politically/technically loaded findings about which v1 experts the v2.0 design obsoletes.
+- **Theory_critic trigger condition (FEATURES gap):** Confirmed consultative (Phase 8), but *when* does the pipeline invoke it? Needs design during Phase B or D.
+- **Loop exit conditions for every `loop_with_critic` node (FEATURES gap):** Defer to per-node design during Phase B.
+- **V8 审核门 (review gate) survival into v2.0 (PITFALLS Open Question #3):** V8 architecture has review gates; v2.0 may legitimately automate some. Handoff doc must address explicitly during Phase E.
 
 ---
 
-## Sources
+## Open Questions for User (the roadmapper cannot resolve these from research alone)
 
-### Primary (HIGH confidence — direct source read)
-
-**Hermes codebase:**
-- `/data/workspace/hermes-agent/agent/memory_provider.py` — MemoryProvider ABC, lifecycle hooks, system_prompt_block contract
-- `/data/workspace/hermes-agent/agent/memory_manager.py` — single-external-provider limit (`add_provider()` at lines 258-302), prefetch/sync orchestration
-- `/data/workspace/hermes-agent/plugins/memory/holographic/{__init__.py,store.py,retrieval.py}` — `fact_store` / `fact_feedback` schemas, SQLite + FTS5 + HRR pipeline, schema constraints
-- `/data/workspace/hermes-agent/plugins/memory/mem0/__init__.py` — Mem0 client, circuit breaker, `mem0_profile` / `mem0_search` / `mem0_conclude` tools
-- `/data/workspace/hermes-agent/plugins/video_gen/fal/__init__.py` — `FAL_FAMILIES` catalog (ltx-2.3, pixverse-v6, veo3.1, seedance-2.0, kling-v3-4k, happy-horse) — confirms NO `wan22_video`
-- `/data/workspace/hermes-agent/plugins/image_gen/{fal/plugin.yaml,openai/__init__.py}` + `tools/image_generation_tool.py:98-372` — image model catalog (FLUX 2 Klein 9B default, FLUX 2 Pro, Z-Image, Nano Banana, gpt-image-2)
-- `/data/workspace/hermes-agent/skills/movie-experts/{screenplay,drawer,animator,voicer,composer,foley,performer,scene_builder,editor,colorist,style_genome}/SKILL.md` — existing 14-expert structure, stale model references, related_skills adjacency
-- `/data/workspace/hermes-agent/skills/creative/{manim-video,p5js,comfyui}/references/*.md` — reference corpus structure pattern (12 directories verified)
-- `/data/workspace/hermes-agent/.planning/{PROJECT.md,codebase/{STACK.md,INTEGRATIONS.md,ARCHITECTURE.md,CONVENTIONS.md,CONCERNS.md}}` — project requirements, Hermes stack baseline, schema, security
-
-### Secondary (MEDIUM confidence — WebSearch verified June 2026)
-
-- CosyVoice GitHub (FunAudioLLM) — CosyVoice 3.0 confirmed latest, 9 languages
-- CosyVoice 2 arXiv paper (2412.10117) — v2 details
-- Wan 2.2 / 2.7 on fal.ai — exists externally but NOT in Hermes catalog
-- Stable Audio Open (Stability AI) + HF model — 47s @ 44.1kHz, foley/SFX
-- Stable-Foley (arXiv:2412.15023) — video-synced foley on Stable Audio Open base
-- AudioCraft / MusicGen (Meta) — stable but not actively developed
-- MT-Bench paper (arXiv:2306.05685) — LLM-as-judge + position-bias mitigation
-- Position bias benchmark (lechmazur) — 45% preference flip rate median
-- Systematic Study of Position Bias (arXiv:2406.07791)
-- Ragas docs — retrieval-pipeline metrics (NOT used as primary eval)
-- DeepEval — pytest-native, deferred to v2
-- Best Vector Databases 2026 (Firecrawl + Encore) — sqlite-vec / LanceDB / Chroma / Qdrant comparison
-
-### Regulatory (HIGH for existence, MEDIUM for specifics)
-
-- 国家广电总局 网络微短剧 备案 framework (well-established, ongoing enforcement 2024-2026)
-- 网信办 《人工智能生成合成内容标识办法》 effective 2025-09-01 (verifiable official source)
-- 2026-04-01 AI 漫剧 备案 regime (newly in force — exact threshold provisions to verify against current official notices during Phase 1)
-
-### Film craft references (HIGH confidence — canonical works)
-
-All cited in FEATURES.md enhancement table: *Save the Cat!* (Snyder), *Story* (McKee), *The Foundations of Screenwriting* (Field), *The Technique of Film Editing* (Reisz & Millar), *In the Blink of an Eye* (Murch — Rule of Six), *If It's Purple, Someone's Gonna Die* (Bellantoni), *Color Correction Look Book* (Hurkman), *The Animator's Survival Kit* (Williams), Disney 12 Principles (Johnston & Thomas), *The Sound Effects Bible* (Viers), *Audio-Vision* (Chion), *On the Track* (Karlin & Wright), *An Actor Prepares* (Stanislavski), *Mixing Secrets for the Small Studio* (Senior).
+1. **Node-count target.** Should the derivation target be **8-15** (PITFALLS / ARCHITECTURE recommendation, with ≤25 hard ceiling) or **~25** (FEATURES MVP P1 list)? This sets the rigor bar for Phase A — fewer nodes means each one must defend itself harder.
+2. **Cost-ceiling assumption.** Should we adopt PITFALLS' assumption of **¥1000-10000/episode** as the budget envelope that constrains every node's `cost_budget`, or does the user have a different figure in mind (this drives whether loops, multi-model retries, etc. are affordable)?
+3. **Single-author vs distributed authorship.** ARCHITECTURE Anti-Pattern 7 warns against mixing design authority with implementation authority. Does the user intend to be the sole design maintainer for this milestone, or should we plan for multiple authors (affecting Phase F governance rules)?
+4. **Theory_critic invocation trigger.** Confirmed consultative, but when does the pipeline actually fire it? User-stated artistic-intent threshold, heuristic trigger, or always-available-but-optional?
+5. **Bilingual doc policy.** v1 SKILL.md files follow EN structure + CN prose. Does the v2.0 design-doc suite follow the same pattern, or is it English-primary given the methodology canon (Musk/Isaacson/Aristotle/TRIZ) is English-sourced? Affects Phase F glossary work and PITFALLS 6.4 (translation/context loss).
 
 ---
 
-*Research completed: 2026-06-15*
-*Ready for roadmap: yes*
+### Ready for Requirements
+
+4 source research files + this SUMMARY.md feed the requirements phase. Cross-file conflicts resolved above; open questions flagged for user input.
+
+**Relevant file paths:**
+- `/data/workspace/hermes-agent/.planning/research/STACK.md`
+- `/data/workspace/hermes-agent/.planning/research/FEATURES.md`
+- `/data/workspace/hermes-agent/.planning/research/ARCHITECTURE.md`
+- `/data/workspace/hermes-agent/.planning/research/PITFALLS.md`
+- `/data/workspace/hermes-agent/.planning/PROJECT.md` (Current Milestone v2.0 PRFP section)
