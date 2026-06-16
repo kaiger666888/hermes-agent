@@ -1,189 +1,196 @@
-# Roadmap: Movie-Experts Suite v2 — Milestone **v2.0 PRFP** (Pipeline Redesign from First Principles)
+# Roadmap: Movie-Experts Suite v2 — Milestone **v3.0 Skills-to-DAG Alignment**
 
-**Milestone:** v2.0 PRFP — Pipeline Redesign from First Principles
+**Milestone:** v3.0 Skills-to-DAG Alignment
 **Defined:** 2026-06-16
 **Granularity:** standard
-**Phase numbering:** continues from v1 (v1 ended at Phase 6; v2.0 starts at **Phase 7**)
-**Coverage:** 52/52 v2.0 requirements mapped ✓ (0 orphaned)
-**Deliverable form:** DESIGN DOCS ONLY — zero code changes to `skills/movie-experts/` or `kais-movie-agent/lib/`. Only `scripts/validate_design.py` (governance lint, dev tool) is permitted.
+**Phase numbering:** continues from v2.0 (v2.0 ended at Phase 12; v3.0 starts at **Phase 13**)
+**Coverage:** 12/12 v3.0 requirements mapped ✓ (0 orphaned)
+**Deliverable form:** `skills/movie-experts/` 重构 — rename + merge + new + deprecate experts to align with v2.0 PRFP DAG. ZERO edits to kais-movie-agent/(parallel milestone).
 
 ---
 
 ## Milestones
 
 - ✅ **v1 — Movie-Experts Suite v2** — Phases 0-6 (shipped 2026-06-15) — [Full archive](./milestones/v1-ROADMAP.md)
-- 🚧 **v2.0 PRFP — Pipeline Redesign from First Principles** — Phases 7-12 (in planning)
+- ✅ **v2.0 PRFP — Pipeline Redesign from First Principles** — Phases 7-12 (shipped 2026-06-16) — design suite at `.planning/research/v2-pipeline-design/`
+- 🚧 **v3.0 Skills-to-DAG Alignment** — Phases 13-18 (in planning)
 
-<details>
-<summary>✅ v1 — Movie-Experts Suite v2 (Phases 0-6) — SHIPPED 2026-06-15</summary>
+---
 
-- ✅ Phase 0: AUDIT + Eval Skeleton (BLOCKER GATE) — completed 2026-06-15
-- ✅ Phase 1: EXPERT-COMPLI (Legal Gate) — completed 2026-06-15
-- ✅ Phase 2: EXPERT-HOOK (Commercial Engine) — completed 2026-06-15
-- ✅ Phase 3: Top-4 Existing Experts RAG — completed 2026-06-15 (dry-run; live deferred)
-- ✅ Phase 4: EXPERT-CINE (Camera Language) — completed 2026-06-15
-- ✅ Phase 5: Remaining 10 + EXPERT-PROD (v1.5) — completed 2026-06-15
-- ✅ Phase 6: Full Eval + Bilingual + README — completed 2026-06-15 (doc pass; live run deferred to operator)
+## v3.0 PRFP Coverage Map (12 requirements mapped)
 
-See [`.planning/milestones/v1-ROADMAP.md`](./milestones/v1-ROADMAP.md) for full v1 phase details.
+| Phase | Requirements | Count |
+|---|---|---|
+| 13 | RENAME-01, RENAME-02 | 2 |
+| 14 | MERGE-01 | 1 |
+| 15 | MERGE-02 | 1 |
+| 16 | NEW-01 | 1 |
+| 17 | DEPRECATE-01, DEPRECATE-02, DEPRECATE-03 | 3 |
+| 18 | VALIDATE-01, VALIDATE-02, DOC-01, DOC-02 | 4 |
+| **Total** | | **12** |
 
-</details>
+---
+
+## v3.0 Phases
+
+### Phase 13: Expert Rename + Alias Scaffolding
+
+**Goal:** A reader can read `skills/movie-experts/continuity_auditor/SKILL.md` and `skills/movie-experts/compliance_gate/SKILL.md` and find fully renamed experts with backward-compat aliases — old `continuity` and `compliance_marketing` references still resolve (FOUND-08 frozen rule preserved).
+
+**Depends on:** Phase 12 (v2.0 PRFP design shipped; `skills-mapping.yaml` is the canonical source)
+
+**Requirements:** RENAME-01, RENAME-02
+
+**Success Criteria** (what must be TRUE):
+1. `skills/movie-experts/continuity_auditor/SKILL.md` exists with `name: continuity_auditor` + `expert_id: continuity_auditor` + `metadata.hermes.aliases: [continuity]`
+2. `skills/movie-experts/compliance_gate/SKILL.md` exists with `name: compliance_gate` + `expert_id: compliance_gate` + `metadata.hermes.aliases: [compliance_marketing]`
+3. All experts that previously listed `continuity` or `compliance_marketing` in `metadata.hermes.related_skills` have updated to new IDs (bidirectional edge sync)
+4. Old directory paths (`continuity/`, `compliance_marketing/`) preserved with redirect SKILL.md (backward compat)
+5. `skills-mapping.yaml` `sign_off_status` updated: `pending` → `signed_off` for both renamed entries
+
+**Plans:** TBD
+
+---
+
+### Phase 14: Visual Executor Merge (drawer + animator)
+
+**Goal:** A reader can read `skills/movie-experts/visual_executor/SKILL.md` and find a unified expert that declares `sub_steps: [drawer, animator]`, with `related_skills` edges inherited from both predecessors, and the old drawer + animator expert_ids preserved as aliases for backward compatibility.
+
+**Depends on:** Phase 13 (rename pattern established + alias scaffolding reusable)
+
+**Requirements:** MERGE-01
+
+**Success Criteria:**
+1. `skills/movie-experts/visual_executor/SKILL.md` exists with `sub_steps: [drawer, animator]` declared
+2. `metadata.hermes.related_skills` includes union of drawer + animator edges (cinematographer, prompt_injector, continuity_auditor, editor, etc.)
+3. Old `drawer/SKILL.md` + `animator/SKILL.md` preserved with `status: merged_into` + `merged_into: visual_executor` + redirect
+4. All consumers (other experts' related_skills, README, _eval/, _shared/) updated to reference `visual_executor` instead of drawer/animator
+5. Drawer + animator refs (if any in `_shared/project-corpus/`) consolidated or cross-referenced under visual_executor
+
+**Plans:** TBD
+
+---
+
+### Phase 15: Audio Pipeline Merge (5 audio experts)
+
+**Goal:** A reader can read `skills/movie-experts/audio_pipeline/SKILL.md` and find a unified expert declaring `sub_steps: [voicer, lip_sync, composer, foley, mixer]`, with `spatial_audio` explicitly addressed (folded or deprecated with rationale), and old expert_ids preserved as aliases.
+
+**Depends on:** Phase 14 (merge pattern established)
+
+**Requirements:** MERGE-02
+
+**Success Criteria:**
+1. `skills/movie-experts/audio_pipeline/SKILL.md` exists with `sub_steps: [voicer, lip_sync, composer, foley, mixer]`
+2. `spatial_audio` expert disposition documented (fold into audio_pipeline mixer sub-step OR deprecate with rationale) — decision recorded in SKILL.md
+3. `metadata.hermes.related_skills` includes union of 5 audio experts' edges
+4. Old 5 audio expert directories preserved with `status: merged_into` + redirect
+5. lip_sync explicitly added as sub-step (was implicit in v1; new DAG makes it explicit per Phase 8 §2.9 NODE-09 critic pairing)
+
+**Plans:** TBD
+
+---
+
+### Phase 16: New AI-Native Expert (prompt_injector)
+
+**Goal:** A reader can read `skills/movie-experts/prompt_injector/SKILL.md` and find a complete new expert with 4 refs (prompt engineering patterns + cross-call consistency), frontmatter metadata.hermes aligned to v2.0 PRFP DAG (expert_id, related_skills, metrics), and integration into the collaboration graph.
+
+**Depends on:** Phase 15 (merge pattern + collaboration graph topology stable)
+
+**Requirements:** NEW-01
+
+**Success Criteria:**
+1. `skills/movie-experts/prompt_injector/SKILL.md` exists with full content (EN structure + CN prose per META-03)
+2. `metadata.hermes.expert_id: prompt_injector`
+3. `metadata.hermes.related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]` (per Phase 8 §2.7)
+4. `metadata.hermes.metrics: [cross_call_consistency, prompt_token_efficiency]` (per nodes.yaml)
+5. 4 refs in `prompt_injector/references/` (prompt engineering patterns + cross-call consistency literature)
+6. README 21-expert inventory lists prompt_injector as NEW (Phase 16 entry)
+
+**Plans:** TBD
+
+---
+
+### Phase 17: Deprecate 3 Candidates (performer / scene_builder / storyboard_designer)
+
+**Goal:** A reader can find 3 deprecated experts (`performer`, `scene_builder`, `storyboard_designer`) each marked `status: deprecated` with redirect annotations pointing to their inheritance targets (character_designer + screenplay / cinematographer + style_genome / cinematographer composition_lock respectively), and old expert_ids preserved for backward compatibility.
+
+**Depends on:** Phase 14-16 (inheritance targets exist as renamed/merged/new experts)
+
+**Requirements:** DEPRECATE-01, DEPRECATE-02, DEPRECATE-03
+
+**Success Criteria:**
+1. `skills/movie-experts/performer/SKILL.md` marked `status: deprecated` + redirect to `character_designer` + `screenplay`
+2. `skills/movie-experts/scene_builder/SKILL.md` marked `status: deprecated` + redirect to `cinematographer` + `style_genome`
+3. `skills/movie-experts/storyboard_designer/SKILL.md` marked `status: deprecated` + redirect to `cinematographer` (composition_lock sub-task per Phase 7 §3.4 D3.4)
+4. Each deprecated SKILL.md retains original expert_id + content (FOUND-08 backward compat)
+5. `metadata.hermes.deprecated: true` + `metadata.hermes.deprecated_reason: <CN prose>` per deprecation rationale
+
+**Plans:** TBD
+
+---
+
+### Phase 18: Validation + Documentation + Collaboration Graph Update
+
+**Goal:** A reader can verify (a) 21 active expert_id inventory (16 DAG pipeline-roles + 5 aliases from rename/merge), (b) updated 21-expert collaboration DAG matching v2.0 PRFP topology, (c) updated README + glossary + known-external-models.yaml reflecting Phase 13-17 changes, and (d) `skills-mapping.yaml` sign_off_status: signed_off across all entries.
+
+**Depends on:** Phase 13-17 (all rename/merge/new/deprecate operations complete)
+
+**Requirements:** VALIDATE-01, VALIDATE-02, DOC-01, DOC-02
+
+**Success Criteria:**
+1. `grep -r 'expert_id:' skills/movie-experts/ | wc -l` returns 21 (16 active + 5 aliases); no orphan IDs
+2. `skills-mapping.yaml` all entries have `sign_off_status: signed_off`
+3. `skills/movie-experts/README.md` updated: 26-expert → 21-expert inventory; 18-expert collaboration DAG → v2.0 PRFP topology Mermaid (per `01-NODE-DAG.md` §1.5)
+4. `_shared/glossary.md` updated with new terms (visual_executor, audio_pipeline, prompt_injector, continuity_auditor, compliance_gate)
+5. `_shared/known-external-models.yaml` updated with Phase 8 §2.17 dated annex models
+6. FOUND-08 frozen rule compliance verified: zero silent renames; all aliases explicit
+7. Backward compat verified: old expert_id references still resolve via aliases
+
+**Plans:** TBD
 
 ---
 
 ## Critical Path
 
 ```
-7 → 8 → 11 → 12
-      ↘
-        9 (parallel with 8, starts when 7 produces node IDs)
-        10 (parallel with 8, starts when 7 produces "AI-limits" definition)
+13 (rename) → 14 (visual merge) → 15 (audio merge) → 16 (prompt_injector NEW) → 17 (deprecate 3) → 18 (validate + docs)
 ```
 
-- **Phase 7 (A)** is the bottleneck — nothing else may start until the first-principles pass produces a defensible candidate node set.
-- **Phase 9 (C)** and **Phase 10 (D)** run fully parallel with **Phase 8 (B)** once Phase 7 emits node IDs / AI-limits definition.
-- **Phase 11 (E)** waits on 8 + 9 + 10 all stable.
-- **Phase 12 (F)** is finalization — waits on 11.
+Strict sequential — each phase establishes pattern for next. No parallelism within v3.0 (skills work is single-track).
+
+**Phase 13 is bottleneck** — establishes rename + alias pattern reused by 14-17.
+
+**Phase 18 is integration gate** — validates all 13-17 work meets FOUND-08 + backward compat + collaboration graph coherence.
 
 ---
 
-## Phases
+## v2.0 PRFP Cross-References
 
-- [ ] **Phase 7: First-Principles Derivation** — Musk-style reasoning trace producing the candidate node set (the epistemic anchor)
-- [ ] **Phase 8: Node DAG + Per-Node Specs** — YAML-canonical + Markdown-rendered DAG and per-node spec sheets
-- [ ] **Phase 9: 102-Book Corpus Traceability** — bidirectional book ↔ node coverage matrix + per-anchor tags
-- [ ] **Phase 10: LLM-Creative-Distillation Deep-Dive** — standalone horizontal sub-doc on creativity / self-consistency / prompts / fail modes
-- [ ] **Phase 11: Cross-Comparisons + Dual-Repo Handoff** — non-binding delta analyses vs existing 8 phases + 26 skills + handoff contract
-- [ ] **Phase 12: Finalization (Governance + Open Questions + README)** — living-doc rules, known unknowns, audit trail, executive summary
-
----
-
-## Phase Details
-
-### Phase 7: First-Principles Derivation
-**Goal:** A reader can follow an unbroken Musk-style first-principles reasoning chain from irreducible questions ("what does the audience ultimately receive?", "what can AI actually accelerate?", "what can AI never replace?") to a candidate node set — and can challenge every step.
-**Depends on:** Nothing (bottleneck; nothing else may start until 7 emits the candidate node set)
-**Requirements:** DERIV-01, DERIV-02, DERIV-03, DERIV-04, DERIV-05, DERIV-06, DERIV-07, DERIV-08 (8)
-**Success Criteria** (what must be TRUE):
-  1. A reader can read `00-FIRST-PRINCIPLES.md` end-to-end and reconstruct the candidate node set without inferring any missing logical step (no "obviously", no jumps from analogy to conclusion).
-  2. Every candidate node carries a `derivation` field that defends its existence from first principles (not "every pipeline has this"), and an `alternatives-considered` log naming at least one node considered and rejected for this slot.
-  3. Every core claim in the derivation trace is tagged with one of {physical, psychological, platform-algorithmic, tool-capability}, so volatile vs stable assumptions are machine-distinguishable.
-  4. Every node's core assumptions are classified as `contingent` vs `validated-invariant`, and the derivation explicitly cites a STACK §1.4 corpus subset for each first-principles question (not corpus-blind).
-  5. The derivation explicitly walks the 6 PITFALLS §1 + §5 Musk-method failure modes and shows how each was avoided (audit checklist at end of section).
-**Plans:** TBD
-
-### Phase 8: Node DAG + Per-Node Specs
-**Goal:** A reader (human reviewer or downstream tool) can read a machine-derivable, human-reviewable DAG of 8-15 nodes where each node declares its full spec (core task, I/O, AIGC transformation, traditional anchor, cost/latency/model-horizon, critic pairing, theory_critic placement) and can defend every node against the C1-C7 selection criteria.
-**Depends on:** Phase 7 (needs candidate node IDs + AI-limits definition)
-**Requirements:** NODE-01, NODE-02, NODE-03, NODE-04, NODE-05, NODE-06, NODE-07, NODE-08, NODE-09, META-05, META-06 (11 — includes META-05 because it constrains every node's `cost_budget`, and META-06 because it shapes theory_critic edges)
-**Success Criteria** (what must be TRUE):
-  1. The DAG exists in 3 representations — YAML canonical (`nodes.yaml` + `edges.yaml`), Markdown rendered (`01-NODE-DAG.md`), Mermaid visual — and regenerating Markdown+Mermaid from YAML is reproducible.
-  2. Every node in the DAG has all 4 core fields (`core_task` / `I/O contract` / `AIGC transformation point` / `traditional experience anchor`) AND all 8 STACK supplementary fields (`success_criteria ≥1 quantified`, `fail_modes`, `fallback_strategy`, `dependencies`, `complexity_class`, `ai_capability_assumption`, `non_ai_alternative`, `rationale_for_existence`) AND all 3 budget fields (`cost_budget` within the META-05 ¥1000-10000/episode ceiling, `latency_budget`, `model_horizon`) populated and non-empty.
-  3. Every node has passed an explicit C1-C7 selection check (FEATURES §5); nodes failing any of the 7 are NOT in the DAG, and the rejection is logged.
-  4. Every generation-type node has a paired critic node OR a self-critic step with a quantified metric; any generation node lacking a critic has a written justification.
-  5. `theory_critic` appears only as a `consultative` vertical edge (per META-06, creator-pulled — not auto-invoked, not a blocking linear gate), and model names appear ONLY in a dated annex — the canonical node spec is capability-spec, never brand-named (NODE-08).
-**Plans:** TBD
-
-### Phase 9: 102-Book Corpus Traceability
-**Goal:** A reader can verify, for every derived node, which 102-book corpus sources inform it (and at what strength), AND for every cited source, which nodes it informs — with the corpus anchor's `applicable_form`, original Chinese terminology, principle-vs-workflow separation, challenge-source engagement, and verification date all machine-checkable.
-**Depends on:** Phase 7 (node IDs only — does NOT need full Phase 8 specs to begin)
-**Requirements:** CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, CORPUS-06, CORPUS-07 (7)
-**Success Criteria** (what must be TRUE):
-  1. A bidirectional `corpus-trace.yaml` exists — readers can query both "node → supporting books" (forward) and "book → informed nodes" (reverse) without manual lookup.
-  2. Every corpus anchor carries an `applicable_form` tag (长片 / 微电影 / 短剧 / universal) — no 长片 anchor silently justifies a 短剧-specific node without an explicit translation argument.
-  3. For every node, at least 1 corpus source that DISAGREES with the node's design is cited and engaged (challenge-source engagement — prevents cherry-picking); 0-citation nodes are explicitly marked AIGC-native with a written rationale (no fake-tradition masquerade).
-  4. Each anchor separates principle (likely still valid) from workflow (likely obsolete in AIGC) AND preserves the Chinese original term alongside any English gloss.
-  5. Every anchor has a `Last-verified` stamp consistent with v1's LICENSE pattern, enabling downstream corpus-drift detection.
-**Plans:** TBD
-
-### Phase 10: LLM-Creative-Distillation Deep-Dive
-**Goal:** A reader can read a standalone sub-doc that operationally defines LLM creativity (novelty within inviolable constraints, not randomness), specifies the self-consistency verification mechanism, references ≥3 LLM-story-gen papers for prompt strategy, handles the platform-vs-art tension without dogma, and wires creativity back to the DAG's `creative_source` node rather than floating in the abstract.
-**Depends on:** Phase 7 (the "what AI can/cannot do" definition falls out of the derivation)
-**Requirements:** CREATIVE-01, CREATIVE-02, CREATIVE-03, CREATIVE-04, CREATIVE-05, CREATIVE-06, CREATIVE-07 (7)
-**Success Criteria** (what must be TRUE):
-  1. A standalone `04-LLM-CREATIVE-DISTILLATION.md` exists covering all 4 dimensions: creativity definition, self-consistency mechanism, prompt strategy, fail modes.
-  2. Creativity is operationally defined as "novelty within inviolable constraints" with explicit lists of (a) inviolable constraints and (b) open-for-novelty dimensions — a reader can distinguish "creative" from "random".
-  3. The self-consistency check mechanism is concretely specified as `consistency-context input + logic-critic` (anti-hallucinated-logic), and the prompt strategy cites ≥3 STACK §5 LLM-story-gen papers (not invented from vibes).
-  4. Platform-vs-art tension (短剧 convention vs artistic value) is explicitly addressed without picking a dogmatic side, AND a template library (≥2 narrative-arc templates, not a single Save-the-Cat / Hero's-Journey) is specified.
-  5. The sub-doc links back to the DAG's `creative_source` node via an explicit novelty-pressure mechanism — creativity is wired to the DAG, not floating.
-**Plans:** TBD
-
-### Phase 11: Cross-Comparisons + Dual-Repo Handoff
-**Goal:** A reader at either downstream repo (hermes-agent skills team OR kais-movie-agent impl team) can pick up a non-binding handoff contract that maps new DAG nodes ↔ existing artifacts (26 skills / 8 phases / lib modules), declares explicit ownership, baselines against a recorded git SHA, ships a 1-2 page impl cheatsheet, and explains convergence (where new DAG agrees with existing) — not just divergence.
-**Depends on:** Phase 8 + Phase 9 + Phase 10 all stable (need final node set, corpus trace, and LLM-distillation patterns to compare against)
-**Requirements:** HANDOFF-01, HANDOFF-02, HANDOFF-03, HANDOFF-04, HANDOFF-05, HANDOFF-06, HANDOFF-07, HANDOFF-08, HANDOFF-09 (9)
-**Success Criteria** (what must be TRUE):
-  1. The handoff plan is explicitly labeled `binding: non_binding_recommendation` and downstream consumers know they decide in their own future milestones (no compulsion).
-  2. `skills-mapping.yaml` maps every new DAG node ↔ existing 26 movie-experts skills, preserving v1 FOUND-08 frozen `expert_id` rule; `kais-migration-matrix.yaml` maps every node ↔ existing kais-movie-agent phases + lib modules, with the kais-movie-agent `baseline_ref` git SHA recorded as the design-vs-impl drift baseline.
-  3. The ownership matrix distinguishes design-intent layer (hermes-agent) / implementation layer (kais-movie-agent) / co-owned DAG (changes require sign-off from both) — a reader knows who owns what post-handoff.
-  4. A date-stamped versioning scheme (e.g., `design-2026-06-16-prfp`) with `supersedes` / `superseded_by` is in place, AND a 1-2 page impl-cheatsheet annex exists for kais-movie-agent onboarding.
-  5. The convergence log explains where the new DAG AGREES with the existing pipeline (and why agreement is correct, not just where it diverges); `COMPARISON-VS-8-PHASES.md` + `COMPARISON-VS-26-SKILLS.md` both exist as non-binding delta analyses authored AFTER Phases 7-10 (contamination-safe).
-**Plans:** TBD
-
-### Phase 12: Finalization (Governance + Open Questions + README)
-**Goal:** The design-doc suite ships with living-doc governance rules (enforced by a lint script), an honest OPEN-QUESTIONS.md feeding downstream research, an append-only CHANGELOG audit trail, Decision/Rationale/Outcome entries for every key call, and a 3-page executive summary readable by a non-author in 10 minutes — plus verified META exit-checks that no SKILL.md / no kais-movie-agent code was touched and bilingual policy was followed.
-**Depends on:** Phase 11
-**Requirements:** GOV-01, GOV-02, GOV-03, GOV-04, GOV-05, GOV-06, META-01, META-02, META-03, META-04 (10 — META-01/02/03/04 land here as the final exit-check; this is the load-bearing phase for the no-touch / bilingual / location invariants)
-**Success Criteria** (what must be TRUE):
-  1. `08-GOVERNANCE.md` documents rules G1-G7 (node addition requires re-derivation; AIGC updates require marginal-value delta; corpus changes require source verification; status transitions require all review gates) AND `scripts/validate_design.py` (~30-line lint) enforces them as a runnable pre-commit hook.
-  2. `09-OPEN-QUESTIONS.md` is mandatory and non-empty — every gap surfaced in SUMMARY.md §"Gaps to Address" is transferred here (no hidden ambiguities) to feed downstream research phases.
-  3. `10-CHANGELOG.md` is append-only (date / what / why / who per entry) and every key design decision has a Decision / Rationale / Outcome record (v1 PROJECT.md pattern — v1 RETROSPECTIVE validated it).
-  4. The README contains a 3-page executive summary (non-author-readable in 10 min: derived DAG diagram + one-paragraph shape rationale + top-5 diffs vs existing 8 phases + top-3 deferred risks).
-  5. META exit-checks pass at milestone close: zero SKILL.md edits under `skills/movie-experts/` (META-01); zero `.js`/`.py` edits under `kais-movie-agent/` except `scripts/validate_design.py` (META-02); design docs follow EN-structure + CN-prose bilingual policy (META-03); all artifacts physically live under `.planning/research/v2-pipeline-design/` in hermes-agent (META-04).
-**Plans:** TBD
+- **Design source-of-truth:** `.planning/research/v2-pipeline-design/`
+- **Canonical mapping:** `.planning/research/v2-pipeline-design/skills-mapping.yaml`
+- **Comparison rationale:** `.planning/research/v2-pipeline-design/06-COMPARISON-VS-26-SKILLS.md`
+- **Per-node specs:** `.planning/research/v2-pipeline-design/02-NODE-SPECS.md` + `nodes.yaml`
+- **DAG topology:** `.planning/research/v2-pipeline-design/01-NODE-DAG.md` (Mermaid in §1.5)
 
 ---
 
-## Progress
+## Coordination with kais-movie-agent parallel milestone
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 0. AUDIT + Eval Skeleton | v1 | 4/4 | ✓ Complete | 2026-06-15 |
-| 1. EXPERT-COMPLI | v1 | 3/3 | ✓ Complete | 2026-06-15 |
-| 2. EXPERT-HOOK | v1 | 3/3 | ✓ Complete | 2026-06-15 |
-| 3. Top-4 Existing Experts RAG | v1 | 5/5 | ✓ Complete | 2026-06-15 |
-| 4. EXPERT-CINE | v1 | 1/1 | ✓ Complete | 2026-06-15 |
-| 5. Remaining 10 + EXPERT-PROD (v1.5) | v1 | 1/1 | ✓ Complete | 2026-06-15 |
-| 6. Full Eval + Bilingual + README | v1 | 1/1 | ✓ Complete | 2026-06-15 |
-| 7. First-Principles Derivation | v2.0 | 0/? | Not started | - |
-| 8. Node DAG + Per-Node Specs | v2.0 | 0/? | Not started | - |
-| 9. 102-Book Corpus Traceability | v2.0 | 0/? | Not started | - |
-| 10. LLM-Creative-Distillation Deep-Dive | v2.0 | 0/? | Not started | - |
-| 11. Cross-Comparisons + Dual-Repo Handoff | v2.0 | 0/? | Not started | - |
-| 12. Finalization (Governance + Open Questions + README) | v2.0 | 0/? | Not started | - |
+Per HANDOFF-05 ownership matrix:
+- **hermes-agent (this milestone v3.0):** owns design-intent layer (skills)
+- **kais-movie-agent (parallel milestone):** owns implementation layer (lib/)
+- **Co-owned DAG:** structural changes require cross-repo sign-off (cross-repo ADR)
+
+v3.0 does NOT change DAG structure — it only renames/merges/deprecates experts to align with already-frozen v2.0 PRFP DAG. So no cross-repo sign-off needed for v3.0 individual phases; only final VALIDATE-01 may surface coordination items for kais team.
 
 ---
 
-## Coverage Map (all 52 v2.0 requirements mapped)
+## Notes
 
-| Phase | Requirements | Count |
-|-------|--------------|-------|
-| 7 — First-Principles Derivation | DERIV-01..08 | 8 |
-| 8 — Node DAG + Per-Node Specs | NODE-01..09, META-05, META-06 | 11 |
-| 9 — 102-Book Corpus Traceability | CORPUS-01..07 | 7 |
-| 10 — LLM-Creative-Distillation Deep-Dive | CREATIVE-01..07 | 7 |
-| 11 — Cross-Comparisons + Dual-Repo Handoff | HANDOFF-01..09 | 9 |
-| 12 — Finalization (Governance + Open Questions + README) | GOV-01..06, META-01, META-02, META-03, META-04 | 10 |
-| **Total mapped** | | **52** |
-| **Orphaned** | | **0** |
-
-**Cross-cutting META assignment rationale:**
-- **META-01/02/03/04 → Phase 12** — these are exit-checks (no-touch policy, bilingual policy, location invariant) that the finalization phase verifies at milestone close. Putting them earlier would be premature; Phase 12 is the load-bearing verification point.
-- **META-05 → Phase 8** — the ¥1000-10000/episode cost ceiling directly constrains every node's `cost_budget` field, which is a Phase 8 deliverable. The ceiling must be set before cost budgets can be populated.
-- **META-06 → Phase 8** — theory_critic's "creator-pulled, not auto-invoked" trigger mode shapes the DAG's `consultative` edge type, which is a Phase 8 deliverable.
-
-> **Note on count:** REQUIREMENTS.md flagged "51 total - 1 for HANDOFF-09/HANDOFF-01 overlap - 待 roadmapper 验证". On review, HANDOFF-01 (non-binding handoff plan declared) and HANDOFF-09 (comparison-vs-existing artifacts exist) are distinct REQs addressing different artifacts (the handoff contract vs the comparison analyses). No overlap; actual count = **52** = 8+9+7+7+9+6+6. All mapped.
+- **Phase 17 (deprecate) is reversible** — if kais team or live run shows a deprecated expert is still needed, the `status: deprecated` flag can be removed without structural DAG change.
+- **Phase 18 (validation) may trigger small revisions to 13-17** — if FOUND-08 violations found, the relevant phase revisits before milestone complete.
+- **v3.0 is preparatory for FUTURE-08 live run** — once v3.0 + kais parallel milestone both complete, FUTURE-08 (live statistical GO/NO-GO) becomes possible.
 
 ---
 
-## Research Flags (phases likely needing deeper research during planning)
-
-- **Phase 7 (First-Principles Derivation):** HIGH research load — Musk-method primary-source verification against Isaacson biography before citing (PITFALLS §5 Open Question #4); epistemic-status tagging framework; steelman-the-elimination methodology. Recommend `/gsd:plan-phase --research-phase 7`.
-- **Phase 8 (Node DAG + Specs):** MEDIUM research load — 2026-Q2 AI capability stability survey (which `ai_capability_assumption` entries are `stable_2026` vs `evolving` vs `research_bet`); per-node cost/latency budget validation against current platform economics (PITFALLS Open Question #1).
-- **Phase 10 (LLM-Creative-Distillation):** MEDIUM research load — STACK §5 provides 8 references but prompt-strategy subtopics may need Awesome-Story-Generation follow-ups.
-- **Phases 9, 11, 12:** Standard / well-precedented patterns. No new research needed.
-
----
-
-*Roadmap created: 2026-06-16 via /gsd:new-project (roadmapper agent) for milestone v2.0 PRFP*
-*v1 archive: milestones/v1-ROADMAP.md · Source synthesis: research/SUMMARY.md + research/ARCHITECTURE.md*
+*Roadmap defined: 2026-06-16 — v3.0 Skills-to-DAG Alignment, 6 phases (13-18), 12 requirements*
