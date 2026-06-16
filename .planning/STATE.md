@@ -4,12 +4,12 @@ milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: Executing
 last_updated: "2026-06-17T00:00:00.000Z"
-last_activity: 2026-06-17 — Phase 13 Plan 01 complete (continuity → continuity_auditor)
+last_activity: 2026-06-17 — Phase 13 Plan 02 complete (compliance_marketing → compliance_gate)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,9 +29,9 @@ progress:
 ## Current Position
 
 Phase: 13 (Expert Rename + Alias Scaffolding) — In Progress
-Plan: 13-01 complete; 13-02 next (compliance_marketing → compliance_gate)
+Plan: 13-02 complete; 13-03 next (close-out: skills-mapping.yaml sign_off + README + glossary)
 Status: Executing Phase 13
-Last activity: 2026-06-17 — Plan 13-01 (continuity → continuity_auditor) complete
+Last activity: 2026-06-17 — Plan 13-02 (compliance_marketing → compliance_gate) complete
 
 ### Progress
 
@@ -41,7 +41,7 @@ v1 milestone: [██████████] 100% Complete (Phases 0-6, shippe
 v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12, shipped 2026-06-16)
 
 v3.0 Skills-to-DAG Alignment milestone:
-  Phase 13 [█         ] 33% In Progress (13-01 done: continuity→continuity_auditor; 13-02 + 13-03 pending)
+  Phase 13 [██        ] 67% In Progress (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 pending close-out)
   Phase 14 [          ] 0% Not started (depends on 13)
   Phase 15 [          ] 0% Not started (depends on 13)
   Phase 16 [          ] 0% Not started (depends on 13)
@@ -95,7 +95,7 @@ v3.0 Skills-to-DAG Alignment milestone:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Backward-compat rename pattern: new dir + redirect stub + `metadata.hermes.aliases` | FOUND-08 zero-silent-rename rule requires explicit alias declaration; redirect stub preserves historical transcript references | Applied 2026-06-17 in plan 13-01 (continuity → continuity_auditor) |
+| Backward-compat rename pattern: new dir + redirect stub + `metadata.hermes.aliases` | FOUND-08 zero-silent-rename rule requires explicit alias declaration; redirect stub preserves historical transcript references | Applied 2026-06-17 in plan 13-01 (continuity → continuity_auditor) + plan 13-02 (compliance_marketing → compliance_gate) |
 | Composer excluded from continuity_auditor consumer set | `composer/SKILL.md` never had `continuity` in `related_skills`; plan over-listed based on "invisible continuity" English noun | Documented in 13-01-SUMMARY §Deviations; rename correctly applied to all 16 actual consumers |
 | `_eval/baseline/` snapshots NOT renamed | Frozen regression baselines must preserve point-in-time expert_id for eval harness integrity | Documented in 13-01-SUMMARY §Deviations; only active SKILL.md consumers renamed |
 | lip_sync JSON output field names (`continuity_handoff`, `needs_continuity_audit`) preserved | These are data field names in the output schema, not expert_id references; renaming would be an API-shape change | Documented in 13-01-SUMMARY §Deviations; plan action 5 scope respected |
@@ -128,9 +128,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 13 Plan 01 executed (2026-06-17) — continuity → continuity_auditor rename complete. New expert dir + redirect stub + 16-consumer edge sync + English-noun/metric preservation. Commits 473014e02 + 1e41cf11e.
-**Next action:** Plan 13-02 — Rename `compliance_marketing` → `compliance_gate` (parallel pattern to 13-01; 11-consumer edge sync). After 13-02, plan 13-03 closes out with `skills-mapping.yaml` sign_off + README/glossary updates.
-**Hand-off note:** Phase 13 is the bottleneck for v3.0 — establishes the rename + alias pattern reused by Phases 14-17 (merge / new / deprecate). 13-01 has validated the pattern; 13-02 should be straightforward (same pattern, smaller consumer set).
+**Last action:** Phase 13 Plan 02 executed (2026-06-17) — compliance_marketing → compliance_gate rename complete. New expert dir + redirect stub + 11-consumer edge sync + regression check on 13-01's continuity_auditor tokens in 4 shared consumer files. Commits ccad47b87 + 25f1b3d7e.
+**Next action:** Plan 13-03 — Close-out: update `skills-mapping.yaml` `sign_off_status: pending` → `signed_off` for both rename entries, refresh README inventory, and add `_shared/glossary.md` alias entries. After 13-03, Phase 13 is complete and Phases 14-18 can begin (each depends on Phase 13's pattern).
+**Hand-off note:** Phase 13 is the bottleneck for v3.0 — establishes the rename + alias pattern reused by Phases 14-17 (merge / new / deprecate). 13-01 and 13-02 have both validated the pattern; 13-03 is pure documentation/sign-off close-out.
 
 ---
 
