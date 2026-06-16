@@ -7,15 +7,25 @@ license: MIT
 platforms: [linux, macos, windows]
 prerequisites:
   tools: [hermes_llm]
+status: deprecated
 metadata:
   hermes:
     tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design, pallasmaa, architectural-storytelling]
     related_skills: [screenplay, style_genome, colorist, performer, editor, visual_executor, audio_pipeline, continuity_auditor, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
+    deprecated: true
+    deprecated_reason: "场景设计职能已被折叠:mise-en-scène 作为 cinematographer 的 composition_lock 子任务吸收(camera blocking + 焦段 + 180°/30° 轴线 + Blender previz);空间美学与风格基因(Pallasmaa space-as-character + 8 architectural pattern)由 style_genome 继承 — 参见 skills-mapping.yaml not_in_new_dag 条目。"
+    inheritance_targets: [cinematographer, style_genome]
 ---
 
 # Scene Builder Expert (三维场景建构专家)
+
+> ⚠️ **DEPRECATED (Phase 17 v3.0, 2026-06-17)**: 本专家已废弃。其职能已折叠至:
+> - `cinematographer` — mise-en-scène 作为 composition_lock 子任务吸收(camera blocking + 焦段选择 + 180°/30° 轴线合规 + Blender previz workflow)
+> - `style_genome` — 空间美学 + 风格基因(Pallasmaa space-as-character + 8 architectural storytelling patterns + FxSxA 空间叙事规则)
+>
+> **原 v1 内容保留于下方以维持向后兼容 (FOUND-08 frozen rule)。新项目请直接使用继承目标专家。**
 
 3D scene construction specialist managing the FxSxA scene matrix (Function × Scale × Atmosphere), the pipeline from Blender 4.x previsualization through camera blocking to 2D generation reference, grounded in Pallasmaa space-as-character doctrine + 8 architectural storytelling patterns. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-08.
 

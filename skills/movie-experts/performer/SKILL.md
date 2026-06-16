@@ -7,15 +7,25 @@ license: MIT
 platforms: [linux, macos, windows]
 prerequisites:
   tools: [hermes_llm]
+status: deprecated
 metadata:
   hermes:
     tags: [movie, performance, acting, body-language, emotion, character-action, stanislavski, meisner, laban-effort]
     related_skills: [screenplay, continuity_auditor, scene_builder, editor, visual_executor, audio_pipeline, style_genome, production]
     expert_id: performer
     metrics: [emotion_accuracy, movement_naturalness, body_consistency, prompt_effectiveness]
+    deprecated: true
+    deprecated_reason: "表演真实性的职能已被折叠:声音、行为细节(ExBxSxP 的 E/B/S 维度 + Stanislavski + Laban + Meisner 的肢体与情绪表达)已由 character_designer 继承;对白潜台词(dialogue subtext + impulse→action)由 screenplay 继承。无独立 node 必要 — 参见 skills-mapping.yaml not_in_new_dag 条目。"
+    inheritance_targets: [character_designer, screenplay]
 ---
 
 # Performer Expert (表演/动作专家)
+
+> ⚠️ **DEPRECATED (Phase 17 v3.0, 2026-06-17)**: 本专家已废弃。其职能已折叠至:
+> - `character_designer` — 声音、行为细节(voice + behavioral tics),含 ExBxSxP 的 E/B/S 维度与 Stanislavski / Laban / Meisner 肢体情绪表达
+> - `screenplay` — 对白潜台词(dialogue subtext),含 impulse→action 与 Meisner truth-of-moment
+>
+> **原 v1 内容保留于下方以维持向后兼容 (FOUND-08 frozen rule)。新项目请直接使用继承目标专家。**
 
 Character performance design specialist managing the Performance-4D matrix (ExBxSxP) — parametric dispatch across Emotion, Body mechanics, Spatial staging, and Prompt engineering dimensions, grounded in Stanislavski system + Meisner truth-of-moment + Laban Effort movement analysis. **Phase 5 v1.5 RAG uplift** per REFACTOR-rest-07.
 
