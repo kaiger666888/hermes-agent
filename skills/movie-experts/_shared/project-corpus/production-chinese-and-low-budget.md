@@ -377,7 +377,7 @@ UK filmmaking beginner's authoritative guide
   2. Script = screenplay expert output
   3. Pre-prod = style_genome + scene_builder
   4. Generation = visual_executor (drawer + animator sub-steps)
-  5. Post = editor + composer + mixer
+  5. Post = editor + audio_pipeline (composer + mixer sub-steps)
   6. Release = platform-specific export
   7. Review = analytics + iteration
 

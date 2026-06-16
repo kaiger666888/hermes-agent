@@ -18,7 +18,7 @@ verified_date: 2026-06
 
 Editing theory (Murch dialogue) + sound theory (Chion + Vázquez) + documentary method (Wang Jing). Use this ref for:
 - `editor` expert: Murch philosophy complement
-- `composer` / `foley` / `mixer` experts: Chion's audio-vision framework
+- `audio_pipeline` expert (composer / foley / mixer sub-steps): Chion's audio-vision framework
 - `production` for documentary-mode 短剧
 
 ---
@@ -438,12 +438,12 @@ Wang Jing (王竞), Beijing Film Academy professor
 - "Humble voice" = AI should respect source material, not over-impose
 - 2.5/14/30 rule for cut-point distance
 
-### Sound Bible for `foley` / `mixer`
+### Sound Bible for `audio_pipeline` (foley / mixer sub-steps)
 - 5-category classification for sound asset taxonomy
 - 10 commandments as recording quality gate
 - 5 layers for emotional sound design
 
-### Chion for `composer` / `spatial_audio`
+### Chion for `audio_pipeline` (composer / spatial_audio sub-steps)
 - 5 audio-vision modes for music-image relationships
 - Synchresis = AI music must sync visual accents
 - Added value = music should add meaning, not double image
@@ -461,8 +461,8 @@ Wang Jing (王竞), Beijing Film Academy professor
 - [`../../editor/references/classical-editing-rhythm.md`](../../editor/references/classical-editing-rhythm.md)
 - [`../../editor/references/cn-cutting-rhythm.md`](../../editor/references/cn-cutting-rhythm.md)
 - [`../../editor/references/montage-theory.md`](../../editor/references/montage-theory.md)
-- [`../../foley/SKILL.md`](../../foley/SKILL.md)
-- [`../../composer/SKILL.md`](../../composer/SKILL.md)
-- [`../../mixer/SKILL.md`](../../mixer/SKILL.md)
-- [`../../spatial_audio/SKILL.md`](../../spatial_audio/SKILL.md)
+- [`audio_pipeline`](../../audio_pipeline/SKILL.md) (foley sub-step)
+- [`audio_pipeline`](../../audio_pipeline/SKILL.md) (composer sub-step)
+- [`audio_pipeline`](../../audio_pipeline/SKILL.md) (mixer sub-step)
+- [`audio_pipeline`](../../audio_pipeline/SKILL.md) (spatial_audio sub-step)
 - [Glossary](../../glossary.md)

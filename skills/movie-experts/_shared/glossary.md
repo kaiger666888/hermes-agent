@@ -10,7 +10,7 @@
 ## How to use this glossary
 
 1. **Authoring SKILL.md / refs:** When you write 短剧-specific terms, look them up here first. If a term exists, use the canonical CN form. If not, add it here with a bilingual definition + context note.
-2. **Cross-expert signals:** When one expert emits a term (e.g., screenplay emits `钩子`), downstream experts (editor, composer) MUST consume the same CN token, not an ad-hoc English translation.
+2. **Cross-expert signals:** When one expert emits a term (e.g., screenplay emits `钩子`), downstream experts (editor, audio_pipeline (composer sub-step)) MUST consume the same CN token, not an ad-hoc English translation.
 3. **LLM-as-judge prompts:** Judge prompts reference these terms by their CN form for 短剧-specific evaluation anchors. Bilingual definitions prevent judge-model misreading.
 
 ---
@@ -70,7 +70,7 @@
 ### 击中点 / emotional-impact point
 **CN:** 击中点 — 短剧中触发观众强烈共鸣的瞬间,可能是台词、镜头、配乐或三者合一。
 **EN:** Emotional-impact point — instant in 短剧 that triggers strong audience resonance; may be a line of dialogue, a shot, a musical cue, or a combination.
-**Context:** Distinct from 爽点 (satisfaction) — 击中点 can be sad / bitter / nostalgic / cathartic. composer aligns musical sting to 击中点.
+**Context:** Distinct from 爽点 (satisfaction) — 击中点 can be sad / bitter / nostalgic / cathartic. audio_pipeline (composer sub-step) aligns musical sting to 击中点.
 
 ### 镜头语言 / shot grammar / cinematic language
 **CN:** 镜头语言 — 通过镜头选择(景别、视角、运动、构图)传递意义的系统化表达方式。
@@ -161,14 +161,14 @@
 **Context:** Scores ≥ 9 trigger VETO; 5-8 require per-platform reframing paths.
 
 ### 角色圣经 / Character Bible
-**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(visual_executor / lip_sync / continuity_auditor)的 ground truth。
+**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(visual_executor / audio_pipeline (lip_sync sub-step) / continuity_auditor)的 ground truth。
 **EN:** Character Bible — character identity contract JSON output by character_designer. Contains 4D anchors + layered STYLE_PREFIX + consistency stress-test results + negative_traits + consistency_lock. Ground truth for all downstream consumers.
 **Context:** Schema version 2.0.0; frozen after stress test pass.
 
 ### 4D 锚点 / 4D Anchor
 **CN:** 4D 锚点 — 角色的 4 个标准视角源图(front 正面 / three_quarter 3/4 / side 侧面 / back 背面),构成角色身份的"4D 护照"。下游专家按 3Q > Front > Side > Back 优先级使用。
 **EN:** 4D Anchor — 4 canonical view source images (front / three_quarter / side / back) defining a character's identity across all shot angles. Downstream consumers use 3Q > Front > Side > Back priority.
-**Context:** character_designer output; lip_sync prefers front + 3Q for identity reference.
+**Context:** character_designer output; audio_pipeline (lip_sync sub-step) prefers front + 3Q for identity reference.
 
 ### 分层 STYLE_PREFIX / Layered Style Prefix
 **CN:** 分层 STYLE_PREFIX — character_designer 的核心方法论,把角色风格分为 CORE(全局不变)/ IDENTITY(严格锁定)/ VARIANCE(随镜头变化)三层。组合公式:`{CORE}, {IDENTITY}, {VARIANCE}`。
@@ -198,7 +198,7 @@
 ### 唇形同步 / Lip Sync
 **CN:** 唇形同步 — 把目标音频对齐到人物视频的嘴部运动,生成口型与音频精确匹配的视频。基于音频驱动的潜在扩散(LatentSync v1.5 / v1.6)。
 **EN:** Lip Sync — aligning target audio to mouth motion in person footage, generating video where lip movement matches audio precisely. Based on audio-conditioned latent diffusion (LatentSync v1.5 / v1.6).
-**Context:** lip_sync expert's domain. Decoupled from voicer (audio synthesis) — voicer produces WAV, lip_sync aligns WAV to footage.
+**Context:** audio_pipeline (lip_sync sub-step) domain. Intra-expert handoff from voicer sub-step (audio synthesis) — voicer sub-step produces WAV, lip_sync sub-step aligns WAV to footage.
 
 ### LSE / Lip Sync Error — Distance
 **CN:** LSE — SyncNet 嵌入空间中音频嵌入与视频嵌入的平均欧氏距离,客观指标,越低越好。SOTA ≤ 6.5。
@@ -231,3 +231,15 @@
 **EN:** Visual Executor Expert — Phase 14 merge of `drawer` + `animator` experts per v2.0 PRFP DAG. Unified sub-steps handle image gen (FLUX 2 + LoRA + IP-Adapter + InstantID) and video gen (veo3.1 / kling-v3-4k / pixverse-v6 / ltx-2.3 / seedance-2.0).
 
 **Context:** Replaces the v1 drawer → animator inter-expert collaboration edge with an intra-expert sub-step handoff (drawer generates first_frame I-frame → animator consumes it). Declared at `skills/movie-experts/visual_executor/SKILL.md`.
+
+---
+
+## Phase 15 additions (audio_pipeline merge)
+
+### audio_pipeline / 音频管线专家
+
+**CN:** 音频管线专家 — Phase 15 merge of 5 canonical audio experts (voicer, lip_sync, composer, foley, mixer) + spatial_audio (folded per disposition D-1)。声明 `sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]`,unified audio consistency context per Phase 7 §4.9 + PITFALLS §2.6。spatial_audio folded (not deprecated) because spatial rendering is fundamentally a mixer/mastering concern (Atmos, HRTF, binaural)。Backward-compat aliases `[voicer, lip_sync, composer, foley, mixer, spatial_audio]` 保留 per FOUND-08。
+
+**EN:** Audio Pipeline Expert — Phase 15 merge of 6 predecessors per v2.0 PRFP DAG §4.9. Unified sub-steps handle TTS (MiniMax / ElevenLabs / Voxtral / Gemini / Edge / NeuTTS), audio-driven lip sync (LatentSync, LRS2/LRS3 benchmark), music generation (MusicGen-Large, Chion audio-vision), SFX (Stable Audio Open, 7D parametric), mixing (Senior Mixing Secrets, LUFS mastering), and spatial audio (Dolby Atmos, HRTF binaural).
+
+**Context:** Replaces the v1 inter-expert audio collaboration edges (voicer↔mixer, composer↔foley, etc.) with intra-expert sub-step handoffs. spatial_audio disposition D-1 (fold) documented in the merged SKILL.md `## Spatial Audio Disposition` H2 section per ROADMAP §15 criterion #2. Declared at `skills/movie-experts/audio_pipeline/SKILL.md`.
