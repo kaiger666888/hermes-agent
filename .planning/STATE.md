@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Pipeline Redesign from First Principles
-status: planning
-last_updated: "2026-06-16T13:00:00.000Z"
+status: executing
+last_updated: "2026-06-16T14:12:14.344Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -31,8 +31,8 @@ progress:
 **Milestone:** v2.0 — Pipeline Redesign from First Principles (PRFP)
 **Phase:** 7 — First-Principles Derivation (bottleneck; nothing else may start until 7 emits the candidate node set)
 **Plan:** —
-**Status:** planning (roadmap written; awaiting `/gsd:plan-phase 7`)
-**Last activity:** 2026-06-16 — Roadmap created by /gsd:new-project roadmapper
+**Status:** Ready to execute
+**Last activity:** 2026-06-16
 
 ### Progress
 
@@ -93,11 +93,13 @@ v2.0 PRFP milestone:
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
+
 - ⚠ Platform guideline drift — refs use `verified_date` + 90-day refresh cadence
 - ⚠ 短剧 sample copyright — fair-use + LICENSE.md per ref
 - ⚠ LLM-as-judge invalidity — Phase 6 live run deferred to operator
 
 **New in v2.0 PRFP (per PITFALLS §"Top 5 Critical Risks"):**
+
 - 🔴 **First-principles theater** (PITFALLS 1.1, 1.5, 1.6, 5.4) — derivation that is ex-post justification dressed in reductionist language. Mitigation: Phase 7 enforces structural rigor (per-node `derivation`, epistemic-status tagging, steelman-elimination, alternatives log).
 - 🔴 **Design-impl drift across two repos** (PITFALLS 3.1-3.5) — design stale by the time kais-movie-agent implements. Mitigation: Phase 11 handoff includes `baseline_ref` git SHA, impl-cheatsheet, ownership matrix, versioning scheme.
 - ⚠ **Throwing out validated craft as "bias"** (PITFALLS 1.2, 5.3) — discarding Murch/Field/180°-axis as "historical baggage". Mitigation: Phase 9 corpus-anchor + Phase 7 contingent-vs-validated-invariant classification.
