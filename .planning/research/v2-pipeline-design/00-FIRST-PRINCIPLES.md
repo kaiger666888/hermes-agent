@@ -594,3 +594,742 @@ graph TB
 
 ---
 
+## §4 — 候选节点集 (Candidate node set)
+
+> 本节是 Phase 7 的实际产出 — 候选节点 ID 列表,每节点带完整 per-node 严格性(derivation + alternatives + classifications + steelman + anchor + analogy-validity)。Phase 8 会用 C1-C7 过滤器进一步压缩,所以这是 **候选集**,不是最终 DAG。
+
+### §4.0 — 候选集框架
+
+per CONTEXT.md Area 1/4:**候选集,不是最终集**。Phase 7 的任务是产出一个可辩护的 palette,每节点都能从第一性原理回答"为什么是它"。Phase 8 应用 C1-C7 过滤器压缩到最终 DAG。
+
+**目标:** 8-15 节点(derivation target);**硬上限:** ≤25(任何超过 15 的节点需逐节点说明)。
+
+**实际产出:** **16 候选节点** — 超出 target 1 个。§5.2 给出 over-target justification。
+
+**v1 expert_id 兼容性(per HANDOFF-02 / FOUND-08 frozen rule):** 16 节点中 14 个直接映射到 v1 现有 expert_id(保留);2 个是 AIGC-native 新节点(prompt_injector, visual_executor 由 drawer+animator 合并)。
+
+### §4.1 — 节点 1: `creative_source`(根节点)
+
+> **v1 expert_id mapping:** `creative_source`(v1 已存在,expert_id 保留 per HANDOFF-02 / FOUND-08)
+
+**核心任务:** 从 6 个社会阶层的生活经验挖故事 kernel,产出整合元意图(logline + 主角欲望 + 中央冲突 + 转折点 + 解决立场 + 风格基因)。
+
+**Derivation(从第一性原理辩护存在):** 从 §3.1 D1.1+D1.2+D1.3+D1.5 + §3.4 D4.1 共同推出 — 观众消费整合体验(D1.1),整合体验不能从单一 LLM call 产出(D1.4),元意图必须从人类生活经验起源(D4.1),因此 root 必须是挖 kernel + 元意图的节点。**不是** "每个 pipeline 都有起点"(那是类比),**而是** 整合体验的本性要求 root 必须产 integrated intent,且 intent 必须有 non-LLM-origin(D4.1)。
+
+**Epistemic-status tags:**
+- `[psychological: 整合体验是观众消费的本体]` — D1.1
+- `[tool-capability: 当前 LLM 不能端到端一次产出元意图]` — D1.4
+
+**Assumption classification:**
+- `validated-invariant`: 元意图的整合性(D1.1+D1.2)+ 元意图的人类起源(D4.1)
+- `contingent`: 6 个社会阶层挖 kernel 的具体方法(可换其他挖掘策略)
+
+**Steelman-the-elimination:**
+- **最强反驳(strongest counter):** 如果未来 LLM 能从训练数据直接生成 novel creative intent(突破 D4.1),`creative_source` 节点会消失 — 它只是当前 `tool-capability` 弱的产物,不是第一性原理必要。
+- **我方回应(response):** D4.1 不是 `tool-capability` 偶然,而是 `psychological` 本性 — 创意意图的"novelty"取决于创作者的 **生活经验特异性**(Bazin objectivity + v1 6 社会阶层实证),不是训练数据规模。即使 LLM 能模拟 novel 组合,它模拟的是"看起来 novel",不是"源自生活经验的 novel"。`creative_source` 节点保留人类作者的特定经验输入,这是 `validated-invariant`。
+- **Verdict:** SURVIVES
+
+**Alternatives considered (MADR-style):**
+- **Slot:** pipeline root — 元意图起源
+- **Option 1: `creative_source`** (CHOSEN) — 挖 6 社会阶层生活经验 + 元意图整合
+  - Pros: 已在 v1 实现;实证有效;保留人类作者 in-the-loop
+  - Cons: 需要人类作者输入(慢);不能 fully automate
+- **Option 2: `auto_story_generator`** (REJECTED) — LLM 从训练数据端到端生成故事
+  - Pros: 全自动;快
+  - Cons: 违反 D4.1(novelty 来自生活经验,不是训练数据);违反 PITFALLS §4.5(creative ≠ random);短剧市场上纯 LLM 生成故事已饱和,差异化失败
+- **Option 3: `topic_curatorial_scan`** (REJECTED — deferred) — 高产工作室的热点扫描
+  - Pros: 商业上对短剧工作室有用
+  - Cons: 属于 different value proposition(trend-following 而非 creative-intent origination);不适合作为 pipeline root;defer to future milestone
+- **Decision driver:** D4.1 要求人类生活经验起源;v1 precedent 已验证
+
+**Corpus anchor:**
+- `06-理论批评/film-philosophy-bazin-tarkovsky.md`(Bazin objectivity 论证 + Tarkovsky creative fire)
+- Hermes: `theory-formalism-vs-realism.md` + `film-philosophy-bazin-tarkovsky.md` + `narrative-revolution-and-modernism.md`
+- 配对:麦基《故事》(turning points + resolution stance schema)
+
+**Analogy validity:**
+- `analogy-breaks-here` — 传统电影工业也有 "creative origin" 角色(编剧/导演),但传统是 **个人创作**,AIGC 版本必须 **显式标记 human-bounded**(per D4.5)。传统工艺在这里 **不直接适用** — 因为 AIGC 容易假装"AI 也能创作",设计必须显式标记人类作者不可替代。
+
+---
+
+### §4.2 — 节点 2: `style_genome`
+
+> **v1 expert_id mapping:** `style_genome`(v1 已存在,expert_id 保留)
+
+**核心任务:** 提取 + 编码 + 复用视觉 DNA(5D style genome:色调 + 构图 + 节奏 + 材质 + 情感基调),作为下游节点的 invariant 输入。
+
+**Derivation:** 从 §3.2 D2.3+D2.4(跨节点 coherence 主导 + invariant ownership 必要)推出 — 风格一致性是 invariant ownership 的核心维度之一,必须有显式 owner 节点。**不是** "每个 pipeline 都有 style bible"(类比),**而是** D2.3 的 coherence 主导性要求 style invariant 必须有 owner。
+
+**Epistemic-status tags:**
+- `[psychological: 风格一致性是观众感知 coherence 的核心维度]` — D2.3
+- `[tool-capability: 当前生成模型在 cross-call style 一致性上仍弱,需要显式 genome 输入]` — D3.1(b)
+
+**Assumption classification:**
+- `validated-invariant`: style 一致性作为 coherence 维度(D2.3)
+- `contingent`: 5D genome 的具体维度选择(可换其他 schema)
+
+**Steelman-the-elimination:**
+- **最强反驳:** style 不需要独立节点 — 它可以 fold 进 `cinematographer` 或 `creative_source`(作为元意图的一部分)。
+- **回应:** D2.4 要求每个 invariant 有 owner 节点 — 如果 style fold 进 cinematographer,style consistency 只在 visual execution 阶段被保证,而 screenplay / audio / editing 阶段可能 drift。独立 style_genome 节点让所有下游节点都消费同一 genome,invariant ownership 显式。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** 风格一致性 invariant owner
+- **Option 1: `style_genome`** (CHOSEN) — 独立节点,所有下游消费
+  - Pros: 显式 ownership;5D genome 已 v1 实现;v1 expert_id 保留
+  - Cons: 多一个节点;需要 cross-stage 消费机制
+- **Option 2: fold into `creative_source`** (REJECTED) — style 作为元意图一部分
+  - Pros: 节点数 -1
+  - Cons: 风格被锁在 root,下游 stage 想微调时无法;style drift 风险高
+- **Option 3: fold into `cinematographer`** (REJECTED) — style 作为视觉 intent 一部分
+  - Pros: 视觉一致性集中
+  - Cons: screenplay / audio 阶段失去 style ownership
+- **Decision driver:** D2.4 invariant ownership 要求显式 owner
+
+**Corpus anchor:**
+- `03-拍摄/cinematographer-masterclass.md`(视觉风格大师课)
+- `02-分镜/cinematic-language-grammar.md`(电影语言语法)
+- Hermes: `cinematography-masterclass-and-grammar.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统电影工业的 "art direction" + "production design" 角色直接适用;AIGC 版本只是把人类 art director 的隐性判断显式化为 5D genome 输入。
+
+---
+
+### §4.3 — 节点 3: `screenplay`
+
+> **v1 expert_id mapping:** `screenplay`(v1 已存在)
+
+**核心任务:** 把元意图展开为可执行叙事结构(scene list + dialogue + scene-level intent + 短剧/微电影/长片形态适配)。
+
+**Derivation:** 从 §3.1 D1.3(下游展开是分层执行链)+ §3.2 D2.1(Murch Rule of Six 中 story 维度)推出 — 元意图到可执行规格需要展开层,展开产物是叙事结构。**不是** "每个电影都有剧本"(类比),**而是** D1.3 的分层执行链要求有展开节点 + D2.1 的 story 质量维度要求有 owner。
+
+**Epistemic-status tags:**
+- `[psychological: 叙事结构是人类感知 story 的载体]` — D2.1
+- `[platform-algorithmic: 短剧 vs 微电影 vs 长片的叙事密度差异]` — D2.6
+- `[tool-capability: 当前 LLM 在长程 plot 一致性上仍弱]` — D1.4
+
+**Assumption classification:**
+- `validated-invariant`: 叙事结构必要性(D2.1)+ Field 三幕 / McKee 转折点(D4.3)
+- `contingent`: 短剧/微电影/长片的具体形态切换(D2.6)
+
+**Steelman-the-elimination:**
+- **最强反驳:** 短剧可能不需要完整剧本 — `hook_retention` 节点(D2.6)已经决定了每集的情感弧,screenplay 是冗余。
+- **回应:** 短剧仍需 narrative continuity 跨集(Murch story 维度 D2.1)。即使每集 hook 由 hook_retention 决定,集间 plot thread + character arc 仍需 screenplay owner。`hook_retention` 决定 **pacing + 完播率优化**,`screenplay` 决定 **narrative coherence** — 是不同的 invariant。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** 叙事结构展开
+- **Option 1: `screenplay`** (CHOSEN) — 完整剧本 + 形态适配
+  - Pros: v1 precedent;Field/McKee 理论支撑;`script_auditor` 配对(D2.5)
+  - Cons: 节点多
+- **Option 2: `narrative_skeleton`** (REJECTED) — 只产 outline + scene list,无 dialogue
+  - Pros: 节点更轻
+  - Cons: 失去 dialogue craft(芦苇剧本笔记 + McKee 对话论);下游 visual/audio 失去 dialogue anchor
+- **Option 3: fold into `creative_source`** (REJECTED) — 元意图直接是完整剧本
+  - Cons: 违反 D1.3 分层执行链;root 过重;`tool-capability` 限制使 root 不能端到端
+- **Decision driver:** D2.1 story 维度 + D2.5 配 critic 必要
+
+**Corpus anchor:**
+- `01-剧本/`(17 个剧本文件)
+- 书:Field《剧本》,McKee《故事》,芦苇剧本笔记
+- Hermes: `screenwriting-chinese-and-supplementary.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统编剧角色直接适用。AIGC 版本的差异:配对 `script_auditor` critic(D2.5),而传统工业 critic 是后期 notes。
+
+---
+
+### §4.4 — 节点 4: `script_auditor`
+
+> **v1 expert_id mapping:** `script_auditor`(v1 已存在,5-dim quantitative + Pearson ≥ 0.65 验证)
+
+**核心任务:** 对 screenplay 输出做 5-dim quantitative audit(character-network consistency, plot-hole detection, dialogue-naturalness, narrative-arc closure, setup-payoff),决定 accept/regenerate/escalate。
+
+**Derivation:** 从 §3.2 D2.5(每生成节点配 critic)+ §3.3 D3.1(c)(一致性验证是 AI 加速的第三类操作)共同推出。**不是** "AI 评分很流行"(类比),**而是** D2.5 的 critic 必要性 + D3.1(c) AI verification 能力 + v1 Pearson 验证实证。
+
+**Epistemic-status tags:**
+- `[psychological: plot-hole + character-network 是观众感知 story coherence 的核心]` — D2.1
+- `[tool-capability: 当前 LLM-as-critic 在 plot-hole 检测上有效(STACK §5 ConStory-Bench)]` — D3.1(c)
+
+**Assumption classification:**
+- `validated-invariant`: critic 必要性(D2.5)+ 5-dim 的心理学基础(D2.1)
+- `contingent`: Pearson ≥ 0.65 阈值(可调)
+
+**Steelman-the-elimination:**
+- **最强反驳:** LLM-as-judge 自身有 bias — script_auditor 可能只是把 LLM 的 bias 制度化为"客观"评分。
+- **回应:** v1 已用 Pearson ≥ 0.65 与人类标注对齐验证(不是 raw LLM score);5-dim rubric 是显式可审的(不是黑盒);audit 结果作为 regenerate/escalate 信号,不是 ground truth。critic 的局限已知,但比 "无 critic"(PITFALLS §2.5)好。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** screenplay 的 critic
+- **Option 1: `script_auditor`** (CHOSEN) — 独立节点,5-dim quantitative
+  - Pros: v1 验证;decoupled from screenplay(无 self-grading bias per PITFALLS §2.3);可量化
+  - Cons: 多一次 LLM call(成本)
+- **Option 2: self-critic in `screenplay`** (REJECTED) — screenplay 节点内部做 critic
+  - Cons: PITFALLS §2.3 — self-grading bias;无独立 quantitative 评分
+- **Option 3: `human_review_only`** (REJECTED) — 只靠人类 review
+  - Cons: 慢;不可规模化;违反 D3.1(c) AI verification 加速
+- **Decision driver:** D2.5 + PITFALLS §2.3 + v1 验证
+
+**Corpus anchor:**
+- STACK §5 Plot Hole Detection(arXiv 2504.11900)+ ConStory-Bench(arXiv 2603.05890)+ CONFACTCHECK(ACL 2025)
+- `01-剧本/` narrative theory(Field + McKee)
+
+**Analogy validity:**
+- `analogy-breaks-here` — 传统工业有 "script doctor" + "notes session",但都是人类定性批评。AIGC 版本的差异:quantitative rubric + decoupled from generation。传统工艺 **不直接适用**。
+
+---
+
+### §4.5 — 节点 5: `cinematographer`
+
+> **v1 expert_id mapping:** `cinematographer`(v1 已存在,Phase 4 deep expert)
+
+**核心任务:** 把元意图 + style genome 翻译为视觉 intent(镜头列表 + 灯光设计 + 构图规范 + composition_lock 锁定 — per D3.4)。
+
+**Derivation:** 从 §3.2 D2.1(Murch planarity + eye-trace + spatial continuity 维度)+ §3.3 D3.4(composition_lock 是用户价值层,sketch-then-render 是 instantiation)推出。**不是** "每个电影都有摄影师"(类比),**而是** D2.1 视觉质量维度需 owner + D3.4 composition_lock 需在用户价值层显式。
+
+**Epistemic-status tags:**
+- `[physical: 180° 轴线 + 光线方向 + 构图几何]` — D2.2
+- `[psychological: Murch eye-trace + planarity]` — D2.1
+- `[tool-capability: 当前生成模型在 composition 控制上仍弱,需 sketch-then-render 作为 instantiation]` — D3.4
+
+**Assumption classification:**
+- `validated-invariant`: 180° 轴线(D2.2)+ Murch 视觉维度(D2.1)+ composition_lock 用户价值(D3.4)
+- `contingent`: sketch-then-render 当前 instantiation(D3.4)
+
+**Steelman-the-elimination:**
+- **最强反驳:** 在 AIGC 时代,gen model 接受 text + character refs 后可直接生成镜头,cinematographer 节点会被吸收进 prompt_injector。
+- **回应:** D3.4 明确:capability-spec(composition_lock 用户价值)是规范层,sketch-then-render 是当前 instantiation。即使未来 native multi-shot model 成熟,composition_lock 的 **人类 intent 起源** 仍需独立节点(否则就是 prompt_injector 内部隐式做,失去人类 review seam)。cinematographer 把"为什么这样构图"显式化,prompt_injector 只做"intent → tokens"翻译。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** 视觉 intent 产出
+- **Option 1: `cinematographer`** (CHOSEN) — 视觉 intent + composition_lock
+  - Pros: v1 precedent;Murch 维度 owner;composition_lock 在用户价值层
+  - Cons: 多节点
+- **Option 2: fold into `prompt_injector`** (REJECTED) — 视觉 intent 隐式在 prompt
+  - Cons: 失去人类 review seam;违反 PITFALLS §2.9;composition_lock 退化为 prompt artifact
+- **Option 3: separate `composition_lock` + `cinematographer`** (REJECTED) — 拆为两节点
+  - Cons: 过度拆分;composition_lock 是 cinematographer 的子任务,不需独立
+- **Decision driver:** D2.1 + D3.4 + PITFALLS §2.9
+
+**Corpus anchor:**
+- `03-拍摄/cinematographer-masterclass.md`
+- `02-分镜/cinematic-language-grammar.md` + `mise-en-scene-blocking.md`
+- Hermes: `cinematography-masterclass-and-grammar.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统摄影指导角色直接适用;AIGC 版本增加 composition_lock 显式化。
+
+---
+
+### §4.6 — 节点 6: `character_designer`
+
+> **v1 expert_id mapping:** `character_designer`(v1 已存在)
+
+**核心任务:** 定义 + 维护角色 identity asset(face, body, wardrobe, voice profile, behavioral tics),作为跨节点身份一致性 invariant 的 owner。
+
+**Derivation:** 从 §3.2 D2.4(身份一致性是 invariant ownership 核心维度)推出。**不是** "每个电影都设计角色"(类比),**而是** D2.4 要求身份 invariant 有显式 owner,否则跨镜头 drift。
+
+**Epistemic-status tags:**
+- `[psychological: 角色身份一致性是观众感知 coherence 的核心]` — D2.3
+- `[tool-capability: 当前 LoRA + IP-Adapter 实现 identity lock 但 evolving]` — D3.1(b)
+
+**Assumption classification:**
+- `validated-invariant`: 身份一致性作为 coherence 维度(D2.3)
+- `contingent`: LoRA + IP-Adapter instantiation(可换其他 identity lock 机制)
+
+**Steelman-the-elimination:**
+- **最强反驳:** fold 进 style_genome(角色 identity 是 style 的一部分)。
+- **回应:** style_genome 是 **整体视觉 DNA**(色调、构图风格),character_designer 是 **per-character identity asset**(每个角色的 face/wardrobe/voice)。fold 会让 genome 过载;per-character 维护需要独立 owner。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** 角色 identity invariant owner
+- **Option 1: `character_designer`** (CHOSEN) — per-character identity asset
+  - Pros: v1 precedent;per-character granularity;身份 invariant 显式 owner
+  - Cons: 多节点
+- **Option 2: fold into `style_genome`** (REJECTED)
+  - Cons: genome 过载;per-character 维护失焦点
+- **Option 3: fold into `continuity_auditor`** (REJECTED)
+  - Cons: continuity_auditor 是 critic,不是 producer;身份 asset 需要 producer owner
+- **Decision driver:** D2.4 invariant ownership
+
+**Corpus anchor:**
+- `01-剧本/character-arc-design.md`
+- `03-拍摄/acting-stanislavski-stella.md`(角色表演真实)
+- Hermes: `screenwriting-chinese-and-supplementary.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统角色设计 + casting 直接适用;AIGC 版本增加 voice profile + behavioral tics 显式 asset。
+
+---
+
+### §4.7 — 节点 7: `prompt_injector`(AI-native)
+
+> **v1 expert_id mapping:** NEW — 无 v1 precedent(v1 的 prompt 工程隐式在每 expert 内部)
+
+**核心任务:** 把上游各节点产出的人类 intent(元意图 + style genome + screenplay + 视觉 intent + character assets)翻译为 model-ready prompt(tokens + multimodal refs + 跨 call 一致性 context)。
+
+**Derivation:** 从 §3.3 D3.5(prompt_injector 是 AI-native 必要节点)+ §3.1 D1.4(模型不能端到端,需分层)推出。**这是 AIGC-native 节点** — 传统电影工业无对应。
+
+**Epistemic-status tags:**
+- `[tool-capability: 当前模型 prompt 工程是必要技能]` — D3.5
+- `[psychological: 跨 call 一致性 context 需显式管理]` — D2.4
+
+**Assumption classification:**
+- `validated-invariant`: intent → tokens 转化节点必要(D3.5 + D1.4)
+- `contingent`: 具体 prompt schema(可演化)
+
+**Steelman-the-elimination:**
+- **最强反驳:** prompt 工程是每个生成节点内部的事,不需要独立节点。
+- **回应:** 跨节点 consistency context(style genome + character assets + screenplay continuity)需要在多个生成节点之间 **共享 + 一致**。如果每节点内部独立做 prompt,会出现 consistency drift。独立 prompt_injector 让 consistency context 是显式输入,所有生成节点消费同一份。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** intent → model tokens 转化 + 跨 call 一致性
+- **Option 1: `prompt_injector`** (CHOSEN) — 独立节点,所有生成节点消费
+  - Pros: consistency context 显式;cross-call 一致性强
+  - Cons: AI-native 无传统对应(需新设计);节点多
+- **Option 2: per-node implicit prompt** (REJECTED) — 每生成节点内部做 prompt
+  - Cons: PITFALLS §2.4 — consistency drift;consistency context 失 ownership
+- **Option 3: fold into `quality_gate`** (REJECTED)
+  - Cons: quality_gate 是 critic,不是 producer;prompt 工程是 producer 工作
+- **Decision driver:** D3.5 + D2.4 + PITFALLS §2.4
+
+**Corpus anchor:**
+- STACK §5 EMNLP 2025 Survey on LLMs for Story Generation(prompt strategy)
+- STACK §5 Awesome-Story-Generation(prompt subtopic index)
+- (无传统电影书目对应 — AI-native 节点)
+
+**Analogy validity:**
+- `analogy-breaks-here` — **无传统对应**(AI-native 节点 per PITFALLS §6.6 — 0 强 corpus 引用的节点必须显式标记 AIGC-native)
+
+---
+
+### §4.8 — 节点 8: `visual_executor`(drawer + animator 合并)
+
+> **v1 expert_id mapping:** NEW COMPOSITE — v1 有 `drawer` + `animator` 两个独立 expert,本设计 **合并**(per PITFALLS §2.1 compression opportunity);Phase 8 C1-C7 过滤器可能拆回
+
+**核心任务:** 执行视觉资产生成 — 静态图(drawer 子任务)+ 动态视频(animator 子任务),消费 prompt_injector 输出 + identity asset。
+
+**Derivation:** 从 §3.3 D3.1(b)(规范明确的模态转换是 AI 加速第二类)+ §3.2 D2.5(配 critic)推出。合并 drawer + animator 因为 §3.5 推出 composition_lock 已在 cinematographer;visual_executor 只是 **执行层**,无独立 intent。
+
+**Epistemic-status tags:**
+- `[tool-capability: 当前 image/video 生成模型 evolving]` — D3.1(b)
+- `[psychological: 视觉执行质量由 Murch planarity + eye-trace 衡量]` — D2.1
+
+**Assumption classification:**
+- `validated-invariant`: 视觉资产执行必要(D3.1(b))
+- `contingent`: drawer + animator 合并 vs 分离(D2.6 multi-form 影响)
+
+**Steelman-the-elimination:**
+- **最强反驳:** drawer(静态)和 animator(动态)的能力 profile 不同 — 静态图模型(FLUX 2)和动态视频模型(Sora/Kling)不同。合并会丢失 specialization。
+- **回应:** 节点的 core_task 是 **执行视觉资产生成**,不分静态动态 — 两者的 prompt schema 和 critic rubric 可以节点内分 sub-step。合并的好处是 consistency context 一致(style + identity + composition);拆开的坏处是 drawer 和 animator 各自维护 prompt consistency 容易 drift。Phase 8 C1-C7 过滤可重新评估。
+- **Verdict:** SURVIVES(候选;Phase 8 可 reconsider 拆分)
+
+**Alternatives considered:**
+- **Slot:** 视觉资产执行
+- **Option 1: `visual_executor`** (CHOSEN) — drawer + animator 合并
+  - Pros: consistency context 统一;节点数 -1;v1 drawer + animator expert_id 可作为 sub-step 名保留
+  - Cons: specialization 损失
+- **Option 2: separate `drawer` + `animator`** (REJECTED at Phase 7 candidate level)
+  - Pros: specialization 强
+  - Cons: 节点 +1;consistency drift 风险;Phase 7 候选集超 target
+- **Option 3: fold into `cinematographer`** (REJECTED)
+  - Cons: cinematographer 是 intent,visual_executor 是 execution;层次混淆
+- **Decision driver:** PITFALLS §2.1 compression + consistency context 统一
+
+**Corpus anchor:**
+- `03-拍摄/animation-production.md`(动画执行工艺)
+- Hermes: `animation-disney-system.md`(Disney 动画系统参考)
+
+**Analogy validity:**
+- `analogy-breaks-here` — 传统工业的摄影师 + 动画师是不同专家角色,合并是 AIGC 压缩(per PITFALLS §2.1)
+
+---
+
+### §4.9 — 节点 9: `audio_pipeline`(voicer + lip_sync + composer + foley + mixer 合并)
+
+> **v1 expert_id mapping:** NEW COMPOSITE — v1 有 5 个独立 audio expert(`voicer`, `lip_sync`, `composer`, `foley`, `mixer`),本设计 **合并**;Phase 8 C1-C7 可能拆回
+
+**核心任务:** 执行全部音频生成 + 对齐 + 混音 — voicer(TTS) + lip_sync(音视频锁) + composer(配乐) + foley(拟音) + mixer(混音 + LUFS targeting + 平台 loudness 适配)。
+
+**Derivation:** 从 §3.3 D3.1(a)(高程序化后期是 AI 加速第一类)推出。5 个 audio 任务都是 post-layer + 高程序化 + 高 AIGC-friendly,合并为单 pipeline 节点配 sub-steps 比独立 5 节点更 coherent。
+
+**Epistemic-status tags:**
+- `[tool-capability: TTS / music gen / foley gen 当前模型 evolving]` — D3.1(a)
+- `[physical: LUFS targeting + 平台 loudness specs 是物理规范]`
+- `[psychological: 音频混音的 perceptual quality(Murch emotion + rhythm)]` — D2.1
+
+**Assumption classification:**
+- `validated-invariant`: 音频生成 + 混音必要(D3.1(a))+ LUFS/loudness 物理规范
+- `contingent`: 5 任务合并 vs 分离
+
+**Steelman-the-elimination:**
+- **最强反驳:** 5 个 audio 任务的能力 profile + critic rubric 差异大 — voicer 关心 TTS 自然度,composer 关心音乐情感,foley 关心 ASMR-quality,mixer 关心 LUFS。合并会让节点 spec 过载。
+- **回应:** 节点 spec 可以分 sub-step;5 任务的 **共同点** 是都消费同一 audio consistency context(场景情绪 + 角色声纹 + 平台 loudness),独立 5 节点会重复维护 context。PITFALLS §2.6 警告"更多节点 ≠ 更严谨";本合并是 §2.1 compression 的正当应用。Phase 8 可 reconsider。
+- **Verdict:** SURVIVES(候选;Phase 8 可 reconsider 拆分)
+
+**Alternatives considered:**
+- **Slot:** 音频生成 + 对齐 + 混音
+- **Option 1: `audio_pipeline`** (CHOSEN) — 5 任务合并 + sub-steps
+  - Pros: 节点数 -4;consistency context 统一;audio pipeline 工程成熟
+  - Cons: specialization 损失
+- **Option 2: separate 5 audio experts** (REJECTED at Phase 7 candidate level)
+  - Pros: specialization 强;v1 precedent 多
+  - Cons: 节点 +4 → 总数 20+(超 target 严重);consistency drift
+- **Option 3: 2-way split (`audio_generation` + `audio_mix`)** (REJECTED)
+  - Cons: 边界模糊(foley 是 generation 还是 mix?)
+- **Decision driver:** PITFALLS §2.1 compression + §2.6 节点数控制
+
+**Corpus anchor:**
+- `04-后期/{foley-sfx-recording, sound-layering-design, final-mix, music-supervision}.md`
+- Hermes: `editing-sound-post.md`
+- 书:音效圣经(Murch sound design principles)
+
+**Analogy validity:**
+- `analogy-breaks-here` — 传统工业 5 个独立专家(voice actor + composer + foley artist + mixer + ADR engineer),合并是 AIGC 压缩
+
+---
+
+### §4.10 — 节点 10: `continuity_auditor`
+
+> **v1 expert_id mapping:** `continuity`(v1 已存在;本设计 rename 为 `continuity_auditor` 强调 critic 角色;HANDOFF-02 mapping 保留)
+
+**核心任务:** 跨镜头 invariant 验证 — 身份一致性(character_designer 输出)、wardrobe drift、180° 轴线、空间一致性、plot continuity。携带量化指标 + loop back to visual_executor on fail。
+
+**Derivation:** 从 §3.2 D2.4(每 invariant 需 owner)+ D2.5(每生成配 critic)+ §3.3 D3.1(c)(一致性验证是 AI 加速第三类)推出。**这是 visual_executor 的 critic 配对**(per D2.5)。
+
+**Epistemic-status tags:**
+- `[physical: 180° 轴线 + 空间一致性是感知不变量]` — D2.2
+- `[psychological: wardrobe drift + plot continuity 是观众感知 coherence]` — D2.3
+- `[tool-capability: 当前 cross-shot consistency check 可量化]` — D3.1(c)
+
+**Assumption classification:**
+- `validated-invariant`: critic 必要(D2.5)+ 跨镜头 invariant(物理 + 心理学稳定)
+- `contingent`: 具体 critic rubric + loop iteration 上限
+
+**Steelman-the-elimination:**
+- **最强反驳:** 跨镜头一致性可以 fold 进 `quality_gate`(最终质量评分的一部分)。
+- **回应:** quality_gate 是 **最终输出** 的 multi-dim 评分,continuity_auditor 是 **生成中** 的 cross-shot critic — 后者有 loop back to visual_executor 的能力,前者只有 final verdict。timeline 不同(late vs mid-loop);fold 会让 mid-loop consistency 失 owner。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** cross-shot consistency critic
+- **Option 1: `continuity_auditor`** (CHOSEN) — 独立 mid-loop critic
+  - Pros: v1 precedent(critic 角色);loop back 能力;180°/wardrobe/identity 多 dim
+  - Cons: 多节点
+- **Option 2: fold into `quality_gate`** (REJECTED)
+  - Cons: 失去 mid-loop 能力;final-only
+- **Option 3: fold into `visual_executor` self-critic** (REJECTED)
+  - Cons: PITFALLS §2.3 self-grading bias
+- **Decision driver:** D2.5 + mid-loop 必要
+
+**Corpus anchor:**
+- `04-后期/editing-by-murch-rules.md`(Murch spatial continuity)
+- v1 `continuity` expert precedent
+
+**Analogy validity:**
+- `analogy-breaks-here` — 传统工业的 "continuity supervisor"(剧本监督)是片场人类角色,AIGC 版本是 automated cross-shot critic + loop
+
+---
+
+### §4.11 — 节点 11: `editor`
+
+> **v1 expert_id mapping:** `editor`(v1 已存在)
+
+**核心任务:** 把生成的镜头素材 + 音频 + screenplay 节奏 intent 整合为最终 cut — 节奏控制(Murch rhythm + emotion)、场景过渡、最终 pacing。
+
+**Derivation:** 从 §3.2 D2.1(Murch Rule of Six 是 validated-invariant)+ §3.1 D1.2(整合体验是 joint property)推出。**不是** "每部电影都需要剪辑"(类比),**而是** D2.1 节奏 + 情感维度需要 owner + D1.2 整合性需要 final-cut 节点。
+
+**Epistemic-status tags:**
+- `[psychological: Murch rhythm + emotion + story 是 validated-invariant]` — D2.1, D4.3
+- `[platform-algorithmic: 短剧 pacing 与完播率加权关系]` — D2.2
+
+**Assumption classification:**
+- `validated-invariant`: Murch 维度(D4.3)+ 剪辑作为整合节点(D1.2)
+- `contingent`: 短剧 vs 微电影 vs 长片具体 pacing template
+
+**Steelman-the-elimination:**
+- **最强反驳:** 如果 gen model 能直接 emit sequence(per D3.4 future),editor 节点会被吸收。
+- **回应:** 即使模型 native multi-shot,sequence-level **节奏判断 + 情感弧验证** 仍需 owner。Murch Rule of Six 是 `validated-invariant`(D4.3) — 不随模型能力消失。editor 从"剪刀手"演化为"rhythm/ emotion judge",但节点存在必要性保留。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** 节奏 + 情感整合
+- **Option 1: `editor`** (CHOSEN)
+  - Pros: v1 precedent;Murch 维度 owner;final-cut 节点
+  - Cons: 多节点
+- **Option 2: fold into `visual_executor`** (REJECTED)
+  - Cons: visual_executor 是 shot-gen,不是 sequence-integration
+- **Option 3: `rhythm_judge`** (REJECTED)
+  - Cons: rename 破坏 v1 expert_id 兼容性(HANDOFF-02)
+- **Decision driver:** D2.1 + D1.2 + HANDOFF-02
+
+**Corpus anchor:**
+- `04-后期/{editing-by-murch-rules, editing-rhythm-pacing, murch-in-conversation}.md`
+- Hermes: `editing-sound-post.md`
+- 书:Murch《In the Blink of an Eye》
+
+**Analogy validity:**
+- `analogy-valid` — 传统剪辑师角色直接适用;AIGC 版本接受 generated 素材 + automated rhythm judgment 提示
+
+---
+
+### §4.12 — 节点 12: `colorist`
+
+> **v1 expert_id mapping:** `colorist`(v1 已存在)
+
+**核心任务:** 调色 + color grading strategy — 色调一致性、情感色调、平台 color spec 适配。
+
+**Derivation:** 从 §3.2 D2.1(Murch planarity 维度)+ D2.4(style invariant ownership)推出。color 是 style genome 的核心子维度,需独立 owner。
+
+**Epistemic-status tags:**
+- `[psychological: 色调情感响应是稳定感知]` — D2.1
+- `[physical: 色彩空间 + gamma 规范是物理]`
+- `[tool-capability: 当前 color grading AI 助手稳定]` — D3.1(a)
+
+**Assumption classification:**
+- `validated-invariant`: color consistency 作为 style invariant 子维度(D2.4)
+- `contingent`: 具体 LUT + color profile
+
+**Steelman-the-elimination:**
+- **最强反驳:** color 可以 fold 进 editor(都是 post)或 style_genome(genome 已含色调)。
+- **回应:** editor 是节奏 + 情感;style_genome 是规范;**colorist 是执行 + 适配**(LUT + 平台 color spec)。三者不同时机:genome 是 intent(早期)、editor 是 sequence(中期)、colorist 是 final color pass(后期)。fold 会失去 final color 适配节点。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** final color pass + 平台适配
+- **Option 1: `colorist`** (CHOSEN)
+  - Pros: v1 precedent;color invariant owner;final-pass timing
+  - Cons: 多节点
+- **Option 2: fold into `editor`** (REJECTED)
+  - Cons: 失去 color specialization
+- **Option 3: fold into `style_genome`** (REJECTED)
+  - Cons: genome 是 intent,colorist 是 execution
+- **Decision driver:** D2.4 + D2.1 + HANDOFF-02
+
+**Corpus anchor:**
+- `03-拍摄/color-narrative-analysis.md`
+- `04-后期/color-grading-strategy.md`
+- Hermes: `cinematography-masterclass-and-grammar.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统调色师角色直接适用
+
+---
+
+### §4.13 — 节点 13: `hook_retention`(短剧 commercial engine)
+
+> **v1 expert_id mapping:** `hook_retention`(v1 已存在)
+
+**核心任务:** 针对短剧形态 — 前 3 秒 hook 设计 + 完播率优化 + 付费卡点 pacing + 竖屏 framing 适配。
+
+**Derivation:** 从 §3.2 D2.6(短剧/微电影/长片形态差异)+ Q2 GAP flag(短剧特定质量驱动不在 102 书目)推出。**这是形态特定节点** — 微电影 / 长片 pipeline 不需此节点。
+
+**Epistemic-status tags:**
+- `[platform-algorithmic: 完播率加权 + 付费卡点 pacing 是平台算法]` — D2.2
+- `[psychological: 前 3 秒 hook 是注意力衰减响应]` — D2.2
+
+**Assumption classification:**
+- `validated-invariant`: 短剧 vs 微电影/长片形态本质差异(D2.6)
+- `contingent`: 完播率加权具体阈值(平台演化)
+
+**Steelman-the-elimination:**
+- **最强反驳:** hook_retention 是 commercial 优化,不是 first-principles 必要 — 它服务于平台算法,不服务于观众体验本身。可以从 pipeline 移除。
+- **回应:** 短剧的 **生存** 取决于平台分发(D2.6 短剧形态)。如果 pipeline 不优化 hook + retention,短剧不会被分发,观众根本看不到 → 体验等于零。这是 D2.6 multi-form 差异的具体体现 — `validated-invariant`(短剧形态本质)+ `contingent`(具体算法阈值)。微电影 / 长片 pipeline 可禁用此节点。
+- **Verdict:** SURVIVES(短剧形态启用;其他形态可禁用)
+
+**Alternatives considered:**
+- **Slot:** 短剧 commercial engine
+- **Option 1: `hook_retention`** (CHOSEN) — 形态特定,可禁用
+  - Pros: v1 precedent;短剧生死线
+  - Cons: 形态耦合(非 universal)
+- **Option 2: fold into `screenplay`** (REJECTED)
+  - Cons: screenplay 是 universal narrative,hook_retention 是短剧特定;fold 会污染 universal 节点
+- **Option 3: fold into `compliance_gate`** (REJECTED)
+  - Cons: compliance 是审核,hook_retention 是 design
+- **Decision driver:** D2.6 multi-form 差异
+
+**Corpus anchor:**
+- v1 `hook_retention/references/three-second-hooks.md`(外部短剧源)
+- v1 `hook_retention/references/` 4 refs
+- (102 书目无对应 — corpus gap flag per STACK §1.4)
+
+**Analogy validity:**
+- `analogy-breaks-here` — **无传统对应**(短剧是 AIGC + 平台算法催生的新形态)
+
+---
+
+### §4.14 — 节点 14: `quality_gate`(multi-dim quantitative scorer)
+
+> **v1 expert_id mapping:** `quality_gate`(v1 已存在)
+
+**核心任务:** 最终输出 multi-dim quantitative scoring — 综合 Murch Rule of Six + 短剧/微电影/长片形态权重 + 平台 spec 合规,emit GO/NO-GO/RECONSIDER verdict。
+
+**Derivation:** 从 §3.2 D2.1(Murch Rule of Six)+ D2.5(critic 必要)+ §3.3 D3.1(c)(AI verification 加速)推出。**这是 final-output critic**(与 mid-loop 的 continuity_auditor / script_auditor 互补)。
+
+**Epistemic-status tags:**
+- `[psychological: Murch Rule of Six 是 validated-invariant]` — D2.1, D4.3
+- `[platform-algorithmic: 短剧完播率 + 平台 spec 是 contingent]` — D2.2
+
+**Assumption classification:**
+- `validated-invariant`: Murch 维度 + GO/NO-GO verdict 必要(D2.5 final critic)
+- `contingent`: 具体权重 + 阈值
+
+**Steelman-the-elimination:**
+- **最强反驳:** quality_gate 与 script_auditor + continuity_auditor 重叠 — 都是 critic,可以合并为一个 `pipeline_critic`。
+- **回应:** script_auditor 是 mid-process screenplay critic(可 regenerate screenplay);continuity_auditor 是 mid-loop cross-shot critic(可 regenerate visual);quality_gate 是 **final-output** multi-dim critic(决定 ship/reject)。三者 timeline + 输入 + action 不同;fold 会让 mid-loop 失 critic。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** final-output multi-dim critic
+- **Option 1: `quality_gate`** (CHOSEN)
+  - Pros: v1 precedent;final-pass timing;multi-dim
+  - Cons: 多节点
+- **Option 2: merge all 3 critics** (REJECTED)
+  - Cons: 失去 mid-loop ability
+- **Option 3: human-only final review** (REJECTED)
+  - Cons: 不可规模化
+- **Decision driver:** D2.5 + final-pass timing
+
+**Corpus anchor:**
+- `04-后期/editing-by-murch-rules.md`(Murch Rule of Six)
+- v1 quality_gate 5-dim rubric precedent
+
+**Analogy validity:**
+- `analogy-valid` — 传统 test screening + final QC 直接适用;AIGC 版本增加 automated multi-dim scoring
+
+---
+
+### §4.15 — 节点 15: `compliance_gate`(pre_check + final 合并)
+
+> **v1 expert_id mapping:** `compliance_marketing`(v1 已存在);本设计 rename 为 `compliance_gate` 强调 gate 角色;Phase 8 决定是否拆 pre_check + final
+
+**核心任务:** CN 平台合规审核 — pre_check(早期内容审核,在 screenplay 后)+ final(最终输出审核,在 quality_gate 后)。涵盖抖音/快手/视频号/小程序剧平台规则 + 政治敏感词 + 涉黄涉暴阈值。
+
+**Derivation:** 从 §3.2 D2.6(CN 平台形态特定)+ Q2 GAP flag(CN 合规不在 102 书目)+ v1 compliance_marketing precedent 推出。
+
+**Epistemic-status tags:**
+- `[platform-algorithmic: CN 平台审核规则季度更新]` — D2.2
+- `[psychological: 涉黄涉暴阈值是文化规范]`
+
+**Assumption classification:**
+- `validated-invariant`: CN 合规必要(市场约束)
+- `contingent`: 具体规则 + 阈值(季度更新)
+
+**Steelman-the-elimination:**
+- **最强反驳:** compliance 是事后审核,不需要 pipeline 节点 — 让平台自己拒绝就行。
+- **回应:** 平台拒绝 = 整个 episode 浪费生成成本。pre_check 在 screenplay 后早期能 reject 节省下游成本。final 在 quality_gate 后确保不返工。compliance 是 **成本控制** 节点,不是事后审核。
+- **Verdict:** SURVIVES
+
+**Alternatives considered:**
+- **Slot:** CN 平台合规
+- **Option 1: `compliance_gate`** (CHOSEN) — pre_check + final 合并 + sub-steps
+  - Pros: v1 precedent;成本控制;两个 timing 在同一节点
+  - Cons: v1 expert_id rename(从 compliance_marketing)
+- **Option 2: separate `compliance_pre_check` + `compliance_final`** (REJECTED at Phase 7 candidate level)
+  - Cons: 节点 +1;两节点共享规则库重复
+- **Option 3: out-of-pipeline external review** (REJECTED)
+  - Cons: 失去 pre_check 早期成本节约
+- **Decision driver:** D2.6 + 成本控制 + v1 precedent
+
+**Corpus anchor:**
+- v1 `compliance_marketing/references/` 5 refs(平台规则 + CN 法规)
+- (102 书目无对应 — corpus gap)
+
+**Analogy validity:**
+- `analogy-breaks-here` — **无传统对应**(CN 平台 + AIGC 是新形态)
+
+---
+
+### §4.16 — 节点 16: `theory_critic`(consultative vertical)
+
+> **v1 expert_id mapping:** `theory_critic`(v1 已存在)
+
+**核心任务:** 咨询式理论批判 — 创作者手动拉(META-06),不在主 DAG blocking gate。提供艺术价值 vs 平台优化的张力平衡建议。
+
+**Derivation:** 从 §3.4 D4.2(最终艺术判断必须 consultative)+ D4.4(theory_critic 是 consultative 垂直边,非主 DAG blocking)推出。**这是 AF-12 + META-06 锁定** — 不在主 DAG 触发条件里。
+
+**Epistemic-status tags:**
+- `[psychological: 艺术价值判断是人类作者本性]` — D4.1
+- `[platform-algorithmic: 平台优化 vs 艺术价值张力]` — D2.6
+
+**Assumption classification:**
+- `validated-invariant`: 艺术判断必须人类做(D4.1)+ consultative 性质(D4.4)
+- `contingent`: 具体 trigger 模式(META-06 锁定 manual)
+
+**Steelman-the-elimination:**
+- **最强反驳:** 如果 theory_critic 是 consultative(可选),它实际上等于"专家咨询",不是 pipeline 节点。
+- **回应:** 它是 **垂直边** 节点(per ARCHITECTURE edge type `consultative`) — 不在主 DAG linear sequence,但仍属于 pipeline 拓扑。创作者拉它时,它消费 pipeline 当前状态 + 输出理论批评论点。**它存在** 是为创作者提供"对抗 commercial drift 的艺术锚"。可选 ≠ 不存在。
+- **Verdict:** SURVIVES(垂直边形态)
+
+**Alternatives considered:**
+- **Slot:** 艺术价值咨询
+- **Option 1: `theory_critic`** (CHOSEN) — consultative 垂直边
+  - Pros: v1 precedent;D4.2 + D4.4 + META-06 锁定;AF-12 avoidance
+  - Cons: 形态特殊(需 consultative edge type)
+- **Option 2: linear blocking gate in DAG** (REJECTED)
+  - Cons: AF-12 — 杀短剧 throughput;违反 D4.4
+- **Option 3: remove entirely** (REJECTED)
+  - Cons: 失去艺术锚;PITFALLS §4.7 平台 vs 艺术 dogma 风险
+- **Decision driver:** D4.2 + D4.4 + META-06 + AF-12
+
+**Corpus anchor:**
+- `06-理论批评/`(21 个理论批判文件)
+- Hermes: `theory-formalism-vs-realism.md` + `film-philosophy-bazin-tarkovsky.md`
+
+**Analogy validity:**
+- `analogy-valid` — 传统电影工业的 "theory consultant"(批评家 / 影评人咨询)直接适用;AIGC 版本增加 consultative edge type 显式化
+
+---
+
+## §5 — 节点数量审计
+
+### §5.1 — 最终数量
+
+**16 候选节点**(§4.1-§4.16)。
+
+vs 目标 band:
+- Target:`8-15`(CONTEXT Area 1/4)
+- 实际:`16` — 超 target 1 个
+- 硬上限:`25` — 在 ceiling 内
+
+### §5.2 — Over-target justification
+
+per CONTEXT.md Area 1/4 Q2:超过 15 的节点需逐节点说明不能与相邻节点合并的理由。
+
+**第 16 节点 (`theory_critic`) 的非合并性说明:**
+
+`theory_critic` 是 **consultative 垂直边节点**(per D4.4 + META-06 + AF-12),拓扑上 **不在主 DAG linear sequence**。它与其他 15 个 linear-sequence 节点不是同一拓扑层 — 不能合并。
+
+具体:
+- 它不是 generator(不能 fold 进 creative_source / screenplay / visual_executor 等)
+- 它不是 critic(不能 fold 进 script_auditor / continuity_auditor / quality_gate,因为它们是 mid-process 或 final-output,而 theory_critic 是 **可选咨询**,trigger 由创作者手动控制)
+- 它不是 invariant owner(不能 fold 进 style_genome / character_designer)
+
+theory_critic 的 **存在性** 是 D4.2 + D4.4 + AF-12 共同锁定的;**节点数贡献** 实际上是"垂直边 1 个",不是"linear 节点 +1"。如果按 linear 节点计数,实际是 15 个 linear + 1 个 consultative vertical = pipeline 形态合理。
+
+**其他 15 节点的合并机会(Phase 8 C1-C7 过滤器将重新评估):**
+
+- `visual_executor`(drawer + animator 合并)和 `audio_pipeline`(5 任务合并)是 Phase 7 候选集的 **压缩决策**,Phase 8 可 reconsider 拆回
+- `compliance_gate`(pre_check + final 合并)同理
+
+### §5.3 — Smell detection (PITFALLS §2.6)
+
+- **数量增长轨迹:** §4 写作过程中,候选集从初始 8 (creative_source, style_genome, screenplay, cinematographer, prompt_injector, visual_executor, continuity_auditor, quality_gate) 增长到 16。增长原因:(1) D2.5 要求每生成配 critic → 加 script_auditor;(2) D2.4 invariant ownership → 加 character_designer;(3) D2.6 multi-form → 加 hook_retention + compliance_gate + theory_critic;(4) HANDOFF-02 v1 expert_id 保留 → 加 editor + colorist。
+- **合并候选(Phase 8 重新评估):** visual_executor / audio_pipeline / compliance_gate 的合并是 Phase 7 候选集决策;Phase 8 可 reconsider 拆分如果 specialization 损失 > consistency 收益。
+- **第 17 候选(storyboard_designer)** 在 §3.4 D3.4 论证后 **从候选集移除** — fold 进 cinematographer 作为 composition_lock 子任务(per steelman response in §4.5)。
+
+### §5.4 — Re-evaluation 偏差记录(per CONTEXT Area 1/4 Q4)
+
+Phase 7 允许 mid-Phase re-evaluation,需 audit log:
+- **初始规划:** 12 候选节点(Plan 03 写作前估计)
+- **实际产出:** 16 候选节点
+- **偏差原因:** (1) HANDOFF-02 v1 expert_id 保留要求比预期严格(editor + colorist 不能 fold);(2) D2.5 critic 必要性覆盖更广(script_auditor + continuity_auditor + quality_gate 三个 critic 角色);(3) D2.6 multi-form 要求 hook_retention + compliance_gate + theory_critic 形态特定节点
+- **是否需 ROADMAP 修订:** 否 — 仍在 [16, 25] over-target band 内,§5.2 justification 已记录
+
+---
+
