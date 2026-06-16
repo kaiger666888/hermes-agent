@@ -100,7 +100,10 @@ mappings:
     v1_expert_id: null
     mapping_type: new_ai_native
     rationale: "Phase 7 §4.7 + §3.3 D3.5: AI-native node; no traditional precedent"
-    action_for_v21: "Add prompt_injector expert in v2.1+ skills milestone"
+    action_for_v21: "FULFILLED in v3.0 milestone Phase 16 (2026-06-17): prompt_injector expert created at skills/movie-experts/prompt_injector/ with 4 refs + GAP-REPORT + bidirectional related_skills edges to creative_source / cinematographer / visual_executor / audio_pipeline"
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-16
 
 # ============================================
 # v1 experts NOT in new DAG (deprecation candidates)
