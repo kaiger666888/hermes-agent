@@ -4,14 +4,14 @@ milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: ready_to_plan
 last_updated: 2026-06-17T00:00:00.000Z
-last_activity: 2026-06-17 — Phase 16 Plan 01 complete (prompt_injector NEW AI-native expert created: SKILL.md + 4 refs + LICENSE + GAP-REPORT + bidirectional edge sync to 4 consumers creative_source/cinematographer/visual_executor/audio_pipeline)
+last_activity: 2026-06-17 — Phase 16 COMPLETE (prompt_injector NEW AI-native expert fully integrated: Plan 16-01 created SKILL.md + 4 refs + bidirectional edges; Plan 16-02 close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
-  percent: 50
-stopped_at: Phase 16 Plan 01 complete (1/2) — ready for Plan 16-02 (close-out docs)
+  completed_plans: 11
+  percent: 67
+stopped_at: Phase 16 COMPLETE (2/2 plans) — ready for Phase 17 (deprecations) or Phase 18 (validation)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,13 +25,13 @@ stopped_at: Phase 16 Plan 01 complete (1/2) — ready for Plan 16-02 (close-out 
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 16 — new ai native expert (prompt_injector)
+**Current focus:** Phase 16 COMPLETE — ready for Phase 17 (deprecations) or Phase 18 (validation + docs)
 
 ## Current Position
 
-Phase: 16
-Plan: 16-01 complete (1/2)
-Status: Executing Phase 16
+Phase: 16 (COMPLETE)
+Plan: 16-02 complete (2/2)
+Status: Phase 16 done — ready to plan Phase 17
 Last activity: 2026-06-17
 
 ### Progress
@@ -45,8 +45,8 @@ v3.0 Skills-to-DAG Alignment milestone:
   Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
   Phase 14 [██████████] 100% Complete (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 done: consumer edge sync across 15 SKILL.md; 14-03 done: README + corpus tree + DAG + _shared/ docs close-out)
   Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
-  Phase 16 [█████░░░░░] 50% In progress (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 pending: close-out docs)
-  Phase 17 [          ] 0% Not started (deprecate 3 — UNBLOCKED, depends on 16)
+  Phase 16 [██████████] 100% Complete (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 done: close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
+  Phase 17 [          ] 0% Not started (deprecate 3 — UNBLOCKED, Phase 16 done)
   Phase 18 [          ] 0% Not started (validate + docs — depends on 13-17)
 ```
 
@@ -155,6 +155,13 @@ v3.0 Skills-to-DAG Alignment milestone:
 | Provider-agnostic body with descriptive model-name allowance | SKILL.md body uses <image_primary>/<video_primary> placeholders for prompt identifiers (threat T-16-03); literal model names (FLUX 2/Veo/Kling) appear only in References table descriptions + the rule-declaring note, NOT as committed identifiers or hard-coded parameter values. Matches visual_executor precedent (which also names models in its References table) | Applied 2026-06-17 in plan 16-01 |
 | GAP-REPORT.md as placeholder per CONTEXT D-04 | NEW expert has no v1 baseline to gap-analyze; placeholder notes the NEW-expert status + Phase 18 backfill hook | Applied 2026-06-17 in plan 16-01 |
 | Append-only edge sync (no body prose sync needed) | All 4 consumers (creative_source, cinematographer, visual_executor, audio_pipeline) had zero body prose mentions of prompt_injector/model_prompts/consistency_context before this plan — clean edge addition, unlike Phase 14-15 which had extensive body prose work | Applied 2026-06-17 in plan 16-01 |
+| Phase 16 inventory section uses single-row table (1 NEW expert) | Distinct from Phase 14/15 multi-row tables (which enumerated merge predecessors + new merged entry); NEW expert has no predecessors to enumerate | Applied 2026-06-17 in plan 16-02 |
+| ASCII DAG prompt_injector box placed between storyboard_designer and visual_executor | Per nodes.yaml io_contract: prompt_injector consumes visual_intent (from cinematographer chain through storyboard_designer) and outputs model_prompts + consistency_context (to visual_executor) | Applied 2026-06-17 in plan 16-02 |
+| Parallel inbound edges from style_genome_5d + character_assets annotated as comments (not drawn as direct arrows) | Per plan instruction — direct creative_source → prompt_injector arrow would misrepresent data flow (creative_source produces story_kernel which reaches prompt_injector indirectly via the screenplay → cinematographer chain); indirect path documented in Key DAG properties bullet instead | Applied 2026-06-17 in plan 16-02 |
+| Footer count text documents Phase 17 + Phase 18 forward plan | 17 + 1 NEW = 18 intermediate count; explicit note that Phase 17 will deprecate 3 (performer, scene_builder, storyboard_designer) + Phase 18 will reconcile to canonical 21 (16 DAG + 5 aliases) makes the intermediate 18-count unambiguous for Phase 18 audit | Applied 2026-06-17 in plan 16-02 |
+| action_for_v21 repurposed (not appended) from forward-looking note to FULFILLED record | Single field carries both original intent AND v3.0 fulfillment per CONTEXT D-06 'No silent sign-off'; preserves audit trail without field proliferation | Applied 2026-06-17 in plan 16-02 |
+| Glossary entry placed under new 'Phase 16 additions' H2 section | Matches Phase 14 ('## Phase 14 additions') + Phase 15 ('## Phase 15 additions') H2 section pattern; end-of-file placement with dedicated section header | Applied 2026-06-17 in plan 16-02 |
+| Top-of-file README Status line updated v2 → v3.0 | Pre-existing Status line was stale ('v2 complete — 26 experts') after Phases 13-15; updated to 'v3.0 in progress — 18 active expert_ids' to keep document internally consistent with new footer count | Applied 2026-06-17 in plan 16-02 |
 
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
@@ -184,9 +191,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 16 Plan 01 executed (2026-06-17) — prompt_injector NEW AI-native expert created. 7 files in skills/movie-experts/prompt_injector/ (SKILL.md 266 lines + 4 refs 188-222 lines each + LICENSE.md + GAP-REPORT.md placeholder). 4 consumer SKILL.md files updated with bidirectional related_skills edges (creative_source, cinematographer, visual_executor, audio_pipeline — all append-only, no body prose changes). expert_id=prompt_injector, related_skills=[creative_source, cinematographer, visual_executor, audio_pipeline] exactly, metrics=[cross_call_consistency, prompt_token_efficiency] exactly, no aliases (NEW expert), no sub_steps (single-node). Commits 746da725e + c848ff319.
-**Next action:** `/gsd:plan-phase 16` Plan 02 (close-out docs: README inventory + corpus tree + DAG diagram + _shared/glossary.md + skills-mapping.yaml sign-off) OR `/gsd:plan-phase 17` for deprecations. Phase 16 Plan 01 is COMPLETE — all 5 in-scope ROADMAP §16 success criteria satisfied (#6 README inventory is Plan 16-02 scope). Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
-**Hand-off note:** Phase 16 Plan 01 COMPLETE (1/2). prompt_injector expert created with full content + 4 refs + bidirectional edges to 4 consumers. Plan 16-02 (close-out docs) remains for Phase 16 completion. Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
+**Last action:** Phase 16 Plan 02 executed (2026-06-17) — close-out documentation complete. README.md updated with Phase 16 inventory section (prompt_injector row with Chinese name 提示注入专家 + role + ref count + source citation) + prompt_injector node in ASCII DAG diagram (two-line multi-line box form between storyboard_designer and visual_executor) + AI-native prompt assembly bullet in Key DAG properties + prompt_injector/ row in corpus tree + footer count 17 → 18 with self-documenting arithmetic. _shared/glossary.md updated with prompt_injector H3 bilingual entry under new Phase 16 additions section. skills-mapping.yaml prompt_injector entry signed_off (sign_off_status + signed_off_at: 2026-06-17 + signed_off_by: phase-16) + action_for_v21 repurposed to FULFILLED-in-v3.0 completion record. Commits 179030a4e + 11454d246.
+**Next action:** `/gsd:plan-phase 17` for deprecations (performer / scene_builder / storyboard_designer — all 3 UNBLOCKED now that Phase 16 is done) OR `/gsd:plan-phase 18` for validation + docs (VALIDATE-01 will audit signed_off on all skills-mapping.yaml entries including the new prompt_injector sign-off). Phase 16 is COMPLETE — all 6 ROADMAP §16 success criteria satisfied.
+**Hand-off note:** Phase 16 COMPLETE (2/2 plans). prompt_injector expert fully integrated into all canonical documentation surfaces. Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete — Phase 16 done, so Phase 17 is the only remaining blocker.
 
 ---
 

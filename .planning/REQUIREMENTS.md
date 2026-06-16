@@ -21,7 +21,7 @@
 
 ### NEW — New Expert(1 req)
 
-- [ ] **NEW-01**: 新增 `prompt_injector` expert — AI-native 节点,无 v1 对应。SKILL.md 包含:core_task(intent → model tokens + cross-call consistency context)、4 refs(prompt engineering patterns + cross-call consistency)、`metadata.hermes.expert_id: prompt_injector`、`metadata.hermes.related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]`、接入协作图(per Phase 7 §4.7 + Phase 8 §2.7)。
+- [x] **NEW-01**: 新增 `prompt_injector` expert — AI-native 节点,无 v1 对应。SKILL.md 包含:core_task(intent → model tokens + cross-call consistency context)、4 refs(prompt engineering patterns + cross-call consistency)、`metadata.hermes.expert_id: prompt_injector`、`metadata.hermes.related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]`、接入协作图(per Phase 7 §4.7 + Phase 8 §2.7)。
 
 ### DEPRECATE — Expert Deprecation(3 reqs)
 
@@ -77,7 +77,7 @@
 | RENAME-02 | 13 | Complete |
 | MERGE-01 | 14 | Complete |
 | MERGE-02 | 15 | Complete |
-| NEW-01 | 16 | Pending |
+| NEW-01 | 16 | Complete |
 | DEPRECATE-01 | 17 | Pending |
 | DEPRECATE-02 | 17 | Pending |
 | DEPRECATE-03 | 17 | Pending |
