@@ -28,7 +28,7 @@ Integrated **102-book Chinese film production library** (`/home/kai/Downloads/10
 | `README.md` | 102-book index | All experts (corpus navigation) |
 | `theory-formalism-vs-realism.md` | Andrew / Agel / Balázs | theory_critic |
 | `film-philosophy-bazin-tarkovsky.md` | Bazin / Tarkovsky / 七部半 | theory_critic |
-| `psychoanalytic-film-theory.md` | 凝视的快感 / 好莱坞中的拉康 | theory_critic, compliance_marketing |
+| `psychoanalytic-film-theory.md` | 凝视的快感 / 好莱坞中的拉康 | theory_critic, compliance_gate |
 | `auteur-director-biographies.md` | 7 本导演传记 | theory_critic, style_genome |
 | `film-criticism-methodology.md` | 戴锦华 / 如何写影评 / 外国批评文选 | theory_critic |
 | `film-history-methods.md` | Allen / Oxford / Sadoul | theory_critic |
@@ -74,13 +74,13 @@ Cross-references to project corpus added for:
 | [`spatial_audio`](./spatial_audio/SKILL.md) | 空间音频专家 | Dolby Atmos Bed+Objects + 6D encoding + HRTF binaural + 5 immersive patterns | 2 (Phase 5 light) |
 | [`mixer`](./mixer/SKILL.md) | 混音专家 | Senior Mixing Secrets + LUFS per-platform + dialogue ducking + EQ carving | 2 (Phase 5 light) |
 | [`voicer`](./voicer/SKILL.md) | 配音专家 | Multi-provider TTS (MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS, replaces phantom CosyVoice) + speaker embedding | 2 (Phase 5 light) |
-| [`continuity`](./continuity/SKILL.md) | 连续性专家 | 4-dimension cross-shot audit (face/wardrobe/color/object) + eyeline match + 180° axis | 2 (Phase 5 light) |
+| [`continuity_auditor`](./continuity_auditor/SKILL.md) | 连续性专家 | 4-dimension cross-shot audit (face/wardrobe/color/object) + eyeline match + 180° axis | 2 (Phase 5 light) |
 
 ### 4 New Experts (Phase 1-5)
 
 | Expert | Chinese Name | Role | Phase Built | Refs |
 |--------|--------------|------|-------------|------|
-| [`compliance_marketing`](./compliance_marketing/SKILL.md) | 合规与宣发专家 | CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review | Phase 1 | 5 |
+| [`compliance_gate`](./compliance_gate/SKILL.md) | 合规与宣发专家 | CN content-rules gate + AIGC labeling + per-platform distribution + 爆款 vs 红线 review | Phase 1 | 5 |
 | [`hook_retention`](./hook_retention/SKILL.md) | 钩子与留存专家 | 3-second hook design + 付费卡点 placement + per-platform 爆款公式 + 钩子/爽点/卡点 marker schema | Phase 2 | 4 |
 | [`cinematographer`](./cinematographer/SKILL.md) | 镜头专家 | Shot intent layer (shot scale + composition + axis + camera move) + vertical 9:16 framing + 2026 video gen model prompt-token mapping | Phase 4 | 4 |
 | [`production`](./production/SKILL.md) | 制作管理专家 | AI-relevant subset: character LoRA spec / per-scene wardrobe / lighting intent / GPU budget / asset reuse (NOT live-action per PROD-07) | Phase 5 | 5 |
@@ -133,7 +133,7 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
                           ▼                  ▼                  ▼
                 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
                 │   screenplay    │  │ hook_retention  │  │ compliance_     │
-                │   剧本           │  │ 钩子与留存       │  │ marketing 合规  │
+                │   剧本           │  │ 钩子与留存       │  │ gate 合规       │
                 └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
                          │                    │                    │
                          ▼                    │                    ▼
@@ -198,7 +198,7 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
                          │
                          ▼
                 ┌─────────────────┐
-                │     mixer       │ ◄──── continuity (parallel audit)
+                │     mixer       │ ◄──── continuity_auditor (parallel audit)
                 │     混音         │
                 └────────┬────────┘
                          │
@@ -212,11 +212,11 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
 **Key DAG properties (v2 with Phase 7 + 8):**
 - **New root:** `creative_source` (no upstream; mines Story Kernel from social strata) — replaces style_genome as DAG root
 - **Quality loop:** `screenplay` ↔ `script_auditor` iterate until target audit band
-- **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by drawer / animator / lip_sync / continuity
+- **Identity contract:** `character_designer` emits CharacterBible 2.0 consumed by drawer / animator / lip_sync / continuity_auditor
 - **Bridge nodes:** `storyboard_designer` fills cinematographer → drawer gap with concrete Storyboard JSON
 - **Audio-visual lock:** `voicer` produces audio → `lip_sync` aligns to footage (decoupled, composable)
 - **Bottleneck nodes:** `screenplay` (after style) / `drawer` (after intent) / `lip_sync` (after audio + footage) / `mixer` (after all audio)
-- **Audit nodes:** `continuity` (parallel to mixer) + `script_auditor` (pre-production) verify consistency
+- **Audit nodes:** `continuity_auditor` (parallel to mixer) + `script_auditor` (pre-production) verify consistency
 - **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
 - **Phase 8 verticals (cross-cutting):** `theory_critic` / `documentary_maker` / `animation_studio` are NOT in the linear pipeline — they are **consultative experts** invoked when the pipeline encounters their domain (theory analysis, documentary-style, animation). They draw from `_shared/project-corpus/` (102-book library).
 
@@ -288,7 +288,7 @@ All RAG invocation is provider-agnostic. The `references/*.md` files contain mod
 | editor | 5 | ~95 KB | 2026-06-15 |
 | colorist | 5 | ~100 KB | 2026-06-15 |
 | style_genome | 5 | ~95 KB | 2026-06-15 |
-| compliance_marketing | 5 | ~80 KB | 2026-06-15 |
+| compliance_gate | 5 | ~80 KB | 2026-06-15 |
 | hook_retention | 4 | ~70 KB | 2026-06-15 |
 | cinematographer | 4 | ~52 KB | 2026-06-15 |
 | **Total** | **33** | **~600 KB** | — |
@@ -332,7 +332,7 @@ The Phase 6 live run is the statistically defensible evaluation. To execute:
 
 5. **Execute per expert:**
    ```bash
-   for EXP in screenplay editor colorist style_genome cinematographer compliance_marketing hook_retention production; do
+   for EXP in screenplay editor colorist style_genome cinematographer compliance_gate hook_retention production; do
      python3 _eval/runner.py \
          --config _eval/config.yaml \
          --expert "$EXP" \
@@ -374,9 +374,9 @@ skills/movie-experts/
 ├── animator/           SKILL.md + references/{video-gen-model-matrix,temporal-consistency,camera-execution-and-degradation}.md + LICENSE.md (Phase 5 + Phase 7C increment)
 ├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md (Phase 4)
 ├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md (Phase 3 deep)
-├── compliance_marketing/ SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
+├── compliance_gate/     SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
 ├── composer/           SKILL.md + references/{musicgen-workflow,chion-audio-vision,bgm-and-song-creation}.md + LICENSE.md (Phase 5 + Phase 7C increment)
-├── continuity/         SKILL.md + references/{cross-shot-auditing,eyeline-match-protocol}.md + LICENSE.md (Phase 5)
+├── continuity_auditor/ SKILL.md + references/{cross-shot-auditing,eyeline-match-protocol}.md + LICENSE.md (Phase 5)
 ├── drawer/             SKILL.md + references/{flux2-parameter-surface,character-consistency-lora}.md + LICENSE.md (Phase 5)
 ├── editor/             SKILL.md + references/{murch,classical,montage,fxrxt,cn-cutting}.md + LICENSE.md (Phase 3 deep)
 ├── foley/              SKILL.md + references/{stable-audio-open,sound-effect-taxonomy,sound-effects-prompt-engineering}.md + LICENSE.md (Phase 5 + Phase 7C increment)
@@ -402,7 +402,7 @@ skills/movie-experts/
 │   │   ├── animator_demo.yaml
 │   │   ├── cinematographer_demo.yaml
 │   │   ├── colorist_demo.yaml
-│   │   ├── compliance_marketing_demo.yaml
+│   │   ├── compliance_gate_demo.yaml
 │   │   ├── editor_demo.yaml
 │   │   ├── hook_retention_demo.yaml
 │   │   ├── production_demo.yaml

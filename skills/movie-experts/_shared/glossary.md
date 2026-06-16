@@ -161,7 +161,7 @@
 **Context:** Scores ≥ 9 trigger VETO; 5-8 require per-platform reframing paths.
 
 ### 角色圣经 / Character Bible
-**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(drawer / animator / lip_sync / continuity)的 ground truth。
+**CN:** 角色圣经 — character_designer 输出的角色身份契约 JSON,包含 4D 锚点 + 分层 STYLE_PREFIX + 一致性压力测试结果 + negative_traits + consistency_lock。下游所有专家(drawer / animator / lip_sync / continuity_auditor)的 ground truth。
 **EN:** Character Bible — character identity contract JSON output by character_designer. Contains 4D anchors + layered STYLE_PREFIX + consistency stress-test results + negative_traits + consistency_lock. Ground truth for all downstream consumers.
 **Context:** Schema version 2.0.0; frozen after stress test pass.
 
@@ -183,7 +183,7 @@
 ### 分镜 / Storyboard
 **CN:** 分镜 — 把剧本场景拆解为可执行的 per-shot JSON 列表,每 shot 包含 shot_id / camera 参数 / action / duration / reference_image / end_frame / anchoring。
 **EN:** Storyboard — executable per-shot JSON list decomposed from screenplay scenes. Each shot contains shot_id / camera params / action / duration / reference_image / end_frame / anchoring.
-**Context:** storyboard_designer output; downstream consumers are drawer / animator / editor / continuity.
+**Context:** storyboard_designer output; downstream consumers are drawer / animator / editor / continuity_auditor.
 
 ### 4D 锚定 / 4D Anchoring
 **CN:** 4D 锚定 — 分镜 shot 的渲染层控制参数,4 维度:depth(ControlNet Depth)/ identity(IP-Adapter)/ lighting(IC-Light)/ temporal(AnimateDiff)。每维度可独立开关 + 调强度。4 级降级策略:Draft / Standard / Cinematic / Premium。
