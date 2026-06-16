@@ -1,100 +1,55 @@
-# Requirements: Movie-Experts Suite v2 — Milestone v2.0 PRFP
+# Requirements: Movie-Experts Suite v2 — Milestone v3.0 Skills-to-DAG Alignment
 
 **Defined:** 2026-06-16
-**Core Value:** 从第一性原理推导出 kais-movie-agent 的新工作流节点集 —— 每节点明确核心任务 + I/O + AIGC 转化点 + 传统经验锚点,作为双 repo 实施的理论蓝本。
+**Core Value:** 把 hermes-agent `skills/movie-experts/` 从 26 experts 对齐到 v2.0 PRFP 设计的 16 pipeline-roles,执行 `skills-mapping.yaml` 锁定的 rename / merge / new / deprecate 决定,让 skills 知识层与新 DAG 干净映射。
 
-> **Scope reminder:** 本里程碑交付**仅设计文档**,零代码改动(hermes-agent/skills/ + kais-movie-agent/lib/ 都不动)。唯一允许的"代码"是 `scripts/validate_design.py` governance lint(本里程碑自身用的开发工具,不交付给下游)。
-
----
-
-## v2.0 Requirements
-
-### DERIVATION — Phase 7 (was Phase A) · 第一性原理推导记录
-
-- [ ] **DERIV-01**: 读者可以从"观众最终拿到什么"这一根本问题出发,读到一条**无逻辑跳跃**的 Musk-style 第一性原理推导链,推导结论是**候选节点集**(非从现有 8 phases / 26 skills 类比套出来)。
-- [ ] **DERIV-02**: 每个候选节点携带 `derivation` 字段,显示该节点如何从第一性原理推导而来(非"传统就是这样"的类比)。
-- [ ] **DERIV-03**: 每条核心论断都有 **epistemic-status 标签**(physical / psychological / platform-algorithmic / tool-capability),区分稳定真理 vs 易变假设。
-- [ ] **DERIV-04**: 每个节点都有 **steelman-the-elimination 段落**(最强的"该节点不该存在"论点 + 我方回应)。
-- [ ] **DERIV-05**: 每个节点都有 **alternatives-considered 日志**(本位置原本可放什么节点,为何被拒)。
-- [ ] **DERIV-06**: 每个节点把核心假设分类为 **contingent vs validated-invariant**(决定后续 AIGC 转化能否修改它)。
-- [ ] **DERIV-07**: 推导过程**明确引用 STACK §1.4 corpus 子集**(每个第一性问题对应具体书目),不是 corpus-blind。
-- [ ] **DERIV-08**: 推导明确**显式避免 PITFALLS §1 + §5 列出的 Musk 方法误用**(6 个 failure modes 逐条 check)。
-
-### NODES — Phase 8 (was Phase B) · 节点 DAG + 每节点规格
-
-- [ ] **NODE-01**: 读者能看到一个节点 DAG,**目标节点数 8-15**,硬上限 ≤25(超出需逐节点说明)。
-- [ ] **NODE-02**: 每个节点声明 4 个核心字段:`core_task` / `I/O 契约` / `AIGC transformation point` / `traditional experience anchor`。
-- [ ] **NODE-03**: 每个节点额外声明 8 个 STACK 补充字段:`success_criteria` (≥1 量化指标) / `fail_modes` / `fallback_strategy` / `dependencies` / `complexity_class` / `ai_capability_assumption` / `non_ai_alternative` / `rationale_for_existence`。
-- [ ] **NODE-04**: 每个节点声明 `cost_budget`(¥-range,受 META-05 ceiling 约束)/ `latency_budget` / `model_horizon`(stable_2026 / evolving / research_bet)。
-- [ ] **NODE-05**: DAG 同时有 **3 种表示**:YAML canonical(规范层)/ Markdown 渲染(人类可读)/ Mermaid 可视化(DAG 图)。
-- [ ] **NODE-06**: 节点入选必须 **C1-C7 全部通过**(FEATURES §5 列出的 7 条 selection criteria 显式 check;未通过则不能进 DAG)。
-- [ ] **NODE-07**: `theory_critic` 出现为 **consultative 垂直边**(垂直 invoke,非主 DAG 节点)。
-- [ ] **NODE-08**: `capability-spec` 是规范层;**具体模型名只在 dated annex 出现**(不在 node spec 主体硬编码,避免 v1 `wan22_video` 类型 phantom 错误重演)。
-- [ ] **NODE-09**: 每个生成型节点都有**配对的 critic 节点或 self-critic 步骤**,携带量化指标(无 critic 节点的生成节点需显式说明理由)。
-
-### CORPUS — Phase 9 (was Phase C) · 102 本书传统经验锚点对照
-
-- [ ] **CORPUS-01**: 读者能看到一个**双向 102-book ↔ node 覆盖矩阵**(`corpus-trace.yaml`:正查节点→书目,反查书目→节点)。
-- [ ] **CORPUS-02**: 每个 corpus anchor 标 `applicable_form`(长片 / 微电影 / 短剧 / universal),避免 genre conflation。
-- [ ] **CORPUS-03**: 对每个节点,**至少 1 个 corpus 来源对该节点设计持"反对/不同"立场被引入并回应**(challenge-source engagement,防 cherry-picking)。
-- [ ] **CORPUS-04**: **principle vs workflow 分离**(把 "Murch Rule of Six" 作为 principle 与 "某具体剪辑序列" 作为 workflow 分开标注)。
-- [ ] **CORPUS-05**: **中文原术语保留**(汉字与英文 gloss 并存),防 translation loss。
-- [ ] **CORPUS-06**: **0 强 corpus 引用的节点必须明确标记为 AIGC-native**(并解释为何无传统对应,避免"假传统"伪装)。
-- [ ] **CORPUS-07**: 每个 corpus 引用记录 `Last-verified` 戳(与 v1 LICENSE 模式一致),便于后续 corpus drift 检测。
-
-### CREATIVE — Phase 10 (was Phase D) · LLM 创意凝练专题
-
-- [ ] **CREATIVE-01**: 读者能读到**独立子文档**,覆盖 LLM 创意凝练 4 个维度:创意定义 / 自洽机制 / prompt 策略 / fail modes。
-- [ ] **CREATIVE-02**: 创意被**操作性定义为"在不可侵犯约束内的 novelty"**,不是 randomness(明确区分 creative vs random)。
-- [ ] **CREATIVE-03**: 自洽性检验机制被明确指定:**consistency-context input + logic-critic**(防 hallucinated logic)。
-- [ ] **CREATIVE-04**: LLM 凝练 prompt 策略引用 STACK §5 中 **≥3 篇 LLM-story-gen 论文**(防凭空发明)。
-- [ ] **CREATIVE-05**: 平台-艺术张力被**显式处理**(短剧 convention vs 艺术价值,不做 dogmatic 选边)。
-- [ ] **CREATIVE-06**: 采用 **template library**(多种叙事弧模板库),非单一 Save-the-Cat / Hero's Journey 模板。
-- [ ] **CREATIVE-07**: **链接回 `creative_source` 节点的 novelty-pressure mechanism**(把"创意"接到 DAG 上,非独立浮空)。
-
-### HANDOFF — Phase 11 (was Phase E) · 跨对照 + 双 repo 交接
-
-- [ ] **HANDOFF-01**: 读者能读到 **non-binding 交接计划**,明确标注 `binding: non_binding_recommendation`。
-- [ ] **HANDOFF-02**: `skills-mapping.yaml` 把新 DAG 节点 ↔ 现有 26 个 movie-experts skills 对应(**保留 expert_ids**,v1 FOUND-08 frozen rule 不破坏)。
-- [ ] **HANDOFF-03**: `kais-migration-matrix.yaml` 把新 DAG 节点 ↔ 现有 kais-movie-agent phases + lib/ 模块对应。
-- [ ] **HANDOFF-04**: kais-movie-agent 的 **baseline_ref (git SHA)** 被记录,作为设计-实现 drift 的对比基准。
-- [ ] **HANDOFF-05**: **ownership matrix 明确**:design-intent 层(hermes-agent)/ implementation 层(kais-movie-agent)/ co-owned DAG(变更需双方 sign-off)。
-- [ ] **HANDOFF-06**: **versioning scheme 是 date-stamped** (e.g., `design-2026-06-16-prfp`)with `supersedes` / `superseded_by`(防 design-impl drift)。
-- [ ] **HANDOFF-07**: 附 **1-2 页 impl-cheatsheet** 给 kais-movie-agent 团队上手实施(不是完整 spec,是入口 cheat-sheet)。
-- [ ] **HANDOFF-08**: **convergence log**(新 DAG 与现有 pipeline 同意的部分,解释为什么同意,而不只解释分歧)。
-- [ ] **HANDOFF-09**: 对照产物包含 `COMPARISON-VS-8-PHASES.md` + `COMPARISON-VS-26-SKILLS.md`(非 binding delta 分析,必须在 Phase 7-10 完成后才写,防污染推导)。
-
-### GOVERNANCE — Phase 12 (was Phase F) · 治理 + Finalization
-
-- [ ] **GOV-01**: 读者能读到 **G1-G7 living-doc governance rules**(node 新增需重新推导;AIGC 更新需 marginal-value delta;corpus 变更需 source 验证;status 转换需通过所有 review gates)。
-- [ ] **GOV-02**: `validate_design.py` (~30 行 lint) **强制执行 governance rules**(本里程碑唯一代码,作为 pre-commit hook)。
-- [ ] **GOV-03**: **README 含 3 页 executive summary**(非作者也能看懂;包含设计核心结论 + 关键决策 + 如何读这份设计)。
-- [ ] **GOV-04**: **OPEN-QUESTIONS.md 强制存在**(已知 gap 不藏;SUMMARY.md §"Gaps to Address" 全部落到这里,喂给下游 research phase)。
-- [ ] **GOV-05**: **CHANGELOG.md 是 append-only 审计 trail**(每次设计变更记录 what/why/who/when)。
-- [ ] **GOV-06**: 每个关键设计决策记录 **Decision / Rationale / Outcome**(v1 PROJECT.md 模式,v1 RETROSPECTIVE 验证有效)。
-
-### META — 元约束(跨阶段,roadmapper 分配到各自 load-bearing 阶段)
-
-> **Assignment note (2026-06-16):** META-01/02/03/04 are exit-checks (no-touch / bilingual / location invariants) verified at Phase 12 milestone close. META-05 (cost ceiling) constrains every node's `cost_budget` — assigned to Phase 8 where cost budgets are populated. META-06 (theory_critic trigger mode) shapes DAG `consultative` edges — assigned to Phase 8 where edges are declared. See `.planning/ROADMAP.md` § Coverage Map for the cross-cutting assignment rationale.
-
-- [ ] **META-01** *(Phase 12)*: 本里程碑**零 SKILL.md 编辑**(hermes-agent/skills/movie-experts/ 完全不动)。
-- [ ] **META-02** *(Phase 12)*: 本里程碑**零 .js/.py 代码编辑**(kais-movie-agent/ 完全不动,except `scripts/validate_design.py` 这一个例外)。
-- [ ] **META-03** *(Phase 12)*: **双语策略**:EN 结构 + CN 段落 / 示例(与 v1 SKILL.md 一致)。
-- [ ] **META-04** *(Phase 12)*: 设计文档物理位置在 `.planning/research/v2-pipeline-design/`(或 roadmapper 选定子目录,但必须在 hermes-agent/.planning/ 内,不跨 repo)。
-- [ ] **META-05** *(Phase 8)*: **cost ceiling 假设 ¥1000-10000/episode**(约束所有节点 cost_budget 字段;超出范围的节点需显式说明)。
-- [ ] **META-06** *(Phase 8)*: **theory_critic 触发模式:创作者手动拉**(非自动 invoke;不在主 DAG 触发条件里)。
+> **Scope reminder:** 本次里程碑执行 v2.0 PRFP 设计决策(已在 `.planning/research/v2-pipeline-design/skills-mapping.yaml` 锁定),仅修改 `skills/movie-experts/`。kais-movie-agent 实施是 parallel milestone(在该 repo)。
 
 ---
 
-## Future Requirements(v2 后续里程碑 / 不在本里程碑)
+## v3.0 Requirements
 
-> 这些是合理的下一步,但不在 v2.0 范围。后续里程碑承接。
+### RENAME — Expert Rename(2 reqs)
 
-- **FUTURE-01**: 把设计落地到 kais-movie-agent/lib/(kais-movie-agent/.planning/ 开独立 phase)
-- **FUTURE-02**: 把设计映射到 hermes-agent/skills/movie-experts/(本 repo 开 v2.1 里程碑做 skills 对齐)
-- **FUTURE-03**: 对高成本节点(cinematographer / screenplay / animation)各跑 per-node research-phase
-- **FUTURE-04**: 设计 live statistical GO/NO-GO(实际跑设计 vs 现有 pipeline,量化对比)
-- **FUTURE-05**: Musk 第一性原理主源校验(把 PITFALLS §5 转述的 Musk 故事比对 Isaacson 原书精确措辞)
+- [ ] **RENAME-01**: `continuity` expert 改名为 `continuity_auditor`,更新 SKILL.md frontmatter `name` + `expert_id` + `metadata.hermes.expert_id` + `metadata.hermes.related_skills` 协作图(双向 edge 同步)。保留 `continuity` 作为 alias(per FOUND-08 backward-compat)。
+- [ ] **RENAME-02**: `compliance_marketing` expert 改名为 `compliance_gate`,聚焦 pure compliance(分离 marketing 到独立 ref 或 sub-skill)。保留 `compliance_marketing` 作为 alias。
+
+### MERGE — Expert Merge(2 reqs)
+
+- [ ] **MERGE-01**: `drawer` + `animator` 合并为 `visual_executor` 新 expert。保留原 expert_id 作为 sub-step 名(`visual_executor` SKILL.md 内部声明 `sub_steps: [drawer, animator]`)。`related_skills` 协作图更新:visual_executor 继承 drawer + animator 的全部 edge。
+- [ ] **MERGE-02**: 5 个 audio experts(`voicer` + `composer` + `foley` + `mixer` + `spatial_audio`)合并为 `audio_pipeline` 新 expert。`audio_pipeline` SKILL.md 内部声明 `sub_steps: [voicer, lip_sync, composer, foley, mixer]`(lip_sync 是新增显式 sub-step)。`related_skills` 协作图更新。
+
+### NEW — New Expert(1 req)
+
+- [ ] **NEW-01**: 新增 `prompt_injector` expert — AI-native 节点,无 v1 对应。SKILL.md 包含:core_task(intent → model tokens + cross-call consistency context)、4 refs(prompt engineering patterns + cross-call consistency)、`metadata.hermes.expert_id: prompt_injector`、`metadata.hermes.related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]`、接入协作图(per Phase 7 §4.7 + Phase 8 §2.7)。
+
+### DEPRECATE — Expert Deprecation(3 reqs)
+
+- [ ] **DEPRECATE-01**: `performer` expert deprecate。理由(per `06-COMPARISON-VS-26-SKILLS.md`):表演真实折叠进 character_designer(voice + behavioral tics)+ screenplay(dialogue subtext),无独立节点必要。处理方式:SKILL.md 标 `status: deprecated` + redirect 注释指向 character_designer + screenplay;保留 expert_id 文件以免破坏向后兼容(FOUND-08)。
+- [ ] **DEPRECATE-02**: `scene_builder` expert deprecate。理由:场景设计折叠进 cinematographer(mise-en-scène as composition_lock 子任务)+ style_genome。处理方式同上。
+- [ ] **DEPRECATE-03**: `storyboard_designer` expert deprecate。理由(per Phase 7 §3.4 D3.4):storyboard 折叠进 cinematographer composition_lock。处理方式同上。
+
+### VALIDATE — Frozen Rule + Backward Compat(2 reqs)
+
+- [ ] **VALIDATE-01**: FOUND-08 frozen rule compliance check — 所有保留的 expert_id 不变量维护;rename + merge 显式 mapping 记录在 `.planning/research/v2-pipeline-design/skills-mapping.yaml`(已有,本里程碑 sign_off 状态从 `pending` → `signed_off`);deprecate 不静默。验证方法:grep 26 → 21 个 active expert_id(16 pipeline-roles + 5 alias 兼容 + 3 deprecated-but-present)。
+- [ ] **VALIDATE-02**: Backward compatibility alias — 所有 rename / merge / deprecate 操作保留旧 expert_id 作为 alias(`metadata.hermes.aliases: [old_id]`)。验证方法:现有创作者 workflow 不破坏;旧 expert_id 引用仍能找到对应 SKILL.md。
+
+### DOC — Documentation + Collaboration Graph(2 reqs)
+
+- [ ] **DOC-01**: 更新 `skills/movie-experts/README.md` 26-expert inventory → 21-expert inventory(16 active + 5 aliases 注释)。更新 18-expert collaboration DAG → 新 DAG 拓扑(per `01-NODE-DAG.md` Mermaid)。更新 RAG usage guide + Phase 6 live-run procedure(指向新 DAG)。
+- [ ] **DOC-02**: 更新 `_shared/glossary.md` 添加新术语(`visual_executor`, `audio_pipeline`, `prompt_injector`, `continuity_auditor`, `compliance_gate`)+ EN↔CN 映射。更新 `_shared/known-external-models.yaml` 添加 Phase 8 §2.17 dated annex 的模型清单。
+
+---
+
+## Future Requirements(v3 后续里程碑 / 不在 v3.0)
+
+> 这些是合理的下一步,但不在 v3.0 范围。后续里程碑承接。
+
+- **FUTURE-06**: 把 `_shared/project-corpus/` refs 重新 align 到 v3.0 expert inventory(deprecated experts 的 corpus refs 重定向到继承者)
+- **FUTURE-07**: 更新 `_eval/` benchmark prompts 从 26-expert 到 21-expert(deprecated experts 的 prompts 重定向)
+- **FUTURE-08**: 设计 v3.0 live run 对比 v2.0 PRFP DAG 与 v1 18-expert 实际效果差异
+- **FUTURE-09**: production expert 处理(per v2.0 §6 deferred;超 v3.0 范围)
+- **FUTURE-10**: skills 团队与 kais-movie-agent 团队的 cross-repo ADR 治理流程落地(per HANDOFF-05 co-owned DAG)
 
 ---
 
@@ -102,100 +57,52 @@
 
 | Feature | Reason |
 |---------|--------|
-| hermes-agent/skills/movie-experts/ 任何 SKILL.md 编辑 | 用户明确选择"只做设计文档";skills 重构是后续里程碑 |
-| kais-movie-agent/lib/ 任何 .js/.py 编辑 | 同上;pipeline 实施是后续里程碑 |
-| Hermes 核心 Python/JS 代码改动 | 范围控制;本里程碑与 Hermes 核心解耦 |
-| 新的 LLM provider / adapter | 与设计文档无关 |
-| Web/desktop UI 展示设计文档 | 通过现有 Markdown + Mermaid 阅读即可 |
-| 自动化 corpus ingestion pipeline | 本里程碑靠人工策展,质量优先 |
-| 设计的 live-run 统计验证 | 需要 kais-movie-agent 实施 + 运行 budget,后续里程碑 |
-| 完整 bilingual consistency lint | spot-check 即可;v1 经验显示完整 lint 边际收益低 |
-| Auto-distribution / auto-upload 节点设计 | TOS 风险,明确排除(AF-9) |
-| Theory-critic 作为主 DAG blocking gate | AF-12;明确咨询式(META-06) |
-| >25 节点的设计 | AF-1;硬上限 |
-| 把现有 8 phases 当作起点 | PROJECT.md 明确"从 0 推",Phase 7 必须独立推导 |
-| 把现有 26 skills 当作起点 | 同上;HANDOFF-02 是事后对照,不是设计输入 |
+| kais-movie-agent/lib/ 任何 .js / .py 编辑 | kais-movie-agent impl 是 parallel milestone,在该 repo 处理 |
+| `_eval/` benchmark prompts 全面重写 | FUTURE-07;spot-check 即可 |
+| live run 执行 | FUTURE-08;需要 OPENROUTER_API_KEY + budget |
+| production expert 处理 | FUTURE-09;v3.0 范围只覆盖 16 pipeline-roles,production 超出 |
+| v2.0 PRFP 设计文档修改 | 设计 frozen-pending-impl;只在 impl 团队 challenge 时通过 cross-repo ADR 修订 |
+| 新的 SKILL.md 内容写作 | 本里程碑是 inventory 重构 + rename + merge + deprecate,不是 refs 内容重写 |
+| 全 26-expert SKILL.md 双语 lint | spot-check 即可;v1 经验显示完整 lint 边际收益低 |
 
 ---
 
 ## Traceability
 
-> Phase 映射由 roadmapper 在 2026-06-16 生成。Phase 编号沿用 v1 后续(v1 结束于 phase 6,所以 v2.0 从 phase 7 起步)。Cross-cutting META REQs 分配到各自 load-bearing 阶段(见 META 节 assignment note)。
+> Phase 映射由 roadmapper 在 2026-06-16 生成。Phase 编号沿用 v2.0 后续(v2.0 结束于 phase 12,所以 v3.0 从 phase 13 起步)。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DERIV-01 | 7 | Pending |
-| DERIV-02 | 7 | Pending |
-| DERIV-03 | 7 | Pending |
-| DERIV-04 | 7 | Pending |
-| DERIV-05 | 7 | Pending |
-| DERIV-06 | 7 | Pending |
-| DERIV-07 | 7 | Pending |
-| DERIV-08 | 7 | Pending |
-| NODE-01 | 8 | Pending |
-| NODE-02 | 8 | Pending |
-| NODE-03 | 8 | Pending |
-| NODE-04 | 8 | Pending |
-| NODE-05 | 8 | Pending |
-| NODE-06 | 8 | Pending |
-| NODE-07 | 8 | Pending |
-| NODE-08 | 8 | Pending |
-| NODE-09 | 8 | Pending |
-| META-05 | 8 | Pending |
-| META-06 | 8 | Pending |
-| CORPUS-01 | 9 | Pending |
-| CORPUS-02 | 9 | Pending |
-| CORPUS-03 | 9 | Pending |
-| CORPUS-04 | 9 | Pending |
-| CORPUS-05 | 9 | Pending |
-| CORPUS-06 | 9 | Pending |
-| CORPUS-07 | 9 | Pending |
-| CREATIVE-01 | 10 | Pending |
-| CREATIVE-02 | 10 | Pending |
-| CREATIVE-03 | 10 | Pending |
-| CREATIVE-04 | 10 | Pending |
-| CREATIVE-05 | 10 | Pending |
-| CREATIVE-06 | 10 | Pending |
-| CREATIVE-07 | 10 | Pending |
-| HANDOFF-01 | 11 | Pending |
-| HANDOFF-02 | 11 | Pending |
-| HANDOFF-03 | 11 | Pending |
-| HANDOFF-04 | 11 | Pending |
-| HANDOFF-05 | 11 | Pending |
-| HANDOFF-06 | 11 | Pending |
-| HANDOFF-07 | 11 | Pending |
-| HANDOFF-08 | 11 | Pending |
-| HANDOFF-09 | 11 | Pending |
-| GOV-01 | 12 | Pending |
-| GOV-02 | 12 | Pending |
-| GOV-03 | 12 | Pending |
-| GOV-04 | 12 | Pending |
-| GOV-05 | 12 | Pending |
-| GOV-06 | 12 | Pending |
-| META-01 | 12 | Pending |
-| META-02 | 12 | Pending |
-| META-03 | 12 | Pending |
-| META-04 | 12 | Pending |
+| RENAME-01 | 13 | Pending |
+| RENAME-02 | 13 | Pending |
+| MERGE-01 | 14 | Pending |
+| MERGE-02 | 15 | Pending |
+| NEW-01 | 16 | Pending |
+| DEPRECATE-01 | 17 | Pending |
+| DEPRECATE-02 | 17 | Pending |
+| DEPRECATE-03 | 17 | Pending |
+| VALIDATE-01 | 18 | Pending |
+| VALIDATE-02 | 18 | Pending |
+| DOC-01 | 18 | Pending |
+| DOC-02 | 18 | Pending |
 
 **Coverage:**
-- v2.0 requirements: **52 total** (DERIV × 8 + NODES × 9 + CORPUS × 7 + CREATIVE × 7 + HANDOFF × 9 + GOV × 6 + META × 6)
-- Mapped to phases: **52 / 52** ✓
+- v3.0 requirements: **12 total** (RENAME × 2 + MERGE × 2 + NEW × 1 + DEPRECATE × 3 + VALIDATE × 2 + DOC × 2)
+- Mapped to phases: **12 / 12** ✓
 - Unmapped: **0**
-
-> **Count correction note (2026-06-16):** Earlier draft flagged "51 total - 1 for HANDOFF-09/HANDOFF-01 overlap". On roadmapper review, HANDOFF-01 (handoff contract declared non-binding) and HANDOFF-09 (comparison artifacts exist as contamination-safe delta analyses) address distinct deliverables. No overlap; canonical count = **52**.
 
 **Per-phase summary:**
 
 | Phase | Name | Requirements | Count |
 |-------|------|--------------|-------|
-| 7 | First-Principles Derivation | DERIV-01..08 | 8 |
-| 8 | Node DAG + Per-Node Specs | NODE-01..09, META-05, META-06 | 11 |
-| 9 | 102-Book Corpus Traceability | CORPUS-01..07 | 7 |
-| 10 | LLM-Creative-Distillation Deep-Dive | CREATIVE-01..07 | 7 |
-| 11 | Cross-Comparisons + Dual-Repo Handoff | HANDOFF-01..09 | 9 |
-| 12 | Finalization (Governance + Open Questions + README) | GOV-01..06, META-01, META-02, META-03, META-04 | 10 |
+| 13 | Expert Rename + Alias Scaffolding | RENAME-01, RENAME-02 | 2 |
+| 14 | Visual Executor Merge (drawer + animator) | MERGE-01 | 1 |
+| 15 | Audio Pipeline Merge (5 audio experts) | MERGE-02 | 1 |
+| 16 | New AI-Native Expert (prompt_injector) | NEW-01 | 1 |
+| 17 | Deprecate 3 Candidates (performer / scene_builder / storyboard_designer) | DEPRECATE-01, DEPRECATE-02, DEPRECATE-03 | 3 |
+| 18 | Validation + Documentation + Collaboration Graph Update | VALIDATE-01, VALIDATE-02, DOC-01, DOC-02 | 4 |
 
 ---
 
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-16 — roadmapper traceability populated (52/52 mapped); META cross-cutting assignments applied.*
+*Last updated: 2026-06-16 — v3.0 requirements traceability populated (12/12 mapped to 6 phases 13-18)*
