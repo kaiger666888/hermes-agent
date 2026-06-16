@@ -119,7 +119,73 @@ See `.planning/STATE.md` § Deferred Items for the canonical list.
 | 项目位置:直接在 `hermes-agent` 仓库的 `skills/movie-experts/` 下 | 不另起仓库;作为 Hermes 主仓库子系统;`/gsd:new-project` 把整个 hermes-agent 仓库当项目初始化(已与用户确认) | ✓ Good — co-located; .planning/ tracks project state |
 | 现有 14 的 expert_id 与 related_skills 协作图保持向后兼容 | 现有用户的工作流不应被破坏;新增专家接入而非重写协作图 | ✓ Good — FOUND-08 frozen rule honored across all phases; verified at Phase 1 VERIFICATION SC-4 |
 
-## Current Milestone: v2.0 — Pipeline Redesign from First Principles (PRFP)
+## Previous Milestone: v2.0 — Pipeline Redesign from First Principles (PRFP) ✅ SHIPPED
+
+**Status:** Design shipped 2026-06-16 (Phases 7-12 all passed). 52/52 requirements verified. Design suite at `.planning/research/v2-pipeline-design/`. Frozen-pending-impl.
+
+**Goal:** 从第一性原理出发(忽略现有 kais-movie-agent 8 phases 和 hermes movie-experts 26 skills 的历史包袱),推导出 kais-movie-agent 的新工作流节点集 —— 每节点明确**核心任务 + I/O 契约 + AIGC 转化点 + 传统经验锚点**,作为后续双 repo 实施的理论蓝本。
+
+**Target features(本次里程碑只产出设计文档,不实施任何代码重构):**
+
+1. **第一性原理推导记录** —— 从"观众最终要拿到什么 / 短剧为什么生死在前 3 秒 / 微电影质量由什么决定 / AI 真正能提效的环节在哪 / AI 不能替代什么"这种根本问题出发,逐步推导到最简必要的节点集;Musk-style 还原→推导(非类比)。
+2. **工作流节点流程设计** —— 节点 DAG + 每节点核心任务 + I/O 契约 + 节点间依赖与产物传递路径。
+3. **传统经验锚点对照** —— 每节点溯源到 102 本书(`_shared/project-corpus/` 9 ref + `/home/kai/Downloads/100+本影视剪辑书/` 原始 repo)里的传统工序 / 技巧 / 范例。
+4. **LLM 创意凝练专题** —— 单独子文档:大模型如何产出**有创意且逻辑自洽**的故事框架(用户特别强调的洞察层;记录:创意的本质、自洽性的检验机制、LLM 凝练的 prompt 策略、fail modes)。
+5. **双 repo 交接说明** —— 设计如何分别指导 hermes-agent 的 skills 演化(后续里程碑对齐)+ kais-movie-agent 的 pipeline 重构(后续在 kais-movie-agent/.planning/ 那边再开 phase 执行实施)。
+
+**Key context:**
+
+- **节点设计从 0 推**:不预设现有 8 phases 和 26 skills,但产出后会跟它们做**对照分析**(用于识别覆盖缺口和 AIGC 转化机会,非实施)。
+- **物理位置:双 repo 协作**。本里程碑的 .planning/ 写在 hermes-agent(因为 movie-experts 是 kais-movie-agent 的知识层,设计文档作为交接件自然放这里);后续 kais-movie-agent 那边自己开 phase 执行实施。
+- **范围严格收口**:本次里程碑交付**仅设计文档**,不动 hermes-agent/skills/ 任何 SKILL.md / refs,不动 kais-movie-agent/lib/ 任何 .js / .py。
+- **马斯克第一性原理**贯穿:每个节点都要能回答"为什么是它而不是别的";每个 AIGC 转化点都要能回答"这个转化对最终用户价值的边际贡献是什么"。
+- **大模型创意凝练洞察**作为独立维度贯穿设计:不只是"用 AI 生成 X",而是"如何让 AI 凝练出 X 的最小可行结构"。
+
+**Shipped artifacts (18 files, ~340KB):**
+- `00-FIRST-PRINCIPLES.md` (1638 行 derivation)
+- `01-NODE-DAG.md` + `02-NODE-SPECS.md` + `nodes.yaml` + `edges.yaml`
+- `03-CORPUS-TRACEABILITY.md` + `corpus-trace.yaml`
+- `04-LLM-CREATIVE-DISTILLATION.md`
+- `05-COMPARISON-VS-8-PHASES.md` + `06-COMPARISON-VS-26-SKILLS.md` + `07-HANDOFF-PLAN.md`
+- `skills-mapping.yaml` + `kais-migration-matrix.yaml`
+- `08-GOVERNANCE.md` + `09-OPEN-QUESTIONS.md` + `10-CHANGELOG.md` + `README.md`
+- `scripts/validate_design.py` (~30 行 governance lint)
+
+---
+
+## Current Milestone: v3.0 — Skills-to-DAG Alignment
+
+**Goal:** 把 hermes-agent `skills/movie-experts/` 从 26 experts 对齐到 v2.0 PRFP 设计的 16 pipeline-roles —— 执行 `skills-mapping.yaml` 锁定的 rename / merge / new / deprecate 决定,让 skills 知识层与新 DAG 干净映射。
+
+**Target features(本次里程碑执行设计决策,实施 skills 重构):**
+
+1. **Rename 2 experts(per `skills-mapping.yaml` pending sign-off):**
+   - `continuity` → `continuity_auditor`(强调 critic 角色)
+   - `compliance_marketing` → `compliance_gate`(分离 pure compliance 与 marketing)
+2. **Merge 7 experts → 2(per `skills-mapping.yaml`):**
+   - `drawer` + `animator` → `visual_executor`(consistency context 统一)
+   - 5 audio experts(`voicer` + `composer` + `foley` + `mixer` + `spatial_audio`)→ `audio_pipeline`(PITFALLS §2.6 节点压缩)
+3. **Add 1 new AI-native expert:**
+   - `prompt_injector`(无 v1 precedent,AI-native 节点 per Phase 7 §4.7)
+4. **Resolve 3-4 deprecate candidates(per `06-COMPARISON-VS-26-SKILLS.md`):**
+   - `performer` → 折叠进 character_designer + screenplay
+   - `scene_builder` → 折叠进 cinematographer + style_genome
+   - `storyboard_designer` → 折叠进 cinematographer composition_lock
+   - `production` → defer 到未来 milestone(超 v3.0 范围)
+5. **FOUND-08 frozen rule compliance:** 所有保留的 expert_id 不变量维护;rename + merge 显式 mapping 记录;deprecate 不静默。
+
+**Key context:**
+
+- **Source-of-truth:** `skills-mapping.yaml` 是 canonical 映射;`.planning/research/v2-pipeline-design/` 全部 18 个设计文档作为决策依据
+- **Per HANDOFF-05 ownership matrix:** 本里程碑是 **design-intent layer** owner(hermes-agent);co-owned DAG 修改需与 kais-movie-agent team sign-off
+- **FOUND-08 frozen rule:** v1 expert_id 不能静默重命名;所有 rename 必须显式 mapping + sign-off
+- **Backward compatibility:** 现有创作者 workflow 不破坏;rename experts 必须保留旧 expert_id 作为 alias(可选)
+- **范围严格收口:** 仅 hermes-agent `skills/movie-experts/` 范围;kais-movie-agent impl 是 parallel milestone(在该 repo)
+- **Physical location:** skills 改动在 `skills/movie-experts/`;planning 文档继续在 `.planning/`
+
+---
+
+## Previous Milestone: v2.0 — Pipeline Redesign from First Principles (PRFP) ✅ SHIPPED
 
 **Goal:** 从第一性原理出发(忽略现有 kais-movie-agent 8 phases 和 hermes movie-experts 26 skills 的历史包袱),推导出 kais-movie-agent 的新工作流节点集 —— 每节点明确**核心任务 + I/O 契约 + AIGC 转化点 + 传统经验锚点**,作为后续双 repo 实施的理论蓝本。
 
@@ -157,4 +223,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 — started milestone v2.0 (PRFP — Pipeline Redesign from First Principles) via /gsd-new-milestone*
+*Last updated: 2026-06-16 — started milestone v3.0 (Skills-to-DAG Alignment) via /gsd-new-milestone; v2.0 PRFP design shipped*

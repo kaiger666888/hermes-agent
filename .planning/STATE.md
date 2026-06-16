@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Pipeline Redesign from First Principles
-status: executing
-last_updated: "2026-06-16T14:12:14.344Z"
+milestone: v3.0
+milestone_name: Skills-to-DAG Alignment
+status: planning
+last_updated: "2026-06-16T15:51:34.217Z"
 last_activity: 2026-06-16
 progress:
-  total_phases: 6
+  total_phases: 0
   completed_phases: 0
-  total_plans: 4
+  total_plans: 0
   completed_plans: 0
   percent: 0
 ---
@@ -28,11 +28,10 @@ progress:
 
 ## Current Position
 
-**Milestone:** v2.0 — Pipeline Redesign from First Principles (PRFP)
-**Phase:** 7 — First-Principles Derivation (bottleneck; nothing else may start until 7 emits the candidate node set)
-**Plan:** —
-**Status:** Ready to execute
-**Last activity:** 2026-06-16
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-16 — Milestone v3.0 started
 
 ### Progress
 
