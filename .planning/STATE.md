@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
-status: ready_to_plan
-last_updated: 2026-06-16T16:33:48.138Z
-last_activity: 2026-06-17 — Phase 13 Plan 03 complete (close-out: skills-mapping.yaml sign_off + README + glossary) — Phase 13 COMPLETE
+status: in_progress
+last_updated: "2026-06-17T00:50:00Z"
+last_activity: 2026-06-17 — Phase 14 Plan 01 complete (visual_executor merge: drawer + animator → visual_executor with sub_steps metadata)
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 17
-stopped_at: Phase 13 complete (3/3) — ready to discuss Phase 14
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +29,9 @@ stopped_at: Phase 13 complete (3/3) — ready to discuss Phase 14
 ## Current Position
 
 Phase: 14
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-16
+Plan: 14-01 complete (visual_executor merge)
+Status: In progress
+Last activity: 2026-06-17
 
 ### Progress
 
@@ -43,7 +42,7 @@ v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12
 
 v3.0 Skills-to-DAG Alignment milestone:
   Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
-  Phase 14 [          ] 0% Not started (depends on 13 — UNBLOCKED)
+  Phase 14 [██        ] 20% In progress (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 consumer edge sync next)
   Phase 15 [          ] 0% Not started (depends on 13 — UNBLOCKED)
   Phase 16 [          ] 0% Not started (depends on 13 — UNBLOCKED)
   Phase 17 [          ] 0% Not started (depends on 13 — UNBLOCKED)
@@ -103,6 +102,17 @@ v3.0 Skills-to-DAG Alignment milestone:
 | Added `signed_off_at: 2026-06-17` + `signed_off_by: phase-13` traceability fields under each signed_off entry in skills-mapping.yaml | CONTEXT.md explicitly granted Claude's discretion; explicit sign-off timestamp + signer make audit trail unambiguous for Phase 18 verification | Applied 2026-06-17 in plan 13-03 (Task 1) |
 | Phase 13 ASCII DAG diagram multi-line compliance box preserved (`compliance_` / `gate 合规`) | Same two-line form + column alignment as character_designer multi-line box — visual consistency | Applied 2026-06-17 in plan 13-03 (Task 2) |
 
+### Decisions (v3.0 — Phase 14)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| N-to-one merge pattern: new dir + sub_steps frontmatter + redirect stubs + aliases | Phase 13 backward-compat rename pattern extended to N:1 merges; `sub_steps` field declares predecessor experts as sub-steps per v2.0 PRFP DAG | Applied 2026-06-17 in plan 14-01 (drawer + animator → visual_executor) |
+| New top-level `sub_steps: [drawer, animator]` frontmatter field | Declared at same level as `metadata`, NOT nested inside it — per v2.0 PRFP DAG convention | Applied 2026-06-17 in plan 14-01; grep-verified |
+| Refs organized into sub-folders (`references/drawer/` + `references/animator/`) | Cleaner than filename-prefix strategy; CONTEXT.md granted Claude's discretion | Applied 2026-06-17 in plan 14-01 |
+| Drawer<->animator Collaboration bullets rewritten as internal-handoff notes | Preserves operational contract while making intra-expert nature explicit (post-merge they are sub-steps of one expert_id) | Applied 2026-06-17 in plan 14-01 |
+| RAG tag prefix migration: `expert:{drawer\|animator},domain:X` → `expert:visual_executor,sub:{drawer\|animator},domain:X` | Preserves domain axis while introducing sub-step scoping for query precision | Applied 2026-06-17 in plan 14-01 |
+| Old `drawer/references/` + `animator/references/` + both `GAP-REPORT.md` preserved untouched | Same archival pattern as Phase 13 — point-in-time references must remain intact for transcript resolution | Applied 2026-06-17 in plan 14-01 |
+
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
@@ -131,9 +141,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 13 Plan 03 executed (2026-06-17) — Close-out: skills-mapping.yaml `sign_off_status: pending` → `signed_off` for BOTH renamed entries (continuity_auditor + compliance_gate) + traceability fields `signed_off_at: 2026-06-17` + `signed_off_by: phase-13` + README.md inventory / corpus tree / ASCII DAG / shell-loop updates + _shared/glossary.md expert_id reference updates. Commits 8985f450a + 71da7c0f7.
-**Next action:** Phase 14 (visual_executor merge — drawer + animator → visual_executor) can now begin. Phase 13's backward-compat rename pattern is established + authoritative per skills-mapping.yaml sign-off. Same pattern (new dir + redirect stub + metadata.hermes.aliases) is reusable for the N:1 merge cases in Phase 14 + 15.
-**Hand-off note:** Phase 13 is COMPLETE — both renames signed off in canonical mapping. Phase 14 (visual_executor merge), Phase 15 (audio_pipeline merge), Phase 16 (prompt_injector new), Phase 17 (deprecations) are all UNBLOCKED. Phase 18 (finalization + inventory + verification) is gated on 13-17 all being complete.
+**Last action:** Phase 14 Plan 01 executed (2026-06-17) — Created merged `visual_executor/` expert declaring `sub_steps: [drawer, animator]` + `metadata.hermes.aliases: [drawer, animator]` + unioned `related_skills` (10 IDs). Body has two `## Sub-step:` H2 sections preserving both predecessors verbatim. 7 ref files migrated to `references/{drawer,animator}/` sub-folders (verbatim). GAP-REPORT consolidated. Old `drawer/SKILL.md` + `animator/SKILL.md` replaced with `status: merged_into` redirect stubs; their `references/` + `GAP-REPORT.md` preserved untouched. Commits 240725bc6 + 811b56052.
+**Next action:** Phase 14 plan 14-02 (consumer edge sync) — update all consumer SKILL.md `related_skills` arrays referencing `drawer` or `animator` to use `visual_executor`, plus body prose / markdown links / JSON literals. ROADMAP §14 success criterion #4 (consumer edge sync) is NOT yet satisfied by 14-01.
+**Hand-off note:** Phase 14 is IN PROGRESS — plan 14-01 (source-level merge) done, plan 14-02 (consumer edge sync) next. Phase 15 (audio_pipeline merge), Phase 16 (prompt_injector new), Phase 17 (deprecations) remain UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
 
 ---
 
