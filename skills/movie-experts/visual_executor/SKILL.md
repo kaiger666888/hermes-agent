@@ -11,7 +11,7 @@ sub_steps: [drawer, animator]
 metadata:
   hermes:
     tags: [movie, image, video, flux-2, lora, ip-adapter, instantid, video-gen, camera-motion, temporal-consistency, veo, kling, ltx, pixverse, visual, cinematic, character-consistency]
-    related_skills: [screenplay, continuity_auditor, colorist, style_genome, compliance_gate, cinematographer, production, scene_builder, editor, performer, audio_pipeline, prompt_injector]
+    related_skills: [screenplay, continuity_auditor, colorist, style_genome, compliance_gate, cinematographer, production, editor, character_designer, audio_pipeline, prompt_injector]
     expert_id: visual_executor
     aliases: [drawer, animator]
     metrics: [aesthetic_score, character_consistency, film_realism, vram_efficiency, motion_smoothness, motion_complexity, temporal_consistency, generation_fidelity]
@@ -264,13 +264,13 @@ per [`references/drawer/character-consistency-lora.md`](./references/drawer/char
 
 ## Collaboration
 
-> **Merged collaboration graph.** Cross-references to OTHER experts (cinematographer, colorist, continuity_auditor, editor, scene_builder, performer, production, screenplay, style_genome, compliance_gate) remain inter-expert edges. References between the drawer and animator sub-steps are now intra-expert handoffs (internal to `visual_executor`) — see the `## Sub-steps` section above.
+> **Merged collaboration graph.** Cross-references to OTHER experts (cinematographer, colorist, continuity_auditor, editor, production, screenplay, style_genome, compliance_gate, character_designer) remain inter-expert edges. References between the drawer and animator sub-steps are now intra-expert handoffs (internal to `visual_executor`) — see the `## Sub-steps` section above. *(Phase 17 v3.0: scene_builder + performer edges rewired to cinematographer + character_designer respectively; see deprecated files' inheritance_targets.)*
 
 ### Drawer sub-step inbound / outbound (external experts)
 
 - **<- screenplay**: scene descriptions, lighting_mood
 - **<- style_genome**: composition + color + light_shadow signals
-- **<- performer**: action_prompt (character pose/action descriptions)
+- **<- character_designer (replaces deprecated Phase 17 performer)**: action_prompt (character pose/action descriptions — voice + behavioral tics now defined by character_designer)
 - **<- colorist**: color_intent.json (influences generation parameters)
 - **→ [internal handoff to Animator sub-step — see §Sub-step: Animator above]**: first_frame image as I-frame reference
 - **-> continuity_auditor**: production frames for cross-shot consistency audit
@@ -279,9 +279,9 @@ per [`references/drawer/character-consistency-lora.md`](./references/drawer/char
 ### Animator sub-step inbound / outbound (external experts)
 
 - **← [internal handoff from Drawer sub-step — see §Sub-step: Drawer above]**: first_frame image as I-frame input (mandatory)
-- **<- scene_builder**: camera_constraints and 3D previsualization
+- **<- cinematographer (replaces deprecated Phase 17 scene_builder)**: camera_constraints and 3D previsualization (mise-en-scène + composition_lock sub-task)
 - **<- editor**: beat timing and shot duration
-- **<- performer**: character motion/action parameters
+- **<- character_designer (replaces deprecated Phase 17 performer)**: character motion/action parameters
 - **<- colorist**: CxSxZ temporal consistency reference
 - **-> continuity_auditor**: video clip for cross-shot consistency audit
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, visual_executor, colorist, editor, audio_pipeline, scene_builder, performer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
+    related_skills: [screenplay, visual_executor, colorist, editor, audio_pipeline, character_designer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
@@ -109,8 +109,8 @@ tags="expert:style_genome,domain:cn-director-analysis"
 | colorist | color + light_shadow | 2D |
 | editor | rhythm | 1D |
 | audio_pipeline (composer sub-step) | sound | 1D |
-| scene_builder | composition + light_shadow | 2D |
-| performer | rhythm + sound | 2D |
+| scene_builder *(deprecated Phase 17 → cinematographer + style_genome)* | composition + light_shadow | 2D |
+| performer *(deprecated Phase 17 → character_designer + screenplay)* | rhythm + sound | 2D |
 
 ### Deviation Detection
 - **max_tolerance**: ±0.15 per dimension
@@ -171,8 +171,8 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - colorist: color + light_shadow dimensions
 - editor: rhythm dimension (editing density)
 - audio_pipeline (composer sub-step): sound dimension (score density)
-- scene_builder: composition + light_shadow dimensions
-- performer: rhythm + sound dimensions (performance pacing)
+- scene_builder *(deprecated Phase 17 → composition/light_shadow now feed cinematographer + style_genome)*: composition + light_shadow dimensions
+- performer *(deprecated Phase 17 → rhythm/sound now feed character_designer + screenplay)*: rhythm + sound dimensions (performance pacing)
 
 ### Prohibited
 - 50/50 style blending (must specify dominant)
@@ -208,8 +208,8 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - **-> colorist**: color + light_shadow signals
 - **-> editor**: rhythm signal
 - **-> audio_pipeline (composer sub-step)**: sound signal
-- **-> scene_builder**: composition + light_shadow signals
-- **-> performer**: rhythm + sound signals
+- **-> cinematographer (replaces deprecated Phase 17 scene_builder)**: composition + light_shadow signals (mise-en-scène composition_lock sub-task)
+- **-> character_designer (replaces deprecated Phase 17 performer)**: rhythm + sound signals (behavioral tics + voice)
 - **-> continuity_auditor**: style_genome.json as consistency audit baseline
 - **<- all modules**: preliminary outputs for deviation detection and correction
 
@@ -223,5 +223,5 @@ tags="expert:style_genome,domain:cn-director-analysis"
 
 ## Pipeline Position
 
-Style Genome is the **root expert** in the production DAG:
-`style_genome -> screenplay -> (scene_builder, performer) -> (visual_executor, audio_pipeline, colorist, editor, continuity_auditor) -> final`
+Style Genome is the **root expert** in the production DAG. *(Phase 17 v3.0: former scene_builder + performer slots folded into cinematographer + character_designer respectively — see inheritance_targets in their deprecated SKILL.md files.)*
+`style_genome -> screenplay -> (cinematographer incl. composition_lock sub-task [was scene_builder], character_designer [absorbed performer rhythm+sound]) -> (visual_executor, audio_pipeline, colorist, editor, continuity_auditor) -> final`

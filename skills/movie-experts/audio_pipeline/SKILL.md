@@ -11,7 +11,7 @@ sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]
 metadata:
   hermes:
     tags: [movie, audio, voice, speech, tts, dialogue, character-voice, multi-provider, lip-sync, audio-driven, video-generation, benchmark, talking-head, digital-human, music, score, sound, beat-sync, film-scoring, musicgen, chion-audio-vision, foley, sound-effects, physical-audio, impact-sync, sound-design, mixing, mastering, ducking, lufs, frequency, audio-balance, stems, senior-mixing-secrets, spatial-audio, 3d-sound, ambience, reverb, immersive, dolby-atmos, hrtf, binaural]
-    related_skills: [screenplay, performer, editor, production, visual_executor, continuity_auditor, style_genome, scene_builder, prompt_injector]
+    related_skills: [screenplay, editor, production, visual_executor, continuity_auditor, style_genome, character_designer, cinematographer, prompt_injector]
     expert_id: audio_pipeline
     aliases: [voicer, lip_sync, composer, foley, mixer, spatial_audio]
     metrics: [voice_naturalness, emotion_match, character_distinctiveness, lip_sync_error, lip_sync_confidence, temporal_consistency, identity_preservation, emotional_sync, spatial_coherence, dynamic_range, material_credibility, impact_sync_accuracy, force_consistency, spectral_clarity, level_compliance, frequency_masking_score, dialogue_intelligibility, dynamic_range_appropriateness, reality_anchor_stability, distance_transition_smoothness, vacuum_detection_pass]
@@ -150,13 +150,13 @@ Multi-provider TTS synthesis specialist for character voice generation, emotion-
 - Voice timbre analysis and character-voice matching
 - Prosodic rhythm design (intonation, stress, timing)
 - Emotion-adaptive parameter modulation
-- Lip-sync coordination with performer's facial animation
+- Lip-sync coordination with character_designer (Phase 17 v3.0: was performer) facial animation
 
 ### Output Format
 
 - WAV audio stem per dialogue line (48kHz, 16-bit, mono)
 - Metadata JSON: `duration_ms`, `emotion_label`, `character_id`, `prosody_markers[]`
-- Lip-sync alignment data for performer integration
+- Lip-sync alignment data for character_designer (Phase 17 v3.0: was performer) integration
 
 ### Key Parameters
 
@@ -214,7 +214,7 @@ Multi-provider TTS synthesis specialist for character voice generation, emotion-
 2. **Emotion Mapping** — Map screenplay's `emotion_curve` to `emotion_control` + `emotion_strength`
 3. **Prosody Design** — Set `speed_factor`, pauses based on scene context
 4. **Preview Synthesis** — Quick preview (lower quality) for timing check
-5. **Lip-sync Alignment** — Validate duration matches performer's facial timeline
+5. **Lip-sync Alignment** — Validate duration matches character_designer (Phase 17 v3.0: was performer) facial timeline
 6. **Production Synthesis** — Full quality render per dialogue line
 7. **Post-Processing** — Noise gate (-40dB), normalization (-16 LUFS), fade (10ms), de-essing
 8. **Metadata Export** — Generate alignment data and prosody markers JSON
@@ -580,10 +580,10 @@ Sound effects design specialist managing the 7-dimensional parametric Foley & SF
 ### Workflow
 
 1. **Action Audit** — Frame-by-frame scan of all physical interactions in video
-2. **Material Identification** — Determine interaction materials from visual + scene_builder annotations
+2. **Material Identification** — Determine interaction materials from visual + cinematographer (Phase 17 v3.0: was scene_builder composition_lock) annotations
 3. **7D Encoding** — Generate Material x Action x Force x Duration x Resonance x Pitch x Texture per effect
 4. **Sound Synthesis** — Generate each independent stem via Stable Audio Open 1.0 (per [`references/foley/stable-audio-open.md`](./references/foley/stable-audio-open.md))
-5. **Force Calibration** — Adjust loudness to match performer's force parameters
+5. **Force Calibration** — Adjust loudness to match character_designer (Phase 17 v3.0: was performer) force parameters
 6. **Time Alignment** — Position effects precisely to video frames (±40ms)
 7. **Frequency Check** — Confirm no dialogue band conflict, EQ if needed
 8. **Output** — foley_stems[] + foley_metadata.json + sync_map.json
@@ -829,7 +829,7 @@ Spatial acoustics and design sound specialist using Dolby Atmos bed+objects arch
 
 ### Workflow
 
-1. **Space Analysis** — Determine sound field type from scene_builder layout (indoor/outdoor/size)
+1. **Space Analysis** — Determine sound field type from cinematographer (Phase 17 v3.0: was scene_builder composition_lock) layout (indoor/outdoor/size)
 2. **Source Placement** — Assign 6D coordinates per source (following character/object positions)
 3. **Distance Modeling** — Calculate per-source distance attenuation curves
 4. **Reverb Design** — Select reverb preset by space type, adjust RT60/diffusion/HF damping
@@ -859,23 +859,23 @@ Spatial acoustics and design sound specialist using Dolby Atmos bed+objects arch
 
 ## Collaboration
 
-> **Merged collaboration graph.** Cross-references to OTHER experts (screenplay, performer, editor, production, visual_executor, continuity_auditor, style_genome, scene_builder) remain inter-expert edges. References between the 6 audio sub-steps (voicer↔lip_sync↔composer↔foley↔mixer↔spatial_audio) are now intra-expert handoffs (internal to `audio_pipeline`) — see the `## Sub-steps` section above.
+> **Merged collaboration graph.** Cross-references to OTHER experts (screenplay, editor, production, visual_executor, continuity_auditor, style_genome, character_designer, cinematographer) remain inter-expert edges. References between the 6 audio sub-steps (voicer↔lip_sync↔composer↔foley↔mixer↔spatial_audio) are now intra-expert handoffs (internal to `audio_pipeline`) — see the `## Sub-steps` section above. *(Phase 17 v3.0: performer → character_designer; scene_builder → cinematographer; see inheritance_targets in the deprecated SKILL.md files.)*
 
 ### Voicer sub-step inbound / outbound (external + internal handoffs)
 
 - **<- screenplay**: dialogue text + emotion_curve + scene context
-- **<- performer**: character psychology, action-to-voice sync points
+- **<- character_designer (replaces deprecated Phase 17 performer)**: character psychology, action-to-voice sync points (voice + behavioral tics now defined by character_designer)
 - **<- editor**: timing marks, cut boundaries, dialogue pacing intent
 - **→ [internal handoff to Lip Sync sub-step — see §Sub-step: Lip Sync above]**: `dialogue.wav` audio input (voicer synthesizes audio; lip_sync aligns it to footage)
 - **→ [internal handoff to Mixer sub-step — see §Sub-step: Mixer below]**: dialogue stem (WAV) + metadata for level balancing
-- **-> performer**: lip-sync alignment data for facial animation
+- **-> character_designer (replaces deprecated Phase 17 performer)**: lip-sync alignment data for facial animation
 - **→ [internal handoff to Spatial Audio sub-step — see §Sub-step: Spatial Audio below]**: dialogue position data for spatial placement
 
 ### Lip Sync sub-step inbound / outbound (external + internal handoffs)
 
 - **← [internal handoff from Voicer sub-step — see §Sub-step: Voicer above]**: `dialogue.wav` audio input
 - **<- [`visual_executor`](../visual_executor/SKILL.md)**: silent character video footage(角色对话镜头无音频版)
-- **<- [`performer`](../performer/SKILL.md)**: performance baseline(表情、头部姿态基线)
+- **<- [`character_designer`](../character_designer/SKILL.md)** *(replaces deprecated Phase 17 [`performer`](../performer/SKILL.md))*: performance baseline(表情、头部姿态基线)
 - **-> [`editor`](../editor/SKILL.md)**: synced footage 进入剪辑
 - **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)**: identity preservation 审计
 - **→ [internal handoff to Mixer sub-step — see §Sub-step: Mixer below]**: 最终音频与视频对齐
@@ -892,8 +892,8 @@ Spatial acoustics and design sound specialist using Dolby Atmos bed+objects arch
 ### Foley sub-step inbound / outbound (external + internal handoffs)
 
 - **<- [`visual_executor`](../visual_executor/SKILL.md)**: video clips (action audit input)
-- **<- [`performer`](../performer/SKILL.md)**: force, speed, contact point parameters
-- **<- [`scene_builder`](../scene_builder/SKILL.md)**: material annotations (floor, object materials)
+- **<- [`character_designer`](../character_designer/SKILL.md)** *(replaces deprecated Phase 17 [`performer`](../performer/SKILL.md))*: force, speed, contact point parameters
+- **<- [`cinematographer`](../cinematographer/SKILL.md)** *(replaces deprecated Phase 17 [`scene_builder`](../scene_builder/SKILL.md); composition_lock sub-task now owns spatial + material annotations)*: material annotations (floor, object materials)
 - **← [internal handoff from Composer sub-step — see §Sub-step: Composer above]**: beat timeline (rhythm alignment)
 - **→ [internal handoff to Mixer sub-step — see §Sub-step: Mixer below]**: foley_stems[] + foley_metadata.json (mixing input)
 - **→ [internal handoff to Spatial Audio sub-step — see §Sub-step: Spatial Audio below]**: spatial position data (3D sound field placement)
@@ -911,7 +911,7 @@ Spatial acoustics and design sound specialist using Dolby Atmos bed+objects arch
 
 ### Spatial Audio sub-step inbound / outbound (external + internal handoffs)
 
-- **<- [`scene_builder`](../scene_builder/SKILL.md)**: 3D layout, material annotations (acoustic reflection coefficients)
+- **<- [`cinematographer`](../cinematographer/SKILL.md)** *(replaces deprecated Phase 17 [`scene_builder`](../scene_builder/SKILL.md); composition_lock sub-task owns 3D layout)*: 3D layout, material annotations (acoustic reflection coefficients)
 - **← [internal handoff from Foley sub-step — see §Sub-step: Foley above]**: sound stems + position timeline
 - **← [internal handoff from Voicer sub-step — see §Sub-step: Voicer above]**: dialogue stems + character positions
 - **← [internal handoff from Composer sub-step — see §Sub-step: Composer above]**: music stems + spatial instructions

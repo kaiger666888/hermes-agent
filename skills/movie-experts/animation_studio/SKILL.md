@@ -14,7 +14,7 @@ metadata:
       - screenplay          # Animation script structure
       - visual_executor    # Character design / concept art + animation execution
       - colorist            # Color script
-      - scene_builder       # 3D scene construction
+      - cinematographer     # 3D scene composition_lock (Phase 17 v3.0: was scene_builder)
       - audio_pipeline      # Musical storytelling (composer sub-step) + voice casting for animation (voicer sub-step)
       - hook_retention      # Children's content hook design
     expert_id: animation_studio
@@ -179,7 +179,7 @@ voice_casting:
 - **`screenplay`**: Adapted screenplay with musical numbers + sidekick comedy
 - **`visual_executor`**: Character design / concept art / model sheets (drawer sub-step) + Animation execution (veo3.1, kling-v3-4k, etc.) (animator sub-step)
 - **`colorist`**: Color script + per-scene LUT
-- **`scene_builder`**: 3D scene construction for 3D animation
+- **`cinematographer`** *(replaces deprecated Phase 17 `scene_builder`)*: 3D scene construction for 3D animation (now composition_lock sub-task)
 - **`audio_pipeline (composer sub-step)`**: Musical numbers composition
 - **`audio_pipeline (voicer sub-step)`**: Voice casting for animation characters
 - **`hook_retention`**: Children's content hook design (3-second attention)
@@ -198,7 +198,7 @@ Both books are in `_shared/project-corpus/`. Fair Use paraphrasing per project c
 - [`../screenplay/SKILL.md`](../screenplay/SKILL.md) — Screenplay expert
 - [`../visual_executor/SKILL.md`](../visual_executor/SKILL.md) — Visual executor expert (drawing + animation sub-steps)
 - [`../colorist/SKILL.md`](../colorist/SKILL.md) — Color expert
-- [`../scene_builder/SKILL.md`](../scene_builder/SKILL.md) — 3D scene expert
+- [`../cinematographer/SKILL.md`](../cinematographer/SKILL.md) — 3D scene expert (Phase 17 v3.0: replaces deprecated [`../scene_builder/SKILL.md`](../scene_builder/SKILL.md); composition_lock sub-task)
 - [`../audio_pipeline/SKILL.md`](../audio_pipeline/SKILL.md) — Music expert (composer sub-step) + Voice expert (voicer sub-step)
 - [`../hook_retention/SKILL.md`](../hook_retention/SKILL.md) — Hook expert
 - [`../_shared/glossary.md`](../_shared/glossary.md)
