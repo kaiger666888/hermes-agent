@@ -35,3 +35,57 @@
 See `.planning/milestones/v1-ROADMAP.md` for full phase details and `.planning/milestones/v1-REQUIREMENTS.md` for requirement outcomes.
 
 ---
+
+---
+
+## v2.0 PRFP — Pipeline Redesign from First Principles (Shipped: 2026-06-16)
+
+**Phases completed:** 6 phases (7-12) · **Plans:** N/A (design-only milestone)
+**Tag:** `v2.0-prfp-design` (no code shipped — design suite only)
+**Design artifacts:** `.planning/research/v2-pipeline-design/` (10 design docs + 4 YAML schemas + validation script)
+
+**One sentence:** First-principles redesign of the movie-experts pipeline producing canonical DAG topology + per-node specs + corpus traceability + LLM-creative-distillation + cross-repo handoff plan + governance — design-only milestone, no skill code changes.
+
+---
+
+## v3.0 — Skills-to-DAG Alignment (Shipped: 2026-06-17)
+
+**Phases completed:** 6 phases (13-18) · **Plans:** 16 · **Commits:** 67
+**Tag:** `v3.0` (pending operator push)
+**Stats:** 137 files changed · 19007 insertions · 2137 deletions · 1-day execution window
+**Audit status:** tech_debt (12/12 requirements satisfied, 4 non-blocking WARNINGs) — see [v3.0-MILESTONE-AUDIT.md](./v3.0-MILESTONE-AUDIT.md)
+**Known deferred items at close:** 6 (W-1, W-2, W-3, W-4, VALIDATE-D1, FUTURE-09) — see audit report
+
+**One sentence:** Aligned v1 14-expert skill suite + v2 PRFP design to the canonical v2.0 PRFP DAG topology via 2 renames + 2 merges + 1 new + 3 deprecations — 13 legacy expert_id migrations preserved via FOUND-08 backward-compat aliases.
+
+### Key accomplishments
+
+- **Phase 13 — Expert Rename + Alias Scaffolding:** Renamed `continuity` → `continuity_auditor` and `compliance_marketing` → `compliance_gate` with `metadata.hermes.aliases` preservation (FOUND-08). 27 consumer related_skills rewired bidirectionally. skills-mapping.yaml sign_off_status flipped to signed_off for both renamed entries.
+- **Phase 14 — Visual Executor Merge:** Merged `drawer` + `animator` into unified `visual_executor` with `sub_steps: [drawer, animator]` declaration. 15 consumer edges collapsed to single deduplicated entry. Refs organized under `references/{drawer,animator}/` sub-folders.
+- **Phase 15 — Audio Pipeline Merge:** Merged 5 audio experts (`voicer` + `lip_sync` + `composer` + `foley` + `mixer` + `spatial_audio`) into unified `audio_pipeline` with `sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]`. spatial_audio FOLDED as 6th sub-step (D-1 decision — preserves HRTF/Atmos content; uses `status: folded_into` distinct from `merged_into`). 11 consumer edges collapsed.
+- **Phase 16 — New AI-Native Expert (prompt_injector):** Created brand-new `prompt_injector` expert (no v1 predecessor) per Phase 8 §2.7 + nodes.yaml. 4 refs (prompt-engineering-patterns, cross-call-consistency, token-budget-management, model-specific-prompt-templates). Bidirectional edges to creative_source + cinematographer + visual_executor + audio_pipeline.
+- **Phase 17 — Deprecate 3 Experts:** Marked `performer` / `scene_builder` / `storyboard_designer` as `status: deprecated` with `inheritance_targets` and `deprecated_reason`. 9 consumer body annotations added. FOUND-08 preserved — original expert_id + body content intact for backward compatibility.
+- **Phase 18 — Validation + Documentation:** Produced VALIDATION-REPORT.md reconciling 31 SKILL.md files into 4 buckets (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs). README.md ASCII DAG replaced with canonical Mermaid from 01-NODE-DAG.md §1.5. 5 glossary terms verified/added. known-external-models.yaml Phase 8 §2.17 dated annex (27 entries with verified_date: 2026-06-17). All 19 skills-mapping.yaml entries signed_off.
+
+### Shipped artifacts
+
+- 5 new expert directories: continuity_auditor, compliance_gate, visual_executor, audio_pipeline, prompt_injector
+- 13 redirect/deprecated stubs preserving v1 expert_ids (10 redirect + 3 deprecated)
+- 1 new prompt_injector expert with 4 refs + LICENSE + GAP-REPORT
+- Updated README.md with Mermaid DAG + 4-bucket inventory classification
+- Updated glossary.md (5 new H3 entries)
+- Updated known-external-models.yaml (73 entries, 27 verified_date stamps, Phase 8 §2.17 annex)
+- VALIDATION-REPORT.md (canonical milestone-close audit artifact)
+
+### Known gaps at close
+
+- **W-1:** creative_source → topic_curator dead reference (pre-existing v2.0, narrow phase scope)
+- **W-2:** character_designer missing Phase 17 inheritance body annotation
+- **W-3:** 32 pre-existing v2.0 bidirectional asymmetries (post-v3.0 normalization candidacy)
+- **W-4:** Frontmatter `status:` field path inconsistency (documentation drift in per-phase verification reports)
+- **VALIDATE-D1:** quality_gate gap — canonical 16th DAG node has no SKILL.md directory
+- **FUTURE-09:** production expert (currently `disposition: deferred` in skills-mapping.yaml)
+
+---
+
+*Last updated: 2026-06-17 — v3.0 archived, awaiting next milestone decision*
