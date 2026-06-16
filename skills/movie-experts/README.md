@@ -2,8 +2,8 @@
 
 **Project:** RAG-augmented movie-expert skill suite for AI 短剧 / 微电影 production.
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Status:** v2 complete — 26 experts (14 original + 4 Phase 1-5 + 5 Phase 7 — SCRIPT_AUDIT / LIP_SYNC / CHARACTER / STORYBOARD / CREATIVE + **3 Phase 8 — THEORY_CRITIC / DOCUMENTARY_MAKER / ANIMATION_STUDIO** integrated from project corpus). All RAG-aware. 5 Phase-7 + 3 Phase-8 experts have independent validation protocols.
-**Last updated:** 2026-06-16
+**Status:** v3.0 in progress — 18 active expert_ids (17 post-Phase-15 + 1 Phase 16 prompt_injector NEW). Phases 13-15 merged 4+6+1 predecessors into continuity_auditor / compliance_gate / visual_executor / audio_pipeline; Phase 16 added prompt_injector (the only NEW AI-native node, no v1 predecessor). All RAG-aware. 5 Phase-7 + 3 Phase-8 experts have independent validation protocols.
+**Last updated:** 2026-06-17
 
 ---
 
@@ -100,6 +100,15 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
 | [`animation_studio`](./animation_studio/SKILL.md) | 动画制作专家 | 迪士尼 4 阶段体系 + 12 阶段制作流程 + 跨文化改编 5 法则(花木兰案例)+ 歌舞叙事 + 搭档喜剧 | Project corpus: 《迪士尼的艺术》《影视动画经典剧本赏析》 | 6 |
 
 
+### 1 New Expert (Phase 16 — AI-Native prompt_injector, 2026-06-17)
+
+The only NEW AI-native node in v3.0 (no v1 predecessor per `skills-mapping.yaml:99-103` `mapping_type: new_ai_native`). Translates upstream human intent into model-ready prompts with cross-call consistency context management — a discipline that only exists because of generative models.
+
+| Expert | Chinese Name | Role | Source | Refs |
+|--------|--------------|------|--------|------|
+| [`prompt_injector`](./prompt_injector/SKILL.md) | 提示注入专家 | AI-native node translating visual_intent + style_genome + character_assets → model_prompts + consistency_context. Cross-call consistency context + token budget management (≤4000/call). No v1 predecessor (new_ai_native mapping) | 02-NODE-SPECS.md §2.7 + Phase 7 §4.7 D3.5+D2.4 | 4 |
+
+
 ---
 
 ## Production DAG (Collaboration Graph)
@@ -149,6 +158,13 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
                 │ (Storyboard JSON)│
                 └────────┬────────┘
                          │
+                         ▼
+                    ┌─────────────────┐   ◄── style_genome_5d
+                    │ prompt_injector │       (parallel edge)
+                    │  提示注入        │
+                    └────────┬────────┘   ◄── character_assets
+                             │               (parallel edge)
+                             ▼
                 ┌────────┴────────┬──────────────────┐
                 │                 │                  │
                 ▼                 ▼                  ▼
@@ -194,6 +210,7 @@ These 3 experts are the **primary consumers** of the integrated 102-book project
 - **Audio-visual lock:** `audio_pipeline` (voicer sub-step) produces audio → `audio_pipeline` (lip_sync sub-step) aligns to footage (now intra-expert handoff; still decoupled, composable)
 - **Bottleneck nodes:** `screenplay` (after style) / `visual_executor` (after intent) / `audio_pipeline` (after all audio + footage) — single node now subsumes lip_sync + mixer bottleneck roles
 - **Audit nodes:** `continuity_auditor` (parallel to audio_pipeline) + `script_auditor` (pre-production) verify consistency
+- **AI-native prompt assembly:** `prompt_injector` (Phase 16) translates visual_intent + style_genome_5d + character_assets into model_prompts + consistency_context consumed by visual_executor. No traditional cinematography precedent — this node exists because AI generation requires explicit prompt engineering that human director tools did not. Indirect path from DAG root: creative_source → style_genome → cinematographer → storyboard_designer → prompt_injector.
 - **Independent validation:** 5 Phase 7 experts all have non-LLM-judge validation protocols (Pearson / LSE / CLIP-I / DTW / Bourdieu-field-accuracy)
 - **Phase 8 verticals (cross-cutting):** `theory_critic` / `documentary_maker` / `animation_studio` are NOT in the linear pipeline — they are **consultative experts** invoked when the pipeline encounters their domain (theory analysis, documentary-style, animation). They draw from `_shared/project-corpus/` (102-book library).
 
@@ -373,6 +390,15 @@ skills/movie-experts/
 ├── character_designer/ SKILL.md + references/{4d-anchor-system,layered-style-prefix,consistency-stress-test,character-bible-schema}.md + LICENSE.md (Phase 7B-1 NEW)
 ├── storyboard_designer/ SKILL.md + references/{shot-decomposition-rules,camera-params-dictionary,4d-anchoring-params,storyboard-schema}.md + LICENSE.md (Phase 7B-2 NEW)
 ├── creative_source/    SKILL.md + references/{strata-guide,story-kernel-schema,multi-strata-resonance,unspeakability-protocol}.md + LICENSE.md (Phase 7B-3 NEW)
+├── prompt_injector/                    # Phase 16 NEW (2026-06-17) — AI-native prompt engineering node
+│   ├── SKILL.md                        # Prompt Injector Expert (提示注入)
+│   ├── GAP-REPORT.md                   # placeholder per CONTEXT D-04 (NEW expert, no v1 baseline)
+│   └── references/
+│       ├── prompt-engineering-patterns.md     # few-shot / CoT / template / decomposition
+│       ├── cross-call-consistency.md          # LoRA / IP-Adapter / identity-preserving
+│       ├── token-budget-management.md         # ≤4000 tokens/call strategies
+│       ├── model-specific-prompt-templates.md # FLUX 2 / Veo / Kling (provider-agnostic placeholders)
+│       └── LICENSE.md                         # MIT + source attribution
 ├── _eval/
 │   ├── runner.py                                 (MT-Bench position-swap harness)
 │   ├── config.yaml.example                       (3-condition ablation template)
@@ -429,9 +455,9 @@ If you build on this suite, please cite:
 
 ---
 
-*Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7).*
-*v2 = 17 experts (14 original + 4 Phase 1-5 + 5 Phase 7 − 1 Phase 14 visual_executor merge − 5 Phase 15 audio_pipeline merge), all RAG-aware, all phantom refs stripped.*
-*Total ref corpus: ~80 files (~1.8MB cited fair-use content).*
+*Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7) + 2026-06-17 (Phases 13-16).*
+*v3.0 = 18 active expert_ids (17 post-Phase-15 + 1 Phase 16 prompt_injector NEW — AI-native, no v1 predecessor) — Phase 17 will deprecate 3 candidates (performer, scene_builder, storyboard_designer); Phase 18 will reconcile to canonical 21-expert topology (16 DAG pipeline-roles + 5 aliases). All RAG-aware, all phantom refs stripped.*
+*Total ref corpus: ~85 files (~1.9MB cited fair-use content).*
 *5 Phase 7 experts carry independent validation protocols (no LLM-judge required).*
 *Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
 
