@@ -271,10 +271,10 @@ Use this ref for:
 - 12-stage pipeline compressed for 短剧:
   - Stage 1-2: AI generates story + script (1 day)
   - Stage 3: storyboard via `visual_executor` (drawer sub-step) (1 day)
-  - Stage 4-5: voice via `voicer` + leica reel (1 day)
+  - Stage 4-5: voice via `audio_pipeline` (voicer sub-step) + leica reel (1 day)
   - Stage 6-7: character + color script via `visual_executor` (drawer sub-step) + `colorist` (1 day)
   - Stage 8-11: `visual_executor` (animator sub-step) execution (veo3.1 / kling) (1-2 days)
-  - Stage 12: `composer` + `mixer` (1 day)
+  - Stage 12: `audio_pipeline` (composer + mixer sub-steps) (1 day)
 - Total: 6-8 days for 60-180s animation 短剧
 
 ### Disney style DNA in `style_genome`

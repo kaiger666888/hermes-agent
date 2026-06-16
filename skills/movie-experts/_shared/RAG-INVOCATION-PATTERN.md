@@ -75,9 +75,9 @@ For vendor-specific model / API names that MUST appear in SKILL.md body (e.g., w
 | `<video_gen_preview>` | ltx-2.3, pixverse-v6 (cheap preview tier) | visual_executor (animator sub-step) |
 | `<image_gen_primary>` | FLUX 2 Klein 9B (Hermes default via fal) | visual_executor (drawer sub-step) |
 | `<image_gen_fast>` | Z-Image Turbo (fastest tier) | visual_executor (drawer sub-step) |
-| `<audio_gen_primary>` | Stable Audio Open 1.0 (foley/SFX default) | foley |
-| `<music_gen_primary>` | MusicGen-large (open-source music default) | composer |
-| `<tts_primary>` | MiniMax / ElevenLabs (Hermes-native) or CosyVoice 3.0 (user-deployed) | voicer |
+| `<audio_gen_primary>` | Stable Audio Open 1.0 (foley/SFX default) | audio_pipeline (foley sub-step) |
+| `<music_gen_primary>` | MusicGen-large (open-source music default) | audio_pipeline (composer sub-step) |
+| `<tts_primary>` | MiniMax / ElevenLabs (Hermes-native) or CosyVoice 3.0 (user-deployed) | audio_pipeline (voicer sub-step) |
 
 **Resolution:** Phase 3 / Phase 5 `references/*.md` files document the current model matrix with specific names, costs, and capabilities. Placeholders in SKILL.md body ensure the prompt doesn't break when the underlying model catalog changes (quarterly refresh).
 
