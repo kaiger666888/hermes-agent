@@ -50,19 +50,28 @@
 
 models:
   - name: cosyvoice
-    provenance: "Alibaba CosyVoice 3.0 — SOTA CN emotional TTS; external (NOT in Hermes catalog per Phase 0 GAP-REPORT + research SUMMARY). Phase 5 phantom strip: replaced with Hermes-catalog MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS. Residual SKILL.md mentions are documentation of the strip, not active use."
+    verified_date: 2026-06-17
+    stability: stable_2026
+    node_role: character_designer-voice/audio_pipeline-voicer
+    provenance: "Alibaba CosyVoice 3.0 — SOTA CN emotional TTS; external (NOT in Hermes catalog per Phase 0 GAP-REPORT + research SUMMARY). Phase 5 phantom strip: replaced with Hermes-catalog MiniMax/ElevenLabs/Voxtral/Gemini/Edge/NeuTTS. Residual SKILL.md mentions are documentation of the strip, not active use. Phase 8 §2.17 dated annex (2026-06-17): CosyVoice 2 is §2.17 primary for character_designer voice cloning (stable_2026) + audio_pipeline/voicer TTS (evolving); swap alternative for character_designer voice: ElevenLabs VC."
 
   - name: deepseek
     provenance: "DeepSeek LLM family — referenced as open-weight judge candidate in research SUMMARY (open-weight vs commercial panel discussion)."
 
   - name: elevenlabs
-    provenance: "ElevenLabs Multilingual v2 TTS — Hermes-catalog TTS provider per Phase 5 voicer/cn-tts-model-matrix.md; emotional prosody + voice cloning for main characters."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/voicer
+    provenance: "ElevenLabs Multilingual v2 TTS — Hermes-catalog TTS provider per Phase 5 voicer/cn-tts-model-matrix.md; emotional prosody + voice cloning for main characters. Phase 8 §2.17 dated annex (2026-06-17): ElevenLabs v3 is §2.17 co-primary for audio_pipeline/voicer (TTS) alongside CosyVoice 2."
 
   - name: flux
     provenance: "Black Forest Labs FLUX family shorthand. Hermes default is FLUX 2 (Klein 9B / Pro) via plugins/image_gen/fal. Bare 'flux' token is a legitimate family reference in skill prose."
 
   - name: flux2
-    provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal (line 372). 'flux2' is a context-only shorthand."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: character_designer/visual_executor-drawer
+    provenance: "Black Forest Labs FLUX 2 (Klein 9B / Pro) — current Hermes default via plugins/image_gen/fal (line 372). 'flux2' is a context-only shorthand. Phase 8 §2.17 dated annex (2026-06-17): FLUX 2 is §2.17 primary for character_designer (face/body gen, paired with IP-Adapter) + visual_executor/drawer (image gen). Swap alternatives: SD4 + IP-Adapter (character_designer) / SD4, Ideogram (drawer)."
 
   - name: flux_2
     provenance: "Black Forest Labs FLUX 2 — underscore variant of the shorthand above. Used in skill prose; resolved via fal plugin."
@@ -86,10 +95,16 @@ models:
     provenance: "InstantID (Wang et al. 2024) — face identity preservation method for character consistency per drawer/character-consistency-lora.md. Open research, not a Hermes plugin."
 
   - name: ip-adapter
-    provenance: "IP-Adapter (Ye et al. 2023) — Image Prompt Adapter for character consistency per drawer/character-consistency-lora.md. Open research, not a Hermes plugin."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: character_designer
+    provenance: "IP-Adapter (Ye et al. 2023) — Image Prompt Adapter for character consistency per drawer/character-consistency-lora.md. Open research, not a Hermes plugin. Phase 8 §2.17 dated annex (2026-06-17): paired with FLUX 2 in the §2.17 character_designer primary (face/body gen)."
 
   - name: kling
-    provenance: "Kuaishou Kling v3 (incl. kling-v3-4k, kling 1.6 Pro/Standard) — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Bilingual prompt support."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: visual_executor/animator
+    provenance: "Kuaishou Kling v3 (incl. kling-v3-4k, kling 1.6 Pro/Standard) — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Bilingual prompt support. Phase 8 §2.17 dated annex (2026-06-17): Kling 2.0 is §2.17 co-primary for visual_executor/animator (video gen) alongside Sora 2. Swap alternatives: Veo 4, Runway Gen-5."
 
   - name: ltx
     provenance: "Lightricks LTX Video 2.3 — Hermes-catalog video gen model (cheap tier per animator/video-gen-model-matrix.md). Open weight."
@@ -98,7 +113,10 @@ models:
     provenance: "MiniMax T2A-01 TTS — Hermes-catalog CN TTS provider per Phase 5 voicer/cn-tts-model-matrix.md. CN 母语级 + emotional control, recommended for 短剧 main characters."
 
   - name: musicgen
-    provenance: "Meta MusicGen-large — open-source music generation default per research SUMMARY (composer/SKILL.md). 4 modes incl. melody conditioning."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/composer (swap alternative)
+    provenance: "Meta MusicGen-large — open-source music generation default per research SUMMARY (composer/SKILL.md). 4 modes incl. melody conditioning. Phase 8 §2.17 dated annex (2026-06-17): MusicGen-Large is §2.17 swap alternative for audio_pipeline/composer (vs Suno V5 / Udio 2 primary)."
 
   - name: nano-banana
     provenance: "Google Nano Banana Pro — accessed via plugins/image_gen/fal."
@@ -122,10 +140,16 @@ models:
     provenance: "ByteDance Seedance 2.0 — Hermes-catalog video gen model (per animator/video-gen-model-matrix.md). CN 母语 audience preference."
 
   - name: sora
-    provenance: "OpenAI Sora 2 — external (limited production access as of 2026-06); referenced in cinematographer/camera-motion-catalog.md + animator/video-gen-model-matrix.md. Unique 60s multi-shot sequence capability."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: visual_executor/animator
+    provenance: "OpenAI Sora 2 — external (limited production access as of 2026-06); referenced in cinematographer/camera-motion-catalog.md + animator/video-gen-model-matrix.md. Unique 60s multi-shot sequence capability. Phase 8 §2.17 dated annex (2026-06-17): Sora 2 is §2.17 co-primary for visual_executor/animator (video gen) alongside Kling 2.0. Swap alternatives: Veo 4, Runway Gen-5."
 
   - name: stable_audio
-    provenance: "Stable Audio Open 1.0 — open-source foley / SFX default per research SUMMARY + Phase 5 foley/stable-audio-open.md. Replaces phantom AudioLDM-2."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/foley
+    provenance: "Stable Audio Open 1.0 — open-source foley / SFX default per research SUMMARY + Phase 5 foley/stable-audio-open.md. Replaces phantom AudioLDM-2. Phase 8 §2.17 dated annex (2026-06-17): Stable Audio Open is §2.17 primary for audio_pipeline/foley (foley gen). Swap alternative: AudioLDM-3."
 
   - name: stable_audio_open
     provenance: "Stable Audio Open 1.0 — underscore variant; same model as `stable_audio` entry above."
@@ -143,7 +167,10 @@ models:
     provenance: "AudioGen (Meta AudioCraft) — text-to-audio model. Listed as fallback in foley/SKILL.md; legitimate model name (though Stable Audio Open is preferred default)."
 
   - name: veo
-    provenance: "Google Veo 2 / Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Veo 2 referenced in cinematographer/camera-motion-catalog.md for declarative cinematic language."
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: visual_executor/animator (swap alternative)
+    provenance: "Google Veo 2 / Veo 3.1 — accessed via plugins/video_gen/fal. Supports 9:16 vertical for 短剧 (research SUMMARY). Veo 2 referenced in cinematographer/camera-motion-catalog.md for declarative cinematic language. Phase 8 §2.17 dated annex (2026-06-17): Veo 4 is §2.17 swap alternative for visual_executor/animator (vs Sora 2 / Kling 2.0 primary)."
 
   - name: veo3
     provenance: "Google Veo 3.1 — underscore-prefixed variant. Same as `veo` entry above."
@@ -215,3 +242,171 @@ models:
 
   - name: seedance-1.5-pro
     provenance: "ByteDance Seedance 1.5 Pro — video gen model variant referenced in animator/references/camera-execution-and-degradation.md via kais-evolink integration. External (similar to seedance 2.0 Hermes-catalog model)."
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 §2.17 dated annex additions (2026-06-17) — mirrors 02-NODE-SPECS.md §2.17
+  # ---------------------------------------------------------------------------
+  # Every entry below traces back to the Global Model Annex at
+  # `.planning/research/v2-pipeline-design/02-NODE-SPECS.md §2.17` (verified 2026-06-16).
+  # Per PITFALLS §1.3 + §2.7: the DAG must remain valid even if every model below is swapped.
+  # The `stability` field follows the §2.17 legend:
+  #   - stable_2026: ≥2 year persistence (low churn)
+  #   - evolving:    quarterly updates expected
+  #   - research_bet: may fail (not used in §2.17 annex)
+  # The `node_role` field ties each entry to its DAG node (+ sub-step where applicable).
+  # ---------------------------------------------------------------------------
+
+  # NEW Anthropic LLM entries (multi-node per §2.17):
+
+  - name: claude-sonnet-4.5
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: creative_source/style_genome/screenplay/cinematographer/editor/hook_retention/quality_gate/compliance_gate
+    provenance: "Anthropic Claude Sonnet 4.5 — primary LLM across 8 DAG nodes per Phase 8 §2.17 dated annex (kernel expansion / style extraction / screenplay gen / visual intent / cut-point suggestions / hook + retention / multi-dim verdict / CN compliance). External (Anthropic API or Hermes anthropic provider plugin). style_genome/script_auditor/quality_gate/compliance_gate use cases are stable_2026; the rest are evolving."
+
+  - name: claude-haiku-4.5
+    verified_date: 2026-06-17
+    stability: stable_2026
+    node_role: script_auditor
+    provenance: "Anthropic Claude Haiku 4.5 — script_auditor 5-dim audit model per Phase 8 §2.17 dated annex. External (Anthropic API or Hermes anthropic provider plugin)."
+
+  - name: claude-opus-4.7
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: theory_critic
+    provenance: "Anthropic Claude Opus 4.7 — theory_critic consultative consultation model per Phase 8 §2.17 dated annex. External (Anthropic API or Hermes anthropic provider plugin)."
+
+  # NEW Zhipu LLM entry (GLM-4.6 version — §2.17 swap alternative for multiple nodes):
+
+  - name: glm-4.6
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: creative_source/screenplay/hook_retention/compliance_gate (swap alternative)
+    provenance: "Zhipu GLM-4.6 — listed as swap alternative for creative_source / screenplay / hook_retention / compliance_gate per Phase 8 §2.17 dated annex. Extends the existing `glm` entry (which covers GLM-4) with the 4.6 version note. External (Zhipu API)."
+
+  # NEW OpenAI LLM entries (§2.17 swap alternatives):
+
+  - name: gpt-5
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: creative_source/style_genome/screenplay/cinematographer/editor/hook_retention/quality_gate (swap alternative)
+    provenance: "OpenAI GPT-5 — listed as swap alternative across multiple DAG nodes per Phase 8 §2.17 dated annex. External (OpenAI API)."
+
+  - name: gpt-5-mini
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: script_auditor (swap alternative)
+    provenance: "OpenAI GPT-5-mini — swap alternative for script_auditor (vs Claude Haiku 4.5 default) per Phase 8 §2.17 dated annex. External (OpenAI API)."
+
+  # NEW Google LLM entry (§2.17 swap alternative):
+
+  - name: gemini-3-pro
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: theory_critic/style_genome (swap alternative)
+    provenance: "Google DeepMind Gemini 3 Pro — swap alternative for theory_critic + style_genome per Phase 8 §2.17 dated annex. External (Google API)."
+
+  # NEW Suno / Udio music-gen entries (§2.17 audio_pipeline/composer):
+
+  - name: suno-v5
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/composer
+    provenance: "Suno V5 — music generation model per Phase 8 §2.17 dated annex (audio_pipeline composer sub-step primary). External (Suno cloud service)."
+
+  - name: udio-2
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/composer
+    provenance: "Udio 2 — music generation model per Phase 8 §2.17 dated annex (audio_pipeline composer sub-step primary alternative to Suno V5). External (Udio cloud service)."
+
+  # NEW AudioLDM-3 entry (§2.17 audio_pipeline/foley swap alternative):
+
+  - name: audioldm-3
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/foley (swap alternative)
+    provenance: "AudioLDM-3 — foley gen swap alternative to Stable Audio Open per Phase 8 §2.17 dated annex. Note: existing `audioldm-2` entry is documented as superseded; AudioLDM-3 is the §2.17 swap alternative for audio_pipeline foley sub-step. External / open-source."
+
+  # NEW Ideogram entry (§2.17 visual_executor/drawer swap alternative):
+
+  - name: ideogram
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: visual_executor/drawer (swap alternative)
+    provenance: "Ideogram — image gen swap alternative to FLUX 2 per Phase 8 §2.17 dated annex (visual_executor drawer sub-step). External (Ideogram cloud service)."
+
+  # NEW Runway Gen-5 entry extension (existing `runway` covers Gen-3; Gen-5 is §2.17 animator swap):
+
+  - name: runway-gen-5
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: visual_executor/animator (swap alternative)
+    provenance: "Runway Gen-5 — video gen swap alternative to Sora 2 / Kling 2.0 per Phase 8 §2.17 dated annex (visual_executor animator sub-step). Extends the existing `runway` entry (which covers Gen-3 Alpha) with the Gen-5 version note. External."
+
+  # NEW Azure TTS entry (§2.17 audio_pipeline/voicer swap alternative):
+
+  - name: azure-tts
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/voicer (swap alternative)
+    provenance: "Azure TTS — TTS swap alternative to CosyVoice 2 / ElevenLabs v3 per Phase 8 §2.17 dated annex (audio_pipeline voicer sub-step). External (Microsoft Azure cloud)."
+
+  # NEW OpenAI TTS-2 entry (§2.17 audio_pipeline/voicer swap alternative):
+
+  - name: openai-tts-2
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: audio_pipeline/voicer (swap alternative)
+    provenance: "OpenAI TTS-2 — TTS swap alternative per Phase 8 §2.17 dated annex (audio_pipeline voicer sub-step). External (OpenAI API)."
+
+  # NEW Stable Diffusion 4 entry (§2.17 character_designer + visual_executor/drawer swap):
+
+  - name: sd4
+    verified_date: 2026-06-17
+    stability: evolving
+    node_role: character_designer/visual_executor-drawer (swap alternative)
+    provenance: "Stable Diffusion 4 — image gen swap alternative to FLUX 2 per Phase 8 §2.17 dated annex (character_designer + visual_executor drawer sub-step). External / open-source weights."
+
+  # NEW DaVinci Resolve entry (§2.17 colorist):
+
+  - name: davinci-resolve
+    verified_date: 2026-06-17
+    stability: stable_2026
+    node_role: colorist
+    provenance: "DaVinci Resolve + AI LUT — color grading toolkit per Phase 8 §2.17 dated annex (colorist node primary). External software (Blackmagic Design), not a Hermes plugin. stable_2026 per §2.17 stability legend."
+
+  # NEW ffmpeg-DSP entry (§2.17 audio_pipeline/mixer):
+
+  - name: ffmpeg-dsp
+    verified_date: 2026-06-17
+    stability: stable_2026
+    node_role: audio_pipeline/mixer
+    provenance: "DSP engineering via ffmpeg — LUFS targeting methodology per Phase 8 §2.17 dated annex (audio_pipeline mixer sub-step). External software (ffmpeg open-source). Methodology token, not a model — no swap alternatives. stable_2026 per §2.17 stability legend."
+
+  # NEW template-few-shot entry (§2.17 prompt_injector):
+
+  - name: template-few-shot
+    verified_date: 2026-06-17
+    stability: stable_2026
+    node_role: prompt_injector
+    provenance: "Template + few-shot prompt engineering methodology per Phase 8 §2.17 dated annex (prompt_injector node primary). This is a methodology token, not a model — no swap alternatives per §2.17 (N/A). stable_2026 per §2.17 stability legend."
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 §2.17 inline extensions to existing entries
+  # ---------------------------------------------------------------------------
+  # The existing base entries for tokens that §2.17 references (flux2, cosyvoice,
+  # elevenlabs, stable_audio, musicgen, kling, sora, veo, ip-adapter) have been
+  # extended inline with `verified_date` + `stability` + `node_role` fields. See
+  # the inline-updated entries above for the §2.17 metadata overlays — they are
+  # NOT duplicated here. This comment block exists to mark where the §2.17 annex
+  # would normally list its extensions; the actual extension edits live with the
+  # original base entries to preserve single-source-of-truth per the plan's
+  # "do NOT duplicate the base entry" directive.
+  # ---------------------------------------------------------------------------
+  # Entry count post-Phase 18 §2.17 additions: 53 entries (35 pre-existing +
+  # 18 new entries added in the §2.17 annex block above; the 9 §2.17-referenced
+  # existing entries are extended inline rather than duplicated).
+  # Per Phase 8 §2.17 dated annex, every model that appears in the canonical
+  # 16-node DAG topology is now allowlisted with verified_date: 2026-06-17
+  # provenance.
