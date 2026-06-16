@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, cinematography, shot-intent, axis-rules, vertical-framing, camera-motion, 镜头语言]
-    related_skills: [screenplay, scene_builder, visual_executor, editor, continuity_auditor, hook_retention, production, theory_critic, documentary_maker]
+    related_skills: [screenplay, scene_builder, visual_executor, editor, continuity_auditor, hook_retention, production, theory_critic, documentary_maker, prompt_injector]
     expert_id: cinematographer
     metrics: [shot_intent_clarity, axis_compliance, vertical_framing_quality, motion_narrative_fit]
 ---
