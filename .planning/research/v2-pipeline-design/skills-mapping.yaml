@@ -68,14 +68,18 @@ mappings:
     mapping_type: one_to_one_renamed
     rename_rationale: "Emphasize critic role per Phase 7 §4.10;rename requires skills team agreement"
     sign_off_required: true
-    sign_off_status: pending
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-13
 
   - new_node: compliance_gate
     v1_expert_id: compliance_marketing
     mapping_type: one_to_one_renamed
     rename_rationale: "Separate pure compliance from marketing per Phase 7 §4.15;rename requires skills team agreement"
     sign_off_required: true
-    sign_off_status: pending
+    sign_off_status: signed_off
+    signed_off_at: 2026-06-17
+    signed_off_by: phase-13
 
   # === N:1 merged (2 nodes, 7 experts) ===
   - new_node: visual_executor
