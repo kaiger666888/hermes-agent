@@ -1,6 +1,6 @@
 # nodes.yaml — Canonical node definitions for kais-movie-agent v2.0 pipeline
 # Source of truth: 00-FIRST-PRINCIPLES.md §4 (Phase 7 derivation) + 01-NODE-DAG.md (Phase 8 topology)
-# Rendered as Markdown in 02-NODE-SPECS.md (Phase 8 Plan 04)
+# Rendered as Markdown in 02-NODE-SPECS.md
 # Lint script: scripts/validate_design.py (Phase 12 GOV-02)
 # Stability: stable (per Phase 7 §1.7)
 
@@ -8,7 +8,8 @@ schema_version: design-2026-06-16-prfp
 total_nodes: 16  # 15 linear + 1 consultative
 linear_node_count: 15
 consultative_node_count: 1
-total_cost_per_episode_yuan: 7000-10000  # within META-05 ceiling ¥1000-10000
+total_cost_per_episode_yuan_range: [7000, 10000]  # within META-05 ceiling ¥1000-10000
+total_cost_note: "Complexity-weighted distribution per Phase 8 CONTEXT Area 4/4"
 
 nodes:
   # ============================================
@@ -21,7 +22,72 @@ nodes:
     role: root
     v1_expert_id: creative_source
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.1 (D1.1+D1.2+D1.3+D1.5+D4.1)"
-    # Plan 08-02 fills 15 spec fields below
+    # === 4 CORE FIELDS (NODE-02) ===
+    core_task: "从 6 个社会阶层的生活经验挖故事 kernel,产出整合元意图(logline + 主角欲望 + 中央冲突 + 转折点 + 解决立场 + 风格基因)"
+    io_contract:
+      inputs:
+        - name: creator_anecdote
+          type: text
+          source: external_human
+          required: true
+        - name: lived_experience_seed
+          type: text
+          source: external_human
+          required: true
+      outputs:
+        - name: story_kernel
+          type: structured_json
+          consumers: [style_genome, screenplay, character_designer]
+          required: true
+    aigc_transformation: ai_bounded
+    aigc_transformation_note: "AI 协助把创作者轶事展开为完整 kernel,但不能替代创作者的 lived experience 输入(per D4.1)"
+    traditional_anchor: "传统编剧的 personal-experience mining + 故事 kernel 设计;AIGC 版本显式标记 human-bounded"
+    # === 8 STACK SUPPLEMENTARY FIELDS (NODE-03) ===
+    success_criteria:
+      - metric: kernel_novelty_score
+        quantified: ">= 0.7"
+        measurement: "trope-catalog embedding similarity against known Save-the-Cat / 短剧爆款公式 patterns"
+      - metric: creator_acceptance
+        quantified: pass/fail
+        measurement: "human creator sign-off"
+    fail_modes:
+      - mode: cliche_default
+        trigger: "LLM defaults to training-data tropes without enough specificity from anecdote"
+        impact: "kernel is competent but unoriginal"
+      - mode: lived_experience_thin
+        trigger: "creator provides brief anecdote without emotional specificity"
+        impact: "AI expands to plausible but hollow kernel"
+    fallback_strategy:
+      - on_fail_mode: cliche_default
+        strategy: "increase temperature + add explicit anti-trope constraint in prompt + require ≥3 specific sensory details"
+      - on_fail_mode: lived_experience_thin
+        strategy: "structured-interview prompt: AI asks 5 follow-up questions to draw out specificity before expanding"
+    dependencies:
+      hard: []
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "LLM 在 creative expansion 上稳定(stable_2026);在 truly novel combinatorial creativity 上仍 evolving"
+    non_ai_alternative: "纯人类编剧 — 时间成本 ~10x,质量取决于编剧个人"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.1 D1.1+D1.2+D1.3+D1.5 + §3.4 D4.1:观众消费整合体验(D1.1),整合体验需 root 产出(D1.3),元意图必须人类起源(D4.1)"
+    # === 3 BUDGET FIELDS (NODE-04 + META-05) ===
+    cost_budget:
+      yuan_per_episode: 150
+      cost_driver: human_time
+      distribution_rationale: "主要为人类创作者时间;LLM call 成本可忽略"
+    latency_budget:
+      seconds: 600
+      critical_path: true
+    model_horizon: stable_2026
+    model_horizon_note: "创意意图起源的 human-bounded 性质不随模型演化"
+    # === CURRENT INSTANTIATION (NODE-08 — model names ONLY here) ===
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5"
+          role: "Kernel expansion from creator anecdote + structured interview"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "GLM-4.6"]
+      note: "Canonical spec 是 ai_bounded transformation type,不是 Claude Sonnet 4.5。任何 ≥ Sonnet 4.5 能力的 LLM 都适用。"
 
   # ============================================
   # Layer 1 — Intent parallel (3-way)
@@ -33,6 +99,63 @@ nodes:
     role: intent_parallel
     v1_expert_id: style_genome
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.2 (D2.3+D2.4)"
+    core_task: "提取 + 编码 + 复用视觉 DNA(5D style genome:色调 + 构图 + 节奏 + 材质 + 情感基调)作为下游节点的 invariant 输入"
+    io_contract:
+      inputs:
+        - name: story_kernel
+          type: structured_json
+          source: creative_source
+          required: true
+      outputs:
+        - name: style_genome_5d
+          type: structured_vector
+          consumers: [cinematographer, prompt_injector, visual_executor, editor, colorist, audio_pipeline]
+          required: true
+    aigc_transformation: augmentation
+    aigc_transformation_note: "AI 辅助从 kernel 提取 style,人类导演确认;5D 编码是 engineering,不是 generation"
+    traditional_anchor: "传统 art direction + production design 角色;AIGC 版本显式化为 5D vector"
+    success_criteria:
+      - metric: aesthetic_alignment
+        quantified: ">= 0.7"
+        measurement: "downstream node outputs vs style_genome cosine similarity"
+      - metric: cross_node_consistency
+        quantified: ">= 0.85"
+        measurement: "stylistic drift across shots measured by encoder"
+    fail_modes:
+      - mode: genre_conflation
+        trigger: "5D 提取混淆短剧/微电影/长片形态(PITFALLS §6.3)"
+        impact: "下游节点形态漂移"
+      - mode: over_abstraction
+        trigger: "5D vector 过于抽象,下游无法消费"
+        impact: "下游节点 revert to defaults,style 不一致"
+    fallback_strategy:
+      - on_fail_mode: genre_conflation
+        strategy: "强制 form_context 输入(短剧/微电影/长片),5D 提取按 form 分桶"
+      - on_fail_mode: over_abstraction
+        strategy: "5D 提取增加具体 reference image URLs 作为锚点"
+    dependencies:
+      hard: [creative_source]
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "style 提取稳定(stable_2026);aesthetic encoder 成熟"
+    non_ai_alternative: "人类 art director 手动 5D 编码 — 时间成本 ~5x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.3+D2.4:跨节点 coherence 主导 + invariant ownership 必要,style 是核心 invariant"
+    cost_budget:
+      yuan_per_episode: 300
+      cost_driver: human_time
+      distribution_rationale: "AI 提取 + 人类确认"
+    latency_budget:
+      seconds: 120
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5"
+          role: "Style extraction from kernel + reference alignment"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["GPT-5", "Gemini 3 Pro"]
+      note: "5D encoding scheme 是 canonical;LLM 仅做 extraction"
 
   - id: screenplay
     name: "Screenplay (剧本)"
@@ -41,6 +164,72 @@ nodes:
     role: intent_parallel
     v1_expert_id: screenplay
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.3 (D1.3+D2.1)"
+    core_task: "把元意图展开为可执行叙事结构(scene list + dialogue + scene-level intent + 短剧/微电影/长片形态适配)"
+    io_contract:
+      inputs:
+        - name: story_kernel
+          type: structured_json
+          source: creative_source
+          required: true
+        - name: form_context
+          type: enum
+          source: external
+          required: true
+      outputs:
+        - name: screenplay_full
+          type: structured_markdown
+          consumers: [cinematographer, hook_retention, script_auditor]
+          required: true
+    aigc_transformation: full_generation
+    aigc_transformation_note: "AI 从 kernel 端到端生成 screenplay,script_auditor 后续 critic"
+    traditional_anchor: "传统编剧角色 + Field 三幕 + McKee 转折点(validated-invariant 保留)"
+    success_criteria:
+      - metric: script_auditor_score
+        quantified: ">= 0.75 across 5 dimensions"
+        measurement: "script_auditor 5-dim audit (character-network, plot-hole, dialogue-naturalness, narrative-arc, setup-payoff)"
+      - metric: three_act_compliance
+        quantified: "= 100%"
+        measurement: "Field 3-act structure check"
+    fail_modes:
+      - mode: plot_hole
+        trigger: "LLM 长程一致性不足,场景间出现矛盾"
+        impact: "下游 visual_executor 生成 inconsistent 内容"
+      - mode: dialogue_flat
+        trigger: "LLM 默认 dialogue 缺乏 subtext"
+        impact: "观众感知情感 flat"
+      - mode: mid_act_2_sag
+        trigger: "Field 三幕中点节奏失守"
+        impact: "完播率下降"
+    fallback_strategy:
+      - on_fail_mode: plot_hole
+        strategy: "loop with script_auditor (max 3 iter);if still failing, escalate to human review"
+      - on_fail_mode: dialogue_flat
+        strategy: "rewrite with explicit subtext constraint + reference dialogue samples"
+      - on_fail_mode: mid_act_2_sag
+        strategy: "insert explicit midpoint reversal per Field structure"
+    dependencies:
+      hard: [creative_source]
+      soft: [style_genome]
+    complexity_class: O(n)
+    ai_capability_assumption: "LLM 在 long-form plot consistency 上 evolving;在 short-form 上 stable_2026"
+    non_ai_alternative: "人类编剧 — 时间成本 ~10-50x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.1 D1.3 + §3.2 D2.1:元意图需展开层 + story 质量维度需 owner"
+    cost_budget:
+      yuan_per_episode: 400
+      cost_driver: compute
+      distribution_rationale: "LLM call + iteration with script_auditor"
+    latency_budget:
+      seconds: 300
+      critical_path: true
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5"
+          role: "Screenplay generation from kernel + form adaptation"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "GLM-4.6"]
+      note: "Long-form plot-hole 检测依赖 script_auditor;模型能力 evolving"
 
   - id: script_auditor
     name: "Script Auditor (剧本审计)"
@@ -49,6 +238,67 @@ nodes:
     role: critic_paired
     v1_expert_id: script_auditor
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.4 (D2.5+D3.1(c))"
+    core_task: "对 screenplay 做 5-dim quantitative audit,决定 accept/regenerate/escalate"
+    io_contract:
+      inputs:
+        - name: screenplay_full
+          type: structured_markdown
+          source: screenplay
+          required: true
+      outputs:
+        - name: audit_score_5dim
+          type: structured_scores
+          consumers: [screenplay]
+          required: true
+        - name: verdict
+          type: enum
+          consumers: [screenplay, human_review_gate_1]
+          required: true
+    aigc_transformation: verification
+    aigc_transformation_note: "AI 批判 LLM 输出;5-dim rubric 显式可审"
+    traditional_anchor: "传统 script doctor + notes session(人类定性);AIGC 版本 quantitative + decoupled"
+    success_criteria:
+      - metric: pearson_with_human
+        quantified: ">= 0.65"
+        measurement: "v1 validation against human reviewer scores"
+      - metric: audit_completeness
+        quantified: "= 100%"
+        measurement: "all 5 dimensions evaluated per audit"
+    fail_modes:
+      - mode: rubric_bias
+        trigger: "LLM-as-judge 把训练 bias 制度化为评分"
+        impact: "score 看似客观实为 LLM 偏好"
+      - mode: false_positive
+        trigger: "audit 标记 plot hole 实为创作者故意"
+        impact: "screenplay 不必要重写"
+    fallback_strategy:
+      - on_fail_mode: rubric_bias
+        strategy: "rubric 显式 + Pearson 校准 + 5-dim 评分透明;不作为 ground truth 只作为 regenerate signal"
+      - on_fail_mode: false_positive
+        strategy: "human review seam (gate 1) captures creator intent override"
+    dependencies:
+      hard: [screenplay]
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "LLM-as-judge 在 plot-hole + character-network 上 stable_2026"
+    non_ai_alternative: "人类 script doctor — 时间成本 ~5x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.5 + §3.3 D3.1(c):每生成配 critic + AI verification 能力"
+    cost_budget:
+      yuan_per_episode: 100
+      cost_driver: compute
+      distribution_rationale: "single LLM call per audit iteration × max 3 iter"
+    latency_budget:
+      seconds: 60
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "Claude Haiku 4.5"
+          role: "5-dim audit (cost-optimized; Haiku for speed)"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["GPT-5-mini", "Claude Sonnet 4.5 (higher precision)"]
+      note: "Pearson ≥ 0.65 validation 来自 v1"
 
   - id: character_designer
     name: "Character Designer (角色设计)"
@@ -57,6 +307,67 @@ nodes:
     role: intent_parallel
     v1_expert_id: character_designer
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.6 (D2.4)"
+    core_task: "定义 + 维护角色 identity asset(face, body, wardrobe, voice profile, behavioral tics)作为跨节点身份一致性 invariant 的 owner"
+    io_contract:
+      inputs:
+        - name: story_kernel
+          type: structured_json
+          source: creative_source
+          required: true
+      outputs:
+        - name: character_assets
+          type: structured_set
+          consumers: [cinematographer, prompt_injector, visual_executor, continuity_auditor]
+          required: true
+    aigc_transformation: full_generation
+    aigc_transformation_note: "AI 生成 character design sheets + voice profiles;人类导演 review"
+    traditional_anchor: "传统角色设计 + casting 直接适用;AIGC 增加 voice profile + behavioral tics 显式 asset"
+    success_criteria:
+      - metric: identity_match
+        quantified: ">= 0.85 across shots"
+        measurement: "continuity_auditor facial-recognition similarity"
+      - metric: voice_consistency
+        quantified: ">= 0.9 across scenes"
+        measurement: "speaker-embedding cosine similarity"
+    fail_modes:
+      - mode: identity_drift
+        trigger: "LoRA + IP-Adapter 当前能力不足以保证 cross-shot identity"
+        impact: "观众感知角色变脸"
+      - mode: voice_profile_mismatch
+        trigger: "TTS voice 不匹配 character description"
+        impact: "观众感知违和"
+    fallback_strategy:
+      - on_fail_mode: identity_drift
+        strategy: "loop with continuity_auditor + tighten ControlNet constraints"
+      - on_fail_mode: voice_profile_mismatch
+        strategy: "regenerate voice profile with explicit prosody constraints"
+    dependencies:
+      hard: [creative_source]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "LoRA + IP-Adapter evolving;voice cloning stable_2026"
+    non_ai_alternative: "人类 character designer + voice actor casting — 时间成本 ~10x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.4:身份一致性是 invariant ownership 核心维度"
+    cost_budget:
+      yuan_per_episode: 300
+      cost_driver: compute
+      distribution_rationale: "image + voice generation"
+    latency_budget:
+      seconds: 180
+      critical_path: true
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "FLUX 2 + IP-Adapter"
+          role: "Character face + body generation"
+          verified_date: "2026-06-16"
+          stability: evolving
+        - name: "CosyVoice 2"
+          role: "Voice profile cloning"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["Stable Diffusion 4 + IP-Adapter", "ElevenLabs Voice Cloning"]
+      note: "Identity lock 机制 evolving;voice cloning 相对成熟"
 
   # ============================================
   # Layer 2 — Visual intent (2-way)
@@ -68,14 +379,148 @@ nodes:
     role: visual_intent
     v1_expert_id: cinematographer
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.5 (D2.1+D2.2+D3.4)"
+    core_task: "把元意图 + style genome + character assets 翻译为视觉 intent(镜头列表 + 灯光设计 + 构图规范 + composition_lock 锁定)"
+    io_contract:
+      inputs:
+        - name: screenplay
+          type: structured_markdown
+          source: screenplay
+          required: true
+        - name: style_genome_5d
+          type: structured_vector
+          source: style_genome
+          required: true
+        - name: character_assets
+          type: structured_set
+          source: character_designer
+          required: true
+      outputs:
+        - name: visual_intent
+          type: structured_json
+          consumers: [prompt_injector]
+          required: true
+    aigc_transformation: augmentation
+    aigc_transformation_note: "AI 辅助构图建议;composition_lock 是人类 intent 显式化的 user-value 层"
+    traditional_anchor: "传统摄影指导角色直接适用;AIGC 版本增加 composition_lock 显式化"
+    success_criteria:
+      - metric: composition_lock_adherence
+        quantified: ">= 0.85"
+        measurement: "downstream visual_executor output vs composition_lock constraints"
+      - metric: axis_compliance
+        quantified: "= 100%"
+        measurement: "180° axis rule check by continuity_auditor"
+    fail_modes:
+      - mode: composition_under_specified
+        trigger: "composition_lock 过于宽松,visual_executor 自由度过大"
+        impact: "输出 composition 不一致"
+      - mode: axis_violation
+        trigger: "composition_lock 没有显式 180° 约束"
+        impact: "观众空间定向混乱"
+    fallback_strategy:
+      - on_fail_mode: composition_under_specified
+        strategy: "增加 explicit framing rule + reference frame"
+      - on_fail_mode: axis_violation
+        strategy: "强制 180° axis constraint in composition_lock schema"
+    dependencies:
+      hard: [screenplay, style_genome, character_designer]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "composition advice stable_2026;sketch-then-render instantiation evolving"
+    non_ai_alternative: "人类 DP — 时间成本 ~10x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.1+D2.2 + §3.3 D3.4:Murch 视觉维度需 owner + composition_lock 在用户价值层"
+    cost_budget:
+      yuan_per_episode: 300
+      cost_driver: compute
+      distribution_rationale: "LLM call for composition advice"
+    latency_budget:
+      seconds: 120
+      critical_path: true
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5"
+          role: "Visual intent + composition_lock design"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "Gemini 3 Pro"]
+      note: "sketch-then-render 是当前 instantiation;composition_lock 是 canonical 用户价值"
 
   - id: prompt_injector
     name: "Prompt Injector (提示注入)"
     layer: 2
     location: linear
     role: visual_intent
-    v1_expert_id: NEW  # AI-native, no v1 precedent
+    v1_expert_id: NEW
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.7 (D3.5+D2.4)"
+    core_task: "把上游人类 intent(元意图 + style + screenplay + 视觉 intent + character assets)翻译为 model-ready prompt(tokens + multimodal refs + 跨 call 一致性 context)"
+    io_contract:
+      inputs:
+        - name: visual_intent
+          type: structured_json
+          source: cinematographer
+          required: true
+        - name: style_genome_5d
+          type: structured_vector
+          source: style_genome
+          required: true
+        - name: character_assets
+          type: structured_set
+          source: character_designer
+          required: true
+      outputs:
+        - name: model_prompts
+          type: structured_set
+          consumers: [visual_executor]
+          required: true
+        - name: consistency_context
+          type: structured_context
+          consumers: [visual_executor]
+          required: true
+    aigc_transformation: ai_native
+    aigc_transformation_note: "AI-native 节点 — 无传统对应;prompt 工程本身"
+    traditional_anchor: "无传统对应(AI-native)"
+    success_criteria:
+      - metric: cross_call_consistency
+        quantified: ">= 0.85"
+        measurement: "downstream visual outputs style/identity consistency"
+      - metric: prompt_token_efficiency
+        quantified: "<= 4000 tokens per call"
+        measurement: "token count vs defined ceiling"
+    fail_modes:
+      - mode: consistency_drift
+        trigger: "consistency context 在多 call 之间丢失"
+        impact: "visual_executor 输出 drift"
+      - mode: prompt_overload
+        trigger: "prompt token 过载,模型注意力分散"
+        impact: "关键约束被忽略"
+    fallback_strategy:
+      - on_fail_mode: consistency_drift
+        strategy: "consistency context 显式 carry across calls + repeat key constraints"
+      - on_fail_mode: prompt_overload
+        strategy: "split prompt into structured sections + use system prompt for stable constraints"
+    dependencies:
+      hard: [cinematographer, style_genome, character_designer]
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "prompt engineering stable_2026;cross-call context management evolving"
+    non_ai_alternative: "N/A — 无传统对应"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.3 D3.5 + §3.2 D2.4:AI-native 必要节点 + invariant ownership"
+    cost_budget:
+      yuan_per_episode: 50
+      cost_driver: compute
+      distribution_rationale: "engineering overhead;minimal model cost"
+    latency_budget:
+      seconds: 30
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "Template + few-shot engineering"
+          role: "Cross-call consistency context + prompt assembly"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: []
+      note: "AI-native engineering;不依赖单一模型"
 
   # ============================================
   # Layer 3 — Visual execution (with loop)
@@ -85,17 +530,163 @@ nodes:
     layer: 3
     location: linear
     role: visual_exec
-    v1_expert_id: NEW_COMPOSITE  # drawer + animator merged
+    v1_expert_id: NEW_COMPOSITE
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.8 (D3.1(b)+D2.5)"
     merge_note: "v1 drawer + animator merged; Phase 11 handoff may revisit split"
+    core_task: "执行视觉资产生成 — 静态图(drawer sub-task)+ 动态视频(animator sub-task),消费 prompt_injector 输出 + identity asset"
+    io_contract:
+      inputs:
+        - name: model_prompts
+          type: structured_set
+          source: prompt_injector
+          required: true
+        - name: consistency_context
+          type: structured_context
+          source: prompt_injector
+          required: true
+      outputs:
+        - name: generated_visuals
+          type: media_assets
+          consumers: [audio_pipeline, editor, continuity_auditor]
+          required: true
+    aigc_transformation: full_generation
+    aigc_transformation_note: "AI 生成图像 + 视频;最昂贵的节点"
+    traditional_anchor: "传统工业的摄影师 + 动画师;AIGC 压缩合并(per PITFALLS §2.1)"
+    success_criteria:
+      - metric: identity_match
+        quantified: ">= 0.85 across shots"
+        measurement: "continuity_auditor facial recognition"
+      - metric: aesthetic_alignment
+        quantified: ">= 0.7"
+        measurement: "vs style_genome encoder"
+      - metric: composition_lock_adherence
+        quantified: ">= 0.85"
+        measurement: "vs cinematographer composition_lock"
+    fail_modes:
+      - mode: identity_drift
+        trigger: "cross-shot identity 锁定失败"
+        impact: "观众感知角色变脸"
+      - mode: style_drift
+        trigger: "style_genome 锚定不足"
+        impact: "镜头间风格不一致"
+      - mode: temporal_flicker
+        trigger: "video gen model 帧间一致性弱"
+        impact: "视频 jitter"
+      - mode: composition_drift
+        trigger: "model 不遵守 composition_lock"
+        impact: "构图不符合意图"
+    fallback_strategy:
+      - on_fail_mode: identity_drift
+        strategy: "loop with continuity_auditor (max 2 iter, ¥50/iter ceiling);tighten ControlNet"
+      - on_fail_mode: style_drift
+        strategy: "regenerate with stronger style_genome encoding + reference image"
+      - on_fail_mode: temporal_flicker
+        strategy: "switch to more stable model or split into shorter clips"
+      - on_fail_mode: composition_drift
+        strategy: "regenerate with stricter composition_lock prompt constraints"
+    dependencies:
+      hard: [prompt_injector]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "image gen evolving;video gen evolving rapidly"
+    non_ai_alternative: "人类动画师 — 时间成本 ~100x,质量更高"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.3 D3.1(b) + §3.2 D2.5:模态转换 AI 加速 + 配 critic"
+    cost_budget:
+      yuan_per_episode: 3500
+      cost_driver: compute
+      distribution_rationale: "image + video generation;most expensive node"
+    latency_budget:
+      seconds: 1800
+      critical_path: true
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "FLUX 2"
+          role: "Image generation (drawer sub-task)"
+          verified_date: "2026-06-16"
+          stability: evolving
+        - name: "Sora 2 / Kling 2.0"
+          role: "Video generation (animator sub-task)"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["Stable Diffusion 4", "Ideogram", "Veo 4", "Runway Gen-5"]
+      note: "Composition_lock 是 canonical;具体模型 evolving"
 
   - id: continuity_auditor
     name: "Continuity Auditor (连续性审计)"
     layer: 3
     location: linear
     role: critic_paired
-    v1_expert_id: continuity  # renamed to continuity_auditor (HANDOFF-02 mapping preserved)
+    v1_expert_id: continuity
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.10 (D2.4+D2.5+D3.1(c))"
+    core_task: "跨镜头 invariant 验证 — 身份一致性、wardrobe drift、180° 轴线、空间一致性、plot continuity"
+    io_contract:
+      inputs:
+        - name: generated_visuals
+          type: media_assets
+          source: visual_executor
+          required: true
+        - name: character_assets
+          type: structured_set
+          source: character_designer
+          required: true
+      outputs:
+        - name: continuity_score
+          type: structured_scores
+          consumers: [visual_executor]
+          required: true
+        - name: verdict
+          type: enum
+          consumers: [visual_executor, editor]
+          required: true
+    aigc_transformation: verification
+    aigc_transformation_note: "AI 批判 visual_executor 输出;mid-loop critic"
+    traditional_anchor: "传统剧本监督(continuity supervisor);AIGC 版本 automated + loop back"
+    success_criteria:
+      - metric: identity_match
+        quantified: ">= 0.85"
+        measurement: "facial recognition across shots"
+      - metric: axis_compliance
+        quantified: "= 100%"
+        measurement: "180° axis rule check"
+      - metric: wardrobe_drift
+        quantified: "= 0 scenes"
+        measurement: "wardrobe classification across shots"
+    fail_modes:
+      - mode: identity_misclassification
+        trigger: "facial recognition model confused by similar-looking characters"
+        impact: "false positive in identity drift alert"
+      - mode: axis_false_negative
+        trigger: "axis checker misses subtle violations"
+        impact: "audience disorientation"
+    fallback_strategy:
+      - on_fail_mode: identity_misclassification
+        strategy: "human art director review on borderline cases"
+      - on_fail_mode: axis_false_negative
+        strategy: "use multiple axis-checking models + ensemble voting"
+    dependencies:
+      hard: [visual_executor]
+      soft: []
+    complexity_class: O(n^2)
+    ai_capability_assumption: "facial recognition stable_2026;axis-checking evolving"
+    non_ai_alternative: "人类剧本监督 — 时间成本 ~3x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.4+D2.5 + §3.3 D3.1(c):invariant ownership + critic pairing + AI verification"
+    cost_budget:
+      yuan_per_episode: 600
+      cost_driver: compute
+      distribution_rationale: "loop cost: 2 iter × 50 + base audit"
+    latency_budget:
+      seconds: 300
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "InsightFace + custom axis-checker"
+          role: "Facial recognition + 180° axis detection"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["ArcFace", "DeepFace"]
+      note: "Identity recognition 相对成熟;axis-checking engineering"
 
   # ============================================
   # Layer 4 — Audio + Post parallel (3-way)
@@ -105,9 +696,94 @@ nodes:
     layer: 4
     location: linear
     role: audio_post
-    v1_expert_id: NEW_COMPOSITE  # voicer + lip_sync + composer + foley + mixer merged
+    v1_expert_id: NEW_COMPOSITE
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.9 (D3.1(a))"
     merge_note: "v1 5 audio experts merged; Phase 11 handoff may revisit split"
+    core_task: "执行全部音频生成 + 对齐 + 混音 — voicer + lip_sync + composer + foley + mixer"
+    io_contract:
+      inputs:
+        - name: screenplay
+          type: structured_markdown
+          source: screenplay
+          required: true
+        - name: generated_visuals
+          type: media_assets
+          source: visual_executor
+          required: true
+        - name: character_assets
+          type: structured_set
+          source: character_designer
+          required: true
+      outputs:
+        - name: mixed_audio
+          type: audio_asset
+          consumers: [quality_gate]
+          required: true
+    aigc_transformation: full_generation
+    aigc_transformation_note: "AI 生成 voice + music + foley + 混音;high-program 后期操作"
+    traditional_anchor: "传统工业 5 个独立专家(voice actor + composer + foley artist + mixer + ADR engineer);AIGC 压缩"
+    success_criteria:
+      - metric: lufs_compliance
+        quantified: "within ±1 of platform spec"
+        measurement: "LUFS meter vs platform loudness target"
+      - metric: dialogue_intelligibility
+        quantified: ">= 0.9"
+        measurement: "STOI or similar intelligibility metric"
+      - metric: lip_sync_offset
+        quantified: "<= 80ms"
+        measurement: "audio-video alignment"
+    fail_modes:
+      - mode: tts_pronunciation_degradation
+        trigger: "TTS 在中文方言 / 多音字上发音退化"
+        impact: "观众感知违和"
+      - mode: music_emotion_mismatch
+        trigger: "生成的音乐情感不匹配场景"
+        impact: "情感弧断裂"
+      - mode: lufs_out_of_spec
+        trigger: "mixer LUFS targeting 不准"
+        impact: "平台拒绝"
+    fallback_strategy:
+      - on_fail_mode: tts_pronunciation_degradation
+        strategy: "switch TTS provider for dialect X;human ADR for critical lines"
+      - on_fail_mode: music_emotion_mismatch
+        strategy: "regenerate with explicit emotion tags + reference tracks"
+      - on_fail_mode: lufs_out_of_spec
+        strategy: "human mixer + DSP engineering to fix LUFS"
+    dependencies:
+      hard: [screenplay, visual_executor, character_designer]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "TTS evolving(方言);music gen evolving;foley gen evolving;mixer stable_2026 (DSP engineering)"
+    non_ai_alternative: "5 个独立人类专家 — 时间成本 ~20x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.3 D3.1(a):高程序化后期是 AI 加速第一类"
+    cost_budget:
+      yuan_per_episode: 1000
+      cost_driver: compute
+      distribution_rationale: "5 sub-tasks × per-task generation cost"
+    latency_budget:
+      seconds: 900
+      critical_path: false  # parallel with editor + colorist
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "CosyVoice 2 / ElevenLabs multilingual v3"
+          role: "TTS (voicer sub-task)"
+          verified_date: "2026-06-16"
+          stability: evolving
+        - name: "Suno V5 / Udio 2"
+          role: "Music generation (composer sub-task)"
+          verified_date: "2026-06-16"
+          stability: evolving
+        - name: "Stable Audio Open"
+          role: "Foley generation (foley sub-task)"
+          verified_date: "2026-06-16"
+          stability: evolving
+        - name: "DSP engineering (ffmpeg + custom)"
+          role: "LUFS targeting + mixing (mixer sub-task)"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["Azure TTS", "OpenAI TTS-2", "MusicGen-Large", "AudioLDM-3"]
+      note: "Mixer sub-task 是 DSP engineering 不依赖单一模型"
 
   - id: editor
     name: "Editor (剪辑)"
@@ -116,6 +792,71 @@ nodes:
     role: audio_post
     v1_expert_id: editor
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.11 (D2.1+D1.2)"
+    core_task: "把生成的镜头素材 + 音频 + screenplay 节奏 intent 整合为最终 cut — 节奏控制(Murch rhythm + emotion)、场景过渡、最终 pacing"
+    io_contract:
+      inputs:
+        - name: generated_visuals
+          type: media_assets
+          source: visual_executor
+          required: true
+        - name: screenplay
+          type: structured_markdown
+          source: screenplay
+          required: true
+        - name: style_genome_5d
+          type: structured_vector
+          source: style_genome
+          required: true
+      outputs:
+        - name: edited_sequence
+          type: media_asset
+          consumers: [colorist, human_review_gate_2]
+          required: true
+    aigc_transformation: augmentation
+    aigc_transformation_note: "AI 辅助 cut-point 建议;人类做最终判断"
+    traditional_anchor: "传统剪辑师角色直接适用;Murch Rule of Six 保留"
+    success_criteria:
+      - metric: murch_rhythm_score
+        quantified: ">= 0.7"
+        measurement: "Murch 6-dim audit (rhythm + emotion + story + eye-trace + planarity + spatial continuity)"
+      - metric: pacing_compliance
+        quantified: "within form-specific pacing envelope"
+        measurement: "短剧: scenes per minute vs 短剧 pacing template;微电影: narrative arc beats per minute"
+    fail_modes:
+      - mode: rhythm_flat
+        trigger: "AI 建议 cut-points 过于机械"
+        impact: "节奏失情感"
+      - mode: arc_break
+        trigger: "cut-points 违反叙事弧"
+        impact: "情感弧断裂"
+    fallback_strategy:
+      - on_fail_mode: rhythm_flat
+        strategy: "human editor override + reference rhythm tracks"
+      - on_fail_mode: arc_break
+        strategy: "regenerate cut-points with explicit arc constraints + escalate to theory_critic"
+    dependencies:
+      hard: [visual_executor, screenplay, style_genome]
+      soft: []
+    complexity_class: O(n*log(n))
+    ai_capability_assumption: "rhythm suggestion stable_2026;final cut judgment human-only"
+    non_ai_alternative: "人类剪辑师 — 时间成本 ~10x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.1 + §3.1 D1.2:Murch 维度需 owner + 整合体验需 final-cut 节点"
+    cost_budget:
+      yuan_per_episode: 400
+      cost_driver: human_time
+      distribution_rationale: "AI assist + human time"
+    latency_budget:
+      seconds: 600
+      critical_path: false  # parallel with audio_pipeline + colorist
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5 (rhythm assist)"
+          role: "Cut-point suggestions from screenplay + visuals"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "custom rhythm model"]
+      note: "Murch Rule of Six 是 canonical validated-invariant"
 
   - id: colorist
     name: "Colorist (调色)"
@@ -124,6 +865,67 @@ nodes:
     role: audio_post
     v1_expert_id: colorist
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.12 (D2.1+D2.4)"
+    core_task: "调色 + color grading strategy — 色调一致性、情感色调、平台 color spec 适配"
+    io_contract:
+      inputs:
+        - name: edited_sequence
+          type: media_asset
+          source: editor
+          required: true
+        - name: style_genome_5d
+          type: structured_vector
+          source: style_genome
+          required: true
+      outputs:
+        - name: color_graded_sequence
+          type: media_asset
+          consumers: [quality_gate]
+          required: true
+    aigc_transformation: augmentation
+    aigc_transformation_note: "AI assist for LUT suggestion + human colorist final pass"
+    traditional_anchor: "传统调色师角色直接适用;color theory 是 validated-invariant"
+    success_criteria:
+      - metric: style_alignment
+        quantified: ">= 0.8"
+        measurement: "color histogram vs style_genome target"
+      - metric: cross_shot_consistency
+        quantified: ">= 0.9"
+        measurement: "color profile drift across shots"
+    fail_modes:
+      - mode: emotion_mismatch
+        trigger: "AI LUT 建议不符合场景情感"
+        impact: "情感色调错位"
+      - mode: cross_shot_drift
+        trigger: "不同镜头 color profile 漂移"
+        impact: "色调不一致"
+    fallback_strategy:
+      - on_fail_mode: emotion_mismatch
+        strategy: "human colorist override + reference grade"
+      - on_fail_mode: cross_shot_drift
+        strategy: "apply unified LUT + shot-by-shot correction"
+    dependencies:
+      hard: [editor, style_genome]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "color grading AI assist stable_2026;final pass human"
+    non_ai_alternative: "人类 colorist — 时间成本 ~5x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.1+D2.4:Murch planarity 维度 + style invariant 子维度"
+    cost_budget:
+      yuan_per_episode: 300
+      cost_driver: human_time
+      distribution_rationale: "AI assist + human final pass"
+    latency_budget:
+      seconds: 300
+      critical_path: false  # parallel after editor
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "DaVinci Resolve + AI LUT suggestion"
+          role: "Color grading"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["Baseline AI Color", "manual DaVinci"]
+      note: "Color theory 是 canonical validated-invariant;LUT tool 是 instantiation"
 
   # ============================================
   # Layer 5 — Form-specific
@@ -133,9 +935,71 @@ nodes:
     layer: 5
     location: linear
     role: form_specific
-    form_scope: short_drama  # 短剧 only; disabled for 微电影/长片
+    form_scope: short_drama
     v1_expert_id: hook_retention
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.13 (D2.6)"
+    core_task: "针对短剧形态 — 前 3 秒 hook 设计 + 完播率优化 + 付费卡点 pacing + 竖屏 framing 适配"
+    io_contract:
+      inputs:
+        - name: screenplay
+          type: structured_markdown
+          source: screenplay
+          required: true
+        - name: form_context
+          type: enum
+          source: external
+          required: true
+          enum_values: [short_drama]
+      outputs:
+        - name: hook_pacing_recommendations
+          type: structured_feedback
+          consumers: [screenplay]
+          required: true
+    aigc_transformation: verification
+    aigc_transformation_note: "AI 评估 + 反馈 screenplay 的 hook/retention 适配"
+    traditional_anchor: "无传统对应(短剧是 AIGC + 平台算法催生的新形态)"
+    success_criteria:
+      - metric: hook_strength_score
+        quantified: ">= 0.75"
+        measurement: "first-3-second engagement prediction model"
+      - metric: retention_curve_fit
+        quantified: ">= 0.7"
+        measurement: "predicted completion curve vs 短剧 benchmark"
+    fail_modes:
+      - mode: hook_too_slow
+        trigger: "前 3 秒 hook 强度不足"
+        impact: "完播率下降 → 平台分发拒绝"
+      - mode: 付费卡点_misplaced
+        trigger: "付费卡点位置不优"
+        impact: "变现下降"
+    fallback_strategy:
+      - on_fail_mode: hook_too_slow
+        strategy: "feedback to screenplay for hook rewrite"
+      - on_fail_mode: 付费卡点_misplaced
+        strategy: "regenerate pacing recommendations + A/B test"
+    dependencies:
+      hard: [screenplay]
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "短剧 hook 强度预测 evolving;benchmark data 2026"
+    non_ai_alternative: "无传统对应;纯平台数据分析 — 时间成本 ~10x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.6:短剧形态特定 + 生存依赖平台分发"
+    cost_budget:
+      yuan_per_episode: 200
+      cost_driver: compute
+      distribution_rationale: "短剧 only;LLM call + benchmark comparison"
+    latency_budget:
+      seconds: 60
+      critical_path: false
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5"
+          role: "Hook + retention design"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "GLM-4.6"]
+      note: "短剧 form-specific;微电影 / 长片 pipeline 禁用此节点"
 
   # ============================================
   # Layer 6 — Final gates (2-way sequential)
@@ -147,15 +1011,145 @@ nodes:
     role: final_gate
     v1_expert_id: quality_gate
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.14 (D2.1+D2.5+D3.1(c))"
+    core_task: "最终输出 multi-dim quantitative scoring — 综合 Murch Rule of Six + 短剧/微电影/长片形态权重 + 平台 spec 合规,emit GO/NO-GO/RECONSIDER verdict"
+    io_contract:
+      inputs:
+        - name: color_graded_sequence
+          type: media_asset
+          source: colorist
+          required: true
+        - name: mixed_audio
+          type: audio_asset
+          source: audio_pipeline
+          required: true
+      outputs:
+        - name: quality_score_multidim
+          type: structured_scores
+          consumers: [compliance_gate, human_review_gate_2]
+          required: true
+        - name: verdict
+          type: enum
+          consumers: [compliance_gate]
+          required: true
+    aigc_transformation: verification
+    aigc_transformation_note: "AI 批判最终输出;multi-dim scoring"
+    traditional_anchor: "传统 test screening + final QC;AIGC 增加 automated multi-dim"
+    success_criteria:
+      - metric: murch_six_dim_score
+        quantified: ">= 0.7 average"
+        measurement: "Murch Rule of Six audit"
+      - metric: form_specific_compliance
+        quantified: "= 100%"
+        measurement: "短剧/微电影/长片 form-specific check"
+    fail_modes:
+      - mode: rubric_overweight
+        trigger: "scoring rubric 加权失衡(例如短剧完播率权重过高)"
+        impact: "verdict 偏向 commercial vs artistic 不公"
+      - mode: false_negative
+        trigger: "Gate 拒绝合格内容"
+        impact: "返工浪费"
+    fallback_strategy:
+      - on_fail_mode: rubric_overweight
+        strategy: "rubric weights 可调 + form-specific preset"
+      - on_fail_mode: false_negative
+        strategy: "human review (gate 2) override"
+    dependencies:
+      hard: [colorist, audio_pipeline]
+      soft: []
+    complexity_class: O(1)
+    ai_capability_assumption: "LLM-as-judge stable_2026;multi-dim scoring engineering"
+    non_ai_alternative: "人类 QC — 时间成本 ~5x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.1+D2.5 + §3.3 D3.1(c):Murch + critic + AI verification"
+    cost_budget:
+      yuan_per_episode: 150
+      cost_driver: compute
+      distribution_rationale: "single multi-dim LLM call"
+    latency_budget:
+      seconds: 60
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5 + custom scorer"
+          role: "Multi-dim GO/NO-GO verdict"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["GPT-5", "ensemble judges"]
+      note: "Murch Rule of Six 是 canonical validated-invariant"
 
   - id: compliance_gate
     name: "Compliance Gate (合规门)"
     layer: 6
     location: linear
     role: final_gate
-    v1_expert_id: compliance_marketing  # renamed to compliance_gate (HANDOFF-02 mapping preserved)
+    v1_expert_id: compliance_marketing
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.15 (D2.6)"
     merge_note: "v1 implied pre_check + final; merged; Phase 11 handoff may revisit split"
+    core_task: "CN 平台合规审核 — pre_check(早期内容审核,在 screenplay 后)+ final(最终输出审核,在 quality_gate 后)"
+    io_contract:
+      inputs:
+        - name: quality_approved_sequence
+          type: media_asset
+          source: quality_gate
+          required: true
+        - name: form_context
+          type: enum
+          source: external
+          required: true
+      outputs:
+        - name: compliance_verdict
+          type: enum
+          consumers: [external_distribution]
+          required: true
+        - name: rejection_reason
+          type: text
+          consumers: [editor, screenplay]
+          required: false
+    aigc_transformation: verification
+    aigc_transformation_note: "AI 批判 + rule-based 过滤;CN 法规 + 平台 spec"
+    traditional_anchor: "无传统对应(CN 平台 + AIGC 是新形态)"
+    success_criteria:
+      - metric: platform_spec_compliance
+        quantified: "= 100%"
+        measurement: "platform-specific rule check (抖音/快手/视频号/小程序剧)"
+      - metric: cn_regulation_compliance
+        quantified: "= 100%"
+        measurement: "网络安全法 + 广告法 + 视听节目服务通则 check"
+    fail_modes:
+      - mode: false_negative
+        trigger: "规则库滞后新法规"
+        impact: "平台拒绝 + 法律风险"
+      - mode: false_positive
+        trigger: "规则过严,误拒合规内容"
+        impact: "返工浪费"
+    fallback_strategy:
+      - on_fail_mode: false_negative
+        strategy: "rule 库 90-day refresh + human legal review on borderline cases"
+      - on_fail_mode: false_positive
+        strategy: "human compliance officer override"
+    dependencies:
+      hard: [quality_gate]
+      soft: []
+    complexity_class: O(n)
+    ai_capability_assumption: "rule-based 过滤 stable_2026;LLM context-aware check evolving"
+    non_ai_alternative: "人类 compliance officer — 时间成本 ~5x"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.2 D2.6 + Phase 7 §4.15:CN 平台 + 成本控制"
+    cost_budget:
+      yuan_per_episode: 200
+      cost_driver: compute
+      distribution_rationale: "rule-based + LLM check"
+    latency_budget:
+      seconds: 120
+      critical_path: true
+    model_horizon: stable_2026
+    current_instantiation:
+      models:
+        - name: "Claude Sonnet 4.5 + rule-based filter"
+          role: "CN platform compliance check"
+          verified_date: "2026-06-16"
+          stability: stable_2026
+      swap_alternatives: ["GLM-4.6 (CN-optimized)", "local CN compliance API"]
+      note: "Rule 库季度更新;LLM 辅助 context-aware"
 
   # ============================================
   # Vertical — Consultative
@@ -163,8 +1157,69 @@ nodes:
   - id: theory_critic
     name: "Theory Critic (理论批评)"
     layer: vertical
-    location: consultative  # NOT in linear sequence
+    location: consultative
     role: consultative_vertical
-    trigger_mode: creator_pulled  # META-06
+    trigger_mode: creator_pulled
     v1_expert_id: theory_critic
     phase7_derivation_ref: "00-FIRST-PRINCIPLES.md §4.16 (D4.2+D4.4)"
+    core_task: "咨询式理论批判 — 创作者手动拉(META-06),提供艺术价值 vs 平台优化的张力平衡建议"
+    io_contract:
+      inputs:
+        - name: pipeline_state_snapshot
+          type: structured_state
+          source: any_layer_node
+          required: true
+        - name: creator_consultation_question
+          type: text
+          source: external_human
+          required: true
+      outputs:
+        - name: theoretical_critique
+          type: structured_feedback
+          consumers: [external_human_creator]
+          required: true
+    aigc_transformation: ai_bounded
+    aigc_transformation_note: "AI surfaces theoretical concerns;human decides whether to act"
+    traditional_anchor: "传统 theory consultant(批评家 / 影评人咨询);AIGC 增加 consultative edge type 显式化"
+    success_criteria:
+      - metric: consultation_invoked
+        quantified: true/false
+        measurement: "creator manual invoke log"
+      - metric: creator_usefulness_likert
+        quantified: ">= 4/5"
+        measurement: "creator self-report after consultation"
+    fail_modes:
+      - mode: theory_academic_disconnect
+        trigger: "理论批判过于学术,脱离创作实际"
+        impact: "creator 忽视建议"
+      - mode: commercial_drift_ignored
+        trigger: "理论批判过度倾向艺术,忽视平台分发必要性"
+        impact: "建议不切实际"
+    fallback_strategy:
+      - on_fail_mode: theory_academic_disconnect
+        strategy: "critic prompt 包含 form_context + commercial constraints"
+      - on_fail_mode: commercial_drift_ignored
+        strategy: "critic 提供 both artistic + commercial 视角对比,不单方面"
+    dependencies:
+      hard: []
+      soft: []  # invoked from any layer
+    complexity_class: O(1)
+    ai_capability_assumption: "LLM theory critique stable_2026;边界在于 human 必须做最终判断"
+    non_ai_alternative: "人类 theory consultant / 影评人 — 时间成本 ~10x,质量更高"
+    rationale_for_existence: "per 00-FIRST-PRINCIPLES.md §3.4 D4.2+D4.4 + META-06:艺术判断 consultative + creator-pulled"
+    cost_budget:
+      yuan_per_episode: 50
+      cost_driver: compute
+      distribution_rationale: "only when invoked;minimal cost"
+    latency_budget:
+      seconds: 120
+      critical_path: false  # never blocks pipeline
+    model_horizon: evolving
+    current_instantiation:
+      models:
+        - name: "Claude Opus 4.7"
+          role: "Theoretical critique consultation"
+          verified_date: "2026-06-16"
+          stability: evolving
+      swap_alternatives: ["GPT-5", "Gemini 3 Pro"]
+      note: "High-capability model for nuanced critique;manual invoke only"
