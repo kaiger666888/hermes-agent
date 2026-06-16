@@ -15,7 +15,7 @@ metadata:
       - editor
       - hook_retention  # Phase 2 — bidirectional edge closed (HOOK now lists compliance_marketing)
       - style_genome
-      - drawer
+      - visual_executor
     expert_id: compliance_gate
     aliases: [compliance_marketing]
     metrics: [compliance_coverage, labeling_completeness, risk_detection_recall, platform_fit]
@@ -202,7 +202,7 @@ tags="expert:compliance_gate,domain:platform-specs-<platform>"
 - **<- screenplay**:接收 `script.json` 做发布前 红线 复扫(剧本定稿前必须经本闸门)
 - **<- editor**:接收剪辑后成片做 红线 + AIGC 标识 双检(剪辑决定了画面信号,画面信号决定 红线 触发)
 - **<- style_genome**:接收 视觉 DNA 做 §3 色情低俗 / §6 歧视侮辱 风格评估
-- **<- drawer**:接收海报 / 缩略图做 §2 暴力血腥 / §3 色情低俗 视觉合规检查
+- **<- visual_executor**:接收海报 / 缩略图做 §2 暴力血腥 / §3 色情低俗 视觉合规检查
 - **-> hook_retention (Phase 2)**:输出 `distribution_cuts.json` + 平台 付费门槛 位置约束,供 HOOK 专家设计 风险感知 hook(HOOK Phase 2 将补回反向 edge)
 - **-> distribution**:输出全部 4 个 JSON 工件给下游分发 / 备案 工具
 

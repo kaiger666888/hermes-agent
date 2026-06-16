@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, storyboard, shot-list, shot-decomposition, 4d-anchoring, cinematography, previsualization]
-    related_skills: [screenplay, cinematographer, scene_builder, character_designer, drawer, animator, editor, continuity_auditor]
+    related_skills: [screenplay, cinematographer, scene_builder, character_designer, visual_executor, editor, continuity_auditor]
     expert_id: storyboard_designer
     metrics: [shot_count_accuracy, shot_size_distribution, rhythm_curve_fit, axis_compliance_rate, anchoring_completeness]
 ---
@@ -23,7 +23,7 @@ Decomposes screenplay scenes into executable per-shot Storyboard JSON. Each shot
 
 The user needs one of:
 - **Scene → shot list** — decompose a screenplay scene into 3-15 shots with full camera + action + duration specs
-- **Previsualization planning** — produce a Storyboard JSON that downstream drawer / animator / scene_builder can consume directly
+- **Previsualization planning** — produce a Storyboard JSON that downstream visual_executor / scene_builder can consume directly
 - **Shot rhythm design** — design the cut-density + duration-distribution curve for pacing
 - **4D anchoring specification** — for each shot, specify the depth / identity / lighting / temporal anchor parameters
 - **Extension-chain anchor design** — for multi-shot scenes, specify end-frames that become next-shot visual references
@@ -45,9 +45,9 @@ The user needs one of:
 ## Role & Philosophy
 
 - **场景 → 镜头 ≠ 翻译** — 不是把 scene 文字"翻译"成 shots,而是按电影语法**重新组织**信息密度。同一 scene 可以有多种合法 shot 分解,但只有少数是最优。
-- **每个镜头可执行** — Storyboard JSON 必须能让 drawer 拿着就能生成参考图,让 animator 拿着就能生成视频。模糊的描述(如"展现主角情绪")不合格;"close-up on protagonist's eyes, 50mm lens, slow push-in 0.3 speed, 4.5s duration" 才合格。
+- **每个镜头可执行** — Storyboard JSON 必须能让 visual_executor 拿着就能生成参考图,让 visual_executor 拿着就能生成视频。模糊的描述(如"展现主角情绪")不合格;"close-up on protagonist's eyes, 50mm lens, slow push-in 0.3 speed, 4.5s duration" 才合格。
 - **节奏曲线优先** — shot count + duration distribution 决定整集节奏。设计 shot list 时必须先画出 rhythm curve,再匹配 shots 到 curve 上,而不是逐 scene 独立决定。
-- **4D 锚定是渲染层的契约** — 每个 shot 的 anchoring 字段告诉 Render Layer "用哪些 ControlNet / IP-Adapter / IC-Light / AnimateDiff 注入"。没有 anchoring 的 shot = drawer 自由发挥 = 一致性漂移。
+- **4D 锚定是渲染层的契约** — 每个 shot 的 anchoring 字段告诉 Render Layer "用哪些 ControlNet / IP-Adapter / IC-Light / AnimateDiff 注入"。没有 anchoring 的 shot = visual_executor 自由发挥 = 一致性漂移。
 - **轴线/动势必须合规** — 180° 法则、30° 法则、动势匹配是硬规则,违反就是初学者错误。自动审计必须检查。
 
 ## Knowledge Retrieval
@@ -167,8 +167,7 @@ tags="expert:storyboard_designer,domain:storyboard-schema"
     }
   ],
   "downstream_consumers": [
-    "drawer",
-    "animator",
+    "visual_executor",
     "scene_builder",
     "editor",
     "continuity_auditor"
@@ -261,8 +260,7 @@ tags="expert:storyboard_designer,domain:storyboard-schema"
 
 ### Downstream
 
-- **-> [`drawer`](../drawer/SKILL.md)** — generates per-shot reference images using `reference_image` + `anchoring`
-- **-> [`animator`](../animator/SKILL.md)** — generates per-shot video using `end_frame` chain + `anchoring.temporal`
+- **-> [`visual_executor`](../visual_executor/SKILL.md)** — generates per-shot reference images using `reference_image` + `anchoring` (drawer sub-step) + generates per-shot video using `end_frame` chain + `anchoring.temporal` (animator sub-step)
 - **-> [`editor`](../editor/SKILL.md)** — cuts per shot duration + assembles final cut
 - **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)** — audits cross-shot consistency (character / wardrobe / color / axis)
 
@@ -271,9 +269,9 @@ tags="expert:storyboard_designer,domain:storyboard-schema"
 - ❌ **不要逐场景独立决定 shot count** — 必须先画 rhythm curve,再分配 shots。否则密度不均。
 - ❌ **不要给 shot 模糊的 camera params** — "中景,缓慢运动" 不合格;"中景,50mm,缓慢推进 0.3 speed,持续 4.5s" 才合格。
 - ❌ **不要忽略 axis compliance** — 180° / 30° 是硬规则。任何违反都是初学者错误。
-- ❌ **不要省略 anchoring 字段** — 没锚定的 shot = drawer 自由发挥 = 一致性漂移。至少 Cinematic tier。
+- ❌ **不要省略 anchoring 字段** — 没锚定的 shot = visual_executor 自由发挥 = 一致性漂移。至少 Cinematic tier。
 - ❌ **不要把所有 shot 设为相同 duration** — 节奏需要变化。固定 duration = 平淡 = 观众流失。
-- ❌ **不要在 multi-shot 场景省略 end_frame** — 下游 animator 需要 end_frame 做 extension-chain。
+- ❌ **不要在 multi-shot 场景省略 end_frame** — 下游 visual_executor 需要 end_frame 做 extension-chain。
 - ❌ **不要混淆 reference_image vs render_image** — reference_image 是 sketch (构图蓝本),render_image 是 final (最终画面)。两个指针必须分别指向不同文件。
 - ❌ **不要在 SKILL.md body 引用具体模型名** — 用占位符。
 

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, 3d, scene, blender, previsualization, camera-blocking, spatial-design, pallasmaa, architectural-storytelling]
-    related_skills: [screenplay, style_genome, colorist, performer, editor, drawer, animator, foley, continuity_auditor, cinematographer, production]
+    related_skills: [screenplay, style_genome, colorist, performer, editor, visual_executor, foley, continuity_auditor, cinematographer, production]
     expert_id: scene_builder
     metrics: [narrative_space_match, camera_constraint_validity, asset_completeness, pipeline_integration_score]
 ---
@@ -162,8 +162,7 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 - **<- colorist**: lighting intent (color temp/direction/intensity)
 - **<- performer**: character movement paths
 - **<- editor**: shot planning, camera type requirements
-- **-> drawer**: reference frame images (composition/lighting reference)
-- **-> animator**: camera_constraints.json (camera path constraints)
+- **-> visual_executor**: reference frame images (composition/lighting reference) + camera_constraints.json (camera path constraints)
 - **-> editor**: axis data + previz video
 - **-> foley**: material_annotations.json (surface material tags)
 - **-> continuity_auditor**: scene layout reference (environment consistency audit)
@@ -174,4 +173,4 @@ tags="expert:scene_builder,domain:architectural-storytelling"
 - Don't skip camera path validation (impossible shots waste generation time)
 - Don't forget material annotations (foley depends on them)
 - Don't render final quality before previz approval (saves GPU time)
-- Don't run scene_builder alongside drawer/animator on single GPU (combined >24GB)
+- Don't run scene_builder alongside visual_executor on single GPU (combined >24GB)

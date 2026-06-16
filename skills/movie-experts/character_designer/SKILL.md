@@ -1,6 +1,6 @@
 ---
 name: character_designer
-description: "Character Designer Expert: defines character identity (4D-Anchor multi-view + layered STYLE_PREFIX + consistency stress test) producing CharacterBible 2.0 JSON. Decoupled from drawer — drawer generates images, character_designer defines the identity contract that drawer must satisfy."
+description: "Character Designer Expert: defines character identity (4D-Anchor multi-view + layered STYLE_PREFIX + consistency stress test) producing CharacterBible 2.0 JSON. Decoupled from visual_executor — visual_executor generates images, character_designer defines the identity contract that visual_executor must satisfy."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -10,26 +10,26 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, character, design, identity, 4d-anchor, consistency, character-bible]
-    related_skills: [style_genome, screenplay, drawer, animator, performer, continuity_auditor, lip_sync, production]
+    related_skills: [style_genome, screenplay, visual_executor, performer, continuity_auditor, lip_sync, production]
     expert_id: character_designer
     metrics: [cross_angle_consistency, identity_preservation_rate, stress_test_pass_rate, negative_trait_compliance]
 ---
 
 # Character Designer Expert (角色设计专家)
 
-Character identity contract author for AI 短剧 / 微电影. Produces `CharacterBible 2.0` JSON that defines a character's appearance, personality, style layers, 4D multi-view anchor references, negative traits (anti-drift), and consistency stress-test results. **Decoupled from [`drawer`](../drawer/SKILL.md)**: drawer generates images using FLUX 2 / LoRA / IP-Adapter; character_designer defines WHAT the character is before any image is generated. Calling sequence: character_designer → drawer → (animator | lip_sync).
+Character identity contract author for AI 短剧 / 微电影. Produces `CharacterBible 2.0` JSON that defines a character's appearance, personality, style layers, 4D multi-view anchor references, negative traits (anti-drift), and consistency stress-test results. **Decoupled from [`visual_executor`](../visual_executor/SKILL.md)**: visual_executor generates images (drawer sub-step, FLUX 2 / LoRA / IP-Adapter) and video (animator sub-step); character_designer defines WHAT the character is before any image is generated. Calling sequence: character_designer → visual_executor → lip_sync.
 
 ## When to use this skill
 
 The user needs one of:
 - **New character creation** — define a character before any image generation
-- **Character identity contract** — produce a `CharacterBible 2.0` that downstream experts (drawer, animator, lip_sync, continuity_auditor) can consume as ground truth
+- **Character identity contract** — produce a `CharacterBible 2.0` that downstream experts (visual_executor, lip_sync, continuity_auditor) can consume as ground truth
 - **Consistency stress test** — verify an existing character's identity survives 3 different scene contexts before locking it
 - **Cross-angle validation** — check whether 4 anchor views (front / 3-quarter / side / back) are mutually consistent
 - **Negative trait enforcement** — define what the character is NOT (e.g., "no blonde hair, no beard") to prevent downstream drift
 - **Identity drift diagnosis** — diagnose why a character looks different across shots/episodes
 
-**Do NOT confuse with [`drawer`](../drawer/SKILL.md)**: drawer *generates images*. character_designer *defines the identity contract*. Calling drawer without a CharacterBible first = unreliable, drifting character. Calling character_designer after drawer = post-hoc rationalization.
+**Do NOT confuse with [`visual_executor`](../visual_executor/SKILL.md)**: visual_executor *generates images*. character_designer *defines the identity contract*. Calling visual_executor without a CharacterBible first = unreliable, drifting character. Calling character_designer after visual_executor = post-hoc rationalization.
 
 ## References
 
@@ -48,7 +48,7 @@ The user needs one of:
 - **4D 锚点而非单图** — 单张正面图无法支撑镜头的多角度需求。front / 3-quarter / side / back 四视角构成角色的"4D 身份护照",缺一不可。
 - **负面特征是反漂移的核心** — "character 是金发" 不够,"character 不能是金发 + 不能有胡须 + 不能戴眼镜" 才能锁定。
 - **压力测试先于锁定** — 在 3 个完全不同场景验证一致性,通过才 lock;不通过回退到变体重生成。
-- **下游可消费的契约** — CharacterBible 2.0 是 drawer / animator / lip_sync / continuity_auditor 的 ground truth,字段冻结后不能随意改。
+- **下游可消费的契约** — CharacterBible 2.0 是 visual_executor / lip_sync / continuity_auditor 的 ground truth,字段冻结后不能随意改。
 
 ## Knowledge Retrieval
 
@@ -173,8 +173,7 @@ tags="expert:character_designer,domain:character-bible-schema"
     }
   },
   "downstream_consumers": [
-    "drawer",
-    "animator",
+    "visual_executor",
     "lip_sync",
     "continuity_auditor",
     "production"
@@ -232,7 +231,7 @@ tags="expert:character_designer,domain:character-bible-schema"
 7. **Run consistency stress test** — 3 scenes, compute CLIP-I + DINO-I per scene.
 8. **Lock or fail** — if all 3 scenes pass thresholds, lock + freeze `frozen_fields`; if any fail, regenerate variants + re-test.
 9. **Emit CharacterBible 2.0** — full JSON with all downstream consumer pointers.
-10. **Hand off to downstream** — drawer / animator / lip_sync / continuity_auditor / production.
+10. **Hand off to downstream** — visual_executor / lip_sync / continuity_auditor / production.
 
 ## Quality Thresholds
 
@@ -256,8 +255,7 @@ tags="expert:character_designer,domain:character-bible-schema"
 
 ### Downstream
 
-- **-> [`drawer`](../drawer/SKILL.md)** — consumes CharacterBible as ground-truth identity for every image generation
-- **-> [`animator`](../animator/SKILL.md)** — consumes anchors for video-gen identity preservation
+- **-> [`visual_executor`](../visual_executor/SKILL.md)** — consumes CharacterBible as ground-truth identity for every image generation (drawer sub-step) + consumes anchors for video-gen identity preservation (animator sub-step)
 - **-> [`lip_sync`](../lip_sync/SKILL.md)** — consumes front/three_quarter anchors for identity reference embedding
 - **-> [`continuity_auditor`](../continuity_auditor/SKILL.md)** — consumes ArcFace baseline computed from front anchor
 - **-> [`production`](../production/SKILL.md)** — consumes character wardrobe + accessories spec

@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, lip-sync, audio-driven, video-generation, benchmark, talking-head, digital-human]
-    related_skills: [voicer, performer, editor, animator, mixer, continuity_auditor]
+    related_skills: [voicer, performer, editor, visual_executor, mixer, continuity_auditor]
     expert_id: lip_sync
     metrics: [lip_sync_error, lip_sync_confidence, temporal_consistency, identity_preservation]
 ---
@@ -43,7 +43,7 @@ The user needs one of:
 ## Role & Philosophy
 
 - **唯一国际标准 benchmark 专家** — LRS2 / LRS3 是全球公认的 lip-sync 评估数据集,LSE / LSE-C 是业界标准指标。本专家的产出质量**不依赖 LLM-as-judge**,可直接用 SyncNet 客观验证。
-- **音频驱动而非视频重生成** — 只修改嘴部区域,保留面部其他部分、表情、头部姿态、身份。这是与 [`animator`](../animator/SKILL.md) 的核心区别:animator 从零生成视频,lip_sync 在已有视频上做局部修改。
+- **音频驱动而非视频重生成** — 只修改嘴部区域,保留面部其他部分、表情、头部姿态、身份。这是与 [`visual_executor`](../visual_executor/SKILL.md) 的核心区别:visual_executor 从零生成视频,lip_sync 在已有视频上做局部修改。
 - **口型精度优先于画质** — 数字人/口播场景下,口型与音频的对齐误差 > 120ms 会被观众感知为不同步,即使其他画质指标优秀。
 - **与 [`continuity_auditor`](../continuity_auditor/SKILL.md) 协作** — 输出的视频必须通过 continuity_auditor expert 的"identity preservation"审计,确保角色身份在 shot 内不漂移。
 
@@ -183,7 +183,7 @@ tags="expert:lip_sync,domain:identity-preservation"
 ### Upstream
 
 - **<- [`voicer`](../voicer/SKILL.md)** — `dialogue.wav` 音频输入
-- **<- [`animator`](../animator/SKILL.md)** — silent character video footage(角色对话镜头无音频版)
+- **<- [`visual_executor`](../visual_executor/SKILL.md)** — silent character video footage(角色对话镜头无音频版)
 - **<- [`performer`](../performer/SKILL.md)** — performance baseline(表情、头部姿态基线)
 
 ### Downstream
@@ -194,8 +194,8 @@ tags="expert:lip_sync,domain:identity-preservation"
 
 ## What NOT to do
 
-- ❌ **不要重新生成整段视频** — 这是 [`animator`](../animator/SKILL.md) 的职责。lip_sync 只修改嘴部 ROI。
-- ❌ **不要接受 D-tier 输入** — 侧脸 / 多人 / 遮挡 / 光线不足的视频会输出垃圾。必须 reject 并引导用户重拍或切换到 animator。
+- ❌ **不要重新生成整段视频** — 这是 [`visual_executor`](../visual_executor/SKILL.md) 的职责。lip_sync 只修改嘴部 ROI。
+- ❌ **不要接受 D-tier 输入** — 侧脸 / 多人 / 遮挡 / 光线不足的视频会输出垃圾。必须 reject 并引导用户重拍或切换到 visual_executor。
 - ❌ **不要忽略 SyncNet 客观指标** — LLM-judge 不可靠,必须用 SyncNet 数学指标判定 grade。任何"看起来还行"的主观判断都不合格。
 - ❌ **不要在没有 LSE benchmark 的情况下声称"SOTA"** — 必须在 LRS2/LRS3 测试集上跑出 LSE ≤ 6.5 才能声称 SOTA;否则只能说"达到 X 等级"。
 - ❌ **不要忽略 identity 漂移** — 输出视频与输入视频的 identity cosine similarity < 0.92 时,即使 LSE 优秀也必须 VETO 并触发 continuity_auditor handoff。

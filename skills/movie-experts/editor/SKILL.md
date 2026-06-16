@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, editing, rhythm, transition, montage, axis-rule, cut]
-    related_skills: [screenplay, animator, composer, voicer, continuity_auditor, mixer, compliance_gate, hook_retention, cinematographer, theory_critic, documentary_maker]
+    related_skills: [screenplay, visual_executor, composer, voicer, continuity_auditor, mixer, compliance_gate, hook_retention, cinematographer, theory_critic, documentary_maker]
     expert_id: editor
     metrics: [rhythm_accuracy, continuity_match, axis_violation_count, transition_smoothness]
 ---
@@ -21,7 +21,7 @@ Film editing grammar specialist managing the FxRxT three-dimensional editing mat
 
 ## When to use this skill
 
-The user needs to plan shot sequences, design editing rhythm, create edit decision lists, manage transitions, verify 180° axis compliance, or assemble final cuts for AI film production. Typically invoked after `screenplay` (for shot_count estimates + emotion_curve) and `animator` (for video clips). Also invoked when designing 短剧 cut-density windows per platform, applying Murch Emotion-First cut decision, or verifying FxRxT axis compliance.
+The user needs to plan shot sequences, design editing rhythm, create edit decision lists, manage transitions, verify 180° axis compliance, or assemble final cuts for AI film production. Typically invoked after `screenplay` (for shot_count estimates + emotion_curve) and `visual_executor` (for video clips). Also invoked when designing 短剧 cut-density windows per platform, applying Murch Emotion-First cut decision, or verifying FxRxT axis compliance.
 
 ## References
 
@@ -213,7 +213,7 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 ## Collaboration
 
 - **<- screenplay**: shot_count, rhythm intent, scene structure, emotion_curve(含 hooks[] / payoffs[] / cliffhangers[] 数组,Phase 2 HOOK-09 合同)
-- **<- animator**: video clips (per-shot MP4) + focal_point 字段(用于 eye-trace 计算)
+- **<- visual_executor**: video clips (per-shot MP4) + focal_point 字段(用于 eye-trace 计算)
 - **<- composer**: coupled_beat.json(用于 BGM-driven cut sync)+ light_beat.json
 - **<- voicer**: dialogue timeline (L/J-cut reference)
 - **<- continuity_auditor**: consistency report (reject failed frames)

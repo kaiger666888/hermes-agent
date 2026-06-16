@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, color, grading, color-intent, lut, cinematic, color-science]
-    related_skills: [screenplay, style_genome, drawer, continuity_auditor, animator, production, theory_critic, cinematographer]
+    related_skills: [screenplay, style_genome, visual_executor, continuity_auditor, production, theory_critic, cinematographer]
     expert_id: colorist
     metrics: [color_intent_match, color_cross_shot_consistency, style_fidelity]
 ---
@@ -147,7 +147,7 @@ tags="expert:colorist,domain:digital-color-science"
 1. **Emotion-Color Mapping** — Map each `emotion_curve` sample to CxSxZ combination ID
 2. **Combination Selection** — Select from 28 core combinations or interpolate new
 3. **LUT Design** — Generate lift/gamma/gain parameters from selected combination
-4. **Per-Frame Grading** — Apply LUT parameters to drawer output frames
+4. **Per-Frame Grading** — Apply LUT parameters to visual_executor output frames
 5. **Cross-Shot Verification** — Compare adjacent shots for temp/saturation/brightness consistency
 6. **Transition Processing** — Generate color gradient curves at emotional turning points
 7. **Output Encoding** — Generate `color_intent.json` + LUT params + graded frames
@@ -169,11 +169,10 @@ tags="expert:colorist,domain:digital-color-science"
 
 - **<- screenplay**: emotion_curve, lighting_mood, sound_mood
 - **<- style_genome**: style gene vector, genre color preferences
-- **<- drawer**: raw generated frames (pre-grading input)
+- **<- visual_executor**: raw generated frames (pre-grading input)
 - **<- continuity_auditor**: cross-shot deviation reports (feedback)
-- **-> drawer**: color_intent.json (influences subsequent frame generation)
+- **-> visual_executor**: color_intent.json (influences subsequent frame generation) + color params for temporal consistency
 - **-> continuity_auditor**: graded frames for consistency audit
-- **-> animator**: color params for temporal consistency
 - **-> mixer**: color emotion annotations for mixing judgment
 
 ## What NOT to do

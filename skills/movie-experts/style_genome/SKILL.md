@@ -10,7 +10,7 @@ prerequisites:
 metadata:
   hermes:
     tags: [movie, style, director, genre, visual-dna, style-blending, cross-module]
-    related_skills: [screenplay, drawer, colorist, editor, composer, scene_builder, performer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
+    related_skills: [screenplay, visual_executor, colorist, editor, composer, scene_builder, performer, continuity_auditor, compliance_gate, theory_critic, animation_studio, documentary_maker]
     expert_id: style_genome
     metrics: [style_consistency, gene_extraction_accuracy, blend_coherence, cross_module_alignment]
 ---
@@ -105,7 +105,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 ### Cross-Module Signals
 | Module | Signal Dimensions | Vector Size |
 |--------|------------------|-------------|
-| drawer | composition + color + light_shadow | 3D |
+| visual_executor | composition + color + light_shadow | 3D |
 | colorist | color + light_shadow | 2D |
 | editor | rhythm | 1D |
 | composer | sound | 1D |
@@ -167,7 +167,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 ## Style Rules
 
 ### Cross-Module Alignment
-- drawer: composition + color + light_shadow directly
+- visual_executor: composition + color + light_shadow directly
 - colorist: color + light_shadow dimensions
 - editor: rhythm dimension (editing density)
 - composer: sound dimension (score density)
@@ -204,7 +204,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 
 - **<- user/upstream**: director intent, reference imagery, blending requirements
 - **<- screenplay**: style requirement descriptions
-- **-> drawer**: composition + color + light_shadow signals
+- **-> visual_executor**: composition + color + light_shadow signals
 - **-> colorist**: color + light_shadow signals
 - **-> editor**: rhythm signal
 - **-> composer**: sound signal
@@ -224,4 +224,4 @@ tags="expert:style_genome,domain:cn-director-analysis"
 ## Pipeline Position
 
 Style Genome is the **root expert** in the production DAG:
-`style_genome -> screenplay -> (scene_builder, performer) -> (drawer, voicer, colorist, editor, composer) -> (animator, foley, spatial_audio, continuity_auditor) -> mixer -> final`
+`style_genome -> screenplay -> (scene_builder, performer) -> (visual_executor, voicer, colorist, editor, composer, foley, spatial_audio, continuity_auditor) -> mixer -> final`
