@@ -1,0 +1,137 @@
+# skills-mapping.yaml — new DAG node ↔ v1 hermes-agent expert mapping
+# Per HANDOFF-02 + FOUND-08 frozen rule
+# Binding: non_binding_recommendation per HANDOFF-01
+
+schema_version: design-2026-06-16-prfp
+binding: non_binding_recommendation
+hermes_agent_baseline_ref: 85965c393f44deae29a833f2ae98af66d26548ce
+supersedes: none
+superseded_by: TBD
+frozen_rule: FOUND-08  # v1 expert_ids cannot be silently renamed
+
+# ============================================
+# Mapping entries
+# ============================================
+mappings:
+
+  # === 1:1 preserved (9) ===
+  - new_node: creative_source
+    v1_expert_id: creative_source
+    mapping_type: one_to_one_preserved
+    notes: "Direct mapping;no rename;no merge"
+
+  - new_node: style_genome
+    v1_expert_id: style_genome
+    mapping_type: one_to_one_preserved
+
+  - new_node: screenplay
+    v1_expert_id: screenplay
+    mapping_type: one_to_one_preserved
+
+  - new_node: script_auditor
+    v1_expert_id: script_auditor
+    mapping_type: one_to_one_preserved
+
+  - new_node: character_designer
+    v1_expert_id: character_designer
+    mapping_type: one_to_one_preserved
+
+  - new_node: cinematographer
+    v1_expert_id: cinematographer
+    mapping_type: one_to_one_preserved
+
+  - new_node: editor
+    v1_expert_id: editor
+    mapping_type: one_to_one_preserved
+
+  - new_node: colorist
+    v1_expert_id: colorist
+    mapping_type: one_to_one_preserved
+
+  - new_node: hook_retention
+    v1_expert_id: hook_retention
+    mapping_type: one_to_one_preserved
+    form_specific: short_drama
+
+  - new_node: quality_gate
+    v1_expert_id: quality_gate
+    mapping_type: one_to_one_preserved
+
+  - new_node: theory_critic
+    v1_expert_id: theory_critic
+    mapping_type: one_to_one_preserved
+    location: consultative
+
+  # === 1:1 renamed (2) — requires skills team sign-off ===
+  - new_node: continuity_auditor
+    v1_expert_id: continuity
+    mapping_type: one_to_one_renamed
+    rename_rationale: "Emphasize critic role per Phase 7 §4.10;rename requires skills team agreement"
+    sign_off_required: true
+    sign_off_status: pending
+
+  - new_node: compliance_gate
+    v1_expert_id: compliance_marketing
+    mapping_type: one_to_one_renamed
+    rename_rationale: "Separate pure compliance from marketing per Phase 7 §4.15;rename requires skills team agreement"
+    sign_off_required: true
+    sign_off_status: pending
+
+  # === N:1 merged (2 nodes, 7 experts) ===
+  - new_node: visual_executor
+    v1_expert_ids: [drawer, animator]
+    mapping_type: n_to_one_merged
+    merge_rationale: "Phase 7 §4.8 + PITFALLS §2.1: consistency context unified; specialization loss acceptable"
+    revisit_in_phase: "Phase 11 handoff review — may revisit split if specialization > consistency"
+
+  - new_node: audio_pipeline
+    v1_expert_ids: [voicer, composer, foley, mixer, spatial_audio]
+    mapping_type: n_to_one_merged
+    merge_rationale: "Phase 7 §4.9 + PITFALLS §2.6: 5-task compression; consistency context unified"
+    sub_steps_preserved: [voicer, lip_sync, composer, foley, mixer]
+    revisit_in_phase: "Phase 11 handoff review"
+
+  # === NEW (1) — AI-native, no v1 precedent ===
+  - new_node: prompt_injector
+    v1_expert_id: null
+    mapping_type: new_ai_native
+    rationale: "Phase 7 §4.7 + §3.3 D3.5: AI-native node; no traditional precedent"
+    action_for_v21: "Add prompt_injector expert in v2.1+ skills milestone"
+
+# ============================================
+# v1 experts NOT in new DAG (deprecation candidates)
+# ============================================
+not_in_new_dag:
+
+  - v1_expert_id: performer
+    disposition: deprecate_candidate
+    rationale: "Performance truth folded into character_designer (voice + behavioral tics) + screenplay (dialogue subtext); no standalone node necessary"
+    final_decision_milestone: v2.1+
+
+  - v1_expert_id: scene_builder
+    disposition: deprecate_candidate
+    rationale: "Scene design folded into cinematographer (mise-en-scène as composition_lock sub-task) + style_genome"
+    final_decision_milestone: v2.1+
+
+  - v1_expert_id: storyboard_designer
+    disposition: deprecate_candidate
+    rationale: "Phase 7 §3.4 D3.4: storyboard folded into cinematographer composition_lock"
+    final_decision_milestone: v2.1+
+
+  - v1_expert_id: production
+    disposition: deferred
+    rationale: "Production management out of v2.0 PRFP scope (pipeline design, not production execution)"
+    final_decision_milestone: future
+
+# ============================================
+# FOUND-08 frozen rule compliance check
+# ============================================
+frozen_rule_check:
+  rule: "v1 expert_ids cannot be silently renamed (v1 RETROSPECTIVE FOUND-08)"
+  status: compliant
+  verification:
+    - "All 1:1 preserved nodes keep original expert_id ✓"
+    - "All renamed nodes have explicit mapping entry ✓"
+    - "All merged nodes record original expert_id set ✓"
+    - "New AI-native nodes marked NEW (no v1 expert_id to rename) ✓"
+    - "Deprecate candidates are NOT silent — explicit not_in_new_dag entries ✓"

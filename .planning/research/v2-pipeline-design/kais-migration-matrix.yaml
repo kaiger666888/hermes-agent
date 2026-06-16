@@ -1,0 +1,176 @@
+# kais-migration-matrix.yaml — new DAG node ↔ kais-movie-agent phases + lib/ mapping
+# Per HANDOFF-03 + HANDOFF-04 baseline
+# Binding: non_binding_recommendation per HANDOFF-01
+
+schema_version: design-2026-06-16-prfp
+binding: non_binding_recommendation
+kais_movie_agent_baseline_ref: 734dc71c9d5ff20d55dbd0255f367030962cf329
+baseline_date: 2026-06-16
+supersedes: none
+superseded_by: TBD
+
+# ============================================
+# kais V1-V8 phase → new DAG node mapping
+# ============================================
+# V8 reference: /data/workspace/kais-movie-agent/docs/V8-ARCHITECTURE.md (baseline_ref above)
+# V8 has 20 steps (Steps 1-11 creative立项 + Steps 12-20 production execution)
+
+phase_mappings:
+
+  # === Creative立项 (V8 Steps 1-11) ===
+  - v8_step: "Step 1: kais-soul-radar (痛点发现)"
+    new_node: creative_source
+    mapping_type: maps_to
+    notes: "Phase 7 §4.1 — creative_source covers pain-point discovery + kernel mining"
+
+  - v8_step: "Step 2: kais-script-agent (outline + script)"
+    new_node: screenplay
+    mapping_type: maps_to
+    notes: "Phase 7 §4.3 — screenplay covers outline + scene list + dialogue"
+
+  - v8_step: "Step 3: kais-character-design (角色)"
+    new_node: character_designer
+    mapping_type: maps_to
+
+  - v8_step: "Step 4: kais-art-direction (art bible)"
+    new_node: style_genome
+    mapping_type: maps_to
+    notes: "Phase 7 §4.2 — style_genome 5D vector replaces art bible"
+
+  - v8_step: "Step 5: kais-voice (voice locking)"
+    new_node: audio_pipeline
+    mapping_type: maps_to_sub_step
+    sub_step: voicer
+
+  - v8_step: "Step 6: kais-scene-design (场景)"
+    new_node: cinematographer
+    mapping_type: maps_to_sub_step
+    sub_step: mise_en_scene
+    notes: "Scene folded into cinematographer composition_lock per Phase 7 §4.5"
+
+  - v8_step: "Step 7: kais-shooting-script (分镜)"
+    new_node: cinematographer
+    mapping_type: maps_to_sub_step
+    sub_step: shot_list
+    notes: "Phase 7 §3.4 D3.4: storyboard folded into composition_lock"
+
+  - v8_step: "Step 8: kais-storyboard-designer"
+    new_node: cinematographer
+    mapping_type: maps_to_sub_step
+    sub_step: composition_lock
+    notes: "Phase 7 §3.4 D3.4 + §4.5: storyboard not standalone"
+
+  - v8_step: "Step 9: kais-cinematography-planner"
+    new_node: cinematographer
+    mapping_type: maps_to
+
+  - v8_step: "Step 10: kais-camera (preview + final)"
+    new_node: cinematographer
+    mapping_type: maps_to_sub_step
+    sub_step: composition_lock_preview
+
+  - v8_step: "Step 11: kais-blender-pose (4D anchor)"
+    new_node: character_designer
+    mapping_type: maps_to_sub_step
+    sub_step: identity_anchor
+    notes: "4D anchor system already partially integrated per STACK §3.4"
+
+  # === Production execution (V8 Steps 12-20) ===
+  - v8_step: "Step 12: kais-anatomy-guard"
+    new_node: continuity_auditor
+    mapping_type: maps_to_sub_step
+    sub_step: character_anatomy_check
+
+  - v8_step: "Step 13-15: visual generation (sketch-then-render)"
+    new_node: visual_executor
+    mapping_type: maps_to
+    notes: "Phase 7 §3.3 D3.4: sketch-then-render is instantiation, not user-value"
+
+  - v8_step: "Step 16: kais-story-score (quality)"
+    new_node: quality_gate
+    mapping_type: maps_to
+
+  - v8_step: "Step 17: audio integration"
+    new_node: audio_pipeline
+    mapping_type: maps_to
+
+  - v8_step: "Step 18: final mixing"
+    new_node: audio_pipeline
+    mapping_type: maps_to_sub_step
+    sub_step: mixer
+
+  - v8_step: "Step 19: review platform (Toonflow)"
+    new_node: quality_gate
+    mapping_type: maps_to_sub_step
+    notes: "Phase 11 §5: Toonflow弃用;quality_gate covers review"
+
+  - v8_step: "Step 20: final compliance + distribution"
+    new_node: compliance_gate
+    mapping_type: maps_to
+    notes: "Distribution out of scope per AF-9"
+
+# ============================================
+# kais lib/ modules → new DAG node mapping
+# ============================================
+lib_mappings:
+
+  - kais_lib: lib/pipeline.js
+    role_in_v8: "576-line pipeline orchestrator"
+    new_role: "kais-movie-agent impl decides whether to refactor or wrap"
+    recommendation: "Wrap with new DAG topology;don't refactor inline"
+    priority: medium
+
+  - kais_lib: lib/phases/index.js
+    role_in_v8: "1157-line phases dispatcher"
+    new_role: "Map each phase to new DAG node via phase_mappings above"
+    recommendation: "Refactor to dispatch by new_node id;keep backward-compat layer"
+    priority: high
+
+  - kais_lib: lib/agents/
+    role_in_v8: "Per-step LLM agents"
+    new_role: "Refactor to per-new_node agents;agents stay,but topology changes"
+    priority: high
+
+  - kais_lib: lib/consistency/
+    role_in_v8: "kais-consistency-agent"
+    new_role: "Fold into continuity_auditor node + cross-cutting invariants"
+    priority: medium
+
+  - kais_lib: lib/state/
+    role_in_v8: "Pipeline state management"
+    new_role: "Extend to include consistency_context (per Phase 10 §2.1)"
+    priority: high
+
+  - kais_lib: lib/gpu-runtime/
+    role_in_v8: "GPU Runtime Manager V5.1 (3090/3060Ti split)"
+    new_role: "Keep as-is;impl detail for visual_executor + audio_pipeline"
+    priority: low
+
+# ============================================
+# Migration phases (suggested, non-binding)
+# ============================================
+migration_phases:
+
+  - phase: 1
+    name: "Add new node topology wrapper"
+    description: "Don't replace V8 pipeline;add wrapper that exposes new_node ids as API"
+    risk: low
+    effort_estimate: 2-3 weeks
+
+  - phase: 2
+    name: "Migrate per-node agents to new topology"
+    description: "Refactor each agent from V8 step mapping to new_node mapping"
+    risk: medium
+    effort_estimate: 4-6 weeks
+
+  - phase: 3
+    name: "Remove V8 legacy paths"
+    description: "Once new topology stable,deprecate V8 step dispatch"
+    risk: high
+    effort_estimate: 2-3 weeks
+
+  - phase: 4
+    name: "Add Phase 10 LLM-creative wiring"
+    description: "Implement consistency_context + novelty_constraint per Phase 10"
+    risk: medium
+    effort_estimate: 3-4 weeks
