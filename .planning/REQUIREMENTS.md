@@ -9,7 +9,7 @@
 
 ## v2.0 Requirements
 
-### DERIVATION — Phase A · 第一性原理推导记录
+### DERIVATION — Phase 7 (was Phase A) · 第一性原理推导记录
 
 - [ ] **DERIV-01**: 读者可以从"观众最终拿到什么"这一根本问题出发,读到一条**无逻辑跳跃**的 Musk-style 第一性原理推导链,推导结论是**候选节点集**(非从现有 8 phases / 26 skills 类比套出来)。
 - [ ] **DERIV-02**: 每个候选节点携带 `derivation` 字段,显示该节点如何从第一性原理推导而来(非"传统就是这样"的类比)。
@@ -20,7 +20,7 @@
 - [ ] **DERIV-07**: 推导过程**明确引用 STACK §1.4 corpus 子集**(每个第一性问题对应具体书目),不是 corpus-blind。
 - [ ] **DERIV-08**: 推导明确**显式避免 PITFALLS §1 + §5 列出的 Musk 方法误用**(6 个 failure modes 逐条 check)。
 
-### NODES — Phase B · 节点 DAG + 每节点规格
+### NODES — Phase 8 (was Phase B) · 节点 DAG + 每节点规格
 
 - [ ] **NODE-01**: 读者能看到一个节点 DAG,**目标节点数 8-15**,硬上限 ≤25(超出需逐节点说明)。
 - [ ] **NODE-02**: 每个节点声明 4 个核心字段:`core_task` / `I/O 契约` / `AIGC transformation point` / `traditional experience anchor`。
@@ -32,7 +32,7 @@
 - [ ] **NODE-08**: `capability-spec` 是规范层;**具体模型名只在 dated annex 出现**(不在 node spec 主体硬编码,避免 v1 `wan22_video` 类型 phantom 错误重演)。
 - [ ] **NODE-09**: 每个生成型节点都有**配对的 critic 节点或 self-critic 步骤**,携带量化指标(无 critic 节点的生成节点需显式说明理由)。
 
-### CORPUS — Phase C · 102 本书传统经验锚点对照
+### CORPUS — Phase 9 (was Phase C) · 102 本书传统经验锚点对照
 
 - [ ] **CORPUS-01**: 读者能看到一个**双向 102-book ↔ node 覆盖矩阵**(`corpus-trace.yaml`:正查节点→书目,反查书目→节点)。
 - [ ] **CORPUS-02**: 每个 corpus anchor 标 `applicable_form`(长片 / 微电影 / 短剧 / universal),避免 genre conflation。
@@ -42,7 +42,7 @@
 - [ ] **CORPUS-06**: **0 强 corpus 引用的节点必须明确标记为 AIGC-native**(并解释为何无传统对应,避免"假传统"伪装)。
 - [ ] **CORPUS-07**: 每个 corpus 引用记录 `Last-verified` 戳(与 v1 LICENSE 模式一致),便于后续 corpus drift 检测。
 
-### CREATIVE — Phase D · LLM 创意凝练专题
+### CREATIVE — Phase 10 (was Phase D) · LLM 创意凝练专题
 
 - [ ] **CREATIVE-01**: 读者能读到**独立子文档**,覆盖 LLM 创意凝练 4 个维度:创意定义 / 自洽机制 / prompt 策略 / fail modes。
 - [ ] **CREATIVE-02**: 创意被**操作性定义为"在不可侵犯约束内的 novelty"**,不是 randomness(明确区分 creative vs random)。
@@ -52,7 +52,7 @@
 - [ ] **CREATIVE-06**: 采用 **template library**(多种叙事弧模板库),非单一 Save-the-Cat / Hero's Journey 模板。
 - [ ] **CREATIVE-07**: **链接回 `creative_source` 节点的 novelty-pressure mechanism**(把"创意"接到 DAG 上,非独立浮空)。
 
-### HANDOFF — Phase E · 跨对照 + 双 repo 交接
+### HANDOFF — Phase 11 (was Phase E) · 跨对照 + 双 repo 交接
 
 - [ ] **HANDOFF-01**: 读者能读到 **non-binding 交接计划**,明确标注 `binding: non_binding_recommendation`。
 - [ ] **HANDOFF-02**: `skills-mapping.yaml` 把新 DAG 节点 ↔ 现有 26 个 movie-experts skills 对应(**保留 expert_ids**,v1 FOUND-08 frozen rule 不破坏)。
@@ -62,9 +62,9 @@
 - [ ] **HANDOFF-06**: **versioning scheme 是 date-stamped** (e.g., `design-2026-06-16-prfp`)with `supersedes` / `superseded_by`(防 design-impl drift)。
 - [ ] **HANDOFF-07**: 附 **1-2 页 impl-cheatsheet** 给 kais-movie-agent 团队上手实施(不是完整 spec,是入口 cheat-sheet)。
 - [ ] **HANDOFF-08**: **convergence log**(新 DAG 与现有 pipeline 同意的部分,解释为什么同意,而不只解释分歧)。
-- [ ] **HANDOFF-09**: 对照产物包含 `COMPARISON-VS-8-PHASES.md` + `COMPARISON-VS-26-SKILLS.md`(非 binding delta 分析,必须在 Phase A-D 完成后才写,防污染推导)。
+- [ ] **HANDOFF-09**: 对照产物包含 `COMPARISON-VS-8-PHASES.md` + `COMPARISON-VS-26-SKILLS.md`(非 binding delta 分析,必须在 Phase 7-10 完成后才写,防污染推导)。
 
-### GOVERNANCE — Phase F · 治理 + Finalization
+### GOVERNANCE — Phase 12 (was Phase F) · 治理 + Finalization
 
 - [ ] **GOV-01**: 读者能读到 **G1-G7 living-doc governance rules**(node 新增需重新推导;AIGC 更新需 marginal-value delta;corpus 变更需 source 验证;status 转换需通过所有 review gates)。
 - [ ] **GOV-02**: `validate_design.py` (~30 行 lint) **强制执行 governance rules**(本里程碑唯一代码,作为 pre-commit hook)。
@@ -73,14 +73,16 @@
 - [ ] **GOV-05**: **CHANGELOG.md 是 append-only 审计 trail**(每次设计变更记录 what/why/who/when)。
 - [ ] **GOV-06**: 每个关键设计决策记录 **Decision / Rationale / Outcome**(v1 PROJECT.md 模式,v1 RETROSPECTIVE 验证有效)。
 
-### META — 元约束(贯穿全里程碑)
+### META — 元约束(跨阶段,roadmapper 分配到各自 load-bearing 阶段)
 
-- [ ] **META-01**: 本里程碑**零 SKILL.md 编辑**(hermes-agent/skills/movie-experts/ 完全不动)。
-- [ ] **META-02**: 本里程碑**零 .js/.py 代码编辑**(kais-movie-agent/ 完全不动,except `scripts/validate_design.py` 这一个例外)。
-- [ ] **META-03**: **双语策略**:EN 结构 + CN 段落 / 示例(与 v1 SKILL.md 一致)。
-- [ ] **META-04**: 设计文档物理位置在 `.planning/research/v2-pipeline-design/`(或 roadmapper 选定子目录,但必须在 hermes-agent/.planning/ 内,不跨 repo)。
-- [ ] **META-05**: **cost ceiling 假设 ¥1000-10000/episode**(约束所有节点 cost_budget 字段;超出范围的节点需显式说明)。
-- [ ] **META-06**: **theory_critic 触发模式:创作者手动拉**(非自动 invoke;不在主 DAG 触发条件里)。
+> **Assignment note (2026-06-16):** META-01/02/03/04 are exit-checks (no-touch / bilingual / location invariants) verified at Phase 12 milestone close. META-05 (cost ceiling) constrains every node's `cost_budget` — assigned to Phase 8 where cost budgets are populated. META-06 (theory_critic trigger mode) shapes DAG `consultative` edges — assigned to Phase 8 where edges are declared. See `.planning/ROADMAP.md` § Coverage Map for the cross-cutting assignment rationale.
+
+- [ ] **META-01** *(Phase 12)*: 本里程碑**零 SKILL.md 编辑**(hermes-agent/skills/movie-experts/ 完全不动)。
+- [ ] **META-02** *(Phase 12)*: 本里程碑**零 .js/.py 代码编辑**(kais-movie-agent/ 完全不动,except `scripts/validate_design.py` 这一个例外)。
+- [ ] **META-03** *(Phase 12)*: **双语策略**:EN 结构 + CN 段落 / 示例(与 v1 SKILL.md 一致)。
+- [ ] **META-04** *(Phase 12)*: 设计文档物理位置在 `.planning/research/v2-pipeline-design/`(或 roadmapper 选定子目录,但必须在 hermes-agent/.planning/ 内,不跨 repo)。
+- [ ] **META-05** *(Phase 8)*: **cost ceiling 假设 ¥1000-10000/episode**(约束所有节点 cost_budget 字段;超出范围的节点需显式说明)。
+- [ ] **META-06** *(Phase 8)*: **theory_critic 触发模式:创作者手动拉**(非自动 invoke;不在主 DAG 触发条件里)。
 
 ---
 
@@ -111,25 +113,89 @@
 | Auto-distribution / auto-upload 节点设计 | TOS 风险,明确排除(AF-9) |
 | Theory-critic 作为主 DAG blocking gate | AF-12;明确咨询式(META-06) |
 | >25 节点的设计 | AF-1;硬上限 |
-| 把现有 8 phases 当作起点 | PROJECT.md 明确"从 0 推",Phase A 必须独立推导 |
+| 把现有 8 phases 当作起点 | PROJECT.md 明确"从 0 推",Phase 7 必须独立推导 |
 | 把现有 26 skills 当作起点 | 同上;HANDOFF-02 是事后对照,不是设计输入 |
 
 ---
 
 ## Traceability
 
-> Phase 映射由 roadmapper 在下一步生成。Phase 编号沿用 v1 后续(v1 结束于 phase 6,所以 v2.0 从 phase 7 起步)。
+> Phase 映射由 roadmapper 在 2026-06-16 生成。Phase 编号沿用 v1 后续(v1 结束于 phase 6,所以 v2.0 从 phase 7 起步)。Cross-cutting META REQs 分配到各自 load-bearing 阶段(见 META 节 assignment note)。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (待 roadmapper 填充) | TBD | Pending |
+| DERIV-01 | 7 | Pending |
+| DERIV-02 | 7 | Pending |
+| DERIV-03 | 7 | Pending |
+| DERIV-04 | 7 | Pending |
+| DERIV-05 | 7 | Pending |
+| DERIV-06 | 7 | Pending |
+| DERIV-07 | 7 | Pending |
+| DERIV-08 | 7 | Pending |
+| NODE-01 | 8 | Pending |
+| NODE-02 | 8 | Pending |
+| NODE-03 | 8 | Pending |
+| NODE-04 | 8 | Pending |
+| NODE-05 | 8 | Pending |
+| NODE-06 | 8 | Pending |
+| NODE-07 | 8 | Pending |
+| NODE-08 | 8 | Pending |
+| NODE-09 | 8 | Pending |
+| META-05 | 8 | Pending |
+| META-06 | 8 | Pending |
+| CORPUS-01 | 9 | Pending |
+| CORPUS-02 | 9 | Pending |
+| CORPUS-03 | 9 | Pending |
+| CORPUS-04 | 9 | Pending |
+| CORPUS-05 | 9 | Pending |
+| CORPUS-06 | 9 | Pending |
+| CORPUS-07 | 9 | Pending |
+| CREATIVE-01 | 10 | Pending |
+| CREATIVE-02 | 10 | Pending |
+| CREATIVE-03 | 10 | Pending |
+| CREATIVE-04 | 10 | Pending |
+| CREATIVE-05 | 10 | Pending |
+| CREATIVE-06 | 10 | Pending |
+| CREATIVE-07 | 10 | Pending |
+| HANDOFF-01 | 11 | Pending |
+| HANDOFF-02 | 11 | Pending |
+| HANDOFF-03 | 11 | Pending |
+| HANDOFF-04 | 11 | Pending |
+| HANDOFF-05 | 11 | Pending |
+| HANDOFF-06 | 11 | Pending |
+| HANDOFF-07 | 11 | Pending |
+| HANDOFF-08 | 11 | Pending |
+| HANDOFF-09 | 11 | Pending |
+| GOV-01 | 12 | Pending |
+| GOV-02 | 12 | Pending |
+| GOV-03 | 12 | Pending |
+| GOV-04 | 12 | Pending |
+| GOV-05 | 12 | Pending |
+| GOV-06 | 12 | Pending |
+| META-01 | 12 | Pending |
+| META-02 | 12 | Pending |
+| META-03 | 12 | Pending |
+| META-04 | 12 | Pending |
 
 **Coverage:**
-- v2.0 requirements: **51 total**(DERIV × 8 + NODES × 9 + CORPUS × 7 + CREATIVE × 7 + HANDOFF × 9 + GOV × 6 + META × 6 - 1 因 HANDOFF-09 与 HANDOFF-01 重叠部分 - 待 roadmapper 验证)
-- Mapped to phases: 0
-- Unmapped: 51 ⚠️(等 roadmapper 填)
+- v2.0 requirements: **52 total** (DERIV × 8 + NODES × 9 + CORPUS × 7 + CREATIVE × 7 + HANDOFF × 9 + GOV × 6 + META × 6)
+- Mapped to phases: **52 / 52** ✓
+- Unmapped: **0**
+
+> **Count correction note (2026-06-16):** Earlier draft flagged "51 total - 1 for HANDOFF-09/HANDOFF-01 overlap". On roadmapper review, HANDOFF-01 (handoff contract declared non-binding) and HANDOFF-09 (comparison artifacts exist as contamination-safe delta analyses) address distinct deliverables. No overlap; canonical count = **52**.
+
+**Per-phase summary:**
+
+| Phase | Name | Requirements | Count |
+|-------|------|--------------|-------|
+| 7 | First-Principles Derivation | DERIV-01..08 | 8 |
+| 8 | Node DAG + Per-Node Specs | NODE-01..09, META-05, META-06 | 11 |
+| 9 | 102-Book Corpus Traceability | CORPUS-01..07 | 7 |
+| 10 | LLM-Creative-Distillation Deep-Dive | CREATIVE-01..07 | 7 |
+| 11 | Cross-Comparisons + Dual-Repo Handoff | HANDOFF-01..09 | 9 |
+| 12 | Finalization (Governance + Open Questions + README) | GOV-01..06, META-01, META-02, META-03, META-04 | 10 |
 
 ---
 
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-16 after v2.0 PRFP requirements scoping*
+*Last updated: 2026-06-16 — roadmapper traceability populated (52/52 mapped); META cross-cutting assignments applied.*
