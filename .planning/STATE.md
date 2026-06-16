@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Skills-to-DAG Alignment
 status: ready_to_plan
-last_updated: 2026-06-16T17:47:04.409Z
-last_activity: 2026-06-17 — Phase 15 Plan 03 complete (audio_pipeline close-out docs: README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge; 6 audio expert_ids collapsed to 1 across cross-cutting docs)
+last_updated: 2026-06-17T00:00:00.000Z
+last_activity: 2026-06-17 — Phase 16 Plan 01 complete (prompt_injector NEW AI-native expert created: SKILL.md + 4 refs + LICENSE + GAP-REPORT + bidirectional edge sync to 4 consumers creative_source/cinematographer/visual_executor/audio_pipeline)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 50
-stopped_at: Phase 15 complete (3/3) — ready to discuss Phase 16
+stopped_at: Phase 16 Plan 01 complete (1/2) — ready for Plan 16-02 (close-out docs)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +30,9 @@ stopped_at: Phase 15 complete (3/3) — ready to discuss Phase 16
 ## Current Position
 
 Phase: 16
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-16
+Plan: 16-01 complete (1/2)
+Status: Executing Phase 16
+Last activity: 2026-06-17
 
 ### Progress
 
@@ -45,7 +45,7 @@ v3.0 Skills-to-DAG Alignment milestone:
   Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
   Phase 14 [██████████] 100% Complete (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 done: consumer edge sync across 15 SKILL.md; 14-03 done: README + corpus tree + DAG + _shared/ docs close-out)
   Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
-  Phase 16 [          ] 0% Not started (prompt_injector NEW — UNBLOCKED, Phase 15 complete)
+  Phase 16 [█████░░░░░] 50% In progress (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 pending: close-out docs)
   Phase 17 [          ] 0% Not started (deprecate 3 — UNBLOCKED, depends on 16)
   Phase 18 [          ] 0% Not started (validate + docs — depends on 13-17)
 ```
@@ -146,6 +146,16 @@ v3.0 Skills-to-DAG Alignment milestone:
 | Bilingual glossary header '### audio_pipeline / 音频管线专家' | Matches Phase 14's '### visual_executor / 视觉执行专家' bilingual header convention. Plan verify regex `^### audio_pipeline$` was too strict; bilingual header is the established convention | Applied 2026-06-17 in plan 15-03 |
 | Cross-cutting doc consolidation scope boundary | Stray audio references in _shared/cognitive-resonance-metrics.md + _shared/known-external-models.yaml OUT OF SCOPE per plan files_modified. Phase 14 precedent: known-external-models.yaml provenance strings reference predecessor ref paths that still resolve via archival preservation; Phase 18 is canonical path reconciliation phase | Deferred to Phase 18 per plan 15-03 scope boundary |
 
+### Decisions (v3.0 — Phase 16)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| AI-native expert creation pattern: no aliases, no sub_steps, no redirect stub | prompt_injector has no v1 predecessor (skills-mapping.yaml:99-103 mapping_type: new_ai_native); FOUND-08 alias requirement inapplicable; no predecessor directory to redirect from | Applied 2026-06-17 in plan 16-01 |
+| related_skills = exactly 4 collaboration-graph peers [creative_source, cinematographer, visual_executor, audio_pipeline] | ROADMAP §16 criterion #3 specifies exactly these 4; nodes.yaml hard deps (style_genome, character_designer) are data-flow predecessors NOT collaboration-graph peers — documented in SKILL.md I/O Contract section as the canonical distinction (threat T-16-06 mitigation) | Applied 2026-06-17 in plan 16-01 |
+| Provider-agnostic body with descriptive model-name allowance | SKILL.md body uses <image_primary>/<video_primary> placeholders for prompt identifiers (threat T-16-03); literal model names (FLUX 2/Veo/Kling) appear only in References table descriptions + the rule-declaring note, NOT as committed identifiers or hard-coded parameter values. Matches visual_executor precedent (which also names models in its References table) | Applied 2026-06-17 in plan 16-01 |
+| GAP-REPORT.md as placeholder per CONTEXT D-04 | NEW expert has no v1 baseline to gap-analyze; placeholder notes the NEW-expert status + Phase 18 backfill hook | Applied 2026-06-17 in plan 16-01 |
+| Append-only edge sync (no body prose sync needed) | All 4 consumers (creative_source, cinematographer, visual_executor, audio_pipeline) had zero body prose mentions of prompt_injector/model_prompts/consistency_context before this plan — clean edge addition, unlike Phase 14-15 which had extensive body prose work | Applied 2026-06-17 in plan 16-01 |
+
 ### Blockers / Risks (carried from v1 + new v2.0 risks)
 
 **Inherited from v1 (still ongoing):**
@@ -174,9 +184,9 @@ These remain unresolved at roadmap creation; they surface during phase planning:
 
 ## Session Continuity
 
-**Last action:** Phase 15 Plan 03 executed (2026-06-17) — audio_pipeline close-out documentation complete. 6 cross-cutting documentation files updated: README.md (inventory row consolidation 6→1, corpus→expert table, ASCII DAG diagram collapse, narrative notes with sub-step annotations, corpus tree with new audio_pipeline/ row + 6 redirect stub annotations, Phase 7 summary paths, footer count 22→17), _shared/glossary.md (5 prose references + new audio_pipeline entry with D-1 fold note), _shared/RAG-INVOCATION-PATTERN.md (3 model-attribution table rows), _shared/project-corpus/animation-disney-system.md (2 Disney pipeline stage refs), _shared/project-corpus/editing-sound-post.md (5 expert_id refs + 4 See Also links; "Sync hard effects + foley" craft noun preserved), _shared/project-corpus/production-chinese-and-low-budget.md (Post line). A reader skimming README or any _shared/ doc now sees a single audio_pipeline expert where there used to be 6. Commits 0ad1181c2 + 23401f725.
-**Next action:** `/gsd:plan-phase 16` to plan the prompt_injector NEW expert phase, OR `/gsd:plan-phase 17` for deprecations. Phase 15 is COMPLETE — all 7 ROADMAP §15 success criteria satisfied. Phase 16 (prompt_injector new) + Phase 17 (deprecations) are UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
-**Hand-off note:** Phase 15 COMPLETE — 3/3 plans done. audio_pipeline merged expert + predecessor stubs (15-01) + consumer edge sync (15-02) + close-out docs (15-03) all complete. Phase 16 (prompt_injector new), Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
+**Last action:** Phase 16 Plan 01 executed (2026-06-17) — prompt_injector NEW AI-native expert created. 7 files in skills/movie-experts/prompt_injector/ (SKILL.md 266 lines + 4 refs 188-222 lines each + LICENSE.md + GAP-REPORT.md placeholder). 4 consumer SKILL.md files updated with bidirectional related_skills edges (creative_source, cinematographer, visual_executor, audio_pipeline — all append-only, no body prose changes). expert_id=prompt_injector, related_skills=[creative_source, cinematographer, visual_executor, audio_pipeline] exactly, metrics=[cross_call_consistency, prompt_token_efficiency] exactly, no aliases (NEW expert), no sub_steps (single-node). Commits 746da725e + c848ff319.
+**Next action:** `/gsd:plan-phase 16` Plan 02 (close-out docs: README inventory + corpus tree + DAG diagram + _shared/glossary.md + skills-mapping.yaml sign-off) OR `/gsd:plan-phase 17` for deprecations. Phase 16 Plan 01 is COMPLETE — all 5 in-scope ROADMAP §16 success criteria satisfied (#6 README inventory is Plan 16-02 scope). Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
+**Hand-off note:** Phase 16 Plan 01 COMPLETE (1/2). prompt_injector expert created with full content + 4 refs + bidirectional edges to 4 consumers. Plan 16-02 (close-out docs) remains for Phase 16 completion. Phase 17 (deprecations) UNBLOCKED. Phase 18 (finalization) gated on 13-17 complete.
 
 ---
 
