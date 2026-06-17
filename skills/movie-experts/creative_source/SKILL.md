@@ -41,6 +41,7 @@ The user needs one of:
 | [`references/story-kernel-schema.md`](./references/story-kernel-schema.md) | 输出 StoryKernel JSON 前 | 完整 schema(strata_layers[] / structural_formula / unspeakability_score / dramatic_potential / target_audience_overlap / downstream_consumers)+ 每字段冻结规则 + 多层叠加协议 |
 | [`references/multi-strata-resonance.md`](./references/multi-strata-resonance.md) | 设计多层叠加分析 前 | 多层叠加规则(2 层叠加 = 1+1 > 2 / 3 层叠加 = 共振级跃迁)+ 6 层叠加系数矩阵 + 最佳叠加组合(L1+L4 制度-空间 / L2+L5 技术-代际 / L3+L6 人口-心灵)+ 共振度量化公式 |
 | [`references/unspeakability-protocol.md`](./references/unspeakability-protocol.md) | 评估不可言说性 前 | 10 分制评分协议(1=主流安全 / 10=绝对禁忌)+ CN 平台审核红线映射(网信办 / 广电总局 / 抖音 / 快手 / 小红书)+ 不可言说性 vs 商业价值权衡矩阵 + 平台合规降级策略 |
+| [`references/snowflake-method.md`](./references/snowflake-method.md) | 高质量 StoryKernel 需要展开为剧情 scaffold 前 | Ingermanson 雪花法 10 步递进管线(Step 1 premise → Step 2 paragraph → Step 3 character synopsis → Step 4 one-page synopsis → 可选 Step 5-6)+ 短剧 60-180s 单集 step scaling(强制 Step 1-4 / 可选 Step 5-6 / 延后 Step 7-10)+ 10-80 集连续剧 series-vs-episode split + StoryKernel → Snowflake 触发条件 + 桥接协议(Step 1 输入抽取)+ Snowflake-4 → Snyder 15-beat 字段映射 + McMahon 6 弧线隐含耦合 + snowflake_artifacts.json schema |
 
 ## Role & Philosophy
 
@@ -174,6 +175,31 @@ tags="expert:creative_source,domain:unspeakability-protocol"
 | 3 layers (rare) | 2.5-3.0 | 共振级跃迁(罕见,极强故事核) |
 | 4+ layers | < 1.5 | 过载,叙事混乱(避免) |
 
+### Snowflake Expansion Output (snowflake_artifacts.json)
+
+当 StoryKernel 满足触发条件(`unspeakability_score ≥ 7` OR `dramatic_potential.overall ≥ 0.75` OR `strata_overlay_coefficient ≥ 1.7`),creative_source 在 StoryKernel JSON 之后追加此 artifact 作为展开 scaffold,交付给 screenplay 消费(screenplay 在 Beat Planning 前的 step 1.5 消费此 artifact,详见 [`../screenplay/SKILL.md`](../screenplay/SKILL.md) §Workflow):
+
+```json
+{
+  "type": "SnowflakeArtifacts",
+  "version": "1.0.0",
+  "snowflake_id": "snowflake_<hash>",
+  "kernel_id_ref": "kernel_<hash>",
+  "trigger_reason": "unspeakability_score_ge_7 | dramatic_potential_ge_0_75 | strata_overlay_ge_1_7",
+  "mcmahon_arc_selected": "man_in_a_hole",
+  "step_1_premise_sentence": { "text": "...", "char_count": 28, "four_elements": {...} },
+  "step_2_paragraph_expansion": { "story_spine": [...] },
+  "step_3_character_synopses": [...],
+  "step_4_one_page_synopsis": { "paragraphs": [{"index": 1, "mapped_snyder_beats": [...]}, ...] },
+  "step_5_character_bios": null,
+  "step_6_four_page_synopsis": null,
+  "downstream_consumer": "screenplay",
+  "created_by": "creative_source.snowflake_expansion"
+}
+```
+
+完整 schema + 字段冻结规则 + 短剧 step scaling + StoryKernel 触发条件详见 [`references/snowflake-method.md`](./references/snowflake-method.md)。**关键调用点:** Snowflake-4 one-page synopsis 的 4 段是 screenplay 消费的核心输入 —— 4 段分别映射到 Snyder 的 Set-Up+Catalyst / Midpoint / All Is Lost / Finale 四个 beat 集(字段映射表详见 [`references/snowflake-method.md`](./references/snowflake-method.md) §Snowflake-4 → Snyder 15-Beat Field Mapping)。
+
 ## Key Parameters
 
 ### Strata selection
@@ -212,6 +238,8 @@ tags="expert:creative_source,domain:unspeakability-protocol"
 9. **Score dramatic potential** — actionability + emotional intensity + narrative compression fit.
 10. **Compute audience overlap** — for 6 standard demographic segments.
 11. **Emit StoryKernel JSON** — full schema with all fields + downstream consumer pointers.
+12. **Snowflake 触发判定** — 检查 StoryKernel 是否满足雪花法展开触发条件(`unspeakability_score ≥ 7` OR `dramatic_potential.overall ≥ 0.75` OR `strata_overlay_coefficient ≥ 1.7`,详见 [`references/snowflake-method.md`](./references/snowflake-method.md) §StoryKernel → Snowflake Bridge Protocol)。满足则进入 step 13;不满足则 `snowflake_artifacts` 字段输出 null,StoryKernel 直接交付 screenplay。
+13. **Snowflake 展开(Step 1-4 强制 / Step 5-6 可选)** — 按递进顺序展开:Step 1 premise sentence(≤ 30 字,含 4 要素:主人公/冲突/目标/障碍)→ Step 2 paragraph expansion(5 句话 Story Spine)→ Step 3 character synopses(每主角 1 段)→ Step 4 one-page synopsis(4 段对应 Snyder 4 个 act 集)。短剧单集 step scaling 详见 [`references/snowflake-method.md`](./references/snowflake-method.md) §短剧 Step Scaling。**调用点:** Step 7-10(完整角色表 / 场景列表 / 场景描述 / 初稿)延后到 screenplay 内部 Beat Planning 之后做,不在 creative_source 跑(避免与 Snyder beat sheet 重复)。
 
 ## Quality Thresholds
 

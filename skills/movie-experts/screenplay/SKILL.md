@@ -188,7 +188,17 @@ tags="expert:screenplay,domain:dialogue-craft"
 ## Workflow
 
 1. **Knowledge Retrieval** — 若有 memory/RAG 工具,查询 5 个检索主题(tags="expert:screenplay");若无,回退 `references/*.md`(见 §Knowledge Retrieval)
-2. **Beat Planning** — Generate scene-level beat sheet using Snyder 15-beat model adapted to 短剧 runtime (per [`references/save-the-cat-beat-sheet.md`](./references/save-the-cat-beat-sheet.md) §短剧 Adaptation)
+1.5. **Consume Snowflake-4 一页大纲** (scaffold input from creative_source) — 检查上游 [`creative_source`](../creative_source/SKILL.md) 的 StoryKernel JSON 是否附带 `snowflake_artifacts.json`(触发条件详见 [`../creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §StoryKernel → Snowflake Bridge Protocol)。若存在,消费 `step_4_one_page_synopsis.paragraphs` 的 4 段作为 Beat Planning 的 scaffold 输入(避免从 structural_formula 一句话直接跳到 Snyder 15-beat 的展开塌陷)。**字段映射表**(Snowflake-4 段落 ↔ Snyder 15-beat 集,详见 [`../creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §Snowflake-4 → Snyder 15-Beat Field Mapping):
+
+   | Snowflake-4 段落 | 对应 Snyder beat 集 | 段落功能 | Snyder 目标 runtime 比例 |
+   |------------------|---------------------|----------|--------------------------|
+   | 段落 1 (开头) | Opening Image + Theme Stated + Set-Up + Catalyst + Debate | 主人公世界 + 触发事件 | 0-20% |
+   | 段落 2 (灾难 第 1 幕) | Break into Two + B-Story + Fun & Games + Midpoint | 进入新世界 + Midpoint 极性反转 | 20-50% |
+   | 段落 3 (灾难 第 2 幕) | Bad Guys Close In + All Is Lost + Dark Night of the Soul | 局势恶化 + 最低点 | 50-77% |
+   | 段落 4 (结尾) | Break into Three + Finale + Final Image | 解决方案 + 执行 + 视觉对照 | 77-100% |
+
+   **三处强制对齐锚点:** Snowflake 段落 1 结尾(Catalyst)必须落在 Snyder p.10 ± 3(~10% runtime ± 5%);段落 2 结尾(Midpoint)必须落在 p.55 ± 3(~50% runtime ± 5%);段落 3 结尾(All Is Lost)必须落在 p.75 ± 3(~68% runtime ± 5%)。若任一锚点偏离 ± 5%,回退到 creative_source 重写 Step 4 段落 —— 不要强行适配会破坏 Snyder 节奏。若 `snowflake_artifacts` 字段为 null(未触发),直接进入 step 2 Beat Planning,用 StoryKernel `structural_formula` 作为单一输入(退化路径,beat 分布质量风险较高,需在 Self-Review 阶段加强检查)。
+2. **Beat Planning** — Generate scene-level beat sheet using Snyder 15-beat model adapted to 短剧 runtime (per [`references/save-the-cat-beat-sheet.md`](./references/save-the-cat-beat-sheet.md) §短剧 Adaptation)。若 step 1.5 已消费 Snowflake-4 scaffold,则 Beat Planning 在 scaffold 基础上展开 15-beat(验证而非替代);若无 scaffold,从 StoryKernel structural_formula 直接展开。
 3. **Structure Validation** — Check Catalyst / Midpoint / All Is Lost positions; verify value-shift rate ≥ 1 per scene (per [`references/mckee-scene-design.md`](./references/mckee-scene-design.md) §Value-Shift Rule)
 4. **Dialogue Draft** — Write dialogue with subtext annotations; verify density within genre range + subtext ratio ≥ 60% (per [`references/dialogue-craft.md`](./references/dialogue-craft.md))
 5. **Mood Annotation** — Assign `sound_mood` and `lighting_mood` per scene
