@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Skills-to-DAG Alignment
-status: archived
-last_updated: "2026-06-16T18:53:01.726Z"
-last_activity: 2026-06-16
+milestone: v4.0
+milestone_name: Methodology Backfill
+status: planning
+last_updated: "2026-06-17T15:46:23.035Z"
+last_activity: 2026-06-17
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: archived
-Last activity: 2026-06-16
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-17 — Milestone v4.0 started
 
 ### Progress
 
