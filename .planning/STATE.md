@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Methodology Backfill
-status: planning
-last_updated: "2026-06-17T16:00:00.000Z"
-last_activity: 2026-06-17
+status: Awaiting next milestone
+last_updated: "2026-06-17T16:51:23.242Z"
+last_activity: 2026-06-17 — Milestone v4.0 completed and archived
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 19 (Snowflake Method Integration) — Not started (awaiting `/gsd:plan-phase 19`)
+Phase: Milestone v4.0 complete
 Plan: —
-Status: Roadmap written 2026-06-17; ready for phase planning
-Last activity: 2026-06-17 — v4.0 ROADMAP.md + STATE.md initialized by roadmapper
+Status: Awaiting next milestone
+Last activity: 2026-06-17 — Milestone v4.0 completed and archived
 
 ### Progress
 
@@ -85,6 +85,7 @@ Phases 19 + 20 are independent (touch disjoint expert directories). Phase 21 con
 ### v4.0 Goal Restatement
 
 把 2026-06-17 gap-analysis 识别的 3 个 ⭐⭐⭐⭐⭐ AI 化方法论缺口补进 `skills/movie-experts/`:
+
 1. **Snowflake Method** (过程) — 接入 creative_source + screenplay,填补 StoryKernel → beat-sheet 的展开塌陷
 2. **E-Konte 絵コンテ** (视觉中间格式) — 接入 cinematographer + visual_executor,填补 storyboard_designer deprecated 后的东方分镜真空
 3. **SCAMPER** (变体引擎) — 接入 style_genome + hook_retention,填补 style_blend 单一输出的变体生成缺口
@@ -173,3 +174,7 @@ Key takeaways informing v4.0 ROADMAP:
 ---
 
 *Last updated: 2026-06-17 — v4.0 Methodology Backfill roadmap + state initialized (3 phases, 14 reqs mapped, Phase 19 ready for planning)*
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

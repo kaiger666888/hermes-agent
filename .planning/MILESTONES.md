@@ -1,5 +1,53 @@
 # Milestones
 
+## v4.0 — Methodology Backfill (Shipped: 2026-06-18)
+
+**Phases completed:** 3 phases (19-21) · **Plans:** 3 · **Requirements:** 14 / 14 ✓
+**Tag:** `v4.0`
+**Source artifact:** [`.planning/research/methodology-gap-analysis-2026-06-17.md`](./research/methodology-gap-analysis-2026-06-17.md)(quick task 260617-wgz 产物)
+**Audit:** [`v4.0-MILESTONE-AUDIT.md`](./milestones/v4.0-MILESTONE-AUDIT.md) — status: passed(14/14 reqs, 7/7 integration, 3/3 E2E flows, 4/4 FOUND-08)
+
+**One sentence:** 把 2026-06-17 gap-analysis 识别的 3 个 ⭐⭐⭐⭐⭐ AI 化方法论缺口(Snowflake Method / E-Konte 絵コンテ / SCAMPER)增量挂载到 `creative_source+screenplay` / `cinematographer+visual_executor` / `style_genome+hook_retention` —— 不引入新 expert_id、不动 DAG 节点、不重构核心架构,纯知识层增量(1249 行新 refs + 8 SKILL.md patches + 16 glossary 词条)。
+
+### Key accomplishments
+
+- **Phase 19 — Snowflake Method Integration:** 新增 `creative_source/references/snowflake-method.md`(279 行)挂载 Ingermanson 10 步递进管线,填补 StoryKernel → Snyder 15-beat 之间的"展开塌陷"。Patched `creative_source/SKILL.md`(+45 行,新增 SnowflakeArtifacts output schema + Workflow steps 12-13)+ `screenplay/SKILL.md`(+20 行,Beat Planning 前新增 step 1.5 "Consume Snowflake-4 一页大纲" + 字段映射表)+ `_shared/glossary.md`(+52 行,4 词条)。StoryKernel→Snowflake→Snyder 全链路字段对齐。
+- **Phase 20 — E-Konte Integration:** 新增 `cinematographer/references/e-konte-format.md`(371 行)挂载日本动画工业 5 层分镜格式(场景布局 / 镜头角度运动 / 角色位置表情动作 / 对白音效 / 时间帧数),与现有西方 Mascelli 8-level + 180°/30° 轴线**互补不替代**。Patched `cinematographer/SKILL.md`(+27 行,composition_lock 下新增 H2 "E-Konte as Intermediate Format")+ `visual_executor/SKILL.md`(+47 行,drawer 消费 Layer 1+3 / animator 消费 Layer 2+5)+ `_shared/glossary.md`(+41 行,4 词条)+ LICENSE.md attribution。兑现 Phase 17 storyboard_designer deprecated promise(E-Konte 折叠进 cinematographer,**不复活** storyboard_designer)。
+- **Phase 21 — SCAMPER Variation Engine + DOC Close-out:** 新增 `style_genome/references/scamper-variations.md`(599 行)挂载 Bob Eberle SCAMPER 7 动词变体引擎,生成 35 个短剧变体配方(7 动词 × 5 genre×mood×pacing×cast×runtime 组合)。Patched `style_genome/SKILL.md`(+43 行,style_blend 上叠加 SCAMPER Variation Layer,显式声明**叠加不替代** auteur-theory)+ `hook_retention/SKILL.md`(+44 行,SCAMPER × 5 爆款公式 cross-table = 35 hook variant seeds)+ `_shared/glossary.md`(+67 行,8 词条)+ `README.md`(+35 行,corpus tree 列出 3 个新 refs)+ `.planning/research/v2-pipeline-design/skills-mapping.yaml`(+50 行,新增 v4_ref_signoffs section 3 entries)。
+
+### Shipped artifacts
+
+- **3 new methodology refs**(1249 lines total):`snowflake-method.md` (279) + `e-konte-format.md` (371) + `scamper-variations.md` (599)
+- **8 SKILL.md body patches** across 6 experts(creative_source / screenplay / cinematographer / visual_executor / style_genome / hook_retention)
+- **16 new glossary entries**(4 Snowflake + 4 E-Konte + 8 SCAMPER,中英对照 + 出处标注)
+- **Updated corpus tree** in `skills/movie-experts/README.md`(Mermaid DAG 不变 —— 3 refs 都是已有 expert 内部 ref)
+- **v4_ref_signoffs** section in `skills-mapping.yaml`(3 entries with verified_date / source / license_status: fair_use_paraphrase)
+- **3 new refs LICENSE.md attribution rows**(creative_source / cinematographer / style_genome 各 +1)
+
+### Cross-phase integration(verified by gsd-integration-checker)
+
+- **Flow A — Snowflake narrative pipeline:** creative_source StoryKernel → Snowflake Step 1-4 → snowflake_artifacts.json → screenplay step 1.5 Consume → Snyder 15-beat validation(3 anchor points ±5%)→ Beat Planning。Fallback: 低质量 kernel 走 direct structural_formula → Beat Planning。
+- **Flow B — E-Konte visual pipeline:** cinematographer composition_lock → 5-layer annotation → e_konte.json(dual-output with shot_intent.json)→ visual_executor drawer (L1+3) + animator (L2+5)→ editor 消费 shot_intent.json for axis compliance。Fallback: Western storyboard when e_konte absent。
+- **Flow C — SCAMPER variation pipeline:** style_genome auteur + genre + cross-cultural → SCAMPER 7-verb expansion → scamper_variants.json(7 candidates with novelty/feasibility/alignment scores)→ hook_retention 7×5 cross-table(35 seeds)→ Hook Design Workflow。
+
+### FOUND-08 backward-compat honored
+
+- All 6 patched experts retain original `expert_id` + `related_skills`(byte-identical)
+- No new expert directories created
+- No deprecated experts revived(storyboard_designer / scene_builder / performer 仍 deprecated)
+- E-Konte folded into existing cinematographer.composition_lock —— 兑现 Phase 17 promise
+
+### Known tech debt at close(non-blocking)
+
+- Snowflake trigger conditions expanded from 1 to 3 OR-conditions during execution(documented in 19-01-SUMMARY.md deviations)
+- E-Konte trigger conditions expanded from 2 to 6-row table during execution(documented in 20-01-SUMMARY.md deviations)
+- scamper-variations.md reached 599 lines vs 300-450 target —— 非阻塞 over-delivery,覆盖更彻底
+- Live-run statistical validation of SCAMPER 7 候选 quality deferred to operator —— v4.0 close 不要求
+
+See `.planning/milestones/v4.0-ROADMAP.md` for full phase details and `.planning/milestones/v4.0-REQUIREMENTS.md` for requirement outcomes.
+
+---
+
 ## v1 — Movie-Experts Suite v2 (Shipped: 2026-06-15)
 
 **Phases completed:** 7 phases (0-6) · **Plans:** 15 · **Tasks:** 25

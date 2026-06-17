@@ -185,18 +185,27 @@ See full archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 ---
 
-## Current Milestone: v4.0 — Methodology Backfill
+## Previous Milestone: v4.0 — Methodology Backfill ✅ SHIPPED 2026-06-18
 
 **Goal:** 把 2026-06-17 gap-analysis 识别的 3 个 ⭐⭐⭐⭐⭐ AI 化方法论缺口补进 `skills/movie-experts/` —— Snowflake Method(过程)、E-Konte 絵コンテ(视觉中间格式)、SCAMPER(变体引擎),三者互补不重叠。
 
 **Target features:**
-- **Snowflake Method** — 接入 `creative_source` + `screenplay`,填补 Story Kernel → beat sheet 之间的"展开塌陷"(一句话→段落→角色→大纲→场景列表的递进管线)。
-- **E-Konte 絵コンテ** — 接入 `cinematographer`,填补 `storyboard_designer` deprecated 后留下的东方分镜真空(分镜中间格式 + 轴线 + 景别 + 时长 + 表情/动作注记)。
-- **SCAMPER** — 接入 `style_genome`(或 `hook_retention`),填补 `style_blend` 手动协议的变体引擎缺口(7 动词系统化生成故事/风格变体)。
+- ✅ **Snowflake Method** — 接入 `creative_source` + `screenplay`,填补 Story Kernel → beat sheet 之间的"展开塌陷"(一句话→段落→角色→大纲→场景列表的递进管线)。
+- ✅ **E-Konte 絵コンテ** — 接入 `cinematographer`,填补 `storyboard_designer` deprecated 后留下的东方分镜真空(分镜中间格式 + 轴线 + 景别 + 时长 + 表情/动作注记)。
+- ✅ **SCAMPER** — 接入 `style_genome` + `hook_retention`,填补 `style_blend` 手动协议的变体引擎缺口(7 动词系统化生成故事/风格变体)。
 
-**Scope boundary:** 每个 phase = 1 个新 ref + 1-2 个 SKILL.md 增量更新 + 跨 skill `related_skills` 边缘同步 + glossary 词条。**不重构** creative_source / cinematographer / style_genome 的核心架构,只增量挂载方法论。
+**Shipped:** 3 phases, 3 plans, 14/14 requirements satisfied (audit PASSED). 1249 lines of new methodology refs + 8 SKILL.md patches across 6 experts + 16 new glossary entries. See `.planning/milestones/v4.0-ROADMAP.md` and `.planning/milestones/v4.0-MILESTONE-AUDIT.md`.
 
-**Source artifact:** `.planning/research/methodology-gap-analysis-2026-06-17.md`(2026-06-17 quick task 产物,作为本 milestone 的事实底座)。
+---
+
+## Current Milestone: None (awaiting operator decision)
+
+v4.0 milestone archived 2026-06-18. Operator may:
+
+- Start v5 via `/gsd:new-milestone` (suggested candidates from v4.0 gap-analysis §6: Vogler / Truby / 设计思维 / Story Grid / 起承转合)
+- Run `/gsd:review-backlog` to triage open issues
+- Run `/gsd:progress` to view state
+- Polish v4.0 deferred items (live-run statistical validation of SCAMPER 7 候选 quality)
 
 ---
 
@@ -270,4 +279,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-17 — v4.0 milestone started (Methodology Backfill: Snowflake / E-Konte / SCAMPER); source: gap-analysis at .planning/research/methodology-gap-analysis-2026-06-17.md*
+*Last updated: 2026-06-18 — v4.0 Methodology Backfill milestone shipped (14/14 reqs, audit PASSED); 1249 lines new methodology refs + 8 SKILL.md patches + 16 glossary entries. Awaiting next milestone decision.*
