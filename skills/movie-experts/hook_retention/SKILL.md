@@ -190,6 +190,41 @@ metadata:
 - **付费卡点位置:** 第 5-7 集设 付费门槛(中性区间);3-5 / 10 集 卡点 密度;硬卡点 强度目标 🟢
 - **典型案例:** (1)未知平台的「母亲遗愿」开场,情感钩 + 悬念钩 双锚;主转 转发 trigger = 情感共鸣;(2)未知平台的「神秘来电」,悬念钩 驱动,通用 30s setup 后进入主线
 
+## SCAMPER × 5 爆款公式 Cross-Table
+
+**消费路径声明 (load-bearing):** 本表是 `hook_retention` 从 `style_genome` 的 SCAMPER 变体引擎([`../style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md))**消费候选 hook 变体种子**的交叉表。当 style_genome 输出 `scamper_variants.json` 后,hook_retention 可基于本表 7 动词 × 5 平台爆款公式交叉,得到 **35 个具体 hook 变体种子**,扩展开场 3 秒钩子的设计空间。
+
+**与 `references/three-second-hooks.md` §Taxonomy 的关系:** 本表**不替代** 5-type taxonomy(情感钩 / 悬念钩 / 冲突钩 / 反差钩 / 情绪爆点钩)的选型责任,而是在 taxonomy 选型确定后,提供「该 hook 类型在该平台爆款公式下的 7 个变体种子」 —— 每个 SCAMPER 动词对应一种对已选 hook 类型的变体操作。
+
+### 交叉表(7 SCAMPER 动词 × 5 平台爆款公式 = 35 hook 变体种子)
+
+每单元格 1 个具体 hook 变体种子(基于该动词 × 该平台公式的组合)。
+
+| SCAMPER Verb | 抖音-男频 | 抖音-女频 | 快手-草根 | 小程序剧-长集数 | 通用 fallback |
+|---|---|---|---|---|---|
+| **S — Substitute** | S-M1: 主角身份替代(战神↔乞丐)开场反差钩 | S-F1: 主角性别替代(女主↔男主视角)情感钩 | S-K1: 场景替代(豪宅↔工地)接地气钩 | S-P1: 时间替代(古代↔现代)悬念钩 | S-U1: 角色 substitute 通用情感钩 |
+| **C — Combine** | C-M1: 男频复仇 + 武侠动作组合冲突钩 | C-F1: 女频甜宠 + 悬疑元素组合悬念钩 | C-K1: 草根家庭 + 搞笑元素组合反差钩 | C-P1: 多角色 + 多线索组合悬疑钩 | C-U1: 双元素组合通用悬念钩 |
+| **A — Adapt** | A-M1: 适应游戏 IP(战斗场面)情绪爆点钩 | A-F1: 适应古风审美(留白构图)情感钩 | A-K1: 适应民间故事元素共鸣钩 | A-P1: 适应文学名著(倒叙)悬念钩 | A-U1: 跨领域 adapt 通用反差钩 |
+| **M — Modify** | M-M1: Magnify 复仇强度(极致爽感)情绪爆点钩 | M-F1: Minify 冲突强度(治愈向)情感钩 | M-K1: Modify 接地气程度(更草根)情感共鸣钩 | M-P1: Magnify 悬念密度(每集一峰)悬念钩 | M-U1: Magnify 单一维度通用钩 |
+| **P — Put to other use** | P-M1: 复仇爽剧套路 → 装穷打脸(另作他用)反差钩 | P-F1: 甜宠套路 → 萌宝助攻(另作他用)情感钩 | P-K1: 草根套路 → 直播带货场景(另作他用)实用价值钩 | P-P1: 悬疑套路 → 解谜互动(另作他用)悬念钩 | P-U1: 套路 put-to-other-use 通用钩 |
+| **E — Eliminate** | E-M1: 消除 BGM(沉浸式战斗)情绪爆点钩 | E-F1: 消除对白(无声剧)反差钩 | E-K1: 消除炫富(纯草根)情感共鸣钩 | E-P1: 消除主角(旁观者视角)悬念钩 | E-U1: Eliminate 单一元素通用钩 |
+| **R — Reverse** | R-M1: 反转复仇顺序(从结局开场)悬念钩 | R-F1: 反转男女主角色(女主追男主)反差钩 | R-K1: 反转草根→逆袭方向情绪爆点钩 | R-P1: 反转叙事时间(倒叙解谜)悬念钩 | R-U1: Reverse 单一维度通用钩 |
+
+### 使用流程
+
+1. **style_genome 输出 `scamper_variants.json`**(7 候选,含 recipe_id 如 `S-C1` / `R-C3`)
+2. **hook_retention 读取候选** → 对每个候选的 verb(S / C / A / M / P / E / R)在本表查找对应行
+3. **结合当前平台分支**(抖音-男频 / 抖音-女频 / 快手-草根 / 小程序剧-长集数 / 通用 fallback)确定单元格
+4. **取出该单元格的 hook 变体种子**(如 `S-M1` = 主角身份替代战神↔乞丐开场反差钩)
+5. **与 5-type taxonomy 选型**(来自 [`references/three-second-hooks.md`](./references/three-second-hooks.md) §Taxonomy)交叉验证:本表种子的 hook 类型应与 taxonomy 选型一致或互补
+6. **按 §Hook Design Workflow** 展开 0-1s / 1-2s / 2-3s 帧级拆解 + 5-tier 评分
+
+### Anti-patterns
+
+- ❌ 不要把 35 种子全部应用 —— 用户应基于推荐分数(novelty × feasibility × alignment)挑选 1-3 个
+- ❌ 不要让本表替代 5-type taxonomy 选型 —— 本表是 taxonomy 的变体层,不是选型层
+- ❌ 不要在 auteur-theory / genre-dna / cross-cultural-style 分类前置层未锁定时调用本表 —— SCAMPER 是叠加层,必须在分类完成后介入
+
 ## Hook Design Workflow
 
 设计开场 3 秒钩子的标准 5 步流程。每步必跨链 [`references/three-second-hooks.md`](./references/three-second-hooks.md) 对应章节,不允许凭直觉跳过。

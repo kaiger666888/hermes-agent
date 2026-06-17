@@ -375,3 +375,77 @@ Per REQUIREMENTS EKONTE-04, `_shared/glossary.md` must have 4 new H3 entries: `E
 ---
 
 **Phase 20 EKONTE-04 verification:** 4 / 4 new H3 entries added (E-Konte / 絵コンテ / Layout / ト書き / 絵切り), each with CN/EN/Context + 日本动画工业体系 出处. EKONTE-04 PASS.
+
+---
+
+## Phase 21 canonical terms (SCAMPER-04)
+
+Per REQUIREMENTS SCAMPER-04, `_shared/glossary.md` must have 8 new H3 entries: `SCAMPER` + 7 verbs (Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse) — each with EN↔CN bilingual definitions and Eberle 1971 / based on Osborn 出处.
+
+### SCAMPER / 变体引擎
+
+**CN:** 变体引擎 —— Bob Eberle 在 1971 年系统化的 7 动词创意变体方法论,基于 Alex F. Osborn 1953 年 *Applied Imagination* 提出的 83-item 创意思考清单改编压缩而成。SCAMPER 是 7 个 verb 的首字母助记:**S**ubstitute / **C**ombine / **A**dapt / **M**odify / **P**ut-to-other-use / **E**liminate / **R**everse。每个 verb 对应一种「对已有方案做单点变体」的认知操作。Phase 21 把 SCAMPER **叠加**(stacked,不替代)到 `style_genome.style_blend` 子任务上 —— 在 auteur-theory + genre-dna + cross-cultural-style 三层分类锁定后,SCAMPER 系统化展开 7 个 style 候选变体供下游(用户 / hook_retention / prompt_injector)选择。**SCAMPER 是变体引擎,不是分类系统** —— 它不重写 director tier 判定,不修改 genre 5D 区间。
+
+**EN:** Variation Engine — 7-verb creative variation methodology systematized by Bob Eberle in 1971, adapted from Alex F. Osborn's 83-item creative-thinking checklist (1953, *Applied Imagination*, Scribner). SCAMPER is a mnemonic for the first letters of 7 verbs: Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse. Each verb corresponds to a single-point variation operation on an existing solution. Phase 21 **stacks** SCAMPER (not replaces) on `style_genome.style_blend` sub-task — after auteur-theory + genre-dna + cross-cultural-style three classification layers are locked, SCAMPER systematically expands 7 style candidate variants for downstream (user / hook_retention / prompt_injector) selection. **SCAMPER is a variation engine, not a classification system** — it does not rewrite director tier determination, does not modify genre 5D ranges.
+
+**Context:** Source: Bob Eberle, *SCAMPER: Creative Thinking & Brainstorming* (1971, Prufrock Press Inc.); based on Alex F. Osborn, *Applied Imagination: Principles and Procedures of Creative Thinking* (1953, Charles Scribner's Sons) — Osborn's 83-item creative-thinking checklist compressed by Eberle into 7 mnemonic verbs. Phase 21 (SCAMPER-01..04) integrates this method into style_genome + hook_retention experts. Canonical ref: [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md). 7 verbs apply single-point variation operations to 5D vectors; 35 short-drama recipes (7 verbs × 5 gene combinations) cover the most common genre × mood × pacing × cast × runtime forms. Stacking rule: SCAMPER triggers ONLY after auteur-theory + genre-dna + cross-cultural-style classification is locked; SCAMPER does NOT replace classification steps.
+
+### Substitute / 替代
+
+**CN:** 替代 —— SCAMPER 7 动词之一(S)。把 style_genome 的某个元素(director / genre / 5D 维度值 / signature element)替换为另一个同类元素。变体动作为 `original_value → substitute_value`(标量替换)。典型场景:同 genre 下换导演(男频复仇 Wong Kar-wai color → Nolan color)、换色彩冷暖、换节奏快慢。在 hook_retention 的 SCAMPER × 5 爆款公式交叉表中,Substitute 对应「主角身份替代 / 场景替代 / 时间替代」等 hook 变体种子(如战神↔乞丐反差钩)。
+
+**EN:** Substitute — One of SCAMPER's 7 verbs (S). Replace one component of the style genome (director reference / genre label / 5D value / signature element) with another of the same kind. Variation action: `original_value → substitute_value` (scalar replacement). Typical scenarios: substitute director within same genre (male-revenge Wong Kar-wai color → Nolan color), substitute color temperature, substitute rhythm speed. In hook_retention's SCAMPER × 5 viral formula cross-table, Substitute maps to hook variant seeds like "protagonist identity substitute / scene substitute / time substitute" (e.g., warrior↔beggar contrast hook).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Substitute verb. Phase 21 (SCAMPER-01 + SCAMPER-04) defines Substitute's variation action on 5D vectors in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe S-C1..S-C5 cover 5 short-drama gene combinations.
+
+### Combine / 组合
+
+**CN:** 组合 —— SCAMPER 7 动词之一(C)。把 style_genome 的两个不同元素(或两个不同 director / genre 的 5D 向量)合并成单一混合方案。变体动作为 `vector_a × weight + vector_b × (1 - weight)`(向量加权融合),必须遵守 style_genome §Style Blending 的 dominant/recessive 规则,不允许 50/50。典型场景:男频复仇 × 女频甜宠 → 双主角复仇爽剧;快手草根 × 抖音男频 → 双平台分发公式。Combine 与 cross-cultural hybrid encoding 的区别:cross-cultural 是跨文化场景的特例(original × 0.65 + target × 0.35),Combine 是任意两 style 的通用化(70/30 dominant ratio)。
+
+**EN:** Combine — One of SCAMPER's 7 verbs (C). Merge two distinct elements of the style genome (or 5D vectors from two directors / genres) into a single hybrid scheme. Variation action: `vector_a × weight + vector_b × (1 - weight)` (weighted vector fusion); must obey style_genome §Style Blending dominant/recessive rule, 50/50 forbidden. Typical scenarios: male-revenge × female-romance → dual-protagonist revenge drama; Kuaishou-grassroots × Douyin-male → dual-platform distribution formula. Combine vs cross-cultural hybrid encoding: cross-cultural is the cross-culture special case (original × 0.65 + target × 0.35); Combine is the general case for any two styles (70/30 dominant ratio).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Combine verb. Phase 21 (SCAMPER-01 + SCAMPER-04) defines Combine's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe C-C1..C-C5 cover 5 short-drama gene combinations.
+
+### Adapt / 适配
+
+**CN:** 适配 —— SCAMPER 7 动词之一(A)。把一个不同领域的元素(如游戏 / 文学 / 音乐 / 古典艺术)的风格特征借入 style_genome,转化为可编码的 5D 变动。变体动作为 `domain_signal → 5D_translation`(如 "FPS 游戏第一人称视角" → composition +0.3 + rhythm +0.2)。典型场景:文学名著改编短剧(《红楼梦》改编 → composition +0.2 + light_shadow -0.1)、游戏 IP 改编(《黑神话》改编 → rhythm +0.3 + sound +0.2)、古典国画留白审美 → 女频甜宠(composition -0.2)。
+
+**EN:** Adapt — One of SCAMPER's 7 verbs (A). Borrow a stylistic feature from another domain (game / literature / music / classical art) and translate it into encodable 5D variation. Variation action: `domain_signal → 5D_translation` (e.g., "FPS game first-person POV" → composition +0.3 + rhythm +0.2). Typical scenarios: literary classic adaptation (Dream of the Red Chamber → composition +0.2 + light_shadow -0.1); game IP adaptation (Black Myth → rhythm +0.3 + sound +0.2); classical Chinese painting 留白 aesthetic → female-romance (composition -0.2).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Adapt verb. Phase 21 (SCAMPER-01 + SCAMPER-04) defines Adapt's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe A-C1..A-C5 cover 5 short-drama gene combinations.
+
+### Modify / 修改 (含 Magnify / Minify)
+
+**CN:** 修改 —— SCAMPER 7 动词之一(M),含 Magnify(放大)和 Minify(缩小)两个子动作。对 5D 向量的某个维度做幅度调整。变体动作为 `value → value ± delta`(标量调整,典型 delta ∈ [0.15, 0.35] 以触发 style_genome §Deviation Detection 的 warning_threshold ±0.10)。必须遵守 genre-dna-taxonomy 的 5D 区间约束 —— 若 delta 超出区间,SCAMPER 引擎拒绝并返回 feasibility_score=0。典型场景:color Magnify +0.3 → 高饱和度复仇爽剧;rhythm Minify -0.3 → 慢节奏治愈向微电影。
+
+**EN:** Modify — One of SCAMPER's 7 verbs (M), includes Magnify (increase) and Minify (decrease) sub-actions. Adjust the magnitude of a single 5D dimension. Variation action: `value → value ± delta` (scalar adjustment; typical delta ∈ [0.15, 0.35] to trigger style_genome §Deviation Detection warning_threshold ±0.10). Must obey genre-dna-taxonomy 5D range constraints — if delta exceeds range, SCAMPER engine rejects with feasibility_score=0. Typical scenarios: color Magnify +0.3 → high-saturation revenge drama; rhythm Minify -0.3 → slow-pace healing micro-film.
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Modify verb (with Magnify / Minify sub-actions, originally Osborn's checklist items 36-39 in *Applied Imagination* 1953). Phase 21 (SCAMPER-01 + SCAMPER-04) defines Modify's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe M-C1..M-C5 cover 5 short-drama gene combinations. genre-dna-taxonomy 5D range is the hard constraint (out-of-range → feasibility_score=0).
+
+### Put to other use / 另作他用
+
+**CN:** 另作他用 —— SCAMPER 7 动词之一(P)。把现有 style_genome 应用到完全不同的 runtime / 形态 / 受众(原 style_genome 设计为 男频 90s 单集 → 改用为 女频 60s 单集)。变体动作为 `(runtime, audience, platform) → (new_runtime, new_audience, new_platform)` 元组替换。典型场景:抖音 90s 单集风格 → 微信小程序剧 180s 单集(扩展集长);男频复仇风格 → 女频甜宠(翻转受众);竖屏 9:16 → 横屏 16:9 微电影(改形态);真人短剧 → 漫剧(改形式)。
+
+**EN:** Put to other use — One of SCAMPER's 7 verbs (P). Apply the existing style_genome to a completely different runtime / form / audience than it was designed for. Variation action: `(runtime, audience, platform) → (new_runtime, new_audience, new_platform)` tuple replacement. Typical scenarios: Douyin 90s episode style → WeChat mini-program 180s episode (extend episode length); male-revenge style → female-romance (flip audience); 9:16 vertical → 16:9 horizontal micro-film (change aspect); live-action → animated (change form).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Put to other use verb. Phase 21 (SCAMPER-01 + SCAMPER-04) defines Put-to-other-use's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe P-C1..P-C5 cover 5 short-drama gene combinations. Cross-platform distribution (Douyin / Kuaishou / mini-program) is the most common trigger.
+
+### Eliminate / 消除
+
+**CN:** 消除 —— SCAMPER 7 动词之一(E)。从 style_genome 中移除一个元素(signature element / 5D 维度的极端值 / 某个 genre feature),产生极简变体。变体动作为 `remove_element` 或 `value → neutral(0.5)`。典型场景:消除 signature close-up → 沉浸式第一人称视角;消除高饱和度 → 黑白微电影;消除 BGM → 纯环境音 ASMR 短剧;消除对白 → 无声剧。Eliminate 是高风险高 novelty 操作(常用于实验性内容,商业内容慎用)。
+
+**EN:** Eliminate — One of SCAMPER's 7 verbs (E). Remove one element from the style_genome (signature element / extreme 5D value / genre feature) to produce a minimalist variant. Variation action: `remove_element` or `value → neutral(0.5)`. Typical scenarios: eliminate signature close-up → immersive first-person POV; eliminate high-saturation color → black-and-white micro-film; eliminate BGM → pure ambient ASMR short-drama; eliminate dialogue → silent drama. Eliminate is a high-risk high-novelty operation (common in experimental content; commercial content use with caution).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Eliminate verb. Phase 21 (SCAMPER-01 + SCAMPER-04) defines Eliminate's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe E-C1..E-C5 cover 5 short-drama gene combinations. High novelty but typically low feasibility — recommended for experimental / festival content, not commercial short-drama.
+
+### Reverse / 反转 (含 Rearrange)
+
+**CN:** 反转 —— SCAMPER 7 动词之一(R),含 Rearrange(重排)子动作。把 style_genome 的某个维度值取反(如 cool → warm / fast → slow);或重排 narrative 结构的 5D 表达顺序。变体动作为 `value → (1 - value)`(对称取反)或 `signature_order → reversed_order`(顺序重排)。典型场景:Wong Kar-wai 暖色调 → 冷色调悬疑改编;rhythm fast-cut → slow-cinema 艺术微电影;反转 Snyder beat 顺序(从结局开场倒叙);Reverse narrative(从结局倒推真凶)。
+
+**EN:** Reverse — One of SCAMPER's 7 verbs (R), includes Rearrange sub-action. Invert a 5D value (cool → warm / fast → slow); or rearrange the narrative-order 5D expression. Variation action: `value → (1 - value)` (symmetric inversion) or `signature_order → reversed_order` (order rearrangement). Typical scenarios: Wong Kar-wai warm palette → cool suspense adaptation; rhythm fast-cut → slow-cinema arthouse micro-film; reverse Snyder beat order (open from ending); reverse narrative (deduce killer from ending).
+
+**Context:** Source: Bob Eberle, *SCAMPER* (1971) — Reverse verb (with Rearrange sub-action, originally Osborn's checklist items 73-83 in *Applied Imagination* 1953). Phase 21 (SCAMPER-01 + SCAMPER-04) defines Reverse's variation action in [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) §The 7 SCAMPER Verbs. Recipe R-C1..R-C5 cover 5 short-drama gene combinations. High novelty score; recommended for content needing differentiation from established style genome.
+
+---
+
+**Phase 21 SCAMPER-04 verification:** 8 / 8 new H3 entries added (SCAMPER + Substitute + Combine + Adapt + Modify + Put-to-other-use + Eliminate + Reverse), each with CN/EN/Context + Eberle 1971 + Osborn 1953 出处. SCAMPER-04 PASS.

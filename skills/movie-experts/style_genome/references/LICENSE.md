@@ -1,13 +1,15 @@
 # LICENSE — style_genome references/
 
-**Scope:** This LICENSE.md governs the 5 reference files under `skills/movie-experts/style_genome/references/`:
+**Scope:** This LICENSE.md governs the 6 reference files under `skills/movie-experts/style_genome/references/`:
 - `director-dna-archive.md`
 - `genre-dna-taxonomy.md`
 - `cross-cultural-style.md`
 - `auteur-theory.md`
 - `cn-director-analysis.md`
+- `art-direction-methodology.md` (Phase 7C)
+- `scamper-variations.md` (Phase 21 / v4.0)
 
-**Last-verified:** 2026-06-15
+**Last-verified:** 2026-06-18
 **verified_date:** 2026-06
 
 ---
@@ -50,6 +52,11 @@ All 5 refs are authored under **Fair Use** (17 U.S.C. §107) for the following r
 - **Copyright status:** Fair Use — 5D profiles for CN directors are original Hermes analytical encoding; signature elements paraphrased from public interviews and academic film criticism; no proprietary creator-playbook material reproduced.
 - **Specific notes:** "5th generation / 6th generation / post-2010 网生代" director framework is widely-cited CN film-studies taxonomy.
 - **CN political/cultural compliance:** §CN Compliance Flag cross-links [`../compliance_marketing/references/cn-content-rules.md`](../compliance_marketing/references/cn-content-rules.md) — director selection for CN-deployed 短剧 requires compliance review per cn-content-rules.md §内容红线.
+
+### 7. `scamper-variations.md` (Phase 21 / v4.0)
+- **Source:** Bob Eberle *SCAMPER: Creative Thinking & Brainstorming* (1971, Prufrock Press Inc.; based on Alex F. Osborn *Applied Imagination* 1953, Scribner — 83-item creative-thinking checklist). The 7 verbs (Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse) are widely-referenced creativity-pedagogy terminology.
+- **Copyright status:** Fair Use — 7-verb definitions paraphrased; 35 short-drama variation recipes are original Hermes Agent analytical work (7 verbs × 5 gene combinations); LLM prompt templates + JSON schema are original Hermes Agent work. No reproduction of Eberle's example cases, classroom exercises, or chapter-level scaffolding.
+- **Specific notes:** "SCAMPER" mnemonic and the 7 verb categories are widely-cited creativity-pedagogy terms used in academic / educational citation context only; the 35-recipe table is Hermes's original encoding layer on top of the paraphrased verb definitions.
 
 ---
 

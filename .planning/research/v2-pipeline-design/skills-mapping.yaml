@@ -200,3 +200,49 @@ frozen_rule_check:
     - "All merged nodes record original expert_id set ✓"
     - "New AI-native nodes marked NEW (no v1 expert_id to rename) ✓"
     - "Deprecate candidates are NOT silent — explicit not_in_new_dag entries ✓"
+
+# ============================================
+# v4.0 ref-level sign-off entries (DOC-02 close-out)
+# Phase 21 cross-cutting documentation
+# ============================================
+# These entries cover REFS (internal markdown files of existing experts),
+# NOT new expert_id mappings. They are distinct from the 19 expert-level
+# `sign_off_status: signed_off` entries in the `mappings:` block above.
+# v4.0 added 3 methodology refs (snowflake-method.md / e-konte-format.md /
+# scamper-variations.md) to existing active experts without creating new
+# expert_id directories — per FOUND-08 backward-compat rule and v4.0
+# milestone scope ("no new expert_id, only methodology backfill").
+v4_ref_signoffs:
+
+  - ref_path: skills/movie-experts/creative_source/references/snowflake-method.md
+    expert_owner: creative_source
+    phase_added: v4.0-phase-19
+    requirement: SNOWFLAKE-01
+    verified_date: 2026-06-18
+    source: "Randy Ingermanson, How to Write a Novel Using the Snowflake Method (2013 10th-anniversary edition; method originally published on advancedfictionwriting.com 2002-2003 series of articles)"
+    license_status: fair_use_paraphrase
+    line_count: 279
+    signed_off_by: phase-21-doc-02
+    notes: "Snowflake Method 10-step skeleton paraphrased; 短剧 step-scaling + StoryKernel-to-Snowflake bridge protocol are original Hermes analytical work."
+
+  - ref_path: skills/movie-experts/cinematographer/references/e-konte-format.md
+    expert_owner: cinematographer
+    phase_added: v4.0-phase-20
+    requirement: EKONTE-01
+    verified_date: 2026-06-18
+    source: "Japanese animation industry standard terminology (Mushi Production 1960s Astro Boy era); Catherine Munroe Hotes, A Critical Study of the Genesis and Evolution of Kon Satoshi (2010); Studio Ghibli production documentaries (NHK / The Kingdom of Dreams and Madness 2013)"
+    license_status: fair_use_paraphrase
+    line_count: 371
+    signed_off_by: phase-21-doc-02
+    notes: "E-Konte 5-layer annotation format paraphrased from public industry standard; 今敏《红辣椒》案例 + 宫崎骏吉卜力实践 are public reference citations; 5-layer schema + 短剧 9:16 adaptation are original Hermes analytical work."
+
+  - ref_path: skills/movie-experts/style_genome/references/scamper-variations.md
+    expert_owner: style_genome
+    phase_added: v4.0-phase-21
+    requirement: SCAMPER-01
+    verified_date: 2026-06-18
+    source: "Bob Eberle, SCAMPER: Creative Thinking & Brainstorming (1971, Prufrock Press Inc.); based on Alex F. Osborn, Applied Imagination: Principles and Procedures of Creative Thinking (1953, Charles Scribner's Sons — 83-item creative-thinking checklist)"
+    license_status: fair_use_paraphrase
+    line_count: 599
+    signed_off_by: phase-21-doc-02
+    notes: "7 SCAMPER verb definitions paraphrased from Eberle 1971 (based on Osborn 1953 checklist); 35 short-drama variation recipes (7 verbs × 5 gene combinations) + LLM prompt templates + JSON schema are original Hermes Agent analytical work. SCAMPER is STACKED on style_blend (variation engine, not classification system)."
