@@ -291,3 +291,45 @@ Per REQUIREMENTS DOC-02, `_shared/glossary.md` must have entries for: `visual_ex
 | `compliance_gate` | (none — no entry; role-only references via EXPERT-COMPLI) | **ADDED in Phase 18 §Phase 18 canonical term reconciliation** (bilingual CN/EN/Context per DOC-02) |
 
 **Verification verdict:** 5 / 5 terms present with dedicated H3 entries post-Phase 18. DOC-02 PASS.
+
+---
+
+## Phase 19 canonical terms (SNOWFLAKE-04)
+
+Per REQUIREMENTS SNOWFLAKE-04, `_shared/glossary.md` must have 4 new H3 entries: `Snowflake Method`, `Story Spine`, `Premise Sentence`, `Scene List` — each with EN↔CN bilingual definitions and Ingermanson 2000s 出处.
+
+### Snowflake Method / 雪花法
+
+**CN:** 雪花法 — Randy Ingermanson 在 2002-2013 期间系统化的递进式展开创作法。从一句话 premise 出发,逐层放大到段落(Story Spine)→ 角色概要 → 一页大纲 → 角色传记 → 四页大纲 → 完整角色表 → 场景列表(Scene List)→ 场景描述 → 初稿。10 步严格递进,前一步是后一步的唯一输入。Phase 19 把雪花法挂载到 `creative_source` 的 StoryKernel 输出与 `screenplay` 的 Snyder 15-beat 消费之间,填补"一句话 → 段落 → 场景"的展开塌陷。雪花法不替代 StoryKernel(它消费 StoryKernel),也不替代 Snyder beat sheet(它产出可被 Snyder 消费的一页大纲 scaffold)。
+
+**EN:** Snowflake Method — recursive expansion writing method systematized by Randy Ingermanson between 2002-2013. Starting from a one-sentence premise, it progressively expands through paragraph (Story Spine) → character synopses → one-page synopsis → character biographies → four-page synopsis → full character chart → scene list → scene descriptions → first draft. The 10 steps strictly recurse — each step's output is the sole input to the next step. Phase 19 mounts Snowflake between `creative_source`'s StoryKernel output and `screenplay`'s Snyder 15-beat consumption, filling the "one-hop collapse" between premise → paragraph → scene. Snowflake does NOT replace StoryKernel (it consumes it), nor Snyder beat sheet (it produces a scaffold Snyder then consumes).
+
+**Context:** Source: Randy Ingermanson, *How to Write a Novel Using the Snowflake Method* (2013 10th-anniversary edition; method originally published on `advancedfictionwriting.com` 2002-2003 article series). Phase 19 (SNOWFLAKE-01..04) integrates this method into creative_source + screenplay experts. Canonical ref: [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md). Snowflake Step 1-4 (premise → paragraph → character synopses → one-page synopsis) is the forced minimum for 短剧 60-180s 单集; Step 5-6 optional; Step 7-10 deferred to screenplay internal Beat Planning. Trigger conditions: StoryKernel `unspeakability_score ≥ 7` OR `dramatic_potential.overall ≥ 0.75` OR `strata_overlay_coefficient ≥ 1.7`.
+
+### Story Spine / 故事脊
+
+**CN:** 故事脊 — 雪花法 Step 2 paragraph expansion 的结构模板,源自 Ingermanson 对 Kenn Adams 的 Story Spine improvisation 框架的改编(Adams 原始 8 段:Once upon a time... / Every day... / But one day... / Because of that... × 3 / Until finally... / And ever since then...)。雪花法把它压缩为 5 句话段落:开头(1 句)+ 三幕灾难(3 句,每句对应一幕的灾难转折)+ 结尾(1 句)。在 Phase 19 的短剧适配中,每句 ≤ 12 字 —— 5 句 = 60 字 ≈ 90s 单集开场 30s 的信息密度。Story Spine 是 Snowflake Step 2 的唯一结构模板。
+
+**EN:** Story Spine — structural template for Snowflake Method Step 2 paragraph expansion, derived from Ingermanson's adaptation of Kenn Adams's Story Spine improvisation framework (Adams's original 8 segments: "Once upon a time... / Every day... / But one day... / Because of that..." × 3 / "Until finally... / And ever since then..."). Snowflake compresses it into a 5-sentence paragraph: opening (1 sentence) + three disasters (3 sentences, each corresponding to one act's disaster turning point) + ending (1 sentence). In Phase 19's 短剧 adaptation, each sentence ≤ 12 chars — 5 sentences = 60 chars ≈ information density of the opening 30s of a 90s single episode. Story Spine is the sole structural template for Snowflake Step 2.
+
+**Context:** Source: Kenn Adams, improvisation framework (1990s, "How to Create a Story Spine"); adapted by Ingermanson for Snowflake Method Step 2 (2002-2013). Phase 19 (SNOWFLAKE-01) integrates Story Spine as the structural template for Snowflake Step 2 paragraph expansion in the creative_source → screenplay pipeline. Three "disaster" sentences map to Snyder Midpoint + All Is Lost + Finale anchors (详见 [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §Snowflake-4 → Snyder 15-Beat Field Mapping).
+
+### Premise Sentence / 一句话前提
+
+**CN:** 一句话前提 — 雪花法 Step 1 的输出 artifact,≤ 30 字单句,必须包含 4 要素:主人公(who)+ 冲突(conflict)+ 目标(goal)+ 障碍(obstacle)。是整个雪花法展开链的起点 —— Step 2 paragraph 必须从 Step 1 premise 严格扩展,跳过 Step 1 直接写段落会引入结构性塌陷。在 Phase 19 中,Premise Sentence 的输入来自 StoryKernel `structural_formula`(50-200 字单句)的压缩 + StoryKernel `strata_layers[0].answer`(主导地层的"谁被规训 / 谁被豁免")的角色化转译。
+
+**EN:** Premise Sentence — output artifact of Snowflake Method Step 1, a single sentence ≤ 30 chars that must contain four elements: protagonist (who) + conflict + goal + obstacle. It is the starting point of the entire Snowflake expansion chain — Step 2 paragraph must be strictly expanded from Step 1 premise; skipping Step 1 to write the paragraph directly introduces structural collapse. In Phase 19, the Premise Sentence input is derived from compressing StoryKernel `structural_formula` (50-200 char single sentence) + character-level translation of StoryKernel `strata_layers[0].answer` ("who is disciplined / who is exempt" from the dominant stratum).
+
+**Context:** Source: Randy Ingermanson, Snowflake Method Step 1 (2002-2013). Phase 19 (SNOWFLAKE-01) defines Premise Sentence as the starting artifact of the Snowflake expansion chain. Canonical spec: [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §StoryKernel → Snowflake Bridge Protocol. 4-element requirement (protagonist/conflict/goal/obstacle) is the strict rule; missing any element fails Snowflake Step 1.
+
+### Scene List / 场景列表
+
+**CN:** 场景列表 — 雪花法 Step 8 的输出 artifact,每行 1 场景,含 4 字段:视角(POV character)+ 目标(scene goal)+ 冲突(scene conflict)+ 灾难(scene disaster)。是雪花法从幕级展开到场景级的过渡 artifact —— Step 7 完整角色表 → Step 8 场景列表 → Step 9 场景描述。在 Phase 19 的短剧适配中,Step 8 **不在 creative_source 跑** —— 而是延后到 screenplay 内部 Beat Planning 阶段产出,与 Snyder 15-beat 同构合并(避免双重产出场景表)。详见 [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §短剧 Step Scaling 延后项。
+
+**EN:** Scene List — output artifact of Snowflake Method Step 8, one row per scene, containing 4 fields: POV character + scene goal + scene conflict + scene disaster. It is the transitional artifact where Snowflake expands from act-level to scene-level — Step 7 full character chart → Step 8 scene list → Step 9 scene descriptions. In Phase 19's 短剧 adaptation, Step 8 is **NOT executed in creative_source** — it is deferred to screenplay's internal Beat Planning stage, merged with Snyder 15-beat (to avoid double-producing scene tables). See [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) §短剧 Step Scaling deferred items.
+
+**Context:** Source: Randy Ingermanson, Snowflake Method Step 8 (2002-2013). Phase 19 (SNOWFLAKE-01 + SNOWFLAKE-03) places Scene List generation in screenplay's Beat Planning stage (not creative_source), as the merger point between Snowflake and Snyder 15-beat. The 4-field structure (POV/goal/conflict/disaster) aligns with McKee's scene value-shift rule (详见 [`screenplay/references/mckee-scene-design.md`](../screenplay/references/mckee-scene-design.md) §Value-Shift Rule).
+
+---
+
+**Phase 19 SNOWFLAKE-04 verification:** 4 / 4 new H3 entries added (Snowflake Method / Story Spine / Premise Sentence / Scene List), each with CN/EN/Context + Ingermanson 出处. SNOWFLAKE-04 PASS.
