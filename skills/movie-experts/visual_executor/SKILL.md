@@ -96,6 +96,29 @@ FLUX 2 Klein 9B + LoRA + IP-Adapter + InstantID specialist for cinematic visual 
 - Character consistency enforcement across frames
 - Film grain and natural lighting integration
 
+### E-Konte Field Extraction (Optional Input) — Phase 20 v4.0
+
+当上游 cinematographer 触发 E-Konte 路径(详见 [`../cinematographer/references/e-konte-format.md`](../cinematographer/references/e-konte-format.md) §Trigger Conditions)并生成 `e_konte.json` 时,drawer sub-step 优先消费以下两层:
+
+- **Layer 1 stage_layout → FLUX 2 background prompt 段:** `stage_geometry` + `environment_props[]` 直接构造 background 段;9:16 归一化坐标用于 ControlNet depth / IP-Adapter composition 引导
+- **Layer 3 character pose / expression → FLUX 2 character prompt 段 + InstantID 强度:** `pose.body_orientation` / `pose.hands` / `pose.head_tilt` 构造 character action prompt;`expression.primary` / `expression.secondary` / `expression.intensity` 直接映射 InstantID weight(Layer 3 `intensity: 0.7` → InstantID weight 0.50-0.70 区间,详见 [`references/drawer/character-consistency-lora.md`](./references/drawer/character-consistency-lora.md) §InstantID)
+
+**字段抽取协议:**
+
+```yaml
+e_konte_layer_1_to_drawer:
+  background_prompt_source: "layer_1_stage_layout.stage_geometry"
+  props_to_render: "layer_1_stage_layout.environment_props[]"
+  blocking_to_compose: "layer_1_stage_layout.character_blocking[]"
+
+e_konte_layer_3_to_drawer:
+  character_prompt_source: "layer_3_character.pose + layer_3_character.expression"
+  instantid_weight_mapping: "layer_3_character.expression.intensity * 1.0"
+  lora_consistency_lock: "layer_3_character.character_id → character_designer.character_bible.json"
+```
+
+**与 Western 路径的关系:** 当 `e_konte.json` 不存在时,drawer sub-step 走原 Western 路径(消费 `shot_intent.json` + `style_genome_5d` + `character_designer.character_bible.json`)。E-Konte 是**可选增强输入**,不替代 Western 路径的 fallback。`related_skills` 协作图保持稳定(FOUND-08 — cinematographer 边缘无变化)。
+
 ### Output Format
 
 - High-resolution images (1024x1024 base, scaled for aspect ratio)
@@ -186,6 +209,30 @@ per [`references/drawer/character-consistency-lora.md`](./references/drawer/char
 - Motion blur and physics simulation literacy
 - Temporal consistency enforcement across frame sequences
 - Camera velocity curve design (ease-in/out, acceleration profiles)
+
+### E-Konte Field Extraction (Optional Input) — Phase 20 v4.0
+
+当上游 cinematographer 触发 E-Konte 路径(详见 [`../cinematographer/references/e-konte-format.md`](../cinematographer/references/e-konte-format.md) §Trigger Conditions)并生成 `e_konte.json` 时,animator sub-step 优先消费以下两层:
+
+- **Layer 2 camera_move + shot_scale + lens_mm → video gen model camera 参数:** `camera_move` 字段直接复用 [`references/animator/camera-execution-and-degradation.md`](./references/animator/camera-execution-and-degradation.md) 的 12-move taxonomy;`lens_mm` 用于 prompt token "35mm lens equivalent" 等(详见 [`../cinematographer/references/camera-motion-catalog.md`](../cinematographer/references/camera-motion-catalog.md) §4-model prompt-token mapping)
+- **Layer 5 duration_sec + frame_count + cut_transition_type → video gen duration + keyframe timing:** `duration_sec` 直接作为 video gen model 的 duration 参数(短剧标准 1.5-3s 区间);`frame_count` × `fps` 交叉验证;`cut_transition_type` (hard_cut / dissolve / wipe / fade) 影响 animator 与 editor 的 next-shot 衔接协议
+
+**字段抽取协议:**
+
+```yaml
+e_konte_layer_2_to_animator:
+  camera_params_source: "layer_2_camera.camera_move + layer_2_camera.shot_scale + layer_2_camera.lens_mm"
+  motion_intensity_source: "layer_2_camera.motion_intensity"
+  axis_compliance_check: "layer_2_camera.axis_line (强制保留,详见 ../cinematographer/references/axis-rules.md)"
+
+e_konte_layer_5_to_animator:
+  duration_sec_direct: "layer_5_timing.duration_sec → video gen model duration 参数"
+  fps_alignment: "layer_5_timing.fps (短剧标准 24)"
+  cut_transition_for_editor: "layer_5_timing.cut_transition_type + layer_5_timing.next_shot_link"
+  keyframe_count: "layer_5_timing.frame_count / 12 (每 12 frames 1 keyframe 短剧密度标准)"
+```
+
+**与 Western 路径的关系:** 当 `e_konte.json` 不存在时,animator sub-step 走原 Western 路径(消费 drawer 的 first_frame I-frame + `cinematographer.animator_handoff.json` 的 model-agnostic camera move intent)。E-Konte 是**可选增强输入**,不替代 Western 路径。`related_skills` 协作图保持稳定(FOUND-08)。
 
 ### Output Format
 
