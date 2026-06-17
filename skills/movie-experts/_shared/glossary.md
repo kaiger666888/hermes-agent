@@ -333,3 +333,45 @@ Per REQUIREMENTS SNOWFLAKE-04, `_shared/glossary.md` must have 4 new H3 entries:
 ---
 
 **Phase 19 SNOWFLAKE-04 verification:** 4 / 4 new H3 entries added (Snowflake Method / Story Spine / Premise Sentence / Scene List), each with CN/EN/Context + Ingermanson 出处. SNOWFLAKE-04 PASS.
+
+---
+
+## Phase 20 canonical terms (EKONTE-04)
+
+Per REQUIREMENTS EKONTE-04, `_shared/glossary.md` must have 4 new H3 entries: `E-Konte / 絵コンテ`, `Layout`, `ト書き (stage direction)`, `絵切り (cut transition)` — each with EN↔CN bilingual definitions and 日本动画工业体系 出处.
+
+### E-Konte / 絵コンテ / 日式分镜
+
+**CN:** 絵コンテ(えコンテ)— 日本动画工业自 1960s 虫プロダクション《铁臂阿童木》时代定型的分镜标准格式。与西方 storyboard(单页 1 图 + 1 句 scene description)不同,E-Konte 在单页内强制 **5 层标注**:Layer 1 场景布局 / Layer 2 镜头角度与运动 / Layer 3 角色位置表情动作 / Layer 4 对白音效 / Layer 5 时间帧数。每层独立可消费,让下游 expert(visual_executor drawer / animator / audio_pipeline / editor)只读自己需要的层。Phase 20 把 E-Konte 作为**中间格式选项**挂载到 `cinematographer.composition_lock` 子任务下,与现有 Mascelli 8-level + 180°/30° axis 互补不替代 —— 东方分镜语法 vs 西方轴线传统。E-Konte 触发条件:导演风格 = 东方动画 OR `scene.visual_density ≥ 0.75` OR 监督引用东方传统。今敏《红辣椒》(2006)1.5 年分镜周期是 E-Konte 精度上限参考,本 ref **不要求** AI 输出达到今敏级精度。
+
+**EN:** E-Konte (絵コンテ, "picture continuity") — Japanese animation industry's standard storyboard format, formalized in the 1960s at Tsuchida Pro / Mushi Production during *Astro Boy* (1963). Unlike the Western storyboard (1 image + 1 scene description per page), E-Konte enforces **5 annotation layers** per page: Layer 1 Stage Layout / Layer 2 Camera Angle & Movement / Layer 3 Character Pose/Expression/Action / Layer 4 Dialogue & SFX / Layer 5 Duration & Frame Count. Each layer is independently consumable, letting downstream experts (visual_executor drawer / animator / audio_pipeline / editor) read only their needed layer. Phase 20 mounts E-Konte as an **intermediate format option** under `cinematographer.composition_lock` sub-task, complementary (not substitutive) to existing Mascelli 8-level + 180°/30° axis rules — Eastern storyboard grammar vs Western axis tradition. Trigger conditions: director style = eastern anime OR `scene.visual_density ≥ 0.75` OR director references Eastern tradition. Satoshi Kon's *Paprika* (2006) 1.5-year storyboard cycle is the precision-ceiling reference; this ref does NOT require AI output at Kon-level detail.
+
+**Context:** Source: Japanese animation industry standard terminology (public, non-single-copyright-holder); documented in Catherine Munroe Hotes *A Critical Study of the Genesis and Evolution of Kon Satoshi* (2010); Tony Zhou "Every Frame a Painting" public video essays; Studio Ghibli production documentaries (NHK specials, *The Kingdom of Dreams and Madness* 2013). Phase 20 (EKONTE-01..04) integrates this format into cinematographer + visual_executor experts. Canonical ref: [`cinematographer/references/e-konte-format.md`](../cinematographer/references/e-konte-format.md). 5-layer schema is the strict structure; Layer 2 `shot_scale` + `camera_move` fields reuse existing Mascelli 8-level + 12 camera moves vocabularies (no new vocabulary introduced). Layer 2 `axis_line` field remains mandatory (180°/30° rule still enforced per [`axis-rules.md`](../cinematographer/references/axis-rules.md)).
+
+### Layout / レイアウト / 布局图
+
+**CN:** Layout(レイアウト)— 日本动画工业(尤其是 Studio Ghibli)在 E-Konte 分镜与 Key Animation 原画之间插入的独立工序。每 cut 1 张详细 layout drawing,定义该 cut 内的:空间几何(perspective grid)+ 光影方案(lighting diagram)+ camera field-of-view 角度 + 角色 blocking 精确位置。Layout 制度由宫崎骏和高畑勋在 1970s 末期定型,成为吉卜力作品的视觉签名。Phase 20 把 Layout 与 E-Konte Layer 1(stage_layout)+ Layer 3(character pose)耦合 —— 本 ref 的 schema 把 Layer 1+3 保留在同一 E-Konte 页内(简化),不强制单列 Layout 工序;但 visual_executor 的 drawer sub-step 在 background generation + foreground character generation 分离时,可参考 Layout 思路。
+
+**EN:** Layout (レイアウト) — independent production step inserted between E-Konte (storyboard) and Key Animation in the Japanese animation industry (especially at Studio Ghibli). One detailed layout drawing per cut, defining: spatial geometry (perspective grid) + lighting scheme (lighting diagram) + camera field-of-view angle + precise character blocking positions. The Layout system was formalized by Hayao Miyazaki and Isao Takahata in the late 1970s and became the visual signature of Ghibli works. Phase 20 couples Layout with E-Konte Layer 1 (stage_layout) + Layer 3 (character pose) — this ref's schema keeps Layer 1+3 on the same E-Konte page (simplified), not forcing a separate Layout step; but visual_executor's drawer sub-step can reference the Layout approach when separating background generation from foreground character generation.
+
+**Context:** Source: Studio Ghibli production documentaries — *The Kingdom of Dreams and Madness* (2013, NHK / DW) documents Hayao Miyazaki drawing E-Konte for *The Wind Rises* (2013); *10 Years with Hayao Miyazaki* (2019, NHK) episode 2 details the Layout system. Phase 20 (EKONTE-01) references Layout in the e-konte-format.md ref §宫崎骏吉卜力实践(Layout 制度). Full Ghibli Layout requires perspective grid + lighting diagram + camera FOV — fields beyond Phase 20 scope; simplified `stage_geometry` + `pose` / `position` fields are the equivalent subset.
+
+### ト書き / stage direction / 舞台指示
+
+**CN:** ト書き(とがき)— E-Konte(及日本能剧 / 歌舞伎传统)中的"舞台指示"标注。在 E-Konte 分镜页里,ト書き 描述该 shot 内角色的非对话动作与场景变化(如"主角缓缓站起"、"窗外雨声渐强"),区别于 Layer 4 的对话(セリフ)和 Layer 3 的角色 pose 静态标注。Phase 20 把 ト書き 折叠到 E-Konte Layer 3 的 `action_beat` 字段(`type_pause_look_up` 等)和 Layer 4 的 `sfx[].timing` 字段 —— 不单独占一层,但保留语义。短剧 60-180s 单集由于 cut 密度高,ト書き 信息密度被压到最小(每 shot 1-2 个 action_beat 锚点)。
+
+**EN:** ト書き (togaki, "stage direction") — "stage direction" annotation in E-Konte (and the older Noh / Kabuki theater tradition). On an E-Konte page, ト書き describes non-dialogue actions and scene changes within a shot (e.g., "the protagonist slowly stands up", "the sound of rain outside gradually strengthens"), distinct from Layer 4 dialogue (セリフ) and Layer 3 static character pose. Phase 20 folds ト書キ into E-Konte Layer 3's `action_beat` field (`type_pause_look_up` etc.) and Layer 4's `sfx[].timing` field — it does not occupy a separate layer, but the semantic is preserved. In 短剧 60-180s single episodes, due to high cut density, ト書キ information density is minimized (1-2 action_beat anchors per shot).
+
+**Context:** Source: Japanese animation industry standard terminology; ト書き traces to Noh / Kabuki stage direction tradition (EDO-era theater manuscripts). Phase 20 (EKONTE-01 + EKONTE-04) integrates this term into the e-konte-format.md ref Layer 3 schema. Distinguished from セリフ (dialogue, Layer 4) — ト書き is non-verbal action / scene direction; distinguished from 絵姿 (Layer 3 static pose) — ト書き is dynamic / transitional.
+
+### 絵切り / cut transition / 分镜切换
+
+**CN:** 絵切り(えぎり)— E-Konte 分镜页之间的切换标注。在 E-Konte Layer 5 `cut_transition_type` 字段记录,常见 4 类:`hard_cut`(硬切,无过渡)/ `dissolve`(溶解过渡)/ `wipe`(擦拭过渡)/ `fade`(淡入淡出)。E-Konte 的 絵切り 标注把 cut 节奏前移到分镜阶段(西方传统把 cut 决定延后到 editor 后期)。Phase 20 的 Layer 5 `next_shot_link` 字段(`ep01_shot_008` 等)是 絵切り 的具体实现 —— 把 shot 串成链,让 editor 与 visual_executor animator 都能 follow cut 顺序。短剧 9:16 默认 `hard_cut`(信息密度高 + 移动端注意力窗口短);微电影可用 `dissolve`。
+
+**EN:** 絵切り (egiri, "picture cut") — cut transition annotation between E-Konte storyboard pages. Recorded in E-Konte Layer 5 `cut_transition_type` field; 4 common types: `hard_cut` (no transition) / `dissolve` (cross-fade) / `wipe` (sweep transition) / `fade` (fade-in/out). E-Konte's 絵切り annotation moves cut rhythm decisions into the storyboard phase (Western tradition defers cut decisions to the editor in post-production). Phase 20's Layer 5 `next_shot_link` field (`ep01_shot_008` etc.) is the concrete implementation of 絵切り — chaining shots so editor and visual_executor animator can follow cut order. 短剧 9:16 defaults to `hard_cut` (high information density + short mobile attention window); 微电影 can use `dissolve`.
+
+**Context:** Source: Japanese animation industry standard terminology. Phase 20 (EKONTE-01 + EKONTE-04) integrates this term into the e-konte-format.md ref Layer 5 schema. 絵切り is conceptually adjacent to editor's cut decisions but earlier in the pipeline — E-Konte puts cut annotations in the storyboard, Western defers to editor. The 4-type taxonomy (`hard_cut` / `dissolve` / `wipe` / `fade`) is the standard animation industry vocabulary.
+
+---
+
+**Phase 20 EKONTE-04 verification:** 4 / 4 new H3 entries added (E-Konte / 絵コンテ / Layout / ト書き / 絵切り), each with CN/EN/Context + 日本动画工业体系 出处. EKONTE-04 PASS.
