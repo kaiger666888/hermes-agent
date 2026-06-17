@@ -69,6 +69,12 @@ v3.0 Skills-to-DAG Alignment milestone:
         10 (parallel with 8)
 ```
 
+## Quick Tasks Completed
+
+| Quick ID | Date | Slug | Description | Deliverable |
+|----------|------|------|-------------|-------------|
+| 260617-wgz | 2026-06-17 | write-gap-analysis-doc-comparing-creativ | Gap-analysis 对照调研报告 §7.2 6 阶段蓝图 vs movie-experts 实际覆盖;高 ROI 缺口排序(雪花法 / E-Konte / SCAMPER) | `.planning/research/methodology-gap-analysis-2026-06-17.md` |
+
 ## Performance Metrics (v2.0 PRFP)
 
 - v2.0 phases total: 6 (Phases 7-12)
