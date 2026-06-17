@@ -2,6 +2,8 @@
 phase: quick
 plan: 260617-wgz
 status: complete
+date: 2026-06-17
+description: "Gap-analysis 对照调研报告 §7.2 6 阶段蓝图 vs movie-experts 实际覆盖"
 subsystem: research-docs
 tags: [methodology, gap-analysis, decision-basis, movie-experts, snowflake, e-konte, scamper]
 requires: []
