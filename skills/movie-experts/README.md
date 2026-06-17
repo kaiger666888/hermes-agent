@@ -274,11 +274,12 @@ All RAG invocation is provider-agnostic. The `references/*.md` files contain mod
 | screenplay | 5 | ~108 KB | 2026-06-15 |
 | editor | 5 | ~95 KB | 2026-06-15 |
 | colorist | 5 | ~100 KB | 2026-06-15 |
-| style_genome | 5 | ~95 KB | 2026-06-15 |
+| style_genome | 7 (5 + art-direction Phase 7C + scamper-variations Phase 21) | ~115 KB | 2026-06-18 |
 | compliance_gate | 5 | ~80 KB | 2026-06-15 |
 | hook_retention | 4 | ~70 KB | 2026-06-15 |
-| cinematographer | 4 | ~52 KB | 2026-06-15 |
-| **Total** | **33** | **~600 KB** | — |
+| cinematographer | 5 (4 + e-konte-format Phase 20) | ~78 KB | 2026-06-18 |
+| creative_source | 5 (4 + snowflake-method Phase 19) | ~63 KB | 2026-06-18 |
+| **Total** | **36** | **~625 KB** | — |
 
 (Other 10 experts have placeholder refs pending Phase 5 v1.5 RAG uplift.)
 
@@ -360,7 +361,7 @@ skills/movie-experts/
 ├── README.md                                    (this file)
 ├── animator/           SKILL.md (Phase 14 redirect stub) — references/ + GAP-REPORT.md preserved archival
 ├── visual_executor/   SKILL.md + references/{drawer/{flux2-parameter-surface,character-consistency-lora},animator/{video-gen-model-matrix,temporal-consistency,camera-execution-and-degradation}}.md + drawer/LICENSE.md + animator/LICENSE.md + GAP-REPORT.md (Phase 5 + Phase 14 merge)
-├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog}.md + LICENSE.md (Phase 4)
+├── cinematographer/    SKILL.md + references/{shot-grammar,axis-rules,vertical-screen-framing,camera-motion-catalog,e-konte-format}.md + LICENSE.md (Phase 4 + Phase 20 v4.0 increment: e-konte-format.md)
 ├── colorist/           SKILL.md + references/{bellantoni,hurkman,cross-cultural,cn-audience,digital-science}.md + LICENSE.md (Phase 3 deep)
 ├── compliance_gate/     SKILL.md + references/{cn-content-rules,viral-element-catalog,platform-douyin,platform-kuaishou,platform-miniprogram}.md + LICENSE.md (Phase 1)
 ├── audio_pipeline/     SKILL.md + references/{voicer/{cn-tts-model-matrix,character-voice-consistency,tts-emotion-prosody-control},lip_sync/{sync-quality-metrics,latentsync-deployment,audio-video-input-spec,identity-preservation},composer/{musicgen-workflow,chion-audio-vision,bgm-and-song-creation},foley/{stable-audio-open,sound-effect-taxonomy,sound-effects-prompt-engineering},mixer/{mixing-secrets-small-studio,lufs-standards},spatial_audio/{dolby-atmos-workflow,immersive-sound-design}}.md + {voicer,lip_sync,composer,foley,mixer,spatial_audio}/LICENSE.md + GAP-REPORT.md (Phase 5 + Phase 7A-2 + Phase 15 merge)
@@ -376,13 +377,13 @@ skills/movie-experts/
 ├── scene_builder/      SKILL.md + references/{blender-previz-workflow,architectural-storytelling}.md + LICENSE.md (Phase 5)
 ├── screenplay/         SKILL.md + references/{save-the-cat,mckee,cn-shortdrama,emotion-curve-academic,dialogue-craft}.md + LICENSE.md (Phase 3 deep)
 ├── spatial_audio/      SKILL.md (Phase 15 redirect stub — folded_into audio_pipeline) — references/ preserved archival
-├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis,art-direction-methodology}.md + LICENSE.md (Phase 3 deep + Phase 7C increment)
+├── style_genome/       SKILL.md + references/{director-dna-archive,genre-dna-taxonomy,auteur-theory,cross-cultural-style,cn-director-analysis,art-direction-methodology,scamper-variations}.md + LICENSE.md (Phase 3 deep + Phase 7C increment + Phase 21 v4.0 increment: scamper-variations.md)
 ├── voicer/             SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — references/ + GAP-REPORT.md preserved archival
 ├── script_auditor/     SKILL.md + references/{narrative-structure-audit,emotion-arc-audit,hook-strength-audit,character-network-audit,completion-rate-forecast}.md + LICENSE.md (Phase 7A-1 NEW)
 ├── lip_sync/           SKILL.md (Phase 15 redirect stub — merged_into audio_pipeline) — _eval/ regression suite preserved archival
 ├── character_designer/ SKILL.md + references/{4d-anchor-system,layered-style-prefix,consistency-stress-test,character-bible-schema}.md + LICENSE.md (Phase 7B-1 NEW)
 ├── storyboard_designer/ SKILL.md + references/{shot-decomposition-rules,camera-params-dictionary,4d-anchoring-params,storyboard-schema}.md + LICENSE.md (Phase 7B-2 NEW)
-├── creative_source/    SKILL.md + references/{strata-guide,story-kernel-schema,multi-strata-resonance,unspeakability-protocol}.md + LICENSE.md (Phase 7B-3 NEW)
+├── creative_source/    SKILL.md + references/{strata-guide,story-kernel-schema,multi-strata-resonance,unspeakability-protocol,snowflake-method}.md + LICENSE.md (Phase 7B-3 NEW + Phase 19 v4.0 increment: snowflake-method.md)
 ├── prompt_injector/                    # Phase 16 NEW (2026-06-17) — AI-native prompt engineering node
 │   ├── SKILL.md                        # Prompt Injector Expert (提示注入)
 │   ├── GAP-REPORT.md                   # placeholder per CONTEXT D-04 (NEW expert, no v1 baseline)
@@ -448,13 +449,34 @@ If you build on this suite, please cite:
 
 ---
 
-*Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7) + 2026-06-17 (Phases 13-16).*
+*Movie-Experts Suite v2 — built 2026-06-15 (Phases 0-6) + 2026-06-16 (Phase 7) + 2026-06-17 (Phases 13-16) + 2026-06-18 (Phases 19-21 v4.0 methodology backfill: Snowflake + E-Konte + SCAMPER).*
 *v3.0 reconciled inventory: 15 active DAG pipeline-roles + 3 active non-DAG verticals/deferred + 3 deprecated (Phase 17) + 10 redirect stubs preserving legacy expert_id per FOUND-08. See VALIDATION-REPORT.md for the definitive classification.*
 *Original v3.0 target was 21 (16 active + 5 aliases); Phase 18-01 audit reconciled to the actual on-disk reality per VALIDATION-REPORT.md.*
 *All RAG-aware, all phantom refs stripped.*
 *Total ref corpus: ~85 files (~1.9MB cited fair-use content).*
 *5 Phase 7 experts carry independent validation protocols (no LLM-judge required).*
 *Live-run statistical GO/NO-GO evidence deferred to operator per CONTEXT D-11.*
+
+---
+
+## v4.0 Methodology Backfill — Phase 19-21 increments summary (2026-06-18)
+
+**3 new methodology refs** integrated into existing active experts (no new expert_id, no DAG node change). Each ref is a Fair Use paraphrase of a foundational creative-writing / film-craft / creativity-pedagogy methodology, adapted to 短剧 / 微电影 forms.
+
+| Phase | Ref | Expert Owner | Methodology | Source |
+|-------|-----|--------------|-------------|--------|
+| **19** | `creative_source/references/snowflake-method.md` | creative_source | Randy Ingermanson 雪花法 10 步递进展开 | *How to Write a Novel Using the Snowflake Method* (2013 10th-anniv ed.; advancedfictionwriting.com 2002-2003) |
+| **20** | `cinematographer/references/e-konte-format.md` | cinematographer | 日本动画工业 E-Konte 絵コンテ 5 层标注格式 | Japanese animation industry standard terminology (Mushi Production 1960s Astro Boy era); Studio Ghibli production docs |
+| **21** | `style_genome/references/scamper-variations.md` | style_genome | Bob Eberle SCAMPER 7 动词变体引擎(叠加在 style_blend 之上) | Bob Eberle *SCAMPER* (1971); Alex F. Osborn *Applied Imagination* (1953, creative-thinking checklist) |
+
+**Methodology coverage:**
+- **过程性展开 (process)** — Snowflake Method 管「叙事怎么从一句话展开到一页大纲」(Phase 19)
+- **格式性标注 (format)** — E-Konte 管「分镜怎么标注 5 层(场景布局 / 镜头角度运动 / 角色位置表情动作 / 对白音效 / 时间帧数)」(Phase 20)
+- **变体性生成 (variation)** — SCAMPER 管「风格怎么变体 7 候选」(Phase 21)
+
+三者**互补不重叠** —— 雪花法在 creative_source / screenplay 之间挂载(叙事层),E-Konte 在 cinematographer.composition_lock 挂载(分镜层),SCAMPER 在 style_genome.style_blend 之上叠加(变体层)。
+
+**Sign-off status:** All 3 v4.0 refs recorded in `.planning/research/v2-pipeline-design/skills-mapping.yaml` §v4_ref_signoffs(DOC-02 close-out in Phase 21). License status: Fair Use paraphrase for all 3.
 
 ---
 

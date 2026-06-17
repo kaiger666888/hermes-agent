@@ -34,6 +34,7 @@ The user needs to define a director/genre visual style, blend multiple director 
 | [`references/auteur-theory.md`](./references/auteur-theory.md) | 判定 director tier(Pantheon/Modern Auteur/Operator Convention)前 | Sarris 3-criteria rubric(technical competence + distinguishable personality + interior meaning)+ Sarris 9-rank ladder 简化版 + Style Coherence Doctrine(Wood 1965)+ Truffaut auteur vs qualité 区分 + Bordwell anti-pattern |
 | [`references/cross-cultural-style.md`](./references/cross-cultural-style.md) | 跨文化场景(CN × Western / 短剧 出海)前 | CN/Western/Korean 5D divergence matrix + Cultural Translation Cost (CTC) 公式 + Hybrid Encoding Protocol(0.65 original / 0.35 target)+ Non-translatable elements 清单 + Korean Wave 中介规则 |
 | [`references/cn-director-analysis.md`](./references/cn-director-analysis.md) | 编码 CN 大陆 / 港台 / 短剧 导演前 | CN generation tiering(第五代/第六代/香港新浪潮/台湾新电影/short_drama)+ 5 canonical CN director 5D profile(张艺谋/贾樟柯/王家卫/杜琪峰/侯孝贤)+ signature elements + 焦距+ASL + 短剧 director Operator Convention 规则 |
+| [`references/scamper-variations.md`](./references/scamper-variations.md) | 用户请求多候选 / hook_retention 消费 / 跨平台分发 时 | Bob Eberle SCAMPER 7 动词(Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse)+ 35 短剧变体配方(7 动词 × 5 gene 组合)+ LLM prompt 模板 + `scamper_variants.json` output schema。**叠加在 style_blend 之上**(变体引擎,不是分类系统)|
 | [`../_shared/project-corpus/auteur-director-biographies.md`](../_shared/project-corpus/auteur-director-biographies.md) | 任何 auteur 编码需要传记深度时 | 7 位导演独立方法论:Bergman(梦/日记)/Kieślowski(偶然与宿命)/Tarkovsky(七部半)/Ozu(仰拍/相似形)/Fassbinder(反剧场)/Buñuel(超现实)/Altman(群像)+ 5 维度研究法 |
 
 ## Knowledge Retrieval
@@ -45,6 +46,7 @@ The user needs to define a director/genre visual style, blend multiple director 
 - **Sarris 3-criteria rubric + tier 判定决策树 + Style Coherence Doctrine + auteur vs qualité** —— 详见 [`references/auteur-theory.md`](./references/auteur-theory.md)
 - **跨文化 5D divergence + Cultural Translation Cost + Hybrid Encoding Protocol + Non-translatable elements + Korean Wave 中介** —— 详见 [`references/cross-cultural-style.md`](./references/cross-cultural-style.md)
 - **CN generation tiering + 5 canonical CN director + signature elements + 短剧 director Operator Convention** —— 详见 [`references/cn-director-analysis.md`](./references/cn-director-analysis.md)
+- **SCAMPER 7 动词变体引擎 + 35 短剧变体配方 + LLM prompt 模板 + scamper_variants.json schema**(叠加在 style_blend 之上的变体引擎层,详见 §SCAMPER Variation Layer)—— 详见 [`references/scamper-variations.md`](./references/scamper-variations.md)
 
 **若当前 runtime 中有 memory / RAG 工具**(例如 `<memory_plugin>` / `<rag_search>` 或类似检索工具,具体工具名由 runtime 决定),使用以下查询范围:
 
@@ -79,6 +81,7 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - `style_blend_protocol.json`: blending rules and weights
 - `style_alignment_report.json`: cross-module style deviation report
 - `director_profiles[]`: director style archive
+- `scamper_variants.json` (optional, conditional): 7 SCAMPER candidate variants array, only emitted when §SCAMPER Variation Layer 触发条件满足(schema 详见 [`references/scamper-variations.md`](./references/scamper-variations.md) §Output Schema)
 
 ## Key Parameters
 
@@ -163,6 +166,34 @@ tags="expert:style_genome,domain:cn-director-analysis"
 - **Conflict** (opposite directions): dominant completely overrides
 - **Enhancement** (same direction): weighted average
 - **Requirement**: always specify dominant (no 50/50)
+
+## SCAMPER Variation Layer (Stacked on style_blend)
+
+**叠加不替代声明 (load-bearing):** SCAMPER 是**变体引擎**(variation engine),不是**分类系统**(classification system)。它在 style_blend 单一输出之上**叠加**一个 7 候选变体生成层 —— 不替代 style_blend 本身,也不替代 auteur-theory / genre-dna / cross-cultural-style 三个分类前置层。
+
+**与 auteur-theory / genre-dna 的关系:**
+- ❌ SCAMPER 不重写 director tier(Pantheon / Modern Auteur / Operator)—— 那是 auteur-theory 的责任
+- ❌ SCAMPER 不修改 genre 5D 区间 —— 那是 genre-dna-taxonomy 的硬约束
+- ❌ SCAMPER 不替代 cross-cultural hybrid encoding —— 那是跨文化场景的特例
+- ✅ SCAMPER 在 auteur-theory + genre-dna + cross-cultural 三层分类**全部锁定后**才介入,展开 7 个变体候选
+
+**输入 / 处理 / 输出 三段式:**
+- **输入:** `style_genome.json`(已锁定的 5D 向量 + director reference + genre label + tier)
+- **处理:** 对 7 SCAMPER 动词(Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse)各应用其变体动作,生成 7 候选。每候选计算 3 推荐分数:`novelty_score`(与 source 的 5D 距离)+ `feasibility_score`(genre 5D 区间兼容性)+ `alignment_score`(用户意图匹配度)
+- **输出:** `scamper_variants.json`(7 候选数组,schema 详见 [`references/scamper-variations.md`](./references/scamper-variations.md) §Output Schema)
+
+**触发条件(任一):**
+- 用户显式请求多候选(「给 3-5 个风格候选」「我想看不同走向」)
+- `hook_retention` 在 `## SCAMPER × 5 爆款公式 Cross-Table` 中请求候选 hook 变体种子
+- 用户提供 2+ dominant 候选,SCAMPER 自动展开 7 个组合
+- 跨平台分发需求(抖音 / 快手 / 小程序剧 多平台)
+
+**不触发条件:**
+- 用户只给 1 个 director + 1 个 genre + 明确不需要候选(style_blend 单一输出已足够)
+- auteur-theory tier 判定阶段(那是分类,不是变体)
+- genre-dna 5D 区间圈定阶段(那是分类,不是变体)
+
+**配方表:** 35 配方(7 动词 × 5 基因组合)详见 [`references/scamper-variations.md`](./references/scamper-variations.md) §35 Variation Recipes。
 
 ## Style Rules
 
