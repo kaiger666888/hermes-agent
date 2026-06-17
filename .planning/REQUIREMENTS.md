@@ -1,109 +1,104 @@
-# Requirements: Movie-Experts Suite v2 — Milestone v3.0 Skills-to-DAG Alignment
+# Requirements: Movie-Experts Suite v2 — Milestone v4.0 Methodology Backfill
 
-**Defined:** 2026-06-16
-**Core Value:** 把 hermes-agent `skills/movie-experts/` 从 26 experts 对齐到 v2.0 PRFP 设计的 16 pipeline-roles,执行 `skills-mapping.yaml` 锁定的 rename / merge / new / deprecate 决定,让 skills 知识层与新 DAG 干净映射。
+**Defined:** 2026-06-17
+**Core Value:** 把 2026-06-17 gap-analysis 识别的 3 个 ⭐⭐⭐⭐⭐ AI 化方法论缺口补进 `skills/movie-experts/` —— Snowflake Method(过程)、E-Konte 絵コンテ(视觉中间格式)、SCAMPER(变体引擎)。三者互补不重叠,各自接入点独立。
 
-> **Scope reminder:** 本次里程碑执行 v2.0 PRFP 设计决策(已在 `.planning/research/v2-pipeline-design/skills-mapping.yaml` 锁定),仅修改 `skills/movie-experts/`。kais-movie-agent 实施是 parallel milestone(在该 repo)。
-
----
-
-## v3.0 Requirements
-
-### RENAME — Expert Rename(2 reqs)
-
-- [x] **RENAME-01**: `continuity` expert 改名为 `continuity_auditor`,更新 SKILL.md frontmatter `name` + `expert_id` + `metadata.hermes.expert_id` + `metadata.hermes.related_skills` 协作图(双向 edge 同步)。保留 `continuity` 作为 alias(per FOUND-08 backward-compat)。
-- [x] **RENAME-02**: `compliance_marketing` expert 改名为 `compliance_gate`,聚焦 pure compliance(分离 marketing 到独立 ref 或 sub-skill)。保留 `compliance_marketing` 作为 alias。
-
-### MERGE — Expert Merge(2 reqs)
-
-- [x] **MERGE-01**: `drawer` + `animator` 合并为 `visual_executor` 新 expert。保留原 expert_id 作为 sub-step 名(`visual_executor` SKILL.md 内部声明 `sub_steps: [drawer, animator]`)。`related_skills` 协作图更新:visual_executor 继承 drawer + animator 的全部 edge。
-- [x] **MERGE-02**: 5 个 audio experts(`voicer` + `composer` + `foley` + `mixer` + `spatial_audio`)合并为 `audio_pipeline` 新 expert。`audio_pipeline` SKILL.md 内部声明 `sub_steps: [voicer, lip_sync, composer, foley, mixer]`(lip_sync 是新增显式 sub-step)。`related_skills` 协作图更新。
-
-### NEW — New Expert(1 req)
-
-- [x] **NEW-01**: 新增 `prompt_injector` expert — AI-native 节点,无 v1 对应。SKILL.md 包含:core_task(intent → model tokens + cross-call consistency context)、4 refs(prompt engineering patterns + cross-call consistency)、`metadata.hermes.expert_id: prompt_injector`、`metadata.hermes.related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]`、接入协作图(per Phase 7 §4.7 + Phase 8 §2.7)。
-
-### DEPRECATE — Expert Deprecation(3 reqs)
-
-- [x] **DEPRECATE-01**: `performer` expert deprecate。理由(per `06-COMPARISON-VS-26-SKILLS.md`):表演真实折叠进 character_designer(voice + behavioral tics)+ screenplay(dialogue subtext),无独立节点必要。处理方式:SKILL.md 标 `status: deprecated` + redirect 注释指向 character_designer + screenplay;保留 expert_id 文件以免破坏向后兼容(FOUND-08)。
-- [x] **DEPRECATE-02**: `scene_builder` expert deprecate。理由:场景设计折叠进 cinematographer(mise-en-scène as composition_lock 子任务)+ style_genome。处理方式同上。
-- [x] **DEPRECATE-03**: `storyboard_designer` expert deprecate。理由(per Phase 7 §3.4 D3.4):storyboard 折叠进 cinematographer composition_lock。处理方式同上。
-
-### VALIDATE — Frozen Rule + Backward Compat(2 reqs)
-
-- [x] **VALIDATE-01**: FOUND-08 frozen rule compliance check — 所有保留的 expert_id 不变量维护;rename + merge 显式 mapping 记录在 `.planning/research/v2-pipeline-design/skills-mapping.yaml`(已有,本里程碑 sign_off 状态从 `pending` → `signed_off`);deprecate 不静默。验证方法:grep 26 → 21 个 active expert_id(16 pipeline-roles + 5 alias 兼容 + 3 deprecated-but-present)。**Audited PASS 2026-06-17 in Phase 18-01 VALIDATION-REPORT.md §FOUND-08 Compliance Audit (13/13 migrations PASS, zero silent renames). Note: actual on-disk count reconciled to 31 SKILL.md files (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs); original 21-target was an estimate that undercounted stubs + omitted non-DAG verticals — see VALIDATION-REPORT.md §Reconciliation Arithmetic.**
-- [x] **VALIDATE-02**: Backward compatibility alias — 所有 rename / merge / deprecate 操作保留旧 expert_id 作为 alias(`metadata.hermes.aliases: [old_id]`)。验证方法:现有创作者 workflow 不破坏;旧 expert_id 引用仍能找到对应 SKILL.md。**Audited PASS 2026-06-17 in Phase 18-01 VALIDATION-REPORT.md §Backward Compatibility Verification (13/13 legacy expert_ids resolve via successor aliases or preserved redirect stubs; zero stranded references).**
-
-### DOC — Documentation + Collaboration Graph(2 reqs)
-
-- [x] **DOC-01**: 更新 `skills/movie-experts/README.md` 26-expert inventory → 21-expert inventory(16 active + 5 aliases 注释)。更新 18-expert collaboration DAG → 新 DAG 拓扑(per `01-NODE-DAG.md` Mermaid)。更新 RAG usage guide + Phase 6 live-run procedure(指向新 DAG)。**DONE 2026-06-17 in Phase 18-02 (commits 9ee702f5a + f57c0cda3 + 70a478a18): README.md ASCII-art DAG replaced wholesale with canonical Mermaid block from 01-NODE-DAG.md §1.5 (16-node topology, 7 subgraphs, 7 topology properties documented); 7 inventory sub-sections consolidated into 3 canonical tables (15 active DAG + 3 active non-DAG + 3 deprecated + 10 redirect stubs) matching VALIDATION-REPORT.md 4-bucket classification; Status line + footer updated to reconciled 31-count with explicit 21-target → actual reconciliation note per CONTEXT D-06. Note: reconciled actual count is 31 (not 21) per VALIDATION-REPORT.md §Reconciliation Arithmetic — original 21-target was an early estimate that undercounted stubs + omitted non-DAG verticals.**
-- [x] **DOC-02**: 更新 `_shared/glossary.md` 添加新术语(`visual_executor`, `audio_pipeline`, `prompt_injector`, `continuity_auditor`, `compliance_gate`)+ EN↔CN 映射。更新 `_shared/known-external-models.yaml` 添加 Phase 8 §2.17 dated annex 的模型清单。**DONE 2026-06-17 in Phase 18-02 (commits f57c0cda3 + 70a478a18): glossary.md DOC-02 verification — 3 of 5 terms already PRESENT from Phase 14/15/16 (visual_executor, audio_pipeline, prompt_injector), 2 ADDED in Phase 18 §canonical term reconciliation (continuity_auditor + compliance_gate) with bilingual CN/EN/Context entries; Phase 18 DOC-02 verification matrix documents per-term status. known-external-models.yaml Phase 8 §2.17 dated annex — 18 NEW entries (Claude Sonnet/Haiku/Opus 4.x, GLM-4.6, GPT-5/5-mini, Gemini 3 Pro, Suno V5, Udio 2, AudioLDM-3, Ideogram, Runway Gen-5, Azure TTS, OpenAI TTS-2, SD4, DaVinci Resolve, ffmpeg-DSP, template-few-shot) + 9 inline-extended existing entries (flux2, cosyvoice, elevenlabs, stable_audio, musicgen, kling, sora, veo, ip-adapter); 27 entries carry verified_date: 2026-06-17.**
+> **Scope reminder:** 仅修改 `skills/movie-experts/` 的 3 个 active 专家(`creative_source` + `screenplay` / `cinematographer` / `style_genome`)。每个 phase = 1 个新 ref + 1-2 个 SKILL.md 增量更新 + 跨 skill `related_skills` 边缘同步 + glossary 词条。**不重构**核心架构,只增量挂载方法论。
+>
+> **Source artifact:** `.planning/research/methodology-gap-analysis-2026-06-17.md`(2026-06-17 quick task 260617-wgz 产物,作为本 milestone 的事实底座)。
+>
+> **不引入新 expert:** 3 个 phase 都是给已有 active expert 增量挂载方法论 ref,不创建新 expert_id,不触发 FOUND-08 alias 流程。
 
 ---
 
-## Future Requirements(v3 后续里程碑 / 不在 v3.0)
+## v4.0 Requirements
 
-> 这些是合理的下一步,但不在 v3.0 范围。后续里程碑承接。
+### SNOWFLAKE — Snowflake Method Integration(4 reqs,Phase 19)
 
-- **FUTURE-06**: 把 `_shared/project-corpus/` refs 重新 align 到 v3.0 expert inventory(deprecated experts 的 corpus refs 重定向到继承者)
-- **FUTURE-07**: 更新 `_eval/` benchmark prompts 从 26-expert 到 21-expert(deprecated experts 的 prompts 重定向)
-- **FUTURE-08**: 设计 v3.0 live run 对比 v2.0 PRFP DAG 与 v1 18-expert 实际效果差异
-- **FUTURE-09**: production expert 处理(per v2.0 §6 deferred;超 v3.0 范围)
-- **FUTURE-10**: skills 团队与 kais-movie-agent 团队的 cross-repo ADR 治理流程落地(per HANDOFF-05 co-owned DAG)
+- [ ] **SNOWFLAKE-01**: 在 `skills/movie-experts/creative_source/references/` 新增 `snowflake-method.md` —— Randy Ingermanson 雪花法 10 步递进管线(一句话 → 段落 → 角色概要 → 一页大纲 → 角色传记 → 四页大纲 → 完整角色表 → 场景列表 → 场景描述 → 初稿),按短剧 60-180s 单集 + 10-80 集连续剧形态做 step 缩放,并给出与 Bourdieu StoryKernel 的衔接协议。
+- [ ] **SNOWFLAKE-02**: 更新 `skills/movie-experts/creative_source/SKILL.md` —— 在现有 `creative_source → style_genome → screenplay` 调用链上挂载 snowflake 作为 StoryKernel 展开子任务(StoryKernel → Snowflake-3 [角色概要] → Snowflake-4 [一页大纲] → 交付给 screenplay),并在 SKILL.md 正文标注调用点 + 输出 schema。
+- [ ] **SNOWFLAKE-03**: 更新 `skills/movie-experts/screenplay/SKILL.md` —— 在 Beat Planning 步骤前新增"消费 Snowflake 一页大纲作为输入 scaffold"的子步骤,显式声明 Snowflake-4 输出与 Snyder 15-beat 的字段映射(段落 ↔ beat 集 / 灾难节点 ↔ Catalyst+Midpoint+All Is Lost)。
+- [ ] **SNOWFLAKE-04**: 在 `skills/movie-experts/_shared/glossary.md` 新增 4 个词条:`Snowflake Method` / `Story Spine` / `Premise Sentence` / `Scene List`,中英对照 + 出处标注(Ingermanson 2000s)。
+
+### EKONTE — E-Konte 絵コンテ Integration(4 reqs,Phase 20)
+
+- [ ] **EKONTE-01**: 在 `skills/movie-experts/cinematographer/references/` 新增 `e-konte-format.md` —— 日本动画工业 E-Konte 分镜格式(5 标注层:场景布局 / 镜头角度与运动 / 角色位置表情动作 / 对白音效 / 时间帧数),今敏《红辣椒》一年半分镜案例 + 宫崎骏吉卜力实践,与西方 storyboard 的对比表。
+- [ ] **EKONTE-02**: 更新 `skills/movie-experts/cinematographer/SKILL.md` —— 在 `composition_lock` 子任务下新增"E-Konte 作为中间格式输出"的步骤,显式声明 E-Konte 与现有 Mascelli 8-level shot scale / 180°-30° axis rules 的关系(东方分镜语法 vs 西方轴线传统,互补不替代)。
+- [ ] **EKONTE-03**: 更新 `skills/movie-experts/visual_executor/SKILL.md` —— 在 visual_executor 消费 cinematographer 输出的环节,新增"E-Konte 字段抽取"说明(从 E-Konte 5 标注层提取 character pose / camera motion / duration,喂给 drawer/animator sub_steps),保持 `related_skills` 协作图稳定。
+- [ ] **EKONTE-04**: 在 `skills/movie-experts/_shared/glossary.md` 新增 4 个词条:`E-Konte / 絵コンテ` / `Layout` / `ト書き (stage direction)` / `絵切り (cut transition)`,中英对照 + 出处标注(日本动画工业体系)。
+
+### SCAMPER — SCAMPER Variation Engine(4 reqs,Phase 21)
+
+- [ ] **SCAMPER-01**: 在 `skills/movie-experts/style_genome/references/` 新增 `scamper-variations.md` —— Bob Eberle SCAMPER 7 动词(Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse),针对短剧 / 微电影的 7 × 5 = 35 个变体配方(每个动词 × 5 个常见基因组合:genre × mood × pacing × cast × runtime),给出 LLM prompt 模板 + 输出 schema。
+- [ ] **SCAMPER-02**: 更新 `skills/movie-experts/style_genome/SKILL.md` —— 在现有 `style_blend` 子任务上叠加 SCAMPER 作为变体引擎(`style_blend` 输入 → SCAMPER 7 动词展开 → 7 个候选 style_blend 输出 → 用户或下游选择),显式声明与 auteur-theory / genre-dna 的协作关系。
+- [ ] **SCAMPER-03**: 更新 `skills/movie-experts/hook_retention/SKILL.md` —— 新增"SCAMPER × 5 爆款公式"交叉表(7 动词 × 5 短剧爆款公式 = 35 个 hook 变体种子),让 hook_retention 可以从 style_genome 的 SCAMPER 输出消费候选爆款公式变体。
+- [ ] **SCAMPER-04**: 在 `skills/movie-experts/_shared/glossary.md` 新增 8 个词条:`SCAMPER` + 7 动词(Substitute / Combine / Adapt / Modify / Put-to-other-use / Eliminate / Reverse),中英对照 + 出处标注(Eberle 1971,基于 Osborn 创意清单)。
+
+### DOC — Cross-cutting Documentation(2 reqs,跨 Phase 19-21)
+
+- [ ] **DOC-01**: 更新 `skills/movie-experts/README.md` —— 在 corpus tree / inventory 中列出 3 个新 refs(`snowflake-method.md` / `e-konte-format.md` / `scamper-variations.md`),并在 Mermaid DAG 上无变化(3 个方法论都是已有 expert 的内部 ref,不新增 DAG 节点)。
+- [ ] **DOC-02**: 更新 `.planning/research/v2-pipeline-design/skills-mapping.yaml`(或等价 sign-off 文件)—— 为 3 个新 ref 增加签收条目,标注 `verified_date: 2026-06-17` + 出处 + License 状态。
+
+---
+
+## Future Requirements(v4 后续里程碑 / 不在 v4.0)
+
+- **Vogler 12 阶段 + 8 原型接入** — gap-analysis §6 次优先级,可作为 character_designer 心理结构维度补缺(当前偏视觉身份)。
+- **Truby 22 步接入** — gap-analysis §6 次优先级,与 McKee+Snyder 互补(有机生长 vs 模板填充),可在 v5+ 评估。
+- **设计思维五阶段 / 双钻模型作为元流程** — gap-analysis §6,可作为整个 movie-experts pipeline 的迭代元流程接入,影响多个 expert。
+- **Story Grid 节拍分析作为质量评估层** — gap-analysis §6,可与现有 `script_auditor` 5 维评分叠加。
+- **起承转合(Kishōtenketsu)接入** — gap-analysis §6 + §7.3,填补治愈向 / 无冲突内容的结构性盲区。
+- **v3.0 deferred items W-1 through W-4 + VALIDATE-D1** — 不属 v4.0 范围,留待后续清理 milestone。
 
 ---
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| kais-movie-agent/lib/ 任何 .js / .py 编辑 | kais-movie-agent impl 是 parallel milestone,在该 repo 处理 |
-| `_eval/` benchmark prompts 全面重写 | FUTURE-07;spot-check 即可 |
-| live run 执行 | FUTURE-08;需要 OPENROUTER_API_KEY + budget |
-| production expert 处理 | FUTURE-09;v3.0 范围只覆盖 16 pipeline-roles,production 超出 |
-| v2.0 PRFP 设计文档修改 | 设计 frozen-pending-impl;只在 impl 团队 challenge 时通过 cross-repo ADR 修订 |
-| 新的 SKILL.md 内容写作 | 本里程碑是 inventory 重构 + rename + merge + deprecate,不是 refs 内容重写 |
-| 全 26-expert SKILL.md 双语 lint | spot-check 即可;v1 经验显示完整 lint 边际收益低 |
+- **重构 creative_source / cinematographer / style_genome 的核心架构** —— 本 milestone 只增量挂载方法论 ref,不动现有 Bourdieu 场域 / Mascelli 轴线 / Sarris-Truffaut Auteur Theory 等已有方法论。
+- **新建 expert_id** —— 3 个 phase 都不创建新 expert 目录,不触发 FOUND-08 alias 流程。
+- **改编现有 McKee / Snyder / Tan / McMahon 联用结构** —— `screenplay/references/` 现有 4 个 ref 不动,只新增 snowflake-method.md 作为补充。
+- **测试 / eval harness 升级** —— 本 milestone 是知识层增量,不引入新的 eval 维度;v1 eval harness 保持不变。
+- **代码层修改** —— 严格遵守 PROJECT.md 约束("仅 skill 内容(refs + SKILL.md + eval scripts),不改 Hermes 核心 Python/JS 代码")。
+- **kais-movie-agent repo 同步** —— 双 repo 同步留待独立 milestone。
+- **Multi-strata / Un_speakability protocol 扩展** —— creative_source 现有 Bourdieu 路径不动,snowflake 只作为补充展开管线。
 
 ---
 
 ## Traceability
 
-> Phase 映射由 roadmapper 在 2026-06-16 生成。Phase 编号沿用 v2.0 后续(v2.0 结束于 phase 12,所以 v3.0 从 phase 13 起步)。
+> Phase 映射由 roadmapper 在 2026-06-17 生成。Phase 编号沿用 v3.0 后续(v3.0 结束于 phase 18,所以 v4.0 从 phase 19 起步)。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RENAME-01 | 13 | Complete |
-| RENAME-02 | 13 | Complete |
-| MERGE-01 | 14 | Complete |
-| MERGE-02 | 15 | Complete |
-| NEW-01 | 16 | Complete |
-| DEPRECATE-01 | 17 | Complete |
-| DEPRECATE-02 | 17 | Complete |
-| DEPRECATE-03 | 17 | Complete |
-| VALIDATE-01 | 18 | Complete |
-| VALIDATE-02 | 18 | Complete |
-| DOC-01 | 18 | Complete |
-| DOC-02 | 18 | Complete |
+| SNOWFLAKE-01 | 19 | Pending |
+| SNOWFLAKE-02 | 19 | Pending |
+| SNOWFLAKE-03 | 19 | Pending |
+| SNOWFLAKE-04 | 19 | Pending |
+| EKONTE-01 | 20 | Pending |
+| EKONTE-02 | 20 | Pending |
+| EKONTE-03 | 20 | Pending |
+| EKONTE-04 | 20 | Pending |
+| SCAMPER-01 | 21 | Pending |
+| SCAMPER-02 | 21 | Pending |
+| SCAMPER-03 | 21 | Pending |
+| SCAMPER-04 | 21 | Pending |
+| DOC-01 | 21 | Pending |
+| DOC-02 | 21 | Pending |
 
 **Coverage:**
-- v3.0 requirements: **12 total** (RENAME × 2 + MERGE × 2 + NEW × 1 + DEPRECATE × 3 + VALIDATE × 2 + DOC × 2)
-- Mapped to phases: **12 / 12** ✓
+- v4.0 requirements: **14 total**(SNOWFLAKE × 4 + EKONTE × 4 + SCAMPER × 4 + DOC × 2)
+- Mapped to phases: **14 / 14** ✓
 - Unmapped: **0**
-- Completed: **12 / 12** ✓ (v3.0 milestone closed 2026-06-17)
 
 **Per-phase summary:**
 
 | Phase | Name | Requirements | Count |
 |-------|------|--------------|-------|
-| 13 | Expert Rename + Alias Scaffolding | RENAME-01, RENAME-02 | 2 |
-| 14 | Visual Executor Merge (drawer + animator) | MERGE-01 | 1 |
-| 15 | Audio Pipeline Merge (5 audio experts) | MERGE-02 | 1 |
-| 16 | New AI-Native Expert (prompt_injector) | NEW-01 | 1 |
-| 17 | Deprecate 3 Candidates (performer / scene_builder / storyboard_designer) | DEPRECATE-01, DEPRECATE-02, DEPRECATE-03 | 3 |
-| 18 | Validation + Documentation + Collaboration Graph Update | VALIDATE-01, VALIDATE-02, DOC-01, DOC-02 | 4 |
+| 19 | Snowflake Method Integration (creative_source + screenplay) | SNOWFLAKE-01..04 | 4 |
+| 20 | E-Konte Integration (cinematographer + visual_executor) | EKONTE-01..04 | 4 |
+| 21 | SCAMPER Variation Engine (style_genome + hook_retention) + DOC close-out | SCAMPER-01..04 + DOC-01 + DOC-02 | 6 |
 
 ---
 
-*Requirements defined: 2026-06-16*
-*Last updated: 2026-06-17 — v3.0 milestone closed; all 12 requirements Complete*
+*Requirements defined: 2026-06-17*
+*Source: `.planning/research/methodology-gap-analysis-2026-06-17.md`(quick task 260617-wgz)*
