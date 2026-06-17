@@ -1,6 +1,7 @@
 ---
 phase: quick
 plan: 260617-wgz
+status: complete
 subsystem: research-docs
 tags: [methodology, gap-analysis, decision-basis, movie-experts, snowflake, e-konte, scamper]
 requires: []
