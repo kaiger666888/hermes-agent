@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Methodology Backfill
 status: planning
-last_updated: "2026-06-17T15:46:23.035Z"
+last_updated: "2026-06-17T16:00:00.000Z"
 last_activity: 2026-06-17
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,54 +20,49 @@ progress:
 **Project code:** MESV2
 **Name:** Movie-Experts Suite v2 — 短剧/微电影创作专家增强
 **Core value:** 每个 movie-expert skill 都能用检索增强的方式调用行业知识库,让 AI 生成的短剧/微电影在专业度上接近人类创作者水平。
-**Key docs:** `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/MILESTONES.md`, `.planning/REQUIREMENTS.md`, `.planning/milestones/v1-*.md`
+**Key docs:** `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/MILESTONES.md`, `.planning/REQUIREMENTS.md`, `.planning/research/methodology-gap-analysis-2026-06-17.md`
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Milestone complete
+**Current focus:** v4.0 Methodology Backfill — Phase 19 (Snowflake Method Integration) ready for planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 19 (Snowflake Method Integration) — Not started (awaiting `/gsd:plan-phase 19`)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-17 — Milestone v4.0 started
+Status: Roadmap written 2026-06-17; ready for phase planning
+Last activity: 2026-06-17 — v4.0 ROADMAP.md + STATE.md initialized by roadmapper
 
 ### Progress
 
 ```
-v1 milestone: [██████████] 100% Complete (Phases 0-6, shipped 2026-06-15)
+v1 milestone:                  [██████████] 100% Complete (Phases 0-6, shipped 2026-06-15)
+v2.0 PRFP milestone:           [██████████] 100% Complete (Phases 7-12, shipped 2026-06-16)
+v3.0 Skills-to-DAG Alignment:  [██████████] 100% Complete (Phases 13-18, shipped 2026-06-17)
 
-v2.0 PRFP milestone: [██████████] 100% Complete (Phases 7-12, shipped 2026-06-16)
-
-v3.0 Skills-to-DAG Alignment milestone:
-  Phase 13 [██████████] 100% Complete (13-01 done: continuity→continuity_auditor; 13-02 done: compliance_marketing→compliance_gate; 13-03 done: sign_off + README + glossary close-out)
-  Phase 14 [██████████] 100% Complete (14-01 done: drawer+animator → visual_executor with sub_steps metadata; 14-02 done: consumer edge sync across 15 SKILL.md; 14-03 done: README + corpus tree + DAG + _shared/ docs close-out)
-  Phase 15 [██████████] 100% Complete (15-01 done: voicer+lip_sync+composer+foley+mixer+spatial_audio → audio_pipeline with 6-item sub_steps + Spatial Audio Disposition D-1 fold + lip_sync NODE-09 explicit-sub-step; 15-02 done: consumer edge sync across 11 SKILL.md files including 2 deviation discoveries [animation_studio audit miss + production/colorist omitted from plan files_modified]; 15-03 done: close-out docs — README inventory + corpus tree + DAG diagram + _shared/ glossary + RAG-INVOCATION-PATTERN + project-corpus all reflect audio_pipeline merge)
-  Phase 16 [██████████] 100% Complete (16-01 done: prompt_injector NEW AI-native expert created — SKILL.md + 4 refs + LICENSE + GAP-REPORT + 4-consumer bidirectional edge sync; 16-02 done: close-out docs — README inventory + corpus tree + DAG diagram + footer + _shared/glossary.md + skills-mapping.yaml signed_off)
-  Phase 17 [██████████] 100% Complete (17-01 done: 3 experts deprecated [performer / scene_builder / storyboard_designer] with status:deprecated + FOUND-08 preservation + 8-consumer related_skills rewired to inheritance targets; 17-02 done: close-out docs — README inventory + DAG diagram + footer count + glossary deprecation notices + skills-mapping.yaml sign_off for 3 deprecate candidates)
-  Phase 18 [██████████] 100% Complete (18-01 done: VALIDATION-REPORT.md — 31 SKILL.md files classified 15+3+3+10; FOUND-08 audit 13/13 PASS; backward-compat 13/13 PASS; ROADMAP §18 #1 reconciled to 31 with 21-discrepancy surfaced per CONTEXT D-06; DEFECT VALIDATE-D1 [missing quality_gate] documented. 18-02 done: README.md Mermaid DAG from 01-NODE-DAG.md §1.5 + 4-bucket inventory tables + reconciled footer; glossary.md DOC-02 verification [3 PRESENT + 2 ADDED]; known-external-models.yaml §2.17 dated annex [18 NEW + 9 extended]; DOC-01 + DOC-02 satisfied. 18-03 done: skills-mapping.yaml 19 entries signed_off [16 mappings + 3 deprecates] + visual_executor/audio_pipeline revisit_resolution + production v3_0_disposition [deferred per FUTURE-09]; REQUIREMENTS + STATE + ROADMAP v3.0 milestone close; 18-VERIFICATION.md per-criterion verdicts [7/7 PASS]. v3.0 milestone closed 2026-06-17)
+v4.0 Methodology Backfill:
+  Phase 19 (Snowflake Method Integration)  [          ] 0% Not started
+  Phase 20 (E-Konte Integration)           [          ] 0% Not started
+  Phase 21 (SCAMPER + DOC close-out)       [          ] 0% Not started
 ```
 
-### Phase Statuses (v2.0 PRFP)
+### Phase Statuses (v4.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 7 | First-Principles Derivation | Not started (planning) | Bottleneck. HIGH research load (Musk-method primary-source verification, PITFALLS §5 OQ#4). Covers DERIV-01..08. |
-| 8 | Node DAG + Per-Node Specs | Not started | Blocked by Phase 7. Covers NODE-01..09 + META-05 + META-06. MEDIUM research load (2026-Q2 AI capability stability). |
-| 9 | 102-Book Corpus Traceability | Not started | Parallel with Phase 8 once Phase 7 emits node IDs. Covers CORPUS-01..07. No new research needed. |
-| 10 | LLM-Creative-Distillation Deep-Dive | Not started | Parallel with Phase 8 once Phase 7 emits AI-limits definition. Covers CREATIVE-01..07. MEDIUM research load. |
-| 11 | Cross-Comparisons + Dual-Repo Handoff | Not started | Blocked by 8+9+10 stable. Covers HANDOFF-01..09. |
-| 12 | Finalization (Governance + Open Questions + README) | Not started | Blocked by Phase 11. Covers GOV-01..06 + META-01/02/03/04 (exit-checks). |
+| 19 | Snowflake Method Integration | Not started | Covers SNOWFLAKE-01..04. Touches creative_source + screenplay + glossary. LOW difficulty per gap-analysis §5.1. |
+| 20 | E-Konte Integration | Not started | Covers EKONTE-01..04. Touches cinematographer + visual_executor + glossary. MEDIUM difficulty per gap-analysis §5.2. |
+| 21 | SCAMPER Variation Engine + DOC close-out | Not started | Covers SCAMPER-01..04 + DOC-01 + DOC-02. Touches style_genome + hook_retention + glossary + README + skills-mapping.yaml. LOW-MEDIUM difficulty per gap-analysis §5.3. Must run LAST (DOC-01/02 cross-cut all 3 new refs). |
 
 ### Critical Path
 
 ```
-7 → 8 → 11 → 12
-      ↘
-        9 (parallel with 8)
-        10 (parallel with 8)
+Phase 19 (Snowflake)  ─┐
+                        ├─→  Phase 21 (SCAMPER + DOC)  ← DOC-01/02 cross-cutting, must run last
+Phase 20 (E-Konte)    ─┘
 ```
+
+Phases 19 + 20 are independent (touch disjoint expert directories). Phase 21 contains DOC-01/02 (cross-cutting, references all 3 new refs) so must execute after 19+20. Recommended: 19 → 20 → 21 in priority order from gap-analysis §5.
 
 ## Quick Tasks Completed
 
@@ -75,126 +70,63 @@ v3.0 Skills-to-DAG Alignment milestone:
 |----------|------|------|-------------|-------------|
 | 260617-wgz | 2026-06-17 | write-gap-analysis-doc-comparing-creativ | Gap-analysis 对照调研报告 §7.2 6 阶段蓝图 vs movie-experts 实际覆盖;高 ROI 缺口排序(雪花法 / E-Konte / SCAMPER) | `.planning/research/methodology-gap-analysis-2026-06-17.md` |
 
-## Performance Metrics (v2.0 PRFP)
+## Performance Metrics (v4.0)
 
-- v2.0 phases total: 6 (Phases 7-12)
-- v2.0 phases completed: 0
-- v2.0 requirements total: 52
-- v2.0 requirements mapped: 52 / 52 ✓
-- v2.0 requirements orphaned: 0
-- v2.0 plans completed: 0 / ? (TBD per phase)
-- Deliverable form: DESIGN DOCS ONLY — zero code changes to `skills/movie-experts/` or `kais-movie-agent/lib/`
+- v4.0 phases total: 3 (Phases 19-21, continuing from v3.0 phase 18)
+- v4.0 phases completed: 0
+- v4.0 requirements total: 14
+- v4.0 requirements mapped: 14 / 14 ✓
+- v4.0 requirements orphaned: 0
+- v4.0 plans completed: 0 / TBD (per phase)
+- Deliverable form: PURE SKILL CONTENT — zero code changes to Hermes core; all deliverables under `skills/movie-experts/` + cross-cutting doc updates to `skills-mapping.yaml`
 
 ## Accumulated Context
 
-### Decisions (carried into v2.0 from research synthesis)
+### v4.0 Goal Restatement
+
+把 2026-06-17 gap-analysis 识别的 3 个 ⭐⭐⭐⭐⭐ AI 化方法论缺口补进 `skills/movie-experts/`:
+1. **Snowflake Method** (过程) — 接入 creative_source + screenplay,填补 StoryKernel → beat-sheet 的展开塌陷
+2. **E-Konte 絵コンテ** (视觉中间格式) — 接入 cinematographer + visual_executor,填补 storyboard_designer deprecated 后的东方分镜真空
+3. **SCAMPER** (变体引擎) — 接入 style_genome + hook_retention,填补 style_blend 单一输出的变体生成缺口
+
+三者互补不重叠,各自接入点独立。**不重构**核心架构,不创建新 expert_id,不触发 FOUND-08 alias 流程。
+
+### Decisions (v4.0 — entered planning)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Adopt ARCHITECTURE.md's 6-phase A→F decomposition (renumbered 7-12) | Only synthesis with explicit critical-path + parallelism analysis; subsumes PITFALLS' 5-feature mapping and FEATURES' content taxonomy | Pending — roadmap written 2026-06-16 |
-| Phase 7 (derivation) is the bottleneck | PROJECT.md mandates "节点设计从 0 推"; every other section is downstream | Pending — enforced via critical path |
-| Cross-cutting META assignment: META-05/06 → Phase 8 (they constrain node cost_budgets and shape theory_critic edges); META-01/02/03/04 → Phase 12 (exit-checks verified at milestone close) | META-05 cost ceiling must exist before Phase 8 can populate cost_budgets; META-06 trigger mode shapes DAG edges (Phase 8). META-01/02/03/04 are no-touch/bilingual/location invariants that can only be verified at finalization. | Pending |
-| Coverage count = 52 (not 51) | REQUIREMENTS.md flagged a -1 for "HANDOFF-09/HANDOFF-01 overlap" — on review, these are distinct REQs (handoff contract vs comparison analyses). All 52 mapped. | Pending — noted in ROADMAP.md coverage section |
-| Critical path 7 → 8 → 11 → 12 (not 7 → 8 → 9 → 10 → 11 → 12) | Phases 9 and 10 run parallel with 8 once Phase 7 produces node IDs / AI-limits; they do NOT extend the critical path | Pending |
+| 3 phases continuing from v3.0 phase 18 (19, 20, 21) | Project maintains sequential phase numbering; decimal phases reserved for urgent insertions only | Applied 2026-06-17 — ROADMAP.md phase numbering 19/20/21 |
+| Each phase = 1 new ref + 1-2 SKILL.md body updates + glossary词条 + cross-cutting edges | Per PROJECT.md §"Current Milestone: v4.0" scope boundary: only incremental methodology mounting, no architecture refactor | Applied 2026-06-17 — per-phase requirement clusters validated against scope |
+| DOC-01 + DOC-02 placed in Phase 21 (close-out), not Phase 19 | DOC requirements cross-cut all 3 new refs (snowflake-method.md from Phase 19 + e-konte-format.md from Phase 20 + scamper-variations.md from Phase 21); must run after all 3 refs exist | Applied 2026-06-17 — Phase 21 carries SCAMPER-01..04 + DOC-01 + DOC-02 (6 reqs total) |
+| Phase 19/20/21 are independent methodology integrations (no hard cross-phase dep) | Each methodology mounts into a distinct expert directory: Snowflake→creative_source+screenplay, E-Konte→cinematographer+visual_executor, SCAMPER→style_genome+hook_retention. No file ownership overlap. | Applied 2026-06-17 — ROADMAP.md critical path notes independence |
+| Recommended execution order 19 → 20 → 21 | Matches gap-analysis §5 priority ranking (Snowflake LOW → E-Konte MEDIUM → SCAMPER LOW-MEDIUM difficulty); also matches DOC-01/02 last-placement constraint naturally | Applied 2026-06-17 — ROADMAP.md critical path annotated |
+| Phase 21 NOT split into SCAMPER-only + DOC-only phases | Granularity=standard; DOC reqs are 2-line inventory updates (corpus tree + skills-mapping.yaml sign-off), not substantial enough to warrant separate phase | Applied 2026-06-17 — Phase 21 groups SCAMPER-01..04 + DOC-01..02 |
+| FOUND-08 alias flow NOT triggered | All 3 phases mount new refs into existing active expert_ids (creative_source, screenplay, cinematographer, visual_executor, style_genome, hook_retention); no new expert_id created, no rename, no merge | Applied 2026-06-17 — ROADMAP.md success criterion #5 per phase explicitly checks "no new expert_id directory created" |
+| Glossary 词条 split: 4 (Snowflake) + 4 (E-Konte) + 8 (SCAMPER) = 16 new H3 entries total | Each phase's glossary 词条 are methodology-specific; no overlap | Applied 2026-06-17 — glossary counts per phase validated |
+| Phase 21 success criterion #5 (README corpus tree updated) includes ALL 3 new refs | Even though snowflake-method.md + e-konte-format.md belong to Phase 19/20 respectively, the README corpus tree update is a single atomic edit that must list all 3 together for consistency | Applied 2026-06-17 — Phase 21 SC #5 lists all 3 refs explicitly |
 
-### Decisions (v3.0 — Phase 13)
+### Decisions (v3.0 carry-forward — relevant to v4.0)
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Backward-compat rename pattern: new dir + redirect stub + `metadata.hermes.aliases` | FOUND-08 zero-silent-rename rule requires explicit alias declaration; redirect stub preserves historical transcript references | Applied 2026-06-17 in plan 13-01 (continuity → continuity_auditor) + plan 13-02 (compliance_marketing → compliance_gate) |
-| Composer excluded from continuity_auditor consumer set | `composer/SKILL.md` never had `continuity` in `related_skills`; plan over-listed based on "invisible continuity" English noun | Documented in 13-01-SUMMARY §Deviations; rename correctly applied to all 16 actual consumers |
-| `_eval/baseline/` snapshots NOT renamed | Frozen regression baselines must preserve point-in-time expert_id for eval harness integrity | Documented in 13-01-SUMMARY §Deviations; only active SKILL.md consumers renamed |
-| lip_sync JSON output field names (`continuity_handoff`, `needs_continuity_audit`) preserved | These are data field names in the output schema, not expert_id references; renaming would be an API-shape change | Documented in 13-01-SUMMARY §Deviations; plan action 5 scope respected |
-| Added `signed_off_at: 2026-06-17` + `signed_off_by: phase-13` traceability fields under each signed_off entry in skills-mapping.yaml | CONTEXT.md explicitly granted Claude's discretion; explicit sign-off timestamp + signer make audit trail unambiguous for Phase 18 verification | Applied 2026-06-17 in plan 13-03 (Task 1) |
-| Phase 13 ASCII DAG diagram multi-line compliance box preserved (`compliance_` / `gate 合规`) | Same two-line form + column alignment as character_designer multi-line box — visual consistency | Applied 2026-06-17 in plan 13-03 (Task 2) |
+| Decision | Rationale | Why relevant to v4.0 |
+|----------|-----------|----------------------|
+| Self-registration via `metadata.hermes.related_skills` + `expert_id` + `metrics` | All v4.0 SKILL.md body updates must continue using this convention (PROJECT.md §"Skill File Conventions") | Each Phase 19/20/21 SKILL.md body edit must respect existing frontmatter conventions; no new fields invented |
+| FOUND-08 frozen rule: expert_id cannot silently rename; aliases required for any rename | v4.0 does NOT rename or create expert_ids, but the rule still constrains: body edits must not break existing alias chains | ROADMAP per-phase criterion #5 verifies "no architecture break" |
+| Glossary H3 bilingual header convention `### Term / 中文术语` | Established in Phase 14 (visual_executor / 视觉执行专家) + Phase 15 (audio_pipeline / 音频管线专家) | All 16 new v4.0 glossary 词条 must follow bilingual header convention |
+| Mermaid DAG is canonical source-of-truth for topology (Phase 18) | v4.0 explicitly does NOT add DAG nodes — all 3 methodologies are internal refs of existing experts | Phase 21 SC #5 verifies "Mermaid DAG remains unchanged" |
+| skills-mapping.yaml is canonical sign-off registry | DOC-02 requirement specifically targets this file for verified_date + License status annotations | Phase 21 SC #6 verifies skills-mapping.yaml has new entries with required fields |
 
-### Decisions (v3.0 — Phase 14)
+### Blockers / Risks (v4.0 — new)
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| N-to-one merge pattern: new dir + sub_steps frontmatter + redirect stubs + aliases | Phase 13 backward-compat rename pattern extended to N:1 merges; `sub_steps` field declares predecessor experts as sub-steps per v2.0 PRFP DAG | Applied 2026-06-17 in plan 14-01 (drawer + animator → visual_executor) |
-| New top-level `sub_steps: [drawer, animator]` frontmatter field | Declared at same level as `metadata`, NOT nested inside it — per v2.0 PRFP DAG convention | Applied 2026-06-17 in plan 14-01; grep-verified |
-| Refs organized into sub-folders (`references/drawer/` + `references/animator/`) | Cleaner than filename-prefix strategy; CONTEXT.md granted Claude's discretion | Applied 2026-06-17 in plan 14-01 |
-| Drawer<->animator Collaboration bullets rewritten as internal-handoff notes | Preserves operational contract while making intra-expert nature explicit (post-merge they are sub-steps of one expert_id) | Applied 2026-06-17 in plan 14-01 |
-| RAG tag prefix migration: `expert:{drawer\|animator},domain:X` → `expert:visual_executor,sub:{drawer\|animator},domain:X` | Preserves domain axis while introducing sub-step scoping for query precision | Applied 2026-06-17 in plan 14-01 |
-| Old `drawer/references/` + `animator/references/` + both `GAP-REPORT.md` preserved untouched | Same archival pattern as Phase 13 — point-in-time references must remain intact for transcript resolution | Applied 2026-06-17 in plan 14-01 |
-| animation_studio plan-audit deviation (Rule 1) | Plan interface table claimed animation_studio had NEITHER drawer NOR animator in related_skills; actual file listed BOTH. Applied collapse rule anyway — correctness over plan-text literalism. 14 consumers (not 13) now have visual_executor edges. | Applied 2026-06-17 in plan 14-02 |
-| Sub-step annotation strategy for merged Collaboration bullets | Pure collapse of drawer+animator → visual_executor bullets would lose operational context; inline-annotated each sub-step's specific contract to preserve handoff semantics | Applied 2026-06-17 in plan 14-02 across cinematographer, character_designer, storyboard_designer, production, performer, colorist, continuity_auditor |
-| Artifact filename `animator_handoff.json` preserved (cinematographer lines 97, 190) | Stable artifact contract name, not an expert_id reference; renaming would change the artifact schema | Applied 2026-06-17 in plan 14-02 |
-| style_genome DAG pipeline string consolidated to single stage | Original DAG had drawer (stills) + animator (video) in separate stages; post-merge both are visual_executor sub-steps, so a single combined stage avoids ambiguous duplicate entries in non-array context | Applied 2026-06-17 in plan 14-02 |
-| Bare-noun "drawer" in character_designer body (lines 47, 270) PRESERVED | No markdown link, refers to the act/agent of drawing generically, not the expert_id — per plan's English-noun preservation rule | Applied 2026-06-17 in plan 14-02 |
-| Multi-line ASCII DAG box form for visual_executor (`visual_` / `executor 视觉`) | Label exceeds 13-char width of surrounding single-line boxes; same two-line form + column alignment as Phase 13's compliance_gate box | Applied 2026-06-17 in plan 14-03 |
-| Corpus tree: old drawer/ + animator/ rows preserved with `(Phase 14 redirect stub)` annotation | Plan explicitly recommended preserve+annotate over Phase 13's remove-entirely pattern for richer audit trail | Applied 2026-06-17 in plan 14-03 |
-| Footer expert count 23 → 22 with explicit '− 1 Phase 14 visual_executor merge' annotation | Self-documenting arithmetic; Phase 18 will do canonical 26→21 reconciliation | Applied 2026-06-17 in plan 14-03 |
-| known-external-models.yaml NOT modified in 14-03 | Its provenance strings reference predecessor ref file paths (e.g., `animator/video-gen-model-matrix.md`) that still resolve via 14-01's archival preservation; plan files_modified did not list it; Phase 18 (DOC-02 + VALIDATE-01) is canonical path reconciliation phase | Documented 2026-06-17 in plan 14-03 |
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| **E-Konte 今敏级 vs 普通 E-Konte scope confusion** | MEDIUM | HIGH (5-10×工作量差异 per gap-analysis §5.2.2) | EKONTE-01 success criterion explicitly anchors to "5 annotation layers + 今敏红辣椒 case + 宫崎骏吉卜力 practice" — NOT今敏级 hyper-detailed storyboard. SKILL.md body must declare scope = 普通 E-Konte format only. |
+| **SCAMPER × style_blend boundary confusion** | MEDIUM | MEDIUM (用户可能误以为 SCAMPER replaces style_blend) | SCAMPER-02 success criterion explicitly declares "SCAMPER stacked ON TOP of style_blend" (变体引擎叠加, not replacement). Glossary SCAMPER 词条 must cross-reference style_blend. |
+| **Snowflake step selection ambiguity (10 steps vs short-drama缩放后子集)** | LOW | MEDIUM (短剧 60-180s 单集可能容不下全部 10 步) | SNOWFLAKE-01 explicitly requires "短剧 60-180s 单集 + 10-80 集连续剧形态做 step 缩放" — ref must declare缩放规则, not skip steps silently. |
+| **Cross-skill related_skills edge drift** | LOW | LOW | Each phase's SC #5 verifies "no edges removed"; FOUND-08 backward-compat honored. visual_executor + hook_retention consume new methodology outputs without needing edge rewires (SCAMPER output flows through style_genome → hook_retention existing edge). |
+| **Ref LICENSE/copyright not stamped** | MEDIUM | HIGH (PROJECT.md §"Copyright" constraint) | Phase 21 SC #6 explicitly requires skills-mapping.yaml sign-off with License status; gap-analysis §5.2.1 case references must use fair-use quotations only. |
+| **Storyboard_designer deprecation mistaken as "resurrected" via E-Konte** | LOW | MEDIUM | Phase 20 SC #5 explicitly verifies "storyboard_designer deprecation state preserved — E-Konte lives inside cinematographer.composition_lock, does NOT resurrect storyboard_designer". |
 
-### Decisions (v3.0 — Phase 15)
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| N-to-one merge pattern extended from 2-item (Phase 14) to 6-item sub_steps array | v2.0 PRFP DAG canonicalized the audio_pipeline node with 6 sub-steps (voicer, lip_sync, composer, foley, mixer, spatial_audio); frontmatter `sub_steps` field extends naturally to N items | Applied 2026-06-17 in plan 15-01 |
-| spatial_audio disposition D-1: fold (not deprecate) | Spatial audio rendering is fundamentally a mixer/mastering concern (Atmos bed+objects, 6D encoding, HRTF binaural operate on the same stems mixer operates on); folding preserves the unique HRTF/Atmos technical content; deprecation would lose irreplaceable tables | Applied 2026-06-17 in plan 15-01; documented in `## Spatial Audio Disposition` H2 section per ROADMAP §15 criterion #2 |
-| spatial_audio redirect stub uses status: folded_into (distinct from merged_into) | Records the fold disposition explicitly — spatial_audio was not a peer-equivalent merge but a fold-into-a-related-sub-step; semantically meaningful for Phase 18 audit traceability | Applied 2026-06-17 in plan 15-01 |
-| lip_sync promoted to explicit sub-step per Phase 8 §2.9 NODE-09 | lip_sync was implicit in v1 (only a voicer→lip_sync collaboration edge); v2.0 PRFP DAG promotes it because it carries unique objective validation (LRS2/LRS3 + LSE/LSE-C via SyncNet — no LLM-judge) and pairs with a theory_critic on output identity preservation | Applied 2026-06-17 in plan 15-01; documented in `## Sub-step: Lip Sync` opening note per ROADMAP §15 criterion #5 |
-| lip_sync GAP-REPORT absence handled with placeholder note | lip_sync predecessor has no GAP-REPORT.md (only `_eval/prompts/` regression suite); silent omission would lose traceability record | Applied 2026-06-17 in plan 15-01; T-15-08 threat mitigation |
-| Refs organized into sub-folders (references/{voicer,lip_sync,composer,foley,mixer,spatial_audio}/) | Cleaner than filename-prefix strategy; CONTEXT.md granted Claude's discretion; matches Phase 14 visual_executor pattern | Applied 2026-06-17 in plan 15-01 |
-| All 6 predecessors' intra-audio Collaboration bullets rewritten as internal-handoff notes | Post-merge the audio experts are sub-steps of one expert_id (audio_pipeline); preserving the intra-audio Collaboration bullets as inter-expert edges would be incorrect — rewritten to point at sibling Sub-step sections | Applied 2026-06-17 in plan 15-01 |
-| RAG tag prefix migration: `expert:{voicer\|lip_sync\|composer\|foley\|mixer\|spatial_audio},domain:X` → `expert:audio_pipeline,sub:{voicer\|lip_sync\|composer\|foley\|mixer\|spatial_audio},domain:X` | Preserves domain axis while introducing sub-step scoping for query precision; matches Phase 14 migration pattern | Applied 2026-06-17 in plan 15-01 |
-| Version bumps on all 6 redirect stubs | Records the merge event in version history (voicer 1.2.0, lip_sync 1.1.0, composer 1.2.0, foley 1.1.0, mixer 1.2.0, spatial_audio 1.2.0); distinct from Phase 14 which kept drawer/animator versions unchanged in their stubs | Applied 2026-06-17 in plan 15-01 |
-| Plan narrative "21 ref files" miscount NOT propagated | The plan narrative says "21 ref files (3+4+3+3+2+2 + 6 LICENSEs)" but the actual file list in `<files>` and `<verify>` enumerates 23 files; file list was the source of truth and was followed exactly; SUMMARY documents the discrepancy | Documented 2026-06-17 in plan 15-01 SUMMARY §Deviations |
-| Phase 15 Plan 02 audit incompleteness (Rule 2): production + colorist omitted from `<files_modified>` | Plan enumerated 9 consumer SKILL.md but the actual corpus contained 11 with stranded audio references. production had `**-> voicer**` + 4 audio IDs in DAG pipeline string + audio_pipeline lists production (bidirectional edge needed); colorist had `**-> mixer**` (body-only, directional edge). Applied same edge sync rules to both; plan's own "zero stranded references" success criterion made this load-bearing | Applied 2026-06-17 in plan 15-02 |
-| Phase 15 Plan 02 animation_studio audit miss (Rule 1) | Plan `<interfaces>` claimed "animation_studio: NONE in related_skills per audit — body prose only"; actual file had `- composer` + `- voicer` as explicit multi-line related_skills entries. Same deviation pattern as Phase 14's animation_studio drawer/animator miss. Applied collapse rule: both → single `- audio_pipeline` line | Applied 2026-06-17 in plan 15-02 |
-| Sub-step annotation strategy extended from Phase 14 (visual_executor drawer/animator) to Phase 15 (audio_pipeline 6 sub-steps) | Every body reference that previously named a specific audio expert now carries `(composer sub-step)` / `(voicer sub-step)` / `(lip_sync sub-step)` / `(foley sub-step)` / `(mixer sub-step)` inline. Artifact paths use dotted form (`audio_pipeline.composer.coupled_beat.json`) for path-like references. Preserves operational routing context lost in N→1 collapse | Applied 2026-06-17 in plan 15-02 |
-| DAG pipeline string consolidation: `-> mixer -> final` suffix folds INTO audio_pipeline | style_genome + production had pipeline strings ending `... -> mixer -> final`. Post-merge, mixer is an internal sub-step of audio_pipeline, so the suffix becomes `-> final` directly (mixer is not a downstream peer). Avoids ambiguous duplicate `audio_pipeline` entries in non-array DAG-string context | Applied 2026-06-17 in plan 15-02 |
-| Multi-line ASCII DAG box for audio_pipeline (6 sub-steps enumerated) | Label `audio_pipeline` + sub-step list too long for single-line box; extended Phase 13 compliance_gate + Phase 14 visual_executor multi-line box pattern. continuity_auditor parallel-audit annotation moved from mixer box to audio_pipeline box | Applied 2026-06-17 in plan 15-03 |
-| Corpus tree audio_pipeline/ row + 6 redirect stub annotations | New audio_pipeline/ row with 6-sub-folder references/ structure; 6 old rows preserved with '(Phase 15 redirect stub — merged_into audio_pipeline)' or '(folded_into audio_pipeline)' for spatial_audio — distinct fold annotation per D-1 disposition. Follows Phase 14 preserve+annotate pattern | Applied 2026-06-17 in plan 15-03 |
-| Bilingual glossary header '### audio_pipeline / 音频管线专家' | Matches Phase 14's '### visual_executor / 视觉执行专家' bilingual header convention. Plan verify regex `^### audio_pipeline$` was too strict; bilingual header is the established convention | Applied 2026-06-17 in plan 15-03 |
-| Cross-cutting doc consolidation scope boundary | Stray audio references in _shared/cognitive-resonance-metrics.md + _shared/known-external-models.yaml OUT OF SCOPE per plan files_modified. Phase 14 precedent: known-external-models.yaml provenance strings reference predecessor ref paths that still resolve via archival preservation; Phase 18 is canonical path reconciliation phase | Deferred to Phase 18 per plan 15-03 scope boundary |
-
-### Decisions (v3.0 — Phase 16)
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| AI-native expert creation pattern: no aliases, no sub_steps, no redirect stub | prompt_injector has no v1 predecessor (skills-mapping.yaml:99-103 mapping_type: new_ai_native); FOUND-08 alias requirement inapplicable; no predecessor directory to redirect from | Applied 2026-06-17 in plan 16-01 |
-| related_skills = exactly 4 collaboration-graph peers [creative_source, cinematographer, visual_executor, audio_pipeline] | ROADMAP §16 criterion #3 specifies exactly these 4; nodes.yaml hard deps (style_genome, character_designer) are data-flow predecessors NOT collaboration-graph peers — documented in SKILL.md I/O Contract section as the canonical distinction (threat T-16-06 mitigation) | Applied 2026-06-17 in plan 16-01 |
-| Provider-agnostic body with descriptive model-name allowance | SKILL.md body uses <image_primary>/<video_primary> placeholders for prompt identifiers (threat T-16-03); literal model names (FLUX 2/Veo/Kling) appear only in References table descriptions + the rule-declaring note, NOT as committed identifiers or hard-coded parameter values. Matches visual_executor precedent (which also names models in its References table) | Applied 2026-06-17 in plan 16-01 |
-| GAP-REPORT.md as placeholder per CONTEXT D-04 | NEW expert has no v1 baseline to gap-analyze; placeholder notes the NEW-expert status + Phase 18 backfill hook | Applied 2026-06-17 in plan 16-01 |
-| Append-only edge sync (no body prose sync needed) | All 4 consumers (creative_source, cinematographer, visual_executor, audio_pipeline) had zero body prose mentions of prompt_injector/model_prompts/consistency_context before this plan — clean edge addition, unlike Phase 14-15 which had extensive body prose work | Applied 2026-06-17 in plan 16-01 |
-| Phase 16 inventory section uses single-row table (1 NEW expert) | Distinct from Phase 14/15 multi-row tables (which enumerated merge predecessors + new merged entry); NEW expert has no predecessors to enumerate | Applied 2026-06-17 in plan 16-02 |
-| ASCII DAG prompt_injector box placed between storyboard_designer and visual_executor | Per nodes.yaml io_contract: prompt_injector consumes visual_intent (from cinematographer chain through storyboard_designer) and outputs model_prompts + consistency_context (to visual_executor) | Applied 2026-06-17 in plan 16-02 |
-| Parallel inbound edges from style_genome_5d + character_assets annotated as comments (not drawn as direct arrows) | Per plan instruction — direct creative_source → prompt_injector arrow would misrepresent data flow (creative_source produces story_kernel which reaches prompt_injector indirectly via the screenplay → cinematographer chain); indirect path documented in Key DAG properties bullet instead | Applied 2026-06-17 in plan 16-02 |
-| Footer count text documents Phase 17 + Phase 18 forward plan | 17 + 1 NEW = 18 intermediate count; explicit note that Phase 17 will deprecate 3 (performer, scene_builder, storyboard_designer) + Phase 18 will reconcile to canonical 21 (16 DAG + 5 aliases) makes the intermediate 18-count unambiguous for Phase 18 audit | Applied 2026-06-17 in plan 16-02 |
-| action_for_v21 repurposed (not appended) from forward-looking note to FULFILLED record | Single field carries both original intent AND v3.0 fulfillment per CONTEXT D-06 'No silent sign-off'; preserves audit trail without field proliferation | Applied 2026-06-17 in plan 16-02 |
-| Glossary entry placed under new 'Phase 16 additions' H2 section | Matches Phase 14 ('## Phase 14 additions') + Phase 15 ('## Phase 15 additions') H2 section pattern; end-of-file placement with dedicated section header | Applied 2026-06-17 in plan 16-02 |
-| Top-of-file README Status line updated v2 → v3.0 | Pre-existing Status line was stale ('v2 complete — 26 experts') after Phases 13-15; updated to 'v3.0 in progress — 18 active expert_ids' to keep document internally consistent with new footer count | Applied 2026-06-17 in plan 16-02 |
-
-### Decisions (v3.0 — Phase 17)
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Deprecation pattern: keep dir + extend frontmatter + insert body notice (NOT redirect stub) | Phase 17 deprecation is distinct from Phase 13-15 rename/merge: deprecated expert's body content remains fully readable for FOUND-08 backward compatibility. No directory rename, no redirect stub, no aliases field needed. Additive frontmatter: status: deprecated + metadata.hermes.{deprecated, deprecated_reason, inheritance_targets} | Applied 2026-06-17 in plan 17-01 |
-| Self-reference collapse rule: when a target expert IS the deprecated expert's inheritance target AND the target lists the deprecated ID in its own related_skills, just REMOVE the deprecated ID (no add of self-reference) | character_designer listed performer (its own performer-inheritance source), cinematographer listed scene_builder, style_genome listed scene_builder — adding self-references would be nonsensical post-deprecation | Applied 2026-06-17 in plan 17-01 across character_designer + cinematographer + style_genome + screenplay (screenplay IS performer's dialogue-subtext target) |
-| Body-prose annotation strategy: (Phase 17 v3.0: was X) suffix or (replaces deprecated Phase 17 X) prefix | Preserves operational handoff context while making deprecation visible at every mention site. Choice (b) annotation preferred for Collaboration bullets (preserves handoff contract); choice (a) replace preferred for DAG strings (forward-looking) | Applied 2026-06-17 in plan 17-01 across 8 consumer SKILL.md files |
-| `scene_builder_handoff.json` artifact filename in cinematographer body PRESERVED | Stable artifact contract name; renaming would change the artifact schema. Phase 17 v3.0 annotation documents that the file now feeds cinematographer's internal composition_lock sub-task | Applied 2026-06-17 in plan 17-01 in cinematographer/SKILL.md line 99 |
-| animation_studio deviation (Rule 2): plan listed animation_studio as consumer to check but no related_skills entry; animation_studio had BOTH `scene_builder` bullet in multi-line related_skills AND 2 body prose mentions | Plan files_modified listed animation_studio but action section claimed "storyboard_designer consumers: zero external consumers (SKIP)". Actual audit found animation_studio needed scene_builder rewire. Applied same collapse rule: scene_builder → cinematographer. 8 consumers rewired total (plan narrative said 7-10) | Applied 2026-06-17 in plan 17-01 |
-| Zero storyboard_designer external consumers CONFIRMED | Plan narrative claimed "storyboard_designer consumers: zero external consumers (grep returned empty)"; final grep verified zero consumer SKILL.md files list storyboard_designer in related_skills. storyboard_designer was deeply nested in v1.5 DAG but every collaborator referred to it via body prose, never via related_skills edge. SKIPPED as planned | Documented 2026-06-17 in plan 17-01 |
-| DAG diagram option (b) preferred over (a): remove deprecated experts from active DAG + add 'Deprecated (Phase 17)' legend note | Cleaner than grayed/strikethrough nodes; deprecation detail lives in dedicated inventory sub-section. Mirrors clean-active-DAG principle from Phase 14/15 | Applied 2026-06-17 in plan 17-02 |
-| DAG branch collapse: 3-way split (scene_builder / performer / production) → standalone production | scene_builder + performer no longer active nodes; storyboard_designer bridge between cinematographer and prompt_injector also removed (folded into cinematographer composition_lock sub-task) | Applied 2026-06-17 in plan 17-02 |
-| Glossary inline annotation strategy (no new top-level entries) | 6 body-prose mentions annotated with '(deprecated Phase 17 → <target>)' inline; deprecation lives in README + skills-mapping.yaml, not the glossary | Applied 2026-06-17 in plan 17-02 |
-| skills-mapping.yaml sign_off action_for_v21 repurposed to FULFILLED record | Mirrors Phase 16 prompt_injector pattern (CONTEXT D-06 'No silent sign-off'); single field carries both original intent AND v3.0 fulfillment | Applied 2026-06-17 in plan 17-02 |
-| Plan verify-script signed_off count threshold bug (Rule 1) | Plan `<verify>` asserted `>=8` signed_off based on faulty premise that N-to-one merges (visual_executor + audio_pipeline) were signed off — they use `revisit_in_phase` instead. Actual pre-Phase-17 count was 3 (2 renames + 1 new); post-Phase-17 is 6. Implementation unchanged; substantive per-entry checks all passed | Documented 2026-06-17 in plan 17-02 SUMMARY §Deviations |
-
-### Decisions (v3.0 — Phase 18)
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Mermaid DAG replaces ASCII art wholesale (no comment fallback retained) | The prior ASCII-art DAG had accreted across Phases 14-15-16-17 and no longer matched v2.0 PRFP canonical topology (omitted quality_gate, had production in linear pipeline, missing screenplay↔script_auditor loop). Single canonical source-of-truth: `01-NODE-DAG.md §1.5` | Applied 2026-06-17 in plan 18-02 Task 1 |
-| Phase 8 Cross-Cutting ASCII diagram converted to 3-row table | theory_critic is the only vertical in the canonical DAG (consultative node); documentary_maker + animation_studio are NOT in DAG but preserved as parallel corpus-driven verticals. Table form makes this distinction explicit | Applied 2026-06-17 in plan 18-02 Task 1 |
-| 7 inventory sub-sections consolidated into 3 canonical tables (Active / Deprecated / Redirect stubs) with provenance preserved in notes subsection | Single canonical inventory matching VALIDATION-REPORT.md's 4-bucket classification; per-phase provenance preserved separately so no historical info lost | Applied 2026-06-17 in plan 18-02 Task 1 |
-| Glossary DOC-02 verification matrix pattern | Each of the 5 required terms (visual_executor / audio_pipeline / prompt_injector / continuity_auditor / compliance_gate) is auditable: line-of-entry × phase-18-status. 3 PRESENT from Phase 14/15/16, 2 ADDED in Phase 18 §canonical term reconciliation | Applied 2026-06-17 in plan 18-02 Task 2 |
-| Existing-entry inline extension (corrected from initial overlay block) | Plan 18-02 Task 3 initial overlay-block approach created 9 duplicate-name entries (82 total, 73 unique) — violated plan's "do NOT duplicate the base entry" directive. Corrected mid-task (Rule 1 bug): removed overlay block; inline-extended the 9 existing base entries with verified_date + stability + node_role + extended provenance. Single source of truth preserved | Applied 2026-06-17 in plan 18-02 Task 3 (correction landed in same commit before push) |
-
-### Blockers / Risks (carried from v1 + new v2.0 risks)
+### Blockers / Risks (carried from v1-v3)
 
 **Inherited from v1 (still ongoing):**
 
@@ -202,89 +134,42 @@ v3.0 Skills-to-DAG Alignment milestone:
 - ⚠ 短剧 sample copyright — fair-use + LICENSE.md per ref
 - ⚠ LLM-as-judge invalidity — Phase 6 live run deferred to operator
 
-**New in v2.0 PRFP (per PITFALLS §"Top 5 Critical Risks"):**
+**Inherited from v3.0 audit (deferred items, NOT in v4.0 scope):**
 
-- 🔴 **First-principles theater** (PITFALLS 1.1, 1.5, 1.6, 5.4) — derivation that is ex-post justification dressed in reductionist language. Mitigation: Phase 7 enforces structural rigor (per-node `derivation`, epistemic-status tagging, steelman-elimination, alternatives log).
-- 🔴 **Design-impl drift across two repos** (PITFALLS 3.1-3.5) — design stale by the time kais-movie-agent implements. Mitigation: Phase 11 handoff includes `baseline_ref` git SHA, impl-cheatsheet, ownership matrix, versioning scheme.
-- ⚠ **Throwing out validated craft as "bias"** (PITFALLS 1.2, 5.3) — discarding Murch/Field/180°-axis as "historical baggage". Mitigation: Phase 9 corpus-anchor + Phase 7 contingent-vs-validated-invariant classification.
-- ⚠ **Premature model-commitment** (PITFALLS 1.3, 2.7) — hard-coding Sora/Kling/Veo. Mitigation: Phase 8 capability-spec canonical layer; model names only in dated annex.
-- ⚠ **Creative-story node under-specified** (PITFALLS 4.1-4.7). Mitigation: Phase 10 operational creativity definition, consistency-context + logic-critic, template library, platform-vs-art tension.
+- W-1: creative_source → topic_curator dead ref (pre-existing v2.0)
+- W-2: character_designer missing Phase 17 inheritance body annotation
+- W-3: 32 pre-existing v2.0 bidirectional asymmetries
+- W-4: Frontmatter `status:` field path inconsistency (documentation drift)
+- VALIDATE-D1: quality_gate gap — canonical 16th DAG node has no SKILL.md
+- FUTURE-09: production expert (disposition: deferred)
 
-### Open Questions (carried from research SUMMARY.md §"Open Questions for User")
+These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly excluded from v4.0 scope per REQUIREMENTS.md §"Future Requirements".
 
-These remain unresolved at roadmap creation; they surface during phase planning:
+### v4.0 Source Artifact
 
-1. Node-count target: 8-15 (PITFALLS/ARCHITECTURE) vs ~25 (FEATURES MVP P1)? Synthesizer recommends 8-15 with ≤25 hard ceiling.
-2. Cost-ceiling assumption: ¥1000-10000/episode? (PITFALLS Open Question #1)
-3. Single-author vs distributed authorship (ARCHITECTURE Anti-Pattern 7)?
-4. Theory_critic invocation trigger (FEATURES gap)?
-5. Bilingual doc policy for v2.0 design docs (META-03 says EN+CN — confirm applies to all design artifacts)?
+**Canonical source:** `.planning/research/methodology-gap-analysis-2026-06-17.md` (quick task `260617-wgz`)
+
+Key takeaways informing v4.0 ROADMAP:
+
+- §3 coverage matrix: 6-stage blueprint has 1/6 partial (Snyder-only), 2/6 path-divergent (Bourdieu / visual identity), 3/6 vacuum (E-Konte / SCAMPER / meta-process)
+- §5 high-ROI ranking: Snowflake ⭐⭐⭐⭐⭐ LOW → E-Konte ⭐⭐⭐⭐⭐ MEDIUM → SCAMPER ⭐⭐⭐⭐⭐ LOW-MEDIUM (matches Phase 19/20/21 order)
+- §4 fact correction: McKee is NOT a planning baseline (already in-place); future planning must not assume "still need to introduce McKee"
+- §7 独创方法论: 8 methodologies already in-place (Tan / McMahon / Smith / Bourdieu / Sarris-Truffaut-Bordwell / CN 短剧公式 / Plutchik / 疲劳曲线) — these are NOT to be re-introduced in v4.0
+- §8 non-action decision: gap-analysis itself does NOT start a phase; v4.0 milestone was launched by operator decision after reading the analysis
 
 ## Session Continuity
 
-**Last action:** Phase 18 Plan 03 executed (2026-06-17) — v3.0 milestone closed. (1) skills-mapping.yaml: 9 one_to_one_preserved entries + quality_gate + theory_critic signed off; visual_executor + audio_pipeline n_to_one_merged entries signed off with revisit_resolution resolving Phase 11 revisit_in_phase annotations (no split recommended per PITFALLS §2.1 + §2.6); production entry annotated with v3_0_disposition (deferred is final v3.0 state per FUTURE-09; no sign_off action needed because no migration was performed). Total: 16 mappings + 3 deprecates = 19 entries signed_off. (2) REQUIREMENTS.md: VALIDATE-01/02 + DOC-01/02 flipped Pending → Complete (12/12 v3.0 requirements Complete). (3) STATE.md: status → milestone_complete; progress 100%; v3.0 Milestone Close Summary added. (4) ROADMAP.md: Phase 18 plans block → 3/3 complete; v3.0 milestone header → shipped 2026-06-17. (5) 18-VERIFICATION.md: per-criterion verdicts for all 7 ROADMAP §18 success criteria (7/7 PASS). Commits b4d34432f + this plan's milestone-close commit + verification matrix commit.
-**Next action:** `/gsd:plan-milestone v4` OR operator review of v3.0 + FUTURE-06/07/08/09/10 deferred items OR `/gsd:audit v3.0` if an audit workflow exists. Phase 18-01 VALIDATION-REPORT.md DEFECT VALIDATE-D1 (missing quality_gate expert) resolved as deferred per v3.0 milestone scope (documented in README.md Topology notes + ROADMAP §18 criterion #1; full materialization is a post-v3.0 candidate — L6 quality-gating already partially realized in script_auditor + continuity_auditor + theory_critic consumer edges).
-**Hand-off note:** v3.0 Skills-to-DAG Alignment milestone CLOSED 2026-06-17. All 12 requirements Complete. All skills-mapping.yaml entries signed_off (19) or explicitly deferred (production). All 7 ROADMAP §18 success criteria verified PASS in 18-VERIFICATION.md. Audit artifacts: VALIDATION-REPORT.md (primary entry point) + 18-VERIFICATION.md + per-phase SUMMARYs (13-01 through 18-03). Deferred: FUTURE-06 through FUTURE-10 (not v3.0 failures; explicit forward-reference per REQUIREMENTS.md §Future Requirements).
+**If session is lost, restore context by reading:**
+
+1. `.planning/PROJECT.md` §"Current Milestone: v4.0" — milestone goal + scope boundary
+2. `.planning/ROADMAP.md` — 3 phases, success criteria, coverage table
+3. `.planning/REQUIREMENTS.md` — 14 requirements with REQ-IDs + Traceability table
+4. `.planning/research/methodology-gap-analysis-2026-06-17.md` — source artifact (§3 coverage matrix + §5 priority ranking + §7 独创方法论 in-place list)
+
+**Next action:** `/gsd:plan-phase 19` to plan Snowflake Method Integration (creative_source + screenplay + glossary, 4 requirements).
+
+**Resume from interrupted phase:** Read `.planning/phases/19-snowflake-method-integration/` once it exists (created by `/gsd:plan-phase 19`).
 
 ---
 
-## v3.0 Milestone Close Summary
-
-**Milestone:** v3.0 Skills-to-DAG Alignment — shipped 2026-06-17
-
-**Phases:** 6 (Phases 13-18), 16 plans total, all complete:
-
-- Phase 13: Expert Rename + Alias Scaffolding (3 plans) — RENAME-01 + RENAME-02
-- Phase 14: Visual Executor Merge (3 plans) — MERGE-01 (drawer + animator → visual_executor)
-- Phase 15: Audio Pipeline Merge (3 plans) — MERGE-02 (voicer + lip_sync + composer + foley + mixer + spatial_audio → audio_pipeline)
-- Phase 16: New AI-Native Expert (2 plans) — NEW-01 (prompt_injector)
-- Phase 17: Deprecate 3 Candidates (2 plans) — DEPRECATE-01 + DEPRECATE-02 + DEPRECATE-03 (performer / scene_builder / storyboard_designer)
-- Phase 18: Validation + Documentation + Collaboration Graph Update (3 plans) — VALIDATE-01 + VALIDATE-02 + DOC-01 + DOC-02
-
-**Requirements:** 12 / 12 Complete (RENAME × 2 + MERGE × 2 + NEW × 1 + DEPRECATE × 3 + VALIDATE × 2 + DOC × 2)
-
-**Sign-off chain (skills-mapping.yaml):** 19 entries signed_off (16 mappings + 3 deprecate_candidates); production entry explicitly deferred per FUTURE-09 (no migration performed). visual_executor + audio_pipeline revisit_in_phase annotations resolved with revisit_resolution (Phase 11 v2.0 PRFP handoff review complete; no split recommended).
-
-**Inventory reality (per VALIDATION-REPORT.md):** 31 SKILL.md files decomposed as 15 active DAG pipeline-roles (canonical 16 minus unresolved quality_gate gap per DEFECT VALIDATE-D1) + 3 active non-DAG verticals (documentary_maker, animation_studio, production) + 3 deprecated (performer, scene_builder, storyboard_designer) + 10 redirect stubs preserving legacy expert_id per FOUND-08. Original 21-target reconciled to on-disk reality per CONTEXT D-06 no-silent-sign-off.
-
-**Audit artifacts:**
-
-- `.planning/phases/18-validation-documentation/VALIDATION-REPORT.md` (primary audit entry point — inventory classification + FOUND-08 audit + backward compat)
-- `.planning/phases/18-validation-documentation/18-VERIFICATION.md` (per-criterion verdicts for all 7 ROADMAP §18 success criteria)
-- `.planning/research/v2-pipeline-design/skills-mapping.yaml` (sign-off chain)
-- `skills/movie-experts/README.md` (user-facing inventory + canonical Mermaid DAG)
-- `skills/movie-experts/_shared/glossary.md` + `skills/movie-experts/_shared/known-external-models.yaml` (terminology + model allowlist)
-- Per-phase SUMMARYs (13-01 through 18-03) for granular change history
-
-**Deferred items carried forward (NOT v3.0 failures):**
-
-- FUTURE-06: project-corpus/ refs re-align to v3.0 expert inventory
-- FUTURE-07: _eval/ benchmark prompts update from 26-expert to 21-expert
-- FUTURE-08: v3.0 live run vs v2.0 PRFP DAG statistical GO/NO-GO
-- FUTURE-09: production expert resolution (v3.0 scope: pipeline-roles only)
-- FUTURE-10: cross-repo ADR governance between hermes-agent skills team + kais-movie-agent impl team (per HANDOFF-05 co-owned DAG)
-
----
-
-## Deferred Items (carried from v1 close — unchanged)
-
-| Category | Item | Status |
-|----------|------|--------|
-| uat | 06-UAT.md (Phase 6) | partial — 10 pending scenarios; UAT paused by user redirect |
-| verification | 01-VERIFICATION.md (Phase 1) | human_needed — CN legal review + platform-spec spot-check + judge prompt quality + glossary completeness |
-| live-run | Phase 6 live run execution | Requires OPENROUTER_API_KEY + budget |
-| prompt-expansion | N ≥ 20 prompt expansion per expert | Phase 6 statistical threshold (currently 3 per expert) |
-| multi-judge | Multi-judge ensemble invocation | runner currently uses judges[0] only |
-| statistical-verdict | Live-run statistical GO/NO-GO verdict | Pending live run results per CONTEXT D-9 |
-| legal-review | CN legal review of compliance_marketing refs | Statute citations + platform thresholds |
-| bilingual-lint | Full bilingual consistency lint | Corpus complete; spot-check performed |
-
----
-
-*State initialized: 2026-06-15 · Milestone v1 closed: 2026-06-15 · Milestone v2.0 PRFP started: 2026-06-16 · Roadmap written: 2026-06-16*
-
-## Operator Next Steps
-
-- `/gsd:plan-phase 7` to plan the First-Principles Derivation phase (HIGH research load — consider `--research-phase` flag)
-- Review `.planning/ROADMAP.md` (v2.0 section) and `.planning/REQUIREMENTS.md` (Traceability section) to confirm phase assignments
-- After Phase 7 produces candidate node IDs: `/gsd:plan-phase 8`, `/gsd:plan-phase 9`, `/gsd:plan-phase 10` can be planned in parallel
+*Last updated: 2026-06-17 — v4.0 Methodology Backfill roadmap + state initialized (3 phases, 14 reqs mapped, Phase 19 ready for planning)*
