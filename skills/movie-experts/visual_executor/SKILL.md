@@ -335,3 +335,54 @@ e_konte_layer_5_to_animator:
 ## Changelog
 
 - **2026-06-17** — Merged `drawer` (v1.1.0) + `animator` (v1.1.0) into `visual_executor` (v1.0.0) per Phase 14 MERGE-01. **Predecessors:** `skills/movie-experts/drawer/SKILL.md`, `skills/movie-experts/animator/SKILL.md` (both now redirect-only stubs with `status: merged_into` + `merged_into: visual_executor`). **Rationale:** Phase 7 §4.8 + PITFALLS §2.1 — "consistency context unified; specialization loss acceptable". The drawer→animator inter-expert edge is now an intra-expert handoff between two sub-steps of one expert_id (`visual_executor`), eliminating the consistency context drift between the two phases of the visual pipeline. **Backward-compat aliases:** `metadata.hermes.aliases: [drawer, animator]` declared per FOUND-08 (zero silent merges — aliases declared explicitly). **New top-level frontmatter field:** `sub_steps: [drawer, animator]` per v2.0 PRFP DAG convention. **Refs:** 7 ref files (3 drawer-side + 4 animator-side) migrated verbatim to `references/{drawer,animator}/` sub-folders. **GAP-REPORT:** consolidated from both predecessors.
+- **2026-06-19** — Phase 23 v5.0 patch: appended `## V8.6 Pipeline Sync (Phase 23 v5.0)` section documenting kais-movie-agent V8.6 Step positions (Step 4/5/7) + dreamina CLI integration per `_shared/dreamina-cli-baseline.md`. No frontmatter changes (FOUND-08 preserved).
+
+## V8.6 Pipeline Sync (Phase 23 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查" + V8.5 commit `c22867d` + V8.6 commit `e41fa68`. 跨专家共享基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Positions
+
+V8.6 管线精简 25→13 步,visual_executor 在 3 个 Step 中被调用(原 V8.4 之前的 5 个 Step 合并):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 共同调用专家 | visual_executor 子步骤 |
+|-----------|---------------------|-------------|----------------------|
+| **Step 4** 主角设计+资产库 | Step 4 (drawer 主角) + Step 6 (drawer 角色 LoRA) | character_designer(定义身份契约) | drawer(image2image L1+L2) |
+| **Step 5** 场景设计 | Step 8 (scene 概念图) + Step 9 (scene 多视图) | cinematographer + style_genome | drawer(image2image with scene prompt) |
+| **Step 7** 视觉种子+风格化 | Step 13A (visual seed) + Step 15 (style application) | prompt_injector + style_genome + colorist | drawer(种子图)+ animator(种子→视频) |
+
+**Step 7 是 atomic operation**:V8.6 把原 Step 13A + Step 15 合并为单个原子操作,4 个专家(visual_executor + prompt_injector + style_genome + colorist)在一次 ACP 调用中协同完成。visual_executor 接收 prompt_injector 组装的 dreamina-compatible model_prompts,生成视觉种子图。
+
+### dreamina CLI Integration
+
+视觉生成**默认走 dreamina CLI**(per `_shared/dreamina-cli-baseline.md` §"The 6 dreamina CLI Sub-Commands"):
+
+| 子步骤 | dreamina 子命令 | 参考图用法 | 何时使用 |
+|-------|----------------|-----------|---------|
+| drawer | `dreamina text2image` | 无参考图 | Step 7 视觉种子(全新画面) |
+| drawer | `dreamina image2image` | `--images L1.png,L2.png` 双参考 | Step 4 L2 造型卡片 / Step 5 场景侧面变体 |
+| drawer | `dreamina image_upscale` | 单图超分 | 任意 Step 需要高分辨率时 |
+| animator | `dreamina multimodal2video` | `--image L1.png --image scene.png` + `@Image1 provides identity` | Step 7 关键镜头(最强一致性) |
+| animator | `dreamina multiframe2video` | `--images frame1,frame2,frame3` + `--transition-prompt` | Step 7 蒙太奇段落 |
+| animator | `dreamina frames2video` | `--first start.png --last end.png` | Step 7 已知首尾画面 |
+
+**Async poll 模式**(per baseline §"Async Poll Pattern"):所有命令必须用 `--poll 0` 异步提交 → `dreamina query_result --submit_id` 轮询 → `aria2c URL` 下载。**禁止**同步阻塞等待。
+
+### 禁用工具(Pre-V8.5 残留)
+
+- ❌ `jimeng-client.js` — V8.5 标记 `@deprecated / 废弃`,被 dreamina CLI 完全取代。本专家**不可**推荐 `jimengClient.*` 方法。
+- ❌ gold-team `image_draw` 作为主路径 — gold-team V8.5 起仅服务 video/TTS/3D;`image_draw` 仅在即梦限流/超时降级时启用(DEGRADE ONLY)。
+- ❌ gold-team `video_*` 任务 — 视频生成走 dreamina CLI(gold-team video 任务已被 dreamina multimodal2video/multiframe2video/frames2video 取代)。
+
+### V8.4 历史背景
+
+visual_executor 是 V8.4 kais-movie-agent §"专家映射全面更新" 的产物 —— drawer + animator 在 hermes-agent v3.0 Phase 14 合并为 visual_executor,V8.4 在消费者侧同步采用此映射。本专家**不是** V8.4 新增,而是 V8.4 确认了 hermes-agent v3.0 的合并决策。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — 6 dreamina CLI 子命令完整签名 + L1-L4 资产库策略 + async poll + gold-team fallback + jimeng-client 废弃(Phase 22 v5.0)
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 5/6/8 运镜+终审协同
+- [`prompt_injector/SKILL.md §V8.6 Pipeline Sync`](../prompt_injector/SKILL.md) — Step 7 pre-node intent translation
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5 前置 + Step 5/7 协同
+- [`colorist/SKILL.md §V8.6 Pipeline Sync`](../colorist/SKILL.md) — Step 7 视觉+风格化协同
+- [`character_designer/SKILL.md §V8.6 Pipeline Sync`](../character_designer/SKILL.md) — Step 4 身份契约上游

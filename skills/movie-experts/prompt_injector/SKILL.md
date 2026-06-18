@@ -264,3 +264,48 @@ tags="expert:prompt_injector,domain:model-specific-prompt-templates"
 ## Changelog
 
 - **2026-06-17** — Created `prompt_injector` expert (v1.0.0) per Phase 16 NEW-01. AI-native node (no v1 predecessor); `mapping_type: new_ai_native` per `skills-mapping.yaml:99-103`. Node spec source: `02-NODE-SPECS.md §2.7` + `nodes.yaml` lines 448-523. **No aliases** (NEW expert — FOUND-08 alias requirement does not apply). **No redirect stub** (no predecessor directory). **Refs:** 4 ref files (prompt-engineering-patterns + cross-call-consistency + token-budget-management + model-specific-prompt-templates) + LICENSE.md. **GAP-REPORT:** placeholder per CONTEXT.md D-04 (new expert — no v1 baseline to gap-analyze). **Frontmatter constraints satisfied:** `related_skills: [creative_source, cinematographer, visual_executor, audio_pipeline]` exactly (ROADMAP §16 criterion #3); `metrics: [cross_call_consistency, prompt_token_efficiency]` exactly (ROADMAP §16 criterion #4); no `aliases` field; no `sub_steps` field (single-node expert).
+- **2026-06-19** — Phase 23 v5.0 patch: appended `## V8.6 Pipeline Sync (Phase 23 v5.0)` section documenting kais-movie-agent V8.4 NEW role (Step 7 pre-node) + V8.6 atomic Step 7 merge with visual_executor/style_genome/colorist. No frontmatter changes (FOUND-08 preserved).
+
+## V8.6 Pipeline Sync (Phase 23 v5.0)
+
+> 来源:kais-movie-agent V8.4 SKILL.md §"V8.4 更新" §2 + V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Position
+
+prompt_injector 在 V8.6 管线中位于 **Step 7 pre-node**(原 V8.4 §2 引入的新节点):
+
+| V8.6 Step | 角色 | 共同调用专家(atomic op) |
+|-----------|------|----------------------|
+| **Step 7** 视觉种子+风格化 | **pre-node**(在 visual_executor 调用 dreamina CLI 之前) | visual_executor + style_genome + colorist |
+
+**Step 7 atomic operation 流程:**
+1. style_genome 输出 5D 风格向量 + style_blend 协议
+2. cinematographer 输出 visual_intent(shot scale + composition + axis + camera move)
+3. character_designer 输出 character_assets(L1 身份锚点 + L2 造型卡片 + LoRA / IP-Adapter refs)
+4. **prompt_injector**(本专家)将上述 3 路输入翻译为 dreamina-compatible `model_prompts` + `consistency_context`
+5. visual_executor 接收 `model_prompts`,调用 `dreamina text2image` / `image2image` 生成视觉种子
+
+### V8.4 NEW Role(历史背景)
+
+prompt_injector 是 kais-movie-agent V8.4 §2 引入的 **NEW 节点** —— V8.4 之前,visual_intent + style_genome + character_assets 直接堆叠到 visual_executor 的 prompt 中,导致 token 浪费 + cross-call 漂移。V8.4 引入 prompt_injector 作为**翻译层**,将多源异构 intent 压缩为 model-ready prompts。
+
+**与 hermes-agent v3.0 Phase 16 的关系:** hermes-agent 在 Phase 16 创建了 prompt_injector expert_id(per skills-mapping.yaml `mapping_type: new_ai_native`),V8.4 是消费者侧(kais-movie-agent)确认并采用此 expert。
+
+### dreamina CLI 适配要点
+
+prompt_injector 输出的 `model_prompts` 必须是 dreamina CLI 兼容格式:
+
+- **零面部描述** —— 面部特征由 L1 参考图传递,prompt 只写动作/场景/镜头(per `_shared/dreamina-cli-baseline.md` §"核心原则")
+- **`@Image N` 绑定语法** —— 多模态视频生成时,prompt 中用 `@Image1 provides identity...` 显式绑定 L1 参考图
+- **`@Audio N` 绑定语法** —— multimodal2video 音频绑定时使用(详见 audio_pipeline SKILL.md Phase 25 patch)
+- **中文/英文双语 prompt** —— dreamina CLI 对双语 prompt 兼容,但关键身份/动作描述建议英文(参考图识别更稳定)
+- **token budget** —— 单 prompt ≤ 500 tokens(dreamina CLI 最佳实践);超长 prompt 拆分为多次调用
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI prompt 格式约定(Phase 22 v5.0)
+- [`visual_executor/SKILL.md §V8.6 Pipeline Sync`](../visual_executor/SKILL.md) — Step 7 downstream consumer
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5/5/7 上游 5D 向量
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 5/6/8 上游 visual_intent
+- [`character_designer/SKILL.md §V8.6 Pipeline Sync`](../character_designer/SKILL.md) — Step 4 上游 character_assets
+- [`colorist/SKILL.md §V8.6 Pipeline Sync`](../colorist/SKILL.md) — Step 7 协同(color_intent 注入 model_prompts)

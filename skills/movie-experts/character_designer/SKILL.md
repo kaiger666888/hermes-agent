@@ -294,3 +294,69 @@ tags="expert:character_designer,domain:character-bible-schema"
 **Iteration signal**: 当 references/*.md 更新或 prompt 模板调整后,所有 5 个指标必须不下降。
 
 校准数据集和脚本位于 [`_eval/character_benchmark/`](./_eval/character_benchmark/)(若不存在,operator 需创建并标注 ≥ 30 个 character)。
+
+## V8.6 Pipeline Sync (Phase 23 v5.0)
+
+> 来源:kais-movie-agent V8.5 SKILL.md §"L1/L2 双参考角色一致性系统" + §"Step 7 角色资产库完整化" + V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI L1-L4 策略详见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Position
+
+character_designer 在 V8.6 管线中位于 **Step 4 主角设计+资产库**(原 V8.4 之前的 Step 4 + Step 6 合并):
+
+| V8.6 Step | 角色 | 共同调用专家 | character_designer 输出 |
+|-----------|------|------------|----------------------|
+| **Step 4** 主角设计+资产库 | **身份契约定义**(definitions) + 资产库生成协调 | visual_executor(执行图片生成) | CharacterBible 2.0 + L1/L2/L3/L4 asset manifest |
+
+**Step 4 atomic operation 流程:**
+1. character_designer 定义 4D-Anchor 多视图身份契约 + STYLE_PREFIX + stress test 规则
+2. character_designer 协调 visual_executor 调用 dreamina CLI 生成 L1 候选(`dreamina text2image` × 6 张)
+3. 黄金标准检测(per `_shared/dreamina-cli-baseline.md` §"参考图黄金标准")→ 不合格重生 ≤ 3 轮
+4. L1 审核通过 → 注册到 CharacterAssetManager 作为永久身份锚点
+5. 同流程生成 L2(每套服装正面+侧面各 3 变体)+ L3 姿势包 + L4 表情标定(按需)
+
+### L1/L2/L3/L4 Asset Output Format
+
+character_designer 输出的 CharacterBible 2.0 JSON 必须包含 L1-L4 资产清单,供下游 visual_executor + dreamina CLI 使用:
+
+```yaml
+character_assets:
+  L1:  # 身份锚点 — 角色参考 (Character Ref),永不更换
+    - view: "front_bust"
+      path: "assets/L1/front_bust.png"
+      dreamina_ref: "Character Ref"  # 角色参考 API 入口
+      verified: true
+  L2:  # 造型卡片 — 智能参考 (Smart Ref),每套服装一张
+    - costume: "default_outfit"
+      views: ["front", "side"]
+      paths: ["assets/L2/default_front.png", "assets/L2/default_side.png"]
+      dreamina_ref: "Smart Ref"
+  L3:  # 姿势包 — 智能参考,按需生成
+    - pose: "sitting"
+      path: "assets/L3/sitting.png"
+  L4:  # 表情标定 — 智能参考,表情戏前生成
+    - emotion: "smile"
+      path: "assets/L4/smile.png"
+```
+
+**核心原则**(per baseline §"核心原则"):角色参考只传脸,智能参考传衣服/姿势. 不要混放!
+
+### dreamina CLI 集成角色
+
+character_designer **不直接调用** dreamina CLI —— 它定义身份契约 + 资产清单,由 visual_executor 执行实际图片生成。但 character_designer 必须:
+
+- ✅ 输出 dreamina CLI 兼容的 asset manifest 格式(L1/L2/L3/L4 path + dreamina_ref 标注)
+- ✅ 在 CharacterBible 2.0 中明确标注每个 asset 的层级(L1/L2/L3/L4)+ API 入口(Character Ref / Smart Ref)
+- ✅ 定义 L1 黄金标准检测规则(供 visual_executor 在 Step 4A 自动重生时使用)
+
+### V8.4 历史背景
+
+V8.4 §1 "专家映射全面更新" 把 hermes-agent v3.0 Phase 17 deprecated 的 `performer` 折叠进 character_designer(voice + behavioral tics)+ screenplay(dialogue subtext)。character_designer 因此承担了**身份契约 + 行为契约**双重职责。
+
+V8.5 §2 "Step 7 角色资产库完整化" 进一步把 L1-L4 资产库管理纳入 character_designer 职责范围。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — L1/L2/L3/L4 完整策略 + 黄金标准(Phase 22 v5.0)
+- [`visual_executor/SKILL.md §V8.6 Pipeline Sync`](../visual_executor/SKILL.md) — Step 4 下游执行者
+- [`continuity_auditor/SKILL.md §V8.6 Pipeline Sync`](../continuity_auditor/SKILL.md) — Step 9 一致性审计消费 L1-L4
+- [`audio_pipeline/SKILL.md §V8.6 Pipeline Sync`](../audio_pipeline/SKILL.md) — voice sub-step 消费 character voice traits

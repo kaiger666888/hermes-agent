@@ -256,3 +256,65 @@ tags="expert:style_genome,domain:cn-director-analysis"
 
 Style Genome is the **root expert** in the production DAG. *(Phase 17 v3.0: former scene_builder + performer slots folded into cinematographer + character_designer respectively — see inheritance_targets in their deprecated SKILL.md files.)*
 `style_genome -> screenplay -> (cinematographer incl. composition_lock sub-task [was scene_builder], character_designer [absorbed performer rhythm+sound]) -> (visual_executor, audio_pipeline, colorist, editor, continuity_auditor) -> final`
+
+## V8.6 Pipeline Sync (Phase 23 v5.0)
+
+> 来源:kais-movie-agent V8.4 SKILL.md §"V8.4 更新" §3(前置 style_genome)+ V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。v4.0 SCAMPER 变体引擎见 [`references/scamper-variations.md`](./references/scamper-variations.md)(Phase 21 v4.0,PRESERVED)。
+
+### V8.6 Step Positions
+
+style_genome 在 V8.6 管线中跨 **3 个 Step**,且在 Step 2.5 即被前置(V8.4 §3 变更):
+
+| V8.6 Step | 角色 | 共同调用专家 | style_genome 输出 |
+|-----------|------|------------|-----------------|
+| **Step 2.5** 故事框架后置(前置) | **5D 风格向量确立** —— 故事框架一旦确认,style_genome 立即输出全局 5D 向量 | creative_source + screenplay(上游) | style_genome_5d(auteur + genre + mood + pace + color) |
+| **Step 5** 场景设计 | 风格指导场景构图 | cinematographer + visual_executor | 5D 向量 + style_blend 协议 |
+| **Step 7** 视觉种子+风格化 | 风格化应用 + SCAMPER 变体触发 | visual_executor + prompt_injector + colorist | 5D 向量 + scamper_variants(可选,Phase 21 v4.0) |
+
+**Step 2.5 前置的意义(V8.4 §3):** V8.4 之前 style_genome 在 Step 13A 才被调用(太晚)—— 导致前 12 步生成的资产可能不符合全局风格。V8.4 把 style_genome 前置到 Step 2.5(故事框架确认后立即),让 5D 向量**贯穿全管线**,所有下游专家都能消费同一份风格契约。
+
+### 5D 向量贯穿全管线
+
+style_genome 输出的 5D 向量是 V8.6 管线的**全局风格契约**:
+
+```yaml
+style_genome_5d:
+  auteur: "bong_joon_ho"  # 导演 DNA
+  genre: "social_thriller"  # 类型 DNA
+  mood: "tense"
+  pace: "medium_fast"
+  color: "muted_with_pops"
+  # V8.4 起本向量在 Step 2.5 输出,被以下下游消费:
+  consumers:
+    - step_5: cinematographer (composition_lock 风格约束)
+    - step_5: visual_executor (生成参数风格约束)
+    - step_7: colorist (CxSxZ encoding 输入)
+    - step_7: prompt_injector (model_prompts 风格 tokens)
+    - step_7: visual_executor (dreamina CLI prompt 风格描述)
+```
+
+### SCAMPER 变体引擎(V8.6 集成点)
+
+style_genome 的 SCAMPER 变体引擎(per `references/scamper-variations.md`,Phase 21 v4.0)在 V8.6 管线中的触发点:
+
+- **Step 2.5 后**(可选):如果用户希望探索风格变体,style_genome 在 5D 向量确立后立即触发 SCAMPER 7 动词扩展,生成 35 个变体候选(7 verbs × 5 gene combinations)
+- **Step 7 视觉种子+风格化**(可选):如果 Step 7 需要生成多个视觉风格变体供用户选择,style_genome 触发 SCAMPER 输出 scamper_variants.json,visual_executor 为每个变体调用一次 dreamina CLI
+
+**SCAMPER 与 style_blend 关系:** SCAMPER **叠加在** style_blend 之上(变体引擎,不是替代分类系统)—— per Phase 21 v4.0 SC #2。
+
+### V8.4 历史背景
+
+style_genome 在 V8.4 §1 "专家映射全面更新" 中**保持 1:1 映射**(无 merge / 无 rename / 无 deprecate)。但 V8.4 §3 "前置 style_genome" 改变了 style_genome 的调用时机 —— 从晚位(Step 13A)前移到早位(Step 2.5),让 5D 向量贯穿全管线。
+
+V8.4 §3 同时引入了 SCAMPER 变体触发(在 v4.0 Phase 21 完成 hermes-agent 侧实现)。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI prompt 风格描述约定(Phase 22 v5.0)
+- [`references/scamper-variations.md`](./references/scamper-variations.md) — Phase 21 v4.0 SCAMPER 7 动词变体引擎(PRESERVED)
+- [`creative_source/SKILL.md §V8.6 Pipeline Sync`](../creative_source/SKILL.md) — Step 2.5 上游(故事框架输入)
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 2.5 上游(beat sheet 风格约束)
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 5/6/8 协同
+- [`visual_executor/SKILL.md §V8.6 Pipeline Sync`](../visual_executor/SKILL.md) — Step 5/7 下游执行
+- [`colorist/SKILL.md §V8.6 Pipeline Sync`](../colorist/SKILL.md) — Step 7 协同(color 维度下游)
+- [`prompt_injector/SKILL.md §V8.6 Pipeline Sync`](../prompt_injector/SKILL.md) — Step 7 协同(5D 向量翻译)

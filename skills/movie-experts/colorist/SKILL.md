@@ -182,3 +182,53 @@ tags="expert:colorist,domain:digital-color-science"
 - Don't allow color temp jumps > ±200K between adjacent shots
 - Don't design LUTs without referencing style_genome vector
 - Don't apply grading without narrative motivation
+
+## V8.6 Pipeline Sync (Phase 23 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Position
+
+colorist 在 V8.6 管线中位于 **Step 7 视觉种子+风格化**(原 V8.4 之前的 Step 13A + Step 15 合并):
+
+| V8.6 Step | 角色 | 共同调用专家(atomic op) |
+|-----------|------|----------------------|
+| **Step 7** 视觉种子+风格化 | **color_intent 注入** —— CxSxZ 颜色意图注入 prompt_injector 组装的 model_prompts | visual_executor + prompt_injector + style_genome |
+
+**Step 7 atomic operation 流程:**
+1. style_genome 输出 5D 风格向量(含 color 维度)
+2. colorist 把 style_genome 的 color 维度 + 自身 CxSxZ encoding 转化为 dreamina CLI 兼容的 color prompt tokens
+3. prompt_injector 把 colorist 的 color_intent + cinematographer 的 visual_intent + character_assets 合并为最终 model_prompts
+4. visual_executor 调用 `dreamina text2image` / `image2image` 生成视觉种子
+5. colorist 在视觉种子生成后做**实时 color grading feedback** —— 如果生成图偏离 CxSxZ 意图,colorist 反馈给 prompt_injector 调整
+
+### Color Prompt Tokens 适配 dreamina CLI
+
+colorist 输出的 color_intent.json 必须包含 dreamina CLI 友好的 prompt tokens:
+
+```yaml
+color_intent:
+  CxSxZ:  # Phase 5 v1.5 color encoding
+    C: 0.65  # Colorfulness 0-1
+    S: 0.45  # Saturation 0-1
+    Z: 3200  # Color temperature K
+  dreamina_tokens:  # 直接拼接到 dreamina --prompt
+    warmth: "warm golden hour lighting"
+    saturation: "moderately saturated colors"
+    palette: "teal and orange cinematic palette"
+  lut_reference: "assets/luts/cinematic_teal_orange.cube"
+```
+
+**禁止**在 dreamina prompt 中使用 dreamina CLI 不识别的 LUT 文件路径 —— LUT 应作为 post-grading 步骤,由 colorist 在 visual_executor 生成原图后应用。
+
+### V8.4 历史背景
+
+colorist 在 V8.4 §1 "专家映射全面更新" 中**保持 1:1 映射**(无 merge / 无 rename / 无 deprecate)。但 V8.4 §3 "前置 style_genome" 改变了 colorist 的上游 —— V8.4 之前 colorist 直接从 screenplay 接收 emotion_curve,V8.4 起 colorist 必须先消费 style_genome 的 5D 向量(含 color 维度),再叠加自身 CxSxZ encoding。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI prompt token 约定(Phase 22 v5.0)
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5/5/7 上游 5D 向量
+- [`visual_executor/SKILL.md §V8.6 Pipeline Sync`](../visual_executor/SKILL.md) — Step 7 协同(种子图生成)
+- [`prompt_injector/SKILL.md §V8.6 Pipeline Sync`](../prompt_injector/SKILL.md) — Step 7 协同(color_intent 注入)
+- [`continuity_auditor/SKILL.md §V8.6 Pipeline Sync`](../continuity_auditor/SKILL.md) — Step 9 跨镜头 color 一致性审计
