@@ -611,7 +611,13 @@ class SessionManager:
         }
 
         try:
-            runtime = resolve_runtime_provider(requested=requested_provider or config_provider)
+            _rrp_input = requested_provider or config_provider
+            runtime = resolve_runtime_provider(requested=_rrp_input)
+            # Fallback: if runtime returned an empty api_key (e.g. when
+            # requested_provider='custom' from DB restore, which doesn't
+            # match any named custom_provider), retry with config_provider.
+            if not runtime.get("api_key") and config_provider:
+                runtime = resolve_runtime_provider(requested=config_provider)
             logger.info("[ACP-DEBUG] runtime provider=%s api_key=%s base_url=%s",
                         runtime.get("provider"),
                         (runtime.get("api_key","") or "")[:10]+"...",
@@ -630,7 +636,9 @@ class SessionManager:
             logger.debug("ACP session falling back to default provider resolution", exc_info=True)
 
         _register_task_cwd(session_id, cwd)
+
         agent = AIAgent(**kwargs)
+
         # ACP stdio transport requires stdout to remain protocol-only JSON-RPC.
         # Route any incidental human-readable agent output to stderr instead.
         agent._print_fn = _acp_stderr_print
