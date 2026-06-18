@@ -612,6 +612,10 @@ class SessionManager:
 
         try:
             runtime = resolve_runtime_provider(requested=requested_provider or config_provider)
+            logger.info("[ACP-DEBUG] runtime provider=%s api_key=%s base_url=%s",
+                        runtime.get("provider"),
+                        (runtime.get("api_key","") or "")[:10]+"...",
+                        runtime.get("base_url"))
             kwargs.update(
                 {
                     "provider": runtime.get("provider"),
