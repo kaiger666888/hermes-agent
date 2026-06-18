@@ -924,3 +924,88 @@ Spatial acoustics and design sound specialist using Dolby Atmos bed+objects arch
 ## Changelog
 
 - **2026-06-17** — Merged 5 audio predecessors (`voicer` v1.1.0, `lip_sync` v1.0.0, `composer` v1.1.0, `foley` v1.0.0, `mixer` v1.1.0) + folded 1 (`spatial_audio` v1.1.0) into `audio_pipeline` (v1.0.0) per Phase 15 MERGE-02. **Predecessors:** `skills/movie-experts/{voicer,lip_sync,composer,foley,mixer}/SKILL.md` (5 now redirect-only stubs with `status: merged_into` + `merged_into: audio_pipeline`), `skills/movie-experts/spatial_audio/SKILL.md` (1 redirect-only stub with `status: folded_into` + `folded_into: audio_pipeline` — distinct from `merged_into` per disposition D-1). **Rationale:** Phase 7 §4.9 + PITFALLS §2.6 — "5-task compression; consistency context unified". The v1 voicer↔lip_sync↔composer↔foley↔mixer↔spatial_audio inter-expert collaboration edges are now intra-expert sub-step handoffs of one expert_id (`audio_pipeline`), eliminating the consistency context drift across the 6 audio disciplines (dialogue/music/foley/ambience LUFS targets, frequency allocation, ducking, 5.1 channel allocation now decided in one expert). **spatial_audio fold rationale (disposition D-1):** Spatial audio rendering is fundamentally a mixer/mastering concern (Dolby Atmos bed+objects, 6D encoding, HRTF binaural, immersive sound patterns operate on the same stems mixer operates on). Fold preserves the unique HRTF/Atmos technical content (irreplaceable domain knowledge). Rejected alternative = deprecation (loses irreplaceable HRTF/Atmos tables). Documented in `## Spatial Audio Disposition` H2 section per ROADMAP §15 criterion #2. **lip_sync explicit sub-step rationale (Phase 8 §2.9 NODE-09):** lip_sync was implicit in v1 (only a voicer→lip_sync collaboration edge); v2.0 PRFP DAG promotes it to an explicit sub-step because it carries unique objective validation (LRS2/LRS3 benchmark + LSE/LSE-C via SyncNet — no LLM-judge required) and must pair with a theory_critic on output identity preservation. Documented in `## Sub-step: Lip Sync` opening note per ROADMAP §15 criterion #5. **Backward-compat aliases:** `metadata.hermes.aliases: [voicer, lip_sync, composer, foley, mixer, spatial_audio]` declared per FOUND-08 (zero silent merges — aliases declared explicitly). **New top-level frontmatter field:** `sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]` per v2.0 PRFP DAG convention (extends Phase 14's 2-item `sub_steps` to a 6-item array). **Refs:** 23 ref files (4 voicer + 5 lip_sync + 4 composer + 4 foley + 3 mixer + 3 spatial_audio — including 6 LICENSEs) migrated verbatim to `references/{voicer,lip_sync,composer,foley,mixer,spatial_audio}/` sub-folders. **GAP-REPORT:** consolidated from 5 predecessors with GAP-REPORTs (voicer, composer, foley, mixer, spatial_audio) + 1 placeholder note for lip_sync (which has no GAP-REPORT — only `_eval/prompts/` regression suite).
+- **2026-06-19** — Phase 25 v5.0 patch: appended `## V8.6 Pipeline Sync (Phase 25 v5.0)` section documenting kais-movie-agent V8.6 Step 7B + Step 11 atomic operations + dreamina CLI multimodal2video @Audio N binding + V8.4 N:1 merge boundary. 6 redirect-stub SKILL.md files (voicer/lip_sync/composer/foley/mixer/spatial_audio) also patched with V8.6 Step position annotations. No frontmatter changes (FOUND-08 preserved).
+
+## V8.6 Pipeline Sync (Phase 25 v5.0)
+
+> 来源:kais-movie-agent V8.4 SKILL.md §"V8.4 更新" §5(audio_pipeline 语音生成)+ V8.6 SKILL.md §"V8.6 更新" §6(Step 11 BGM+音效+口型统一合并)+ §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Positions
+
+audio_pipeline 在 V8.6 管线中跨 **2 个 Step**(原 V8.4 之前的 4+ Step 合并):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | audio_pipeline 子步骤参与 |
+|-----------|---------------------|------|----------------------|
+| **Step 7B** 声音骨架(Step 7 视觉+风格化后置) | Step 13B (voicer TTS sub-step) — V8.4 §5 引入 | **声音骨架生成**:对白 TTS + BGM 主题 + 关键 SFX 占位 | voicer (TTS) + composer (BGM seed) + foley (key SFX) |
+| **Step 11** BGM+音效+口型统一 | Step 17B (lip_sync) + Step 18 (BGM+foley+mix) — V8.6 §6 合并 | **原子操作**:最终 BGM + 完整 SFX + lip_sync + mix + spatial 一次性完成 | 所有 6 个子步骤(voicer + lip_sync + composer + foley + mixer + spatial_audio) |
+
+**Step 11 atomic operation 流程:**
+1. composer 输出最终 BGM(基于 Step 7B seed 扩展为完整曲目)
+2. foley 输出完整 SFX 库(基于 Step 7B key SFX 扩展为全场景 SFX)
+3. mixer 接收所有 stems(dialogue + BGM + SFX),做 LUFS 标准化 + 频率分配 + ducking
+4. lip_sync 接收 voicer TTS + visual_executor 视频帧,做口型同步对齐
+5. spatial_audio 接收 mixer 输出,做 5.1/7.1/Atmos 编码
+6. 6 个子步骤在一次 ACP 调用中协同输出最终 audio master
+
+**Step 11 atomic 的意义:** V8.6 把原 Step 17B(lip_sync)+ Step 18(BGM+foley+mix)合并 —— V8.4 之前这两步分开会导致 lip_sync 与最终 mix 不匹配(lip_sync 基于未 mix 的 dialogue,与最终 mix 的频率/响度有偏差);V8.6 强制 6 个子步骤一次原子操作,确保 lip_sync 与 mix 完全对齐。
+
+### dreamina CLI multimodal2video @Audio N 音频绑定
+
+audio_pipeline 必须知道 dreamina CLI 的音频绑定能力,以便在 Step 11 之后(或 Step 7 视觉种子生成时)为视频生成提供音频参考:
+
+```bash
+# dreamina multimodal2video 支持音频绑定(Seedance 2.0 spec)
+dreamina multimodal2video \
+  --image L1.png \
+  --image scene.png \
+  --audio dialogue.wav \
+  --audio bgm_seed.wav \
+  --prompt "@Image1 provides identity. @Image2 provides scene. @Audio1 is dialogue to sync. @Audio2 is background music seed." \
+  --model_version seedance2.0fast \
+  --duration 5 \
+  --ratio 16:9 \
+  --poll 0
+```
+
+**@Audio N 绑定语法:**
+- `--audio` 可多次重复传入(per Seedance 2.0:最多 3 音频)
+- `@Audio1` / `@Audio2` / `@Audio3` 在 prompt 中显式绑定音频流到画面元素
+- 典型用法:`@Audio1` = dialogue(口型同步源),`@Audio2` = BGM(背景音乐),`@Audio3` = SFX(关键音效)
+
+**audio_pipeline 何时使用 @Audio N:**
+- ✅ **Step 7 视觉种子+风格化**(可选):如果在视觉种子生成时已有 Step 7B 声音骨架,audio_pipeline 可提供 dialogue + BGM seed 作为 `@Audio N` 输入,让 dreamina 生成口型预对齐的视频种子
+- ✅ **Step 11 之后视频重生**(可选):如果 Step 11 audio master 与原视频口型不匹配,audio_pipeline 可触发 dreamina `multimodal2video` 重生,使用最终 mix 作为 `@Audio1` 输入
+
+### V8.4 N:1 Merge Boundary(merge 边界澄清)
+
+per `skills-mapping.yaml` Phase 18 v3.0 sign-off + revisit_resolution:
+
+| V8.4 前 expert_id | V8.4 后状态 | audio_pipeline 子步骤 | Phase 18 revisit_resolution |
+|-------------------|------------|-------------------|----------------------------|
+| voicer | merged_into audio_pipeline | voicer (TTS) | ✓ no split recommended — 5-task compression rationale upheld |
+| lip_sync | merged_into audio_pipeline(Phase 8 §2.9 显式化为独立 sub-step) | lip_sync | ✓ no split recommended |
+| composer | merged_into audio_pipeline | composer (BGM) | ✓ no split recommended |
+| foley | merged_into audio_pipeline | foley (SFX) | ✓ no split recommended |
+| mixer | merged_into audio_pipeline | mixer (mastering) | ✓ no split recommended |
+| spatial_audio | **folded_into** audio_pipeline(disposition D-1,**folded 不是 merged**) | spatial_audio (5.1/Atmos encoding) | ✓ fold preserves HRTF/Atmos content; no deprecation |
+
+**关键区分(per Phase 15 disposition D-1):**
+- `merged_into` — 5 个 v1 expert 整合为 audio_pipeline 子步骤(身份合并)
+- `folded_into` — spatial_audio 作为 mixer/mastering 关注点折叠进 audio_pipeline(**保留** HRTF/Atmos 唯一技术内容,fold 是为了保留而不是废弃)
+
+V8.4 消费者侧确认了这个 N:1 映射 —— kais-movie-agent V8.4 §"专家映射全面更新" §1 把 6 个 audio expert 调用合并为单一 audio_pipeline 调用,Expert 调用次数从 V8.3 的 6 次降为 V8.4 的 1 次。
+
+### V8.6 审核门结构
+
+V8.6 审核门从 12 个减为 8 个,audio_pipeline 涉及:
+- **Step 7B 后无独立审核门**:声音骨架作为 Step 7 视觉+风格化的伴随产物,审核并入 Step 7 审核门
+- **Step 11 后审核门**(成片前最后审核门):最终 audio master 与视频合成质量确认
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI multimodal2video @Audio N 绑定语法(Phase 22 v5.0)
+- [`visual_executor/SKILL.md §V8.6 Pipeline Sync`](../visual_executor/SKILL.md) — Step 7 协同(视觉种子 + 音频绑定)
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 3/6 上游(dialogue 内容源)
+- [`character_designer/SKILL.md §V8.6 Pipeline Sync`](../character_designer/SKILL.md) — Step 4 上游(character voice traits 喂入 voicer sub-step)
+- [`continuity_auditor/SKILL.md §V8.6 Pipeline Sync`](../continuity_auditor/SKILL.md) — Step 9 audio-visual 一致性审计
+- [`editor/SKILL.md §V8.6 Pipeline Sync`](../editor/SKILL.md) — Step 8/11 协同(节奏 + audio master 同步)
