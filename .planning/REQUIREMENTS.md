@@ -87,15 +87,41 @@
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| DREAMINA-01..05 | P22 | TBD | pending |
-| VISUAL-01..07 | P23 | TBD | pending |
-| LITERARY-01..04 | P24 | TBD | pending |
-| AUDIO-01..04 | P25 | TBD | pending |
-| AUDIT-01..04 | P26 | TBD | pending |
-| INTEGRATION-01..06 | P27 | TBD | pending |
+| DREAMINA-01 | P22 | TBD | pending |
+| DREAMINA-02 | P22 | TBD | pending |
+| DREAMINA-03 | P22 | TBD | pending |
+| DREAMINA-04 | P22 | TBD | pending |
+| DREAMINA-05 | P22 | TBD | pending |
+| VISUAL-01 | P23 | TBD | pending |
+| VISUAL-02 | P23 | TBD | pending |
+| VISUAL-03 | P23 | TBD | pending |
+| VISUAL-04 | P23 | TBD | pending |
+| VISUAL-05 | P23 | TBD | pending |
+| VISUAL-06 | P23 | TBD | pending |
+| VISUAL-07 | P23 | TBD | pending |
+| LITERARY-01 | P24 | TBD | pending |
+| LITERARY-02 | P24 | TBD | pending |
+| LITERARY-03 | P24 | TBD | pending |
+| LITERARY-04 | P24 | TBD | pending |
+| AUDIO-01 | P25 | TBD | pending |
+| AUDIO-02 | P25 | TBD | pending |
+| AUDIO-03 | P25 | TBD | pending |
+| AUDIO-04 | P25 | TBD | pending |
+| AUDIT-01 | P26 | TBD | pending |
+| AUDIT-02 | P26 | TBD | pending |
+| AUDIT-03 | P26 | TBD | pending |
+| AUDIT-04 | P26 | TBD | pending |
+| INTEGRATION-01 | P27 | TBD | pending |
+| INTEGRATION-02 | P27 | TBD | pending |
+| INTEGRATION-03 | P27 | TBD | pending |
+| INTEGRATION-04 | P27 | TBD | pending |
+| INTEGRATION-05 | P27 | TBD | pending |
+| INTEGRATION-06 | P27 | TBD | pending |
 
 **Total: 30 requirements across 6 phases. 100% mapped.**
 
+**Per-phase counts:** P22=5 · P23=7 · P24=4 · P25=4 · P26=4 · P27=6 (matches standard granularity per config.json)
+
 ---
 
-*Last updated: 2026-06-19 — v5.0 requirements defined (30 reqs, 6 phases). Pending roadmap creation.*
+*Last updated: 2026-06-19 — v5.0 roadmap created (30 reqs mapped to P22-P27). Phase 22 ready for planning.*
