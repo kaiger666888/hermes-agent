@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Summary
-status: completed
-last_updated: "2026-06-18T23:40:17.633Z"
-last_activity: 2026-06-18 -- Phase 27 marked complete
+status: Awaiting next milestone
+last_updated: "2026-06-18T23:41:29.425Z"
+last_activity: 2026-06-18 — Milestone v5.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 1
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 27 — COMPLETE
+Phase: Milestone v5.0 complete
 Plan: —
-Status: Phase 27 complete
-Last activity: 2026-06-18 -- Phase 27 marked complete
+Status: Awaiting next milestone
+Last activity: 2026-06-18 — Milestone v5.0 completed and archived
 
 ### Progress
 
@@ -198,6 +198,4 @@ Key takeaways informing v5.0 ROADMAP:
 
 ## Operator Next Steps
 
-- `/gsd:plan-phase 22` — Plan dreamina CLI 知识基线 (first phase of critical path)
-- After P22 ships: P23/P24/P25/P26 can run in parallel waves
-- P27 (Integration close-out) must be the final phase
+- Start the next milestone with /gsd-new-milestone

@@ -198,32 +198,40 @@ See full archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 ---
 
-## Current Milestone: v5.0 — kais-movie-agent V8.6 Adaptation
+## Current Milestone: None (awaiting operator decision)
+
+v5.0 milestone archived 2026-06-19. Operator may:
+
+- Start v6 via `/gsd:new-milestone` (suggested candidates from v5.0 REQUIREMENTS.md FUTURE-10/11/12: live-run validation / cross-repo drift detection / Vogler-Truby-设计思维 methodology expansion)
+- Run `/gsd:review-backlog` to triage open issues
+- Run `/gsd:progress` to view state
+- Polish v5.0 deferred items (FUTURE-10 live-run validation of dreamina CLI integration prompts)
+
+---
+
+## Previous Milestone: v5.0 — kais-movie-agent V8.6 Adaptation ✅ SHIPPED 2026-06-19
 
 **Goal:** Sync hermes-agent's 16 active movie-experts to kais-movie-agent V8.4-V8.6 (13-step pipeline + dreamina CLI + V8.4 expert mapping) so experts stop emitting pre-V8.4 assumptions and align with the consumer-side calling sequence.
+
+**Stats:** 6 phases (P22-P27) · 17 commits · 1-day execution (2026-06-19) · 30/30 requirements satisfied · Audit PASSED
 
 **Trigger source (3 commits same day, 2026-06-18 in kais-movie-agent):**
 - `4fb57b4` V8.4 — hermes-agent v2 expert mapping full update (drawer+animator→visual_executor, audio N:1 merge, continuity→continuity_auditor, scene_builder/storyboard_designer→cinematographer, NEW prompt_injector)
 - `c22867d` V8.5 — dreamina CLI 取代 jimeng-client + Step 7 角色资产库完整化 (L1 面部锚点 + L2 造型卡片 + L3 姿势包 + L4 表情标定)
 - `e41fa68` V8.6 — 管线精简 25→13 步, 审核门 12→8 个, Expert 调用 15→10 次
 
-**Target features (6 phases P22-P27):**
+**Key accomplishments:**
 
-1. **P22 — dreamina CLI 知识基线**: Cross-expert shared ref under `skills/movie-experts/_shared/` documenting dreamina CLI as the sole image/video generation tool (replaces jimeng-client), including: text2image / image2image / multimodal2video / multiframe2video / frames2video / image_upscale signatures, L1-L4 角色资产库 strategy, --poll 0 异步轮询 pattern, gold-team 降级路径
-2. **P23 — 视觉系 V8.6 sync**: visual_executor + prompt_injector + character_designer + cinematographer + colorist + style_genome —— update SKILL.md to reference V8.6 Step positions (Step 4 角色资产 / Step 5 场景 / Step 6 运镜+终审 / Step 7 视觉+风格化), add dreamina CLI parameter knowledge, update related_skills contracts for V8.4 merges
-3. **P24 — 文学系 V8.6 sync**: hook_retention + creative_source + screenplay + script_auditor —— update SKILL.md to reference V8.6 Step positions (Step 1 hook+主题合并 / Step 2 框架+大纲 / Step 3 剧本+审计原子操作), align I/O contracts for new atomic ops
-4. **P25 — 听觉系 V8.6 sync**: audio_pipeline + sub-experts (voicer/composer/foley/mixer/spatial_audio/lip_sync) —— update SKILL.md to reference V8.6 Step positions (Step 7B 声音骨架 / Step 11 BGM+音效+口型统一), document dreamina CLI multimodal2video audio binding
-5. **P26 — 审核系 V8.6 sync**: continuity_auditor + compliance_gate + editor + theory_critic —— update SKILL.md to reference V8.6 8-gate structure (down from 12), document Step 9 一致性检查 atomic role
-6. **P27 — 集成**: skills-mapping.yaml v5 sign-off + V8.6 mapping ref —— add v5_ref_signoffs section, write canonical `_shared/v86-pipeline-mapping.md`, update README.md corpus tree
+1. **2 new `_shared/` refs** — `dreamina-cli-baseline.md` (330 lines, Phase 22) + `v86-pipeline-mapping.md` (220 lines, Phase 27), both with verified_date: 2026-06 + LICENSE attribution + fair_use_paraphrase status
+2. **18 expert SKILL.md body patches** across 16 active experts (Phase 23-26) — each received `## V8.6 Pipeline Sync (Phase XX v5.0)` section documenting V8.6 Step positions + dreamina CLI integration + V8.4 historical context
+3. **6 redirect-stub patches** (Phase 25) — voicer/lip_sync/composer/foley/mixer/spatial_audio stubs updated with V8.6 Step position annotations preserving `merged_into` / `folded_into` frontmatter
+4. **3 cross-cutting close-out updates** (Phase 27) — README.md corpus tree + skills-mapping.yaml `v5_ref_signoffs:` section + glossary.md 3 new V8.6 term H3 entries (Atomic Step / Review Gate / L1 Identity Anchor)
+5. **FOUND-08 preserved milestone-wide** — zero new expert_id directories, zero frontmatter changes across 24 patched files, zero DAG node modifications
+6. **v4.0 methodology refs preserved byte-intact** — snowflake-method.md / e-konte-format.md / scamper-variations.md cross-referenced as PRESERVED (not replaced) from new V8.6 sections
 
-**Key context:**
+**Scope discipline:** Pure knowledge-layer increment. No new expert_id, no DAG node change, no architecture refactor. Mirrors v4.0 scope discipline.
 
-- **Pure increment**: No new expert_id, no DAG node changes, no core architecture refactor — mirrors v4.0 scope discipline (FOUND-08 frozen rule honored)
-- **v4.0 preservation**: snowflake-method.md / e-konte-format.md / scamper-variations.md are PRESERVED, not replaced — V8.6 integration knowledge is ADDED alongside
-- **dreamina CLI authority**: Per V8.5/V8.6, dreamina CLI is the sole image/video generation tool. Experts must NOT recommend jimeng-client.js (deprecated in V8.5) or gold-team image_draw (gold-team now video/TTS/3D only)
-- **13-step pipeline canonical**: V8.6 explicitly merges 25→13 steps via 6 combinations (Step 1 hook+主题 / Step 2 框架+大纲 / Step 3 剧本+审计 / Step 6 运镜+终审 / Step 7 视觉+风格化 / Step 11 声音+口型). Expert SKILL.md updates must reference new Step positions, not legacy 25-step numbering
-- **Consumer co-evolution**: kais-movie-agent V8.4-V8.6 already mapped to hermes-agent v2 expert structure (visual_executor / audio_pipeline / continuity_auditor / cinematographer / prompt_injector all exist). The gap is internal knowledge layer — experts still emit pre-V8.4 assumptions
-- **Foundational milestone**: Re-establishes hermes-agent as the source-of-truth knowledge layer for kais-movie-agent V8.6+ consumer pipeline
+See `.planning/milestones/v5.0-ROADMAP.md` for full phase details, `.planning/milestones/v5.0-REQUIREMENTS.md` for requirement outcomes, and `.planning/milestones/v5.0-MILESTONE-AUDIT.md` for the audit report (status: passed, 30/30 reqs, FOUND-08 preserved).
 
 ---
 
@@ -297,4 +305,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation milestone started (6 phases P22-P27 planned). v4.0 archived.*
+*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation milestone shipped (30/30 reqs, 6/6 phases, audit PASSED, FOUND-08 preserved). 2 new _shared refs + 18 SKILL.md body patches + 6 stub patches + 3 cross-cutting updates.*

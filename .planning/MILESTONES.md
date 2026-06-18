@@ -1,5 +1,48 @@
 # Milestones
 
+## v5.0 kais-movie-agent V8.6 Adaptation (Shipped: 2026-06-19)
+
+**Phases completed:** 6 phases (22-27) · **Requirements:** 30 / 30 ✓ · **Commits:** 17
+**Tag:** `v5.0`
+**Source artifact:** kais-movie-agent V8.4-V8.6 SKILL.md (commits `4fb57b4` + `c22867d` + `e41fa68`, all 2026-06-18)
+**Audit:** [`v5.0-MILESTONE-AUDIT.md`](./milestones/v5.0-MILESTONE-AUDIT.md) — status: passed (30/30 reqs, 6/6 phases, FOUND-08 preserved milestone-wide)
+
+**One sentence:** Sync hermes-agent's 16 active movie-experts to kais-movie-agent V8.4-V8.6 (13-step pipeline + dreamina CLI + V8.4 expert mapping) —— 纯知识层增量(2 新 `_shared/` refs + 18 expert SKILL.md body patches + 6 redirect-stub patches + 3 cross-cutting file updates),不引入新 expert_id、不动 DAG 节点、不重构核心架构,v4.0 方法论 refs 全部 PRESERVED 不替换。
+
+**Key accomplishments:**
+
+1. **Phase 22 — dreamina CLI 知识基线:** 新增 `_shared/dreamina-cli-baseline.md` (330 行) + `_shared/LICENSE.md`,文档化 V8.5 dreamina CLI 6 sub-commands + L1-L4 角色资产库策略 + async poll pattern + gold-team fallback + jimeng-client 废弃通知
+2. **Phase 23 — 视觉系 V8.6 sync:** 6 expert SKILL.md body patches(visual_executor + prompt_injector + character_designer + cinematographer + colorist + style_genome)
+3. **Phase 24 — 文学系 V8.6 sync:** 4 expert SKILL.md patches(hook_retention + creative_source + screenplay + script_auditor),覆盖 V8.6 atomic operations(Step 1 / 2 / 3 / 6)
+4. **Phase 25 — 听觉系 V8.6 sync:** 1 主 patch(audio_pipeline)+ 6 redirect-stub patches,含 dreamina CLI `multimodal2video @Audio N` 绑定语法
+5. **Phase 26 — 审核系 V8.6 sync:** 4 expert SKILL.md patches(continuity_auditor + compliance_gate + editor + theory_critic),文档化 V8.6 8-gate 审核门结构(down from 12)
+6. **Phase 27 — 集成 close-out:** 新增 `_shared/v86-pipeline-mapping.md` (220 行) canonical 13-Step mapping + skills-mapping.yaml `v5_ref_signoffs:` section + README + glossary 3 new H3 entries
+
+**Shipped artifacts:**
+
+- **2 new `_shared/` refs** (~550 lines total): `dreamina-cli-baseline.md` (330) + `v86-pipeline-mapping.md` (220)
+- **18 expert SKILL.md body patches** across 16 active experts(Phase 23-26)
+- **6 redirect-stub SKILL.md patches**(Phase 25,所有 v3.0 merge/fold predecessors)
+- **3 cross-cutting close-out updates**(Phase 27): README + skills-mapping.yaml + glossary
+- **v5.0-MILESTONE-AUDIT.md** (status: passed, 30/30 reqs, FOUND-08 preserved)
+
+**Cross-phase integration(verified by autonomous-orchestrator):**
+
+- **V8.6 Pipeline Sync cross-reference network:** 15-row per-expert table in `v86-pipeline-mapping.md` bidirectionally links all active experts' V8.6 sections
+- **FOUND-08 milestone-wide preservation:** zero new expert_id dirs, zero frontmatter changes across 24 patched files, v3.0/v4.0 byte-intact
+- **License integrity:** both v5.0 refs `fair_use_paraphrase`, signed_off_by: phase-27-doc-02
+
+**Known tech debt at close(non-blocking):**
+
+- **FUTURE-10:** Live-run validation of dreamina CLI integration prompts against actual V8.6 pipeline run (deferred to operator — requires kais-movie-agent end-to-end execution)
+- **FUTURE-11:** Cross-repo automated drift detection between kais-movie-agent V-number and hermes-agent internal knowledge (tooling not yet built)
+- **FUTURE-12:** Vogler / Truby / 设计思维 / Story Grid / 起承转合 methodology expansion (defer to v6.0+ per v4.0 gap-analysis §6)
+- **Quick task 260617-wgz:** status "missing" SUMMARY — pre-existing condition from v4.0 close(non-blocking,separate audit-open item)
+
+See `.planning/milestones/v5.0-ROADMAP.md` for full phase details and `.planning/milestones/v5.0-REQUIREMENTS.md` for requirement outcomes.
+
+---
+
 ## v4.0 — Methodology Backfill (Shipped: 2026-06-18)
 
 **Phases completed:** 3 phases (19-21) · **Plans:** 3 · **Requirements:** 14 / 14 ✓
