@@ -49,7 +49,8 @@
   5. dreamina-cli-baseline.md documents explicit deprecation notice for jimeng-client.js (marked 废弃 in V8.5, retained in lib/ for compat reference only)
   6. dreamina-cli-baseline.md has LICENSE.md attribution row with license_status declared
   7. FOUND-08 preservation: no new expert_id directory created under `skills/movie-experts/`, no DAG node change, no rename — `_shared/` ref only
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 22-01-PLAN.md — Create _shared/dreamina-cli-baseline.md (header + 6 CLI signatures + L1-L4 strategy + async poll + gold-team fallback + jimeng-client deprecation + LICENSE attribution)
 
 ### Phase 23: 视觉系 V8.6 sync
 **Goal**: Update the 6 visual系 experts (visual_executor / prompt_injector / character_designer / cinematographer / colorist / style_genome) to reference V8.6 Step positions (Step 4 角色资产 / Step 5 场景 / Step 6 运镜+终审 / Step 7 视觉种子+风格化) and document dreamina CLI integration parameters, so they stop emitting pre-V8.4 assumptions.
@@ -171,7 +172,7 @@ Phase 26 (审核系)        ─┘          │
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. dreamina CLI 知识基线 | 0/? | Not started | - |
+| 22. dreamina CLI 知识基线 | 0/1 | Not started | - |
 | 23. 视觉系 V8.6 sync | 0/? | Not started | - |
 | 24. 文学系 V8.6 sync | 0/? | Not started | - |
 | 25. 听觉系 V8.6 sync | 0/? | Not started | - |
@@ -180,4 +181,4 @@ Phase 26 (审核系)        ─┘          │
 
 ---
 
-*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation roadmap created (6 phases, 30 reqs mapped). Phase 22 ready for planning.*
+*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation roadmap created (6 phases, 30 reqs mapped). Phase 22 plan created (22-01-PLAN.md). Ready for /gsd:execute-phase 22.*

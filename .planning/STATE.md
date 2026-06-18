@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: kais-movie-agent V8.6 Adaptation
-status: planning
-last_updated: "2026-06-19T00:00:00.000Z"
-last_activity: 2026-06-19
+status: executing
+last_updated: "2026-06-18T23:22:15.593Z"
+last_activity: 2026-06-18 -- Phase 22 planning complete
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -30,8 +30,8 @@ progress:
 
 Phase: 22 (dreamina CLI 知识基线) — ready for planning
 Plan: —
-Status: Roadmap created, Phase 22 ready for `/gsd:plan-phase 22`
-Last activity: 2026-06-19 — v5.0 roadmap created (6 phases, 30 reqs mapped)
+Status: Ready to execute
+Last activity: 2026-06-18 -- Phase 22 planning complete
 
 ### Progress
 
@@ -161,12 +161,14 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 ### v5.0 Source Artifacts
 
 **Canonical sources (kais-movie-agent, 2026-06-18 same-day triple commit):**
+
 - `4fb57b4` V8.4 — hermes-agent v2 expert mapping full update
 - `c22867d` V8.5 — dreamina CLI 取代 jimeng-client + Step 7 角色资产库完整化
 - `e41fa68` V8.6 — 管线精简 25→13 步, 审核门 12→8 个, Expert 调用 15→10 次
 - kais-movie-agent V8.6 SKILL.md canonical mapping table
 
 **Hermes-side baseline:**
+
 - `.planning/research/v2-pipeline-design/skills-mapping.yaml` (v3.0 signed-off + v4.0 v4_ref_signoffs)
 
 Key takeaways informing v5.0 ROADMAP:
