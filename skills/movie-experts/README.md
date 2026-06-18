@@ -480,6 +480,39 @@ If you build on this suite, please cite:
 
 ---
 
+## v5.0 kais-movie-agent V8.6 Adaptation — Phase 22-27 increments summary (2026-06-19)
+
+**2 new shared refs** + **18 SKILL.md body patches** across 16 active experts + **6 redirect-stub patches** (voicer/lip_sync/composer/foley/mixer/spatial_audio). v5.0 syncs hermes-agent movie-experts to kais-movie-agent V8.4-V8.6 (commits `4fb57b4` V8.4 + `c22867d` V8.5 + `e41fa68` V8.6, all 2026-06-18). Pure knowledge-layer increment — no new expert_id, no DAG node change, no core architecture refactor. v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) PRESERVED.
+
+### 2 new `_shared/` refs
+
+| Phase | Ref | Purpose | Source |
+|-------|-----|---------|--------|
+| **22** | `_shared/dreamina-cli-baseline.md` | dreamina CLI 6 sub-commands + L1-L4 asset library + async poll + gold-team fallback + jimeng-client deprecation | kais-movie-agent V8.5 SKILL.md commit `c22867d` + V8.6 commit `e41fa68` |
+| **27** | `_shared/v86-pipeline-mapping.md` | Canonical V8.6 13-Step → expert_id mapping + 8-gate review structure + 6 atomic operations | kais-movie-agent V8.6 SKILL.md commit `e41fa68` §"hermes-agent 专家 → 管线 Step 速查" + §"V8.6 更新" |
+
+### 18 SKILL.md body patches (Phase 23-26)
+
+Each active expert received a `## V8.6 Pipeline Sync (Phase XX v5.0)` section documenting its V8.6 Step position(s), dreamina CLI integration (where applicable), and V8.4 historical context.
+
+| Phase | Cluster | Experts Patched |
+|-------|---------|----------------|
+| **23** | 视觉系 | visual_executor / prompt_injector / character_designer / cinematographer / colorist / style_genome (6 experts) |
+| **24** | 文学系 | hook_retention / creative_source / screenplay / script_auditor (4 experts) |
+| **25** | 听觉系 | audio_pipeline (main + 6 redirect-stubs: voicer/lip_sync/composer/foley/mixer/spatial_audio) |
+| **26** | 审核系 | continuity_auditor / compliance_gate / editor / theory_critic (4 experts) |
+
+### v5.0 highlights
+
+- **V8.6 13-step pipeline canonical** — all expert SKILL.md updates reference new Step positions (25→13 step simplification per V8.6 §1-§6 atomic merges)
+- **dreamina CLI authority** — V8.5 dreamina CLI replaces jimeng-client.js as sole image/video tool; experts route through dreamina CLI per `_shared/dreamina-cli-baseline.md`
+- **FOUND-08 frozen rule honored** — zero frontmatter changes across all 24 patched files; v4.0 methodology refs preserved byte-intact
+- **8-gate review structure** — V8.6 reduces review gates from 12 to 8; compliance_gate fires at 4 gates (Step 1/3/6/11 后)
+
+**Sign-off status:** All 2 v5.0 refs recorded in `.planning/research/v2-pipeline-design/skills-mapping.yaml` §v5_ref_signoffs(INTEGRATION-04 close-out in Phase 27). License status: Fair Use paraphrase for both.
+
+---
+
 ## Phase 7 additions summary (2026-06-16)
 
 **5 new experts** with independent validation protocols:

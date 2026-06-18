@@ -449,3 +449,35 @@ Per REQUIREMENTS SCAMPER-04, `_shared/glossary.md` must have 8 new H3 entries: `
 ---
 
 **Phase 21 SCAMPER-04 verification:** 8 / 8 new H3 entries added (SCAMPER + Substitute + Combine + Adapt + Modify + Put-to-other-use + Eliminate + Reverse), each with CN/EN/Context + Eberle 1971 + Osborn 1953 出处. SCAMPER-04 PASS.
+
+---
+
+## v5.0 V8.6 Pipeline Terms (Phase 27 INTEGRATION-05)
+
+### Atomic Step / 原子步骤
+
+**CN:** 原子步骤 —— kais-movie-agent V8.6 引入的概念。指多个原 V8.4 之前的 Step 在 V8.6 中合并为**单个不可分割的 ACP 调用单元**,多个专家在一次调用中协同完成。V8.6 通过 6 组 atomic operations 把原 25 步精简为 13 步。例如 Step 1 "爆款选题+主题生成" 是 atomic(hook_retention 单专家内部合并),Step 7 "视觉种子+风格化" 是 atomic(visual_executor + prompt_injector + style_genome + colorist 4 专家一次协同)。
+
+**EN:** Atomic Step — Concept introduced in kais-movie-agent V8.6. Multiple pre-V8.4 Steps merged into a single indivisible ACP call unit where multiple experts collaborate in one invocation. V8.6 uses 6 atomic operations to simplify 25 → 13 Steps. Example: Step 1 "topic + theme generation" is atomic (single-expert internal merge in hook_retention); Step 7 "visual seed + stylization" is atomic (4-expert collaboration: visual_executor + prompt_injector + style_genome + colorist).
+
+**Context:** Source: kais-movie-agent V8.6 SKILL.md (commit `e41fa68`, 2026-06-18) §"V8.6 更新" §1-§6. Phase 27 (INTEGRATION-01 + INTEGRATION-05) defines the 6 atomic operations in [`_shared/v86-pipeline-mapping.md`](./v86-pipeline-mapping.md) §Atomic Operations. Each expert's V8.6 Pipeline Sync section (Phase 22-26 patches) annotates whether its Step role is atomic or singleton.
+
+### Review Gate / 审核门
+
+**CN:** 审核门 —— kais-movie-agent 管线中**用户确认节点**,管线在此暂停等待用户 pass/fail 决策。V8.6 把审核门从 12 个精简为 8 个(用户等待轮次减半)。8 个审核门分别位于 Step 1/2/3/4/6/7(含 7B)/9/11 后。Hard gates(fail 阻止推进):compliance_gate(红线 / 备案 / AIGC 标识)+ script_auditor(predicted completion < 65%)+ continuity_auditor(4 维 fail)。Soft gates(用户可越过):theory_critic(artistic critique,advisory only)。
+
+**EN:** Review Gate — User confirmation node in the kais-movie-agent pipeline where the pipeline pauses for pass/fail decision. V8.6 reduces review gates from 12 to 8 (halving user wait rounds). The 8 gates are positioned after Steps 1/2/3/4/6/7(incl 7B)/9/11. Hard gates (fail stops pipeline): compliance_gate (red-line / 备案 / AIGC labeling) + script_auditor (predicted completion < 65%) + continuity_auditor (4-dim fail). Soft gates (user can override): theory_critic (artistic critique, advisory only).
+
+**Context:** Source: kais-movie-agent V8.6 SKILL.md (commit `e41fa68`, 2026-06-18) §"V8.6 更新" §2 + §"强制审核门 (Review Gate)". Phase 27 (INTEGRATION-02 + INTEGRATION-05) defines the 8-gate structure in [`_shared/v86-pipeline-mapping.md`](./v86-pipeline-mapping.md) §V8.6 8-Gate Review Structure. compliance_gate SKILL.md V8.6 Pipeline Sync section (Phase 26 v5.0) documents its 4-gate involvement (Step 1/3/6/11 后).
+
+### L1 Identity Anchor / L1 身份锚点
+
+**CN:** L1 身份锚点 —— kais-movie-agent V8.5 引入的 4 层角色资产库的第 1 层。1-3 张面部/半身特写图,通过 dreamina CLI 的**角色参考 (Character Ref)** API 入口传递,锁定五官 / 骨相 / 发型 / 肤色。L1 是**永不更换**的永久身份锚点 —— 一旦审核通过注册到 CharacterAssetManager,在整个项目内不变。L1 候选必须满足黄金标准(光线柔和 / 正面微侧 < 30° / 中性表情 / 浅灰背景 #D3D3D3 / 高清无滤镜 / 无遮挡)。
+
+**EN:** L1 Identity Anchor — The 1st tier of the 4-layer character asset library introduced in kais-movie-agent V8.5. 1-3 facial/bust close-up images passed via dreamina CLI's **Character Ref** API entry, locking facial features / bone structure / hairstyle / skin tone. L1 is a **never-replaced** permanent identity anchor — once audit-passed and registered to CharacterAssetManager, it remains unchanged throughout the project. L1 candidates must satisfy the golden standard (soft lighting / front micro-side < 30° / neutral expression / light gray background #D3D3D3 / HD no filter / no occlusion).
+
+**Context:** Source: kais-movie-agent V8.5 SKILL.md (commit `c22867d`, 2026-06-18) §"L1/L2 双参考角色一致性系统" + §"Step 7 角色资产库完整化". Phase 22 v5.0 (DREAMINA-02) defines the 4-tier strategy in [`_shared/dreamina-cli-baseline.md`](./dreamina-cli-baseline.md) §L1/L2/L3/L4 Character Asset Library Strategy. character_designer SKILL.md V8.6 Pipeline Sync section (Phase 23 v5.0) documents L1 output format and golden standard detection flow.
+
+---
+
+**Phase 27 INTEGRATION-05 verification:** 3 / 3 minimum new H3 entries added (Atomic Step / Review Gate / L1 Identity Anchor), each with CN/EN/Context + kais-movie-agent V8.5/V8.6 出处. INTEGRATION-05 PASS (minimum 3 entries requirement satisfied).

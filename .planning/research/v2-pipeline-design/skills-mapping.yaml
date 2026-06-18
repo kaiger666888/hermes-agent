@@ -246,3 +246,37 @@ v4_ref_signoffs:
     line_count: 599
     signed_off_by: phase-21-doc-02
     notes: "7 SCAMPER verb definitions paraphrased from Eberle 1971 (based on Osborn 1953 checklist); 35 short-drama variation recipes (7 verbs × 5 gene combinations) + LLM prompt templates + JSON schema are original Hermes Agent analytical work. SCAMPER is STACKED on style_blend (variation engine, not classification system)."
+
+# ============================================
+# v5.0 ref-level sign-off entries (INTEGRATION-04 close-out)
+# Phase 27 cross-cutting documentation
+# ============================================
+# These entries cover REFS (shared markdown under _shared/),
+# NOT new expert_id mappings. They are distinct from the 19 expert-level
+# `sign_off_status: signed_off` entries in the `mappings:` block above.
+# v5.0 added 2 shared refs (dreamina-cli-baseline.md + v86-pipeline-mapping.md)
+# documenting kais-movie-agent V8.4-V8.6 consumer-side pipeline architecture
+# per FOUND-08 backward-compat rule and v5.0 milestone scope.
+v5_ref_signoffs:
+
+  - ref_path: skills/movie-experts/_shared/dreamina-cli-baseline.md
+    expert_owner: _shared
+    phase_added: v5.0-phase-22
+    requirement: DREAMINA-01
+    verified_date: 2026-06-19
+    source: "kais-movie-agent V8.5 SKILL.md (commit c22867d, 2026-06-18 22:17:46 +0800) §V8.5 更新 + §工具映射 + §L1/L2 双参考角色一致性系统 + §图片生成默认引擎; kais-movie-agent V8.6 SKILL.md (commit e41fa68, 2026-06-18 22:56:46 +0800)"
+    license_status: fair_use_paraphrase
+    line_count: 330
+    signed_off_by: phase-27-doc-02
+    notes: "dreamina CLI 6 sub-command signatures (text2image / image2image / multimodal2video / multiframe2video / frames2video / image_upscale) are factual API surface transcribed verbatim from kais-movie-agent V8.5 SKILL.md §工具映射. L1 身份锚点 / L2 造型卡片 / L3 姿势包 / L4 表情标定 4-tier asset library strategy + async poll pattern + gold-team fallback classification are original Hermes Agent analytical encoding. jimeng-client.js deprecation notice references the upstream project's own @deprecated annotation."
+
+  - ref_path: skills/movie-experts/_shared/v86-pipeline-mapping.md
+    expert_owner: _shared
+    phase_added: v5.0-phase-27
+    requirement: INTEGRATION-01
+    verified_date: 2026-06-19
+    source: "kais-movie-agent V8.6 SKILL.md (commit e41fa68, 2026-06-18 22:56:46 +0800) §hermes-agent 专家 → 管线 Step 速查 + §V8.6 更新 §1-§6 + §强制审核门 (Review Gate); V8.5 SKILL.md (commit c22867d) §V8.5 更新; V8.4 SKILL.md (commit 4fb57b4) §V8.4 更新"
+    license_status: fair_use_paraphrase
+    line_count: 220
+    signed_off_by: phase-27-doc-02
+    notes: "V8.6 13-Step → expert_id mapping table + 8-gate review structure are factual integration architecture of the open-source kais-movie-agent project. Atomic-operation classification (§1-§6 6 组合并) paraphrased from V8.6 update notes. Per-expert V8.6 section cross-reference network is original Hermes Agent analytical work. All 16 active movie-experts' V8.6 Pipeline Sync sections (Phase 22-26 patches) cite this ref as canonical."
