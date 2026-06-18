@@ -290,3 +290,60 @@ tags="expert:creative_source,domain:unspeakability-protocol"
 **Iteration signal**: 当 references/*.md 更新后,所有指标必须不下降。
 
 校准数据集和脚本位于 [`_eval/creative_source_benchmark/`](./_eval/creative_source_benchmark/)(若不存在,operator 需创建并标注 ≥ 100 个议题)。
+
+## V8.6 Pipeline Sync (Phase 24 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"V8.6 更新" §2(Step 2 框架+大纲合并)+ §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。v4.0 Snowflake Method 10 步递进见 [`references/snowflake-method.md`](./references/snowflake-method.md)(Phase 19 v4.0,PRESERVED)。
+
+### V8.6 Step Position
+
+creative_source 在 V8.6 管线中位于 **Step 2 故事框架+大纲**(原 V8.4 之前的 Step 2.5 + Step 3 合并):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | 共同调用专家 |
+|-----------|---------------------|------|------------|
+| **Step 2** 故事框架+大纲 | Step 2.5 (story framework) + Step 3 (outline) | **原子操作**:故事框架确立 + 大纲展开一次性完成 | screenplay(同 Step 协同) |
+
+**Step 2 atomic operation 流程:**
+1. creative_source 接收 Step 1 hook_retention 输出的 Topic Kernel
+2. creative_source 应用 Snowflake Method(per `references/snowflake-method.md`,Phase 19 v4.0)从 Topic Kernel 展开为 StoryKernel → 一段落 → 一页大纲
+3. screenplay 同 Step 内并行消费 creative_source 的 Snowflake Step 4 一页大纲,展开为 Snyder 15-beat sheet
+4. 两方协同输出 unified 故事框架 + 大纲文档
+5. 用户审核门(Step 2 后)确认
+
+**Step 2 atomic 的意义:** V8.6 把"故事框架"和"大纲展开"合并 —— V8.4 之前这两步分开会导致 screenplay 的 beat sheet 与 creative_source 的 Snowflake 递进不匹配;V8.6 强制 creative_source + screenplay 一次 ACP 调用协同完成。
+
+### V8.6 多剧集容量分配(V8.3 carry-forward)
+
+per V8.6 SKILL.md,V8.3 引入的多剧集容量分配(episode_count × duration_sec_per_episode 动态计算最低节拍点)在 V8.6 仍适用:
+
+```yaml
+multi_episode_allocation:
+  episode_count: 10        # 用户指定
+  duration_per_ep: 90      # 90s 短剧
+  total_budget: 900        # episode_count × duration_per_ep
+  min_beats_per_ep: 7      # Snyder 15-beat 缩放后子集(单集 90s 容不下全部 15 beats)
+  total_beats: 70          # episode_count × min_beats_per_ep
+  creative_source_must_ensure: total_beats evenly distributed across episodes
+```
+
+creative_source 必须在 Step 2 输出时明确标注 `episode_count` / `duration_per_ep` / `total_beats` 三个字段,供下游 screenplay 缩放 Snyder 15-beat。
+
+### dreamina CLI 关系
+
+creative_source **不直接调用** dreamina CLI —— 它在 Step 2 输出 StoryKernel + Snowflake artifacts,由下游 visual_executor(Step 7)调用 dreamina CLI 执行视觉化。
+
+但 creative_source 必须知道:
+- ✅ StoryKernel 的 visual hooks 应是 dreamina CLI 可生成的(避免描述需要超出当前 AI 视频生成能力的画面)
+- ✅ Snowflake 的"一段落扩展"应包含**视觉种子描述**(供 prompt_injector 在 Step 7 翻译为 dreamina prompt)
+
+### V8.4 历史背景
+
+creative_source 在 V8.4 §1 "专家映射全面更新" 中**保持 1:1 映射**(无 merge / 无 rename / 无 deprecate)。但 V8.6 §2 "Step 2 框架+大纲合并" 改变了 creative_source 的调用节奏 —— 与 screenplay 在同一 Step 内并行协同(原 V8.4 之前是先 creative_source 再 screenplay 串行)。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI 视觉能力边界(Phase 22 v5.0)
+- [`references/snowflake-method.md`](./references/snowflake-method.md) — Phase 19 v4.0 Snowflake Method 10 步递进(PRESERVED)
+- [`hook_retention/SKILL.md §V8.6 Pipeline Sync`](../hook_retention/SKILL.md) — Step 1 上游(Topic Kernel 输入)
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 2 同 Step 协同(beat sheet 展开)
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5 下游(5D 风格向量消费 StoryKernel)

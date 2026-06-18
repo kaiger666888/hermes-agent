@@ -295,3 +295,52 @@ tags="expert:hook_retention,domain:platform-<platform>"
 - **不要在 SKILL.md body 重复 Phase 1 付费机制 合规数字。** 备案 / 付费门槛 / 分账比例 / 退款规则 由 [`../../compliance_gate/references/platform-specs-*.md`](../compliance_gate/references/) 独占 —— HOOK body 只引用数字 + 跨链,不重述原理(Phase 1 [CR-01](../../../../../.planning/phases/02-expert-hook-commercial-engine/02-CONTEXT.md) 教训)
 - **不要在 body 中引入新模型名。** 若需引用具体模型,必须先加入 [`../_shared/known-external-models.yaml`](../_shared/known-external-models.yaml) allowlist;否则一律用 `<video_gen_primary>` / `<image_gen_primary>` / `<audio_gen_primary>` 占位符(防止 [`scripts/verify_skill_references.py`](../../../../../scripts/verify_skill_references.py) `--strict` 误报)
 - **不要忽略 multi-episode callback。** marker schema 的 `setup_callback` / `payoff_callback` 字段对 小程序剧-长集数 分支是核心 —— 填 "next episode" 这种模糊值视为不合格,必须指到具体的 `S1E0X MM:SS`
+
+## V8.6 Pipeline Sync (Phase 24 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"V8.6 更新" §1(Step 1 hook+主题合并)+ §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。v4.0 SCAMPER × hook_retention 5 爆款公式 cross-table 见 [`references/scamper-variations.md`](../style_genome/references/scamper-variations.md)(Phase 21 v4.0,PRESERVED)。
+
+### V8.6 Step Position
+
+hook_retention 在 V8.6 管线中位于 **Step 1 爆款选题+主题**(原 V8.4 之前的 Step 1 + Step 2 合并):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | 共同调用专家 |
+|-----------|---------------------|------|------------|
+| **Step 1** 爆款选题雷达+主题生成 | Step 1 (kais-topic-radar 10维情绪共鸣) + Step 2 (主题生成 based on Topic Kernel 共鸣公式筛选) | **原子操作**:10 维情绪共鸣扫描 + Topic Kernel 筛选 + 主题生成一次性完成 | (无共同专家 —— Step 1 是管线入口) |
+
+**Step 1 atomic operation 流程:**
+1. hook_retention 启动 kais-topic-radar 10 维情绪共鸣扫描(anger / anxiety / curiosity / empathy / frustration / joy / loneliness / love / nostalgia / pride)
+2. 扫描结果按 Topic Kernel 共鸣公式排序(top-K 候选)
+3. 用户从 top-K 中选择主题,或 hook_retention 自动选最高共鸣候选
+4. 选中主题输出为 Topic Kernel JSON(供 Step 2 creative_source + screenplay 消费)
+5. 同 Step 内:hook_retention 基于 Topic Kernel 设计 3-second hook 候选(per Phase 1 v1.5 hook_design.md)
+
+**Step 1 atomic 的意义:** V8.6 把"选题"和"主题生成"合并 —— V8.4 之前这两步分开会导致 hook 设计与主题脱节(选完题再设计 hook 容易跑偏);V8.6 强制一步到位,hook 设计直接基于刚选定的 Topic Kernel。
+
+### V8.4 style_genome 前置的协同影响
+
+V8.4 §3 "前置 style_genome" 把 style_genome 调用从 Step 13A 前移到 Step 2.5(故事框架后立即)。这对 hook_retention 的影响:
+
+- ✅ **保留**:hook_retention 在 Step 1 仍**先于** style_genome —— Step 1 是管线入口,style_genome 在 Step 2.5 才进入
+- ⚠️ **新增约束**:V8.4 起,hook_retention 的 hook 设计建议预判 style_genome 的 5D 向量可能范围(避免 Step 2.5 风格确立后 hook 不匹配)
+- ✅ **协同**:V8.4 §3 同时引入 SCAMPER 变体触发 —— hook_retention 可在 Step 1 调用 style_genome 的 SCAMPER 引擎生成 35 个 hook variant seeds(per Phase 21 v4.0 SCAMPER × 5 爆款公式 cross-table)
+
+### dreamina CLI 关系
+
+hook_retention **不直接调用** dreamina CLI —— 它在 Step 1 输出 Topic Kernel + hook 候选,由下游 visual_executor(Step 7)+ prompt_injector(Step 7 pre-node)调用 dreamina CLI 执行。
+
+但 hook_retention 必须知道:
+- ✅ hook 候选必须是**可视觉化的** —— 文字 hook 在 Step 7 转化为 dreamina prompt 时应能生成强冲击力的视觉画面
+- ❌ 避免 hook 描述需要 dreamina CLI 不支持的画面(如复杂运镜 / 多角色精细互动 —— dreamina CLI 当前对单角色 / 简单镜头支持最好)
+
+### V8.6 审核门结构
+
+V8.6 审核门从 12 个减为 8 个,Step 1 后保留独立审核门(用户确认选题 + 主题 + hook 候选)。这是管线**第一道审核门**,至关重要 —— 选题错误后续 12 步全浪费。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI 能力边界(Phase 22 v5.0)
+- [`style_genome/references/scamper-variations.md`](../style_genome/references/scamper-variations.md) — Phase 21 v4.0 SCAMPER × 5 爆款公式 cross-table(PRESERVED)
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5 下游 5D 向量协同
+- [`creative_source/SKILL.md §V8.6 Pipeline Sync`](../creative_source/SKILL.md) — Step 2 下游(框架+大纲消费 Topic Kernel)
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 2/3/6 下游(剧本消费 hook 结构)

@@ -247,3 +247,62 @@ tags="expert:screenplay,domain:dialogue-craft"
 - Don't hardcode provider-specific tool names (`fact_store` / `mem0_search` / etc.) — use `<memory_plugin>` / `<rag_search>` placeholders (per [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md))
 - Don't redefine numeric thresholds in SKILL.md body — cite the ref §section instead (Phase 1 CR-01 single-source-of-truth rule)
 - Don't modify `expert_id: screenplay` (FOUND-08 HARD RULE — frozen identifier)
+
+## V8.6 Pipeline Sync (Phase 24 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"V8.6 更新" §2/§3/§6 + §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。v4.0 Snowflake Method 衔接见 [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md)(Phase 19 v4.0,PRESERVED)。
+
+### V8.6 Step Positions
+
+screenplay 在 V8.6 管线中跨 **3 个 Step**(原 V8.4 之前的 5+ Step 合并):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | 共同调用专家 |
+|-----------|---------------------|------|------------|
+| **Step 2** 故事框架+大纲 | Step 2.5 + Step 3 | **同 Step 协同**:Snowflake Step 4 → Snyder 15-beat 展开 | creative_source(并行) |
+| **Step 3** 剧本+审计 | Step 5 (剧本) + Step 5B (粗审) + Step 6 (精审) | **原子操作**:scene-level 剧本生成 + 5 维定量审计一次性完成 | script_auditor(并行) |
+| **Step 6** 时空剧本+终审 | Step 11 (时空剧本) + Step 12 (终审) | **原子操作**:时空化剧本 + 终审合规一次性完成 | cinematographer + script_auditor(三方协同) |
+
+**Step 3 atomic operation 流程:**
+1. screenplay 接收 Step 2 creative_source 输出的 Snyder 15-beat sheet
+2. screenplay 展开 scene-level 剧本(每 scene 含 dialogue + action + emotion_curve)
+3. **同 Step 内并行**:script_auditor 对剧本做 5 维定量审计(per `script_auditor/references/*`,Phase 5 v1.5)
+4. 审计不通过 → screenplay 在同 Step 内重生(避免跨 Step 往返)
+5. 审计通过 → 输出 final screenplay JSON
+
+**Step 6 atomic operation 流程:**
+1. screenplay 接收 Step 5 cinematographer 的 shot_intent
+2. screenplay 把 scene-level 剧本时空化(per scene 注入 shot_intent + 时间戳 + 场次衔接)
+3. **同 Step 内并行**:cinematographer 输出 final shot_intent,script_auditor 输出 5 维终审结果
+4. 三方协同达成"时空剧本 + 运镜 + 终审"三合一确认
+5. 输出时空化 screenplay + shot_intent + 终审报告
+
+### V8.4 历史背景
+
+screenplay 在 V8.4 §1 "专家映射全面更新" 中**保持 1:1 映射**(无 merge / 无 rename / 无 deprecate)。V8.4 §2 "新增 prompt_injector" 让 screenplay 的 downstream 在 Step 7 多了一个 prompt 翻译层(per Phase 16 v3.0 + Phase 23 v5.0 prompt_injector V8.6 section)。
+
+V8.4 §4 "前置 script_auditor" 把 script_auditor 从 Step 6(原终审位)前移到 Step 5(原粗审位),让 5 维审计在剧本生成时即触发。V8.6 进一步合并 Step 5+5B+6 → Step 3 + Step 6 双 atomic operation。
+
+### dreamina CLI 关系
+
+screenplay **不直接调用** dreamina CLI —— 它输出 scene-level + 时空化剧本,由下游 prompt_injector(Step 7 pre-node)翻译 + visual_executor(Step 7)执行 dreamina CLI。
+
+但 screenplay 必须知道:
+- ✅ scene description 应是 dreamina CLI 可视觉化的(避免描述超出当前 AI 视频生成能力的画面)
+- ✅ dialogue 应支持后续 TTS 生成(避免特殊音效依赖 —— dreamina CLI 不生成音频,音频走 gold-team TTS 或 audio_pipeline voicer sub-step)
+- ❌ 避免 scene 中包含 dreamina CLI 不支持的角色数量(> 3 个角色同框对话易出现 identity 漂移)
+
+### V8.6 审核门结构
+
+V8.6 审核门从 12 个减为 8 个,screenplay 涉及的审核门:
+- **Step 2 后审核门**:故事框架 + 大纲(用户确认 Snyder 15-beat)
+- **Step 3 后审核门**:剧本 + 审计结果(用户确认 scene-level 剧本质量,审计报告作为决策依据)
+- **Step 6 后审核门**:时空剧本 + 运镜 + 终审(用户确认最终剧本 + 镜头设计 + 合规)
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI 视觉能力边界(Phase 22 v5.0)
+- [`creative_source/references/snowflake-method.md`](../creative_source/references/snowflake-method.md) — Phase 19 v4.0 Snowflake Method 10 步递进(PRESERVED,Step 2 消费)
+- [`creative_source/SKILL.md §V8.6 Pipeline Sync`](../creative_source/SKILL.md) — Step 2 同 Step 协同
+- [`script_auditor/SKILL.md §V8.6 Pipeline Sync`](../script_auditor/SKILL.md) — Step 3/6 协同(5 维审计)
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 6 协同(时空+运镜+终审)
+- [`hook_retention/SKILL.md §V8.6 Pipeline Sync`](../hook_retention/SKILL.md) — Step 1 上游(Topic Kernel + hook 输入)

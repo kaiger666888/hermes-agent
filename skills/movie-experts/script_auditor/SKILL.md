@@ -301,3 +301,56 @@ tags="expert:script_auditor,domain:completion-rate-forecast"
 5. **Iteration signal**: 当本专家的 references/*.md 更新后,Pearson 必须不下降。下降 = refs 引入了噪声。
 
 每次 references 更新后必须重跑校准。校准数据集和脚本位于 [`_eval/validation_corpus/`](./_eval/validation_corpus/)(若不存在,operator 需创建)。
+
+## V8.6 Pipeline Sync (Phase 24 v5.0)
+
+> 来源:kais-movie-agent V8.4 SKILL.md §"V8.4 更新" §4(前置 script_auditor)+ V8.6 SKILL.md §"V8.6 更新" §3/§6。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Positions
+
+script_auditor 在 V8.6 管线中跨 **2 个 Step**(V8.4 §4 前置 + V8.6 atomic merge):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | 共同调用专家 |
+|-----------|---------------------|------|------------|
+| **Step 3** 剧本+审计 | Step 5 (剧本) + Step 5B (粗审) + Step 6 (精审) | **原子操作**:5 维定量审计 + 剧本重生循环 | screenplay(并行,审计驱动重生) |
+| **Step 6** 时空剧本+终审 | Step 11 (时空剧本) + Step 12 (终审) | **原子操作**:5 维终审 + 时空剧本合规 | screenplay + cinematographer(三方协同) |
+
+**Step 3 atomic operation 中 script_auditor 的职责:**
+1. screenplay 生成 scene-level 剧本草稿
+2. **同 Step 内**:script_auditor 立即触发 5 维定量审计(per `references/*`,Phase 5 v1.5)
+3. 审计输出:predicted completion rate + 5 维评分(pacing / hook_strength / emotional_arc / conflict_density / pay_off_quality)+ 改进建议
+4. 若 predicted completion < 65%(行业基准)→ screenplay 在同 Step 内根据审计建议重生
+5. 若通过 → 进入 Step 6
+
+**Step 6 终审 script_auditor 的职责:**
+1. screenplay 输出时空化剧本(注入 cinematographer 的 shot_intent)
+2. **同 Step 内**:script_auditor 做**终审**(per V8.4 §4 前置后,Step 5 粗审 + Step 6 精审合并)—— 检查时空连贯性 + scene 间过渡合规 + 整体完播率预测
+3. 输出终审报告(pass / fail + 详细评分)
+4. 若 fail → 三方(screenplay + cinematographer + script_auditor)在同 Step 内协商重生
+
+### V8.4 §4 前置历史
+
+V8.4 §4 "前置 script_auditor" 是关键变更 —— V8.4 之前 script_auditor 仅在 Step 12(终审位)被调用一次,问题:剧本写完才发现质量不达标,返工成本高。V8.4 §4 把 script_auditor 前置到 Step 5(粗审位),让审计在剧本生成时即触发,**用审计结果驱动剧本选择** —— 若 Step 5 生成 3 个剧本候选,script_auditor 评估后选最高完播率版本进入 Step 6。
+
+V8.6 进一步合并:Step 5(剧本)+ 5B(粗审)+ 6(精审)→ Step 3(剧本+审计 atomic)+ Step 6(时空+终审 atomic)。script_auditor 在两个 atomic Step 中都被调用,职责更重但调用次数减少(per V8.6 §3 Expert 调用 15→10 次)。
+
+### 5 维审计与 dreamina CLI 间接关系
+
+script_auditor **不直接调用** dreamina CLI —— 它评估剧本结构,不评估视觉生成质量。但 5 维审计的 pacing 维度会受下游 dreamina CLI 视频时长限制影响:
+
+- ✅ pacing 审计的 scene 时长假设应 ≤ dreamina CLI `multimodal2video --duration` 上限(典型 5-10s/镜头)
+- ✅ 若剧本 scene 时长 > 10s → 标记为"需多镜头拼接",pacing 评分下调
+- ❌ 不要假设 dreamina CLI 能生成长镜头(> 10s)—— 当前 Seedance 2.0 limit 是 10s
+
+### V8.6 审核门结构
+
+V8.6 审核门从 12 个减为 8 个,script_auditor 涉及:
+- **Step 3 后审核门**:剧本 + 审计结果(用户确认时,script_auditor 报告是核心决策依据)
+- **Step 6 后审核门**:时空剧本 + 终审(用户确认最终剧本,script_auditor 终审报告 pass/fail 是硬门)
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI 视频时长限制(Phase 22 v5.0)
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 3/6 协同(剧本生成)
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 6 协同(运镜+终审)
+- [`hook_retention/SKILL.md §V8.6 Pipeline Sync`](../hook_retention/SKILL.md) — Step 1 上游(hook 设计影响 5 维审计的 hook_strength 维度)
