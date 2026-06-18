@@ -186,3 +186,57 @@ All theoretical frameworks in this expert are attributed to their original theor
 - [`../compliance_gate/SKILL.md`](../compliance_gate/SKILL.md) — Compliance expert
 - [`../_shared/glossary.md`](../_shared/glossary.md) — Glossary
 - [`../_shared/RAG-INVOCATION-PATTERN.md`](../_shared/RAG-INVOCATION-PATTERN.md) — RAG pattern
+
+## V8.6 Pipeline Sync (Phase 26 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查" §"其他可用专家"(按需补充调用)。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Position
+
+theory_critic 在 V8.6 管线中是 **"按需补充调用" consultative role**(非主线 Step):
+
+| V8.6 调用模式 | 触发条件 | 共同调用专家 |
+|--------------|---------|------------|
+| **按需补充**(非每项目都调用) | (1) 用户要求高水准批评分析 (2) 项目定位"艺术向"/获奖向 (3) style_genome 触发 auteur theory 需深化 | (任意 Step 都可调用,典型在 Step 2/6/9 后) |
+
+**theory_critic 不是 V8.6 13 步主线的必需节点** —— 它属于 kais-movie-agent V8.6 SKILL.md §"其他可用专家"列表(per mapping table:`editor`, `production`, `compliance_marketing`, `compliance_gate`, `creative_source`, `theory_critic`, `documentary_maker`, `animation_studio`)。
+
+### Consultative Role 触发场景
+
+theory_critic 的 consultative 调用典型场景:
+
+| 场景 | 何时调用 | 输出 |
+|------|---------|------|
+| **Auteur 选择深化** | Step 2.5 style_genome 确立 auteur 后 | auteur_analysis.md(导演 DNA 深度解读 + 风格一致性建议) |
+| **Genre 选择验证** | Step 2.5 style_genome 确立 genre 后 | genre_critique.md(genre 经典范式对照 + 创新空间建议) |
+| **剧本理论审计** | Step 3 后(可选) | theory_audit.md(formalism / realism / psychoanalytic 视角批评) |
+| **成片艺术评价** | Step 11 后(可选) | artistic_assessment.md(成片艺术质量评价 + 改进建议) |
+
+### V8.6 审核门关系
+
+theory_critic **不绑定审核门** —— 它的输出作为 advisory(咨询性)材料供用户决策,不是 pass/fail 硬门。即使 theory_critic 给出"艺术性不足"评价,管线仍可推进(用户决定是否采纳)。
+
+这区别于:
+- compliance_gate(硬门,fail 阻止推进)
+- script_auditor(硬门,predicted completion < 65% 阻止推进)
+- continuity_auditor(硬门,4 维 fail 触发重生)
+
+theory_critic 是**软咨询**,而非**硬审计**。
+
+### V8.4 历史背景
+
+theory_critic 在 V8.4 §1 "专家映射全面更新" 中**保持 1:1 映射**(无 merge / 无 rename / 无 deprecate)。它的 consultative 角色从 v1(Phase 3 v1.0)就确立 —— V8.4/V8.5/V8.6 都没有改变其 advisory 性质。
+
+### dreamina CLI 关系
+
+theory_critic **完全不涉及** dreamina CLI —— 它在内容生成后做理论批评,既不输入到 dreamina CLI,也不消费 dreamina CLI 输出。
+
+但 theory_critic 应基于**实际生成内容**做批评(而非抽象理论),所以会消费 visual_executor + audio_pipeline 的成片产物作为批评素材。
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — V8.6 工具链参考(本专家不直接使用,仅供批评素材溯源)(Phase 22 v5.0)
+- [`style_genome/SKILL.md §V8.6 Pipeline Sync`](../style_genome/SKILL.md) — Step 2.5 auteur / genre 选择协同
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 3 剧本理论审计
+- [`editor/SKILL.md §V8.6 Pipeline Sync`](../editor/SKILL.md) — Step 8 剪辑理论批评
+- [`compliance_gate/SKILL.md §V8.6 Pipeline Sync`](../compliance_gate/SKILL.md) — 区分:本专家是 soft advisory,compliance_gate 是 hard gate

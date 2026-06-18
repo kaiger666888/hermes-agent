@@ -237,3 +237,68 @@ tags="expert:editor,domain:cn-cutting-rhythm"
 - Don't modify `expert_id: editor` (FOUND-08 HARD RULE — frozen identifier)
 - Don't use uniform cut density across entire episode —— build-to-climax 要求最后 25% runtime 加密 1.5-2x
 - Don't mix Murch Story weighting 23% with 25% across files —— 2nd ed (2001) canonical is 23%(per [`references/murch-rule-of-six.md`](./references/murch-rule-of-six.md) §2nd ed vs 早期引用 差异说明,T-03-07 mitigation)
+
+## V8.6 Pipeline Sync (Phase 26 v5.0)
+
+> 来源:kais-movie-agent V8.4 SKILL.md §"V8.4 更新" §6(editor 节奏前置)+ V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。
+
+### V8.6 Step Position
+
+editor 在 V8.6 管线中位于 **Step 8 运镜+节奏**(V8.4 §6 前置变更):
+
+| V8.6 Step | 原始 Step (V8.4 前) | 角色 | 共同调用专家 |
+|-----------|---------------------|------|------------|
+| **Step 8** 运镜+节奏 | Step 14 (剪辑节奏前置) — **V8.4 §6 引入** | **节奏前置决策**:镜头数 / 时长 / 转场协议在成片前确定 | cinematographer |
+
+**Step 8 atomic operation 流程:**
+1. cinematographer 输出运镜 shot_intent(per-shot scale + composition + axis + camera move)
+2. **同 Step 内**:editor 基于 shot_intent 做节奏决策(per `references/*`,Phase 3 v1.0 deep RAG)
+   - 镜头数(根据 episode 时长 + Snyder 15-beat 节奏密度)
+   - 单镜头时长(FxRxT 3D matrix pacing)
+   - 转场协议(hard cut / dissolve / match cut / J-cut / L-cut)
+3. editor 输出 beat_timing.json + transition_protocol.json
+4. Step 8 后无独立审核门(节奏决策并入成片审核)
+
+### V8.4 §6 前置历史(关键变更)
+
+V8.4 §6 "前置 editor 节奏设计" 是关键变更 —— V8.4 之前 editor 仅在 Step 19+ (剪辑阶段)被调用,问题:剪辑时才发现节奏不达标,无法在不重新生成镜头的前提下调整。
+
+V8.4 §6 把 editor **前置**到 Step 8(运镜同步决策),让 editor 在镜头生成前就明确**镜头数 + 时长 + 转场**,避免后期返工:
+
+- ✅ V8.4 前:Step 14 镜头生成 → Step 19+ 剪辑 → 发现节奏问题 → 重新生成镜头(高成本)
+- ✅ V8.4 后:Step 8 运镜+节奏原子操作 → 镜头生成时已绑定节奏契约 → 剪辑时只需组装(低成本)
+
+V8.6 保持 V8.4 §6 的前置决策 —— Step 8 是运镜+节奏双 atomic,editor 在 cinematographer 旁同步决策。
+
+### Murch Rule of Six(V8.6 适用)
+
+editor 的 6 维评估框架(per `references/murch-rule-of-six.md`,Phase 3 v1.0)在 V8.6 仍适用,但在 Step 8 前置决策时只能基于**剧本+运镜**做预判(无实际剪辑素材):
+
+| Murch 维度 | Step 8 可预判 | 留给成片阶段 |
+|----------|--------------|------------|
+| Story (23%) | ✅ 基于 screenplay 剧情曲线 | - |
+| Rhythm (15%) | ✅ 基于 shot_intent 节奏密度 | - |
+| Eye-trace (7%) | ✅ 基于 cinematographer 构图 | - |
+| 2D plane of screen (5%) | ✅ 基于 cinematographer axis | - |
+| 3D space (4%) | ✅ 基于 cinematographer blocking | - |
+| Emotion (46%) | ⚠️ 部分基于 screenplay emotion_curve | ✅ 实际剪辑时基于生成画面微调 |
+
+**Step 8 editor 决策不能完全替代成片阶段剪辑** —— Emotion 维度需要在 Step 11 后基于实际生成画面做最终微调。
+
+### dreamina CLI 间接关系
+
+editor **不直接调用** dreamina CLI —— 它在 Step 8 输出节奏契约,由下游 visual_executor(Step 7)+ audio_pipeline(Step 11)执行。
+
+但 editor 必须知道 dreamina CLI 的能力边界:
+- ✅ 单镜头时长 ≤ 10s(dreamina multimodal2video 上限)—— editor 设计的镜头时长应 ≤ 10s
+- ✅ 多镜头拼接由 editor 在 Step 11 后做(per `references/*` 剪辑协议)
+- ❌ 避免 editor 设计需要单镜头 > 10s 的"长镜头"风格 —— dreamina CLI 当前不支持
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — dreamina CLI 单镜头时长上限(Phase 22 v5.0)
+- [`references/murch-rule-of-six.md`](./references/murch-rule-of-six.md) — Phase 3 v1.0 Murch 6 维评估(PRESERVED)
+- [`cinematographer/SKILL.md §V8.6 Pipeline Sync`](../cinematographer/SKILL.md) — Step 8 同 Step 协同
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — 上游剧本节奏契约
+- [`audio_pipeline/SKILL.md §V8.6 Pipeline Sync`](../audio_pipeline/SKILL.md) — Step 11 下游(audio master 节奏同步)
+- [`continuity_auditor/SKILL.md §V8.6 Pipeline Sync`](../continuity_auditor/SKILL.md) — Step 9 下游(转场合规审计)

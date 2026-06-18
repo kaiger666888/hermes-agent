@@ -217,3 +217,62 @@ tags="expert:compliance_gate,domain:platform-specs-<platform>"
 ## Changelog
 
 - 2026-06-17: Renamed from `compliance_marketing` to `compliance_gate` (Phase 13 RENAME-02). Rationale: separate pure compliance from marketing per Phase 7 §4.15. Backward-compat alias `compliance_marketing` preserved in `metadata.hermes.aliases` per FOUND-08.
+- 2026-06-19: Phase 26 v5.0 patch — appended `## V8.6 Pipeline Sync (Phase 26 v5.0)` section documenting V8.6 8-gate structure + which gate compliance fires at. No frontmatter changes (FOUND-08 preserved).
+
+## V8.6 Pipeline Sync (Phase 26 v5.0)
+
+> 来源:kais-movie-agent V8.6 SKILL.md §"V8.6 更新" §2(审核门 12→8)+ §"hermes-agent 专家 → 管线 Step 速查"。dreamina CLI 适配基线见 [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md)。v1 Phase 1 cn-content-rules 内容见 [`references/cn-content-rules.md`](./references/cn-content-rules.md)(PRESERVED)。
+
+### V8.6 审核门 8-Gate Structure
+
+V8.6 §2 把审核门从 12 个减为 8 个,compliance_gate 在其中**两个关键审核门**触发:
+
+| # | V8.6 审核门 | 触发 Step | compliance_gate 职责 |
+|---|------------|----------|--------------------|
+| 1 | 选题 + 主题 + hook 候选 | Step 1 后 | **red-line check**:hook 候选是否触犯 8-category 红线(政治 / 暴力 / 色情 / 等等) |
+| 3 | 剧本 + 审计结果 | Step 3 后 | **content compliance**:scene-level 剧本合规 + AIGC 标识办法(2025-09-01)+ AI 漫剧备案(2026-04-01) |
+| 5 | 时空剧本 + 运镜 + 终审 | Step 6 后 | **final compliance pre-publish**:整体内容合规 + 平台分发规则 |
+| 8 | 最终成片 + BGM + 音效 + 口型 | Step 11 后 | **distribution compliance**:per-platform 分发(抖音 / 快手 / 小程序剧)+ 红线终审 |
+
+**compliance_gate 是 V8.6 管线的"守门员"** —— 在 4 个关键审核门(Step 1/3/6/11 后)都触发,确保内容在每个生产阶段都合规。
+
+### V8.6 Step Position
+
+compliance_gate **不绑定单一 Step** —— 它在 Step 1/3/6/11 后的 4 个审核门中触发,每次审核门用户确认前都会先调用 compliance_gate 做合规检查:
+
+| Step | compliance_gate 检查项 | 输出 |
+|------|--------------------|------|
+| Step 1 后 | hook 红线检查 | red_line_report(pass/fail + 触发红线类别) |
+| Step 3 后 | 剧本合规 | compliance_report(8-category 红线 + AIGC 标识 + 备案) |
+| Step 6 后 | 终审前合规 | final_compliance_check(整体内容合规) |
+| Step 11 后 | 分发合规 | distribution_report(平台规则 + 红线终审) |
+
+### V8.4 历史背景
+
+compliance_gate 是 V8.4 §1 "专家映射全面更新" 中**rename** 的产物 —— V8.4 前 expert_id 是 `compliance_marketing`,V8.4 同步了 hermes-agent v3.0 Phase 13 的 rename(compliance_marketing → compliance_gate,分离 pure compliance 与 marketing)。
+
+V8.6 §2 的审核门精简(12→8)**没有削弱** compliance_gate 的角色 —— 相反,V8.6 在 4 个核心审核门都触发 compliance_gate,确保内容在每个阶段都合规。
+
+### dreamina CLI 间接关系
+
+compliance_gate **不直接调用** dreamina CLI —— 它审计内容合规,不参与生成。但当 compliance_gate 标记 fail 时,会触发下游重生:
+
+- ✅ Step 1 red-line fail → 回到 Step 1 hook_retention 重新生成 hook 候选
+- ✅ Step 3 compliance fail → 回到 Step 3 screenplay 重新生成剧本(避免红线元素)
+- ❌ compliance_gate **不可**绕过 —— V8.6 把它作为审核门的硬门,任何 fail 都阻止管线推进
+
+### 平台分发规则(V8.6 适用)
+
+per `references/platform-specs-*.md`(Phase 1 v1.5 cn-content-rules),V8.6 仍适用:
+- 抖音 / 快手 / 视频号:per-platform 红线差异 + 推荐算法偏好
+- 小程序剧:备案 + 付费门槛 + 分账比例
+- AIGC 标识办法(2025-09-01):所有 AI 生成内容必须显著标识
+- AI 漫剧备案(2026-04-01):AI 生成漫画剧需备案
+
+### Cross-References
+
+- [`_shared/dreamina-cli-baseline.md`](../_shared/dreamina-cli-baseline.md) — V8.6 触发重生的工具链(Phase 22 v5.0)
+- [`references/cn-content-rules.md`](./references/cn-content-rules.md) — Phase 1 v1.5 CN 内容规则(PRESERVED)
+- [`hook_retention/SKILL.md §V8.6 Pipeline Sync`](../hook_retention/SKILL.md) — Step 1 后合规检查
+- [`screenplay/SKILL.md §V8.6 Pipeline Sync`](../screenplay/SKILL.md) — Step 3/6 后合规检查
+- [`audio_pipeline/SKILL.md §V8.6 Pipeline Sync`](../audio_pipeline/SKILL.md) — Step 11 后分发合规
