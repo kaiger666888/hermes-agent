@@ -1,10 +1,11 @@
 ---
 phase: 31
 slug: knowledge-evolution-pipeline
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-24
+completed: 2026-06-24
 ---
 
 # Phase 31 — Validation Strategy
@@ -38,36 +39,38 @@ created: 2026-06-24
 
 | Task Pattern | Plan | Wave | Requirement | Secure Behavior | Test Type | Automated Command | Status |
 |--------------|------|------|-------------|-----------------|-----------|-------------------|--------|
-| LLM aggregation pass | 01 | 1 | EVOL-01 | Structured JSON output; evidence chain; rejects malformed LLM response | unit (mock LLM) | `python -m pytest tests/agent/evolution/test_aggregate.py -x` | ⬜ pending |
-| Insight record schema | 01 | 1 | EVOL-01 | Pydantic validators; insight_id format; evidence_chain non-empty | unit | `python -m pytest tests/agent/evolution/test_aggregate.py::TestInsightSchema -x` | ⬜ pending |
-| Diff generator (difflib-based, additive-only) | 01 | 1 | (EVOL-02 placeholder) | difflib.unified_diff; rejects deletion hunks | unit | `python -m pytest tests/agent/evolution/test_diff_generator.py -x` | ⬜ pending |
-| Queue append/move/read | 01 | 1 | EVOL-03 | Atomic append via atomic_json_write; status transitions (pending→applied/rejected) | unit | `python -m pytest tests/agent/evolution/test_queue.py -x` | ⬜ pending |
-| Atomic apply transaction | 01 | 1 | EVOL-04 | git apply --check → git apply → FOUND-08 → additive check → git add → git commit; revert on any failure | integration | `python -m pytest tests/agent/evolution/test_apply.py -x` | ⬜ pending |
-| FOUND-08 per-patch check | 01 | 1 | SC-5 | expert_id + related_skills frontmatter byte-for-byte preserved; abort on violation | unit | `python -m pytest tests/agent/evolution/test_apply.py::TestFound08 -x` | ⬜ pending |
-| Additive-only v4/v5 refs check | 01 | 1 | SC-6 | Reject any `-` line in snowflake-method.md / e-konte-format.md / scamper-variations.md / dreamina-cli-baseline.md / v86-pipeline-mapping.md patches | unit | `python -m pytest tests/agent/evolution/test_apply.py::TestAdditiveOnly -x` | ⬜ pending |
-| Revert on failure | 01 | 1 | EVOL-04 | Working tree restored on FOUND-08/additive/git failure; exit non-zero | integration | `python -m pytest tests/agent/evolution/test_apply.py::TestRevertOnFailure -x` | ⬜ pending |
-| Eval gate integration (EVOL-05) | 01 | 1 | EVOL-05 | Patch runs through gate.py; failed-gate patches logged to failed_gate.jsonl, never enter queue | integration | `python -m pytest tests/agent/evolution/test_queue.py::TestGateIntegration -x` | ⬜ pending |
-| `hermes feedback evolve` CLI | 02 | 2 | EVOL-01 | Smoke: --help works; --skill flag required; --model override | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestEvolveCmd -x` | ⬜ pending |
-| `hermes feedback review-queue` CLI | 02 | 2 | EVOL-03 | Lists pending patches; filter by skill/status | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestReviewQueueCmd -x` | ⬜ pending |
-| `hermes feedback show-patch` CLI | 02 | 2 | EVOL-03 | Prints full diff + rationale + chain | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestShowPatchCmd -x` | ⬜ pending |
-| `hermes feedback approve` CLI | 02 | 2 | EVOL-04 | Non-bypassable prompt; --yes flag; atomic apply; commit message format | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestApproveCmd -x` | ⬜ pending |
-| `hermes feedback reject` CLI | 02 | 2 | EVOL-03 | Moves to rejected.jsonl with reason | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestRejectCmd -x` | ⬜ pending |
-| Hermes runtime isolation | all | gate | (preservation) | `agent/evolution/` not imported by runtime | smoke | `grep -rn "from agent.evolution\|import agent.evolution" agent/ hermes_cli/ tools/ gateway/ cli.py run_agent.py 2>/dev/null \| grep -v "tests/" \| wc -l` returns 0 | ⬜ pending |
-| Ruff PLW1514 | all | all | (convention) | Every `open()` passes `encoding="utf-8"` | lint | `ruff check agent/evolution/ hermes_cli/feedback.py` | ⬜ pending |
-| FOUND-08 byte-intact | all | gate | (preservation) | No bundled SKILL.md changes outside evolution apply | smoke | `git diff --name-only v5.0 -- skills/movie-experts/ \| grep -v _eval \| grep -v _shared \| wc -l` returns 0 (until first patch applied; then per-patch FOUND-08 check is in test_apply.py) | ⬜ pending |
+| LLM aggregation pass | 01 | 1 | EVOL-01 | Structured JSON output; evidence chain; rejects malformed LLM response | unit (mock LLM) | `python -m pytest tests/agent/evolution/test_insights.py -x` | ✅ shipped |
+| Insight record schema | 01 | 1 | EVOL-01 | Pydantic validators; insight_id format; evidence_chain non-empty | unit | `python -m pytest tests/agent/evolution/test_insights.py -x` | ✅ shipped |
+| Diff generator (difflib-based, additive-only) | 01 | 1 | (EVOL-02 placeholder) | difflib.unified_diff; rejects deletion hunks | unit | `python -m pytest tests/agent/evolution/test_diff_generator.py -x` | ✅ shipped |
+| Queue append/move/read | 01 | 1 | EVOL-03 | Atomic append via atomic_json_write; status transitions (pending→applied/rejected) | unit | `python -m pytest tests/agent/evolution/test_queue.py -x` | ✅ shipped |
+| Atomic apply transaction | 01 | 1 | EVOL-04 | git apply --check → git apply → FOUND-08 → additive check → git add → git commit; revert on any failure | integration | `python -m pytest tests/agent/evolution/test_apply.py -x` | ✅ shipped |
+| FOUND-08 per-patch check | 01 | 1 | SC-5 | expert_id + related_skills frontmatter byte-for-byte preserved; abort on violation | unit | `python -m pytest tests/agent/evolution/test_apply.py -x` | ✅ shipped |
+| Additive-only v4/v5 refs check | 01 | 1 | SC-6 | Reject any `-` line in snowflake-method.md / e-konte-format.md / scamper-variations.md / dreamina-cli-baseline.md / v86-pipeline-mapping.md patches | unit | `python -m pytest tests/agent/evolution/test_apply.py -x` | ✅ shipped |
+| Revert on failure | 01 | 1 | EVOL-04 | Working tree restored on FOUND-08/additive/git failure; exit non-zero | integration | `python -m pytest tests/agent/evolution/test_apply.py -x` | ✅ shipped |
+| Eval gate integration (EVOL-05) | 01 | 1 | EVOL-05 | Patch runs through gate.py; failed-gate patches logged to failed_gate.jsonl, never enter queue | integration | `python -m pytest tests/agent/evolution/test_queue.py -x` | ✅ shipped |
+| `hermes feedback evolve` CLI | 02 | 2 | EVOL-01 | Smoke: --help works; --skill flag required; --model override; --dry-run + --insights-only | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestEvolveCmdDryRun -x` | ✅ shipped |
+| `hermes feedback review-queue` CLI | 02 | 2 | EVOL-03 | Lists pending patches; filter by skill/status | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestReviewQueueCmd -x` | ✅ shipped |
+| `hermes feedback show-patch` CLI | 02 | 2 | EVOL-03 | Prints full diff + rationale + chain | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestShowPatchCmd -x` | ✅ shipped |
+| `hermes feedback approve` CLI | 02 | 2 | EVOL-04 | Non-bypassable prompt; --yes flag; atomic apply; commit message format | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestApproveCmdRequiresYes -x` | ✅ shipped |
+| `hermes feedback reject` CLI | 02 | 2 | EVOL-03 | Moves to rejected.jsonl with reason | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestRejectCmd -x` | ✅ shipped |
+| `hermes feedback rollback` CLI | 02 | 2 | EVOL-05 | git revert --no-edit; --yes required; sha validation | integration | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestRollbackCmdHappyPath -x` | ✅ shipped |
+| EVOL-04 structural isolation | 02 | 2 | EVOL-04 | Only `_cmd_approve` calls apply_patch_transaction (ast-walked) | structural | `python -m pytest tests/hermes_cli/test_evolution_cli.py::TestNonBypassableHumanInLoop -x` | ✅ shipped |
+| Hermes runtime isolation | all | gate | (preservation) | `agent/evolution/` not imported by runtime | smoke | `grep -rn "from agent.evolution\|import agent.evolution" agent/ hermes_cli/ tools/ gateway/ cli.py run_agent.py 2>/dev/null \| grep -v "tests/" \| wc -l` returns 0 | ✅ shipped |
+| Ruff PLW1514 | all | all | (convention) | Every `open()` passes `encoding="utf-8"` | lint | `ruff check agent/evolution/ hermes_cli/feedback.py` | ✅ shipped |
+| FOUND-08 byte-intact | all | gate | (preservation) | No bundled SKILL.md changes outside evolution apply | smoke | `git diff --name-only v5.0 -- skills/movie-experts/ \| grep -v _eval \| grep -v _shared \| wc -l` returns 0 (until first patch applied; then per-patch FOUND-08 check is in test_apply.py) | ✅ shipped |
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `tests/agent/evolution/__init__.py` (NEW)
-- [ ] `tests/agent/evolution/conftest.py` (NEW) — Fixtures: `evolution_env` (HERMES_HOME + git repo), `mock_llm_client`, `sample_feedback_records`, `sample_skill_content`
-- [ ] `tests/agent/evolution/test_aggregate.py` (NEW)
-- [ ] `tests/agent/evolution/test_diff_generator.py` (NEW)
-- [ ] `tests/agent/evolution/test_queue.py` (NEW)
-- [ ] `tests/agent/evolution/test_apply.py` (NEW)
-- [ ] `tests/hermes_cli/test_evolution_cli.py` (NEW)
-- [ ] `tests/fixtures/evolution/` — Sample insights, sample SKILL.md content, sample unified diffs (additive + violating)
+- [x] `tests/agent/evolution/__init__.py` (shipped Plan 01)
+- [x] `tests/agent/evolution/conftest.py` (shipped Plan 01) — Fixtures: `evolution_env` (HERMES_HOME + git repo), `mock_llm_client`, `sample_feedback_records`, `sample_skill_content`
+- [x] `tests/agent/evolution/test_insights.py` (shipped Plan 01 — named test_insights.py not test_aggregate.py)
+- [x] `tests/agent/evolution/test_diff_generator.py` (shipped Plan 01)
+- [x] `tests/agent/evolution/test_queue.py` (shipped Plan 01)
+- [x] `tests/agent/evolution/test_apply.py` (shipped Plan 01)
+- [x] `tests/hermes_cli/test_evolution_cli.py` (shipped Plan 02)
+- [x] `tests/fixtures/evolution/` (shipped Plan 01) — Sample insights, sample SKILL.md content, sample unified diffs (additive + violating)
 
 *No framework install needed — pytest already in `[dev]` extra.*
 
@@ -84,11 +87,11 @@ created: 2026-06-24
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify
-- [ ] Sampling continuity
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 90s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify
+- [x] Sampling continuity (per-task pytest runs after every commit; full regression after wave merge)
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags (evolve/approve/reject/rollback are synchronous; review-queue/show-patch are one-shot reads)
+- [x] Feedback latency < 90s (87 tests in ~3s; gate subprocess is the only slow path, operator-invoked)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** ✅ Phase 31 complete — all automated verification gates green (87/87 tests, ruff clean, runtime isolation 0 matches, EVOL-04 structural isolation 0 matches, FOUND-08 byte-intact 0 SKILL.md changes). Manual live-LLM + live-git verifications remain for the operator to run end-to-end with real feedback.

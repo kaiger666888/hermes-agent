@@ -1000,16 +1000,19 @@ grep -rn "from agent.evolution\|import agent.evolution" \
    - What we know: `agent/retry_utils.py:jittered_backoff` exists for the conversation loop. `tenacity==9.1.4` is pinned.
    - What's unclear: whether to add retry to the aggregation call or surface the error immediately (operator can re-run `evolve`).
    - Recommendation: Surface immediately for P31 (operator can re-run). P32 Curator's automated path can add retry. This keeps P31 scope tight.
+   - **RESOLVED (P31 Plan 02 shipped):** Surface immediately. `_cmd_evolve` in `hermes_cli/feedback.py` catches `AggregationError` from `aggregate_feedback` and prints `aggregation failed: <exc>` to stderr + returns exit 1; the operator can re-run `hermes feedback evolve --skill <id>`. No retry layer was added in P31. P32 Curator (automated path) may add `tenacity` retry when daemonized.
 
 2. **How should the queue handle a patch whose eval gate verdict was "pass" at insertion time but the baseline has since been rebuilt?**
    - What we know: Phase 30 gate.py `load_cached_baseline` (gate.py:741) warns on staleness but returns cached composites anyway.
    - What's unclear: whether to re-run the gate at approve time (could be slow) or trust the insertion-time verdict.
    - Recommendation: Trust the insertion-time verdict for P31. Document in `approve` help text that operators can `hermes feedback reject <id> stale_baseline` if they suspect drift. P33 observability can surface stale patches.
+   - **RESOLVED (P31 Plan 02 shipped):** Trust the insertion-time verdict. `_cmd_approve` does NOT re-run the gate at approve time (would be slow). The documented escape hatch is `hermes feedback reject <patch_id> stale_baseline`, which moves the patch to `rejected.jsonl` with reason `stale_baseline` so the operator can re-evolve. P33 observability scope will surface stale patches in the review-queue UI.
 
 3. **Should the `evolve` command accept `--insights-only` (skip patch generation + gate)?**
    - What we know: EVOL-01 is purely about insight extraction; EVOL-03 is about the queue.
    - What's unclear: whether operators want to inspect insights before committing to the full pipeline.
    - Recommendation: Yes — add `--insights-only` flag. It writes to `insights.jsonl` and exits without generating patches or running the gate. Useful for debugging the aggregation prompt. (Claude's Discretion per CONTEXT.md.)
+   - **RESOLVED (P31 Plan 02 shipped):** YES — `--insights-only` flag implemented in `hermes_cli/feedback.py:_cmd_evolve`. Writes insights to `insights.jsonl` then returns 0 WITHOUT generating patches, running the eval gate, or appending to `queue.jsonl`. Useful for debugging the aggregation prompt before committing to the full pipeline. Verified by `TestEvolveCmdInsightsOnly::test_insights_only_skips_patch_generation`.
 
 ## Environment Availability
 
