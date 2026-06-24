@@ -203,7 +203,14 @@ class TestMakeAggregationClient:
     def test_returns_client_and_model_override(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # Mock the OpenAI SDK so the test doesn't require a real install.
+        import sys
+        from unittest.mock import MagicMock
+
         monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+        fake_openai_module = MagicMock()
+        fake_openai_module.OpenAI.return_value = MagicMock(name="fake-client")
+        monkeypatch.setitem(sys.modules, "openai", fake_openai_module)
         client, model = make_aggregation_client(model_override="my-model")
         assert model == "my-model"
         assert client is not None
@@ -211,16 +218,28 @@ class TestMakeAggregationClient:
     def test_env_model_fallback(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        import sys
+        from unittest.mock import MagicMock
+
         monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
         monkeypatch.setenv("HERMES_EVOLUTION_MODEL", "env-model")
+        fake_openai_module = MagicMock()
+        fake_openai_module.OpenAI.return_value = MagicMock()
+        monkeypatch.setitem(sys.modules, "openai", fake_openai_module)
         _, model = make_aggregation_client()
         assert model == "env-model"
 
     def test_default_model_when_no_override(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        import sys
+        from unittest.mock import MagicMock
+
         monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
         monkeypatch.delenv("HERMES_EVOLUTION_MODEL", raising=False)
+        fake_openai_module = MagicMock()
+        fake_openai_module.OpenAI.return_value = MagicMock()
+        monkeypatch.setitem(sys.modules, "openai", fake_openai_module)
         _, model = make_aggregation_client()
         assert model == "claude-sonnet-4-6"
 
