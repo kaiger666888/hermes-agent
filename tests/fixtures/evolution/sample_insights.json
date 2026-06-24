@@ -1,0 +1,18 @@
+{
+  "insights": [
+    {
+      "theme": "Missing SCAMPER integration examples",
+      "evidence_chain": ["fb_001", "fb_002"],
+      "rationale": "Operators consistently noted that the test skill lacks concrete SCAMPER worked examples, making the methodology hard to apply. Two independent feedback records cite the same gap.",
+      "proposed_addition": "### SCAMPER Worked Example\n\nApply Substitute to the hero archetype...\n",
+      "insert_after_marker": "## References"
+    },
+    {
+      "theme": "Unclear trigger conditions",
+      "evidence_chain": ["fb_003"],
+      "rationale": "One operator reported confusion about when to invoke this skill versus a sibling; adding an explicit decision tree would help.",
+      "proposed_addition": "## Decision Tree\n\n- If X then use test_skill\n- If Y then use sibling\n",
+      "insert_after_marker": "## When to use this skill"
+    }
+  ]
+}
