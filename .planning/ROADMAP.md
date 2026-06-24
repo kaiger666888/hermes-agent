@@ -31,7 +31,7 @@
 - [x] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection (completed 2026-06-24)
 - [x] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback — **COMPLETE 2026-06-24**
 - [x] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径 — **COMPLETE 2026-06-25 (CURATE-01..05 + EVOL-02 satisfied, 328 combined green, Option A preserves P31 TestNonBypassableHumanInLoop UNCHANGED)**
-- [~] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out — **Plans 01+02 shipped 2026-06-25** (`hermes curator stats` CLI + 18 tests; `_shared/v6-feedback-loop-architecture.md` + `v6_ref_signoffs:` + 14 doc/schema tests; Plan 03 remains)
+- [x] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out — **COMPLETE 2026-06-25 (3/3 plans shipped; OBS-01/02/03 + SC-4/5/6/7/8 satisfied; v6.0 milestone SHIPPED)**
 
 ---
 
@@ -229,8 +229,8 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 | 30. Eval Gate Reuse | 2/2 | Complete    | 2026-06-24 |
 | 31. Knowledge Evolution Pipeline | 2/2 | Complete    | 2026-06-24 |
 | 32. Curator Upgrade + Audit | 2/2 | Complete    | 2026-06-24 |
-| 33. Observability + Integration Close-out | 0/? | Not started | - |
+| 33. Observability + Integration Close-out | 3/3 | Complete    | 2026-06-25 |
 
 ---
 
-*Last updated: 2026-06-24 — v6.0 Self-Evolution & Feedback Loop roadmap created (6 phases continuing from v5.0 Phase 27, 26/26 reqs mapped, Phase 28 ready for planning).*
+*Last updated: 2026-06-25 — v6.0 Self-Evolution & Feedback Loop milestone SHIPPED (6/6 phases complete, 13/13 plans complete, 26/26 requirements satisfied, SC-1 through SC-8 all PASS, FOUND-08 preserved milestone-wide).*
