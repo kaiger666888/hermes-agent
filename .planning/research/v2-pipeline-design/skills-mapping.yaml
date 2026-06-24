@@ -280,3 +280,27 @@ v5_ref_signoffs:
     line_count: 220
     signed_off_by: phase-27-doc-02
     notes: "V8.6 13-Step → expert_id mapping table + 8-gate review structure are factual integration architecture of the open-source kais-movie-agent project. Atomic-operation classification (§1-§6 6 组合并) paraphrased from V8.6 update notes. Per-expert V8.6 section cross-reference network is original Hermes Agent analytical work. All 16 active movie-experts' V8.6 Pipeline Sync sections (Phase 22-26 patches) cite this ref as canonical."
+
+# ============================================
+# v6.0 ref-level sign-off entries (Phase 33 close-out)
+# ============================================
+# These entries cover REFS (shared markdown under _shared/),
+# NOT new expert_id mappings. They are distinct from the 19 expert-level
+# `sign_off_status: signed_off` entries in the `mappings:` block above.
+# v6.0 added 1 shared ref (v6-feedback-loop-architecture.md) documenting
+# the v6.0 feedback-loop architecture per FOUND-08 backward-compat rule
+# and v6.0 milestone scope. Unlike v4/v5 refs which paraphrased external
+# books or the kais-movie-agent SKILL.md, this v6 ref is internally
+# authored (no upstream external source).
+v6_ref_signoffs:
+
+  - ref_path: skills/movie-experts/_shared/v6-feedback-loop-architecture.md
+    expert_owner: _shared
+    phase_added: v6.0-phase-33
+    requirement: OBS-01
+    verified_date: 2026-06-25
+    source: "Hermes Agent v6.0 Self-Evolution & Feedback Loop — internally authored architecture doc synthesizing P28-P32 implementations (agent/feedback_ingest.py + agent/feedback_schema.py + agent/feedback_store.py + skills/movie-experts/_eval/runner.py + skills/movie-experts/_eval/gate.py + agent/evolution/* + agent/curator.py + agent/curator_audit.py + hermes_cli/feedback.py + hermes_cli/curator.py)"
+    license_status: fair_use_paraphrase
+    line_count: 305
+    signed_off_by: phase-33-doc-01
+    notes: "Canonical v6.0 feedback-loop architecture reference. Internally authored — no upstream external source (unlike v4/v5 refs which paraphrased external methodologies). Documents ingest → store → gate → evolve → curate → observe pipeline with JSON schema, eval-gate thresholds, and human-in-loop boundaries. All 16 active movie-experts' feedback-driven learning paths route through this architecture."

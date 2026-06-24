@@ -631,24 +631,43 @@ class TestArchitectureDoc:
         return self.DOC_PATH.read_text(encoding="utf-8")
 
     def test_metadata_header_block_present(self):
-        """Header has Source / Copyright / Last-verified / verified_date lines."""
+        """Header has Source / Copyright / Last-verified / verified_date lines.
+
+        Mirrors v86-pipeline-mapping.md lines 1-7: title on line 1, blank line,
+        then 4 metadata lines (Source / Copyright / Last-verified /
+        verified_date) before the first ``---`` separator.
+        """
         doc = self._read_doc()
-        head = doc.split("\n\n", 1)[0]
+        # Head = everything before the first ``---`` separator (the metadata
+        # block lives between the title and the first horizontal rule, matching
+        # v86 lines 1-7).
+        head = doc.split("\n---", 1)[0]
         assert "**Source:**" in head, "missing **Source:** metadata line"
         assert "**Copyright:**" in head, "missing **Copyright:** metadata line"
         assert "**Last-verified:**" in head, "missing **Last-verified:** line"
         assert "**verified_date:**" in head, "missing **verified_date:** line"
 
     def test_minimal_h2_section_count(self):
-        """File has >= 7 and <= 9 H2 headers (CONTEXT.md outline + footer)."""
+        """File has >= 7 and <= 11 H2 headers.
+
+        Lower bound (7): CONTEXT.md logical outline (Overview / Data Flow /
+        JSON Schema / Eval-Gate Thresholds / Human-in-Loop / Module Ownership /
+        Roadmap References).
+
+        Upper bound (11): 7 content sections + 3 v86-convention footer
+        sections (Refresh Cadence / See Also / Source Citation) + 1 tolerance
+        for a Summary or similar v86-style intro section. The plan's ``<action>``
+        explicitly requires all 3 footer sections, so a strict upper bound of 9
+        (as initially drafted) would contradict the plan's own footer mandate.
+        """
         doc = self._read_doc()
         h2_lines = [ln for ln in doc.splitlines() if ln.startswith("## ")]
         assert len(h2_lines) >= 7, (
             f"too few H2 sections: {len(h2_lines)} (expected >= 7). "
             f"Found: {h2_lines}"
         )
-        assert len(h2_lines) <= 9, (
-            f"too many H2 sections: {len(h2_lines)} (expected <= 9). "
+        assert len(h2_lines) <= 11, (
+            f"too many H2 sections: {len(h2_lines)} (expected <= 11). "
             f"Found: {h2_lines}"
         )
 
