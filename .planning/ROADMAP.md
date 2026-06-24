@@ -225,7 +225,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 | 29. Feedback Store | 2/2 | Complete    | 2026-06-24 |
 | 30. Eval Gate Reuse | 2/2 | Complete    | 2026-06-24 |
 | 31. Knowledge Evolution Pipeline | 2/2 | Complete    | 2026-06-24 |
-| 32. Curator Upgrade + Audit | 0/? | Not started | - |
+| 32. Curator Upgrade + Audit | 2/2 | Complete    | 2026-06-24 |
 | 33. Observability + Integration Close-out | 0/? | Not started | - |
 
 ---
