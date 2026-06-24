@@ -1,0 +1,4 @@
+--- /dev/null
++++ b/../../../etc/passwd
+@@ -0,0 +1 @@
++root:x:0:0:root:/root:/bin/bash
