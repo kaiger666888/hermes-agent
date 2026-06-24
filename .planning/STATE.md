@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: executing
-last_updated: "2026-06-24T06:14:00.000Z"
+status: ready_to_plan
+last_updated: 2026-06-24T08:12:32.179Z
 last_activity: 2026-06-24
 progress:
   total_phases: 6
@@ -11,6 +11,7 @@ progress:
   total_plans: 2
   completed_plans: 2
   percent: 17
+stopped_at: Phase 28 complete (2/2) — ready to discuss Phase 29
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -24,14 +25,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 28 — feedback-ingestion-mvp
+**Current focus:** Phase 29 — feedback store
 
 ## Current Position
 
-Phase: 28 (feedback-ingestion-mvp) — COMPLETE
-Plan: 2 of 2 (both plans complete: schema + snapshot + atomic write; slash command + watcher + JSONL importer — 76 tests green, FOUND-08 verified)
-Status: Phase 28 shipped. Ready to plan Phase 29 (Feedback Store).
-Last activity: 2026-06-24 — Plan 28-02 SUMMARY committed (2 task commits: 92f32917d, 11737fd0c)
+Phase: 29
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-24
 
 ### Progress
 
