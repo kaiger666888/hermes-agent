@@ -751,22 +751,22 @@ class TestPreV6Regression:
 
 **Planner action:** Validate A3 early in Plan 01 by reading `agent/feedback_schema.py` for the FeedbackRecord schema. If `session_id` is absent, fall back to "distinct UTC dates" as the session proxy.
 
-## Open Questions
+## Open Questions (RESOLVED at plan-phase 2026-06-24)
 
 1. **Does `FeedbackRecord` carry a `session_id` field?**
    - What we know: CONTEXT.md research question #6 sketch references `session_id` in raw records.
    - What's unclear: Whether P28/P29 added `session_id` to the Pydantic schema, or whether it lives only in `output_snapshot.metadata`.
-   - Recommendation: Planner reads `agent/feedback_schema.py` in Wave 0. If absent, use "distinct UTC calendar days" as the session-diversity proxy and document the approximation.
+   - RESOLVED: FeedbackRecord has NO `session_id` field (verified via Wave 0 read of `agent/feedback_schema.py`). Use distinct UTC calendar days derived from `record.ts.date()` as the session-diversity proxy. Documented in `_scan_for_hot_skills` docstring (Plan 01 Task 4).
 
 2. **Should EVOL-02 LLM instruction emission be a SEPARATE LLM call, or fold into P31's `aggregate_feedback`?**
    - What we know: P31's `aggregate_feedback` returns `InsightRecord` with `proposed_addition` (markdown) + `insert_after_marker`. EVOL-02 needs structured `{file, anchor_section, content_en, content_zh}` instructions.
    - What's unclear: Whether to extend `InsightRecord` with instruction fields OR add a second LLM pass that converts an InsightRecord into instructions.
-   - Recommendation: Add a second LLM pass (`emit_evol02_instructions(insight, current_files) -> list[dict]`) — keeps P31's `aggregate_feedback` unchanged (no P31 regression risk) and lets EVOL-02 specialize for bilingual + multi-file.
+   - RESOLVED: Add a second LLM pass (`emit_evol02_instructions(insight, current_files) -> list[dict]`) — keeps P31's `aggregate_feedback` unchanged (no P31 regression risk). Implemented in Plan 01 Task 3.
 
 3. **Should the audit log record `propose` actions given they are system-generated and high-volume?**
    - What we know: CONTEXT.md lists `propose` as a valid action.
    - What's unclear: Whether every curator scan logging 10+ `propose` entries pollutes the audit trail.
-   - Recommendation: Log `propose` — it's the only way to trace "why did this patch enter the queue?" Operator can filter via `--action apply` for the common case. Volume is bounded by `feedback_threshold` (scans only fire for hot skills).
+   - RESOLVED: Log `propose` — it's the only way to trace "why did this patch enter the queue?" Operator can filter via `--action apply` for the common case. Volume is bounded by `feedback_threshold` (scans only fire for hot skills). Implemented in Plan 01 Task 4.
 
 ## Environment Availability
 
