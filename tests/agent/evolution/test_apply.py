@@ -326,10 +326,16 @@ class TestApplyPatchTransactionDirtyTree:
 
 class TestApplyPatchTransactionGitAuthor:
     def test_sets_local_author_if_global_unset(
-        self, evolution_env: dict, tmp_path: Path
+        self, evolution_env: dict, tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         repo = evolution_env["repo_root"]
-        # Unset local user.email to simulate fresh environment.
+        # Isolate from global/system git config so the fallback triggers.
+        # Without this, the operator's global user.email leaks into the
+        # repo and the fallback never fires.
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+        monkeypatch.setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+        # Also unset repo-local config set by the evolution_env fixture.
         subprocess.run(
             ["git", "config", "--unset", "user.email"],
             cwd=str(repo), capture_output=True,
@@ -360,9 +366,13 @@ class TestApplyPatchTransactionGitAuthor:
         )
         assert result.commit_sha
 
-        # Verify the repo-local config was set.
+        # Verify the repo-local config was set (reads through to local
+        # config even with global/system disabled).
         email = subprocess.run(
             ["git", "config", "user.email"],
             cwd=str(repo), capture_output=True, text=True, encoding="utf-8",
+            env={**__import__("os").environ,
+                 "GIT_CONFIG_GLOBAL": "/dev/null",
+                 "GIT_CONFIG_SYSTEM": "/dev/null"},
         ).stdout.strip()
         assert email == "hermes-evolution@local"
