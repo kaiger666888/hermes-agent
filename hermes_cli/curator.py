@@ -805,6 +805,433 @@ def _cmd_auto_apply_eligible(args) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Phase 33 Plan 01 — `hermes curator stats` (OBS-01/02/03, read-only)
+# ---------------------------------------------------------------------------
+
+# Sparkline glyphs (CONTEXT.md D-sparkline). Index 0=lowest → 7=highest.
+_SPARK = "▁▂▃▄▅▆▇█"
+
+# Verdict → rich color style (CONTEXT.md D-stats-format).
+_VERDICT_STYLES = {
+    "good": "green",
+    "needs_work": "yellow",
+    "bad": "red",
+}
+
+# Known sources (CONTEXT.md + RESEARCH §"Architecture Patterns").
+_SOURCES = ("cli", "kais_aigc", "manual")
+
+
+def _sparkline(values: list[float]) -> str:
+    """Compact unicode-block sparkline for a series of floats.
+
+    Maps min(values)..max(values) onto 8 buckets (``_SPARK``).
+    Empty list -> empty string. All-identical -> middle-tier block (index 4).
+    """
+    if not values:
+        return ""
+    lo, hi = min(values), max(values)
+    if hi == lo:
+        # All identical → middle-tier block per CONTEXT.md D-sparkline.
+        return _SPARK[4] * len(values)
+    span = hi - lo
+    return "".join(
+        _SPARK[min(7, max(0, int((v - lo) / span * 7.999)))]
+        for v in values
+    )
+
+
+def _collapse_verdicts(
+    summary: dict[str, dict],
+) -> dict[str, dict[str, object]]:
+    """Collapse a FeedbackStore.summary() dict to per-verdict totals.
+
+    Input:  ``{"<skill>:<source>:<verdict>": {count, weighted_count, first_ts, last_ts}}``
+    Output: ``{"good": {count, weighted, first_ts, last_ts}, "needs_work": {...}, "bad": {...}}``
+
+    Sources are merged; per-verdict counts + weighted_counts summed; ts
+    range is min(first_ts) .. max(last_ts).
+    """
+    out: dict[str, dict[str, object]] = {
+        v: {"count": 0, "weighted": 0.0, "first_ts": None, "last_ts": None}
+        for v in ("good", "needs_work", "bad")
+    }
+    for key, bucket in summary.items():
+        parts = key.split(":")
+        if len(parts) != 3:
+            continue
+        verdict = parts[2]
+        if verdict not in out:
+            continue
+        out[verdict]["count"] = int(out[verdict]["count"]) + int(
+            bucket.get("count", 0)
+        )
+        out[verdict]["weighted"] = float(out[verdict]["weighted"]) + float(
+            bucket.get("weighted_count", 0.0)
+        )
+        f_ts = bucket.get("first_ts")
+        l_ts = bucket.get("last_ts")
+        if f_ts:
+            cur = out[verdict]["first_ts"]
+            out[verdict]["first_ts"] = f_ts if cur is None or f_ts < cur else cur
+        if l_ts:
+            cur = out[verdict]["last_ts"]
+            out[verdict]["last_ts"] = l_ts if cur is None or l_ts > cur else cur
+    return out
+
+
+def _empty_store_message() -> str:
+    """Friendly message for empty FeedbackStore (T-33-05, CONTEXT.md)."""
+    return (
+        "no feedback yet — run /feedback in a Hermes conversation or "
+        "`hermes feedback import <jsonl>` to seed data"
+    )
+
+
+def _render_per_skill_dashboard(
+    *,
+    store,
+    skill_id: str,
+    runs: int,
+    as_json: bool,
+    read_audit_fn,
+    read_queue_fn,
+    evolution_dir,
+) -> int:
+    """OBS-01 — per-skill dashboard.
+
+    Renders verdict buckets (collapsed across sources) + patch history +
+    eval-score trend. ``as_json=True`` emits COUNTS ONLY (T-33-01).
+    """
+    summary = store.summary(skill_id=skill_id)
+    verdicts = _collapse_verdicts(summary)
+
+    # Patch history (P31 evolution queue, status=applied, filtered to skill).
+    try:
+        applied_patches = read_queue_fn(
+            evolution_dir=evolution_dir, status="applied",
+        )
+    except Exception as exc:  # noqa: BLE001 — read-only best-effort
+        logger.warning("read_queue(applied) failed in stats: %s", exc)
+        applied_patches = []
+    skill_patches = [
+        p for p in applied_patches if getattr(p, "skill_id", None) == skill_id
+    ]
+
+    # Eval-score trend (P32 audit log, action=apply, last N entries).
+    try:
+        audit_entries = read_audit_fn(action="apply", skill=skill_id)
+    except Exception as exc:  # noqa: BLE001 — read-only best-effort
+        logger.warning("read_audit(apply) failed in stats: %s", exc)
+        audit_entries = []
+    trend_entries = [e for e in audit_entries if e.get("eval_score")]
+    trend_entries = trend_entries[-runs:] if runs > 0 else trend_entries
+
+    total_count = sum(int(v["count"]) for v in verdicts.values())
+
+    # Empty-store branch (T-33-05): exit 0 with friendly message.
+    if total_count == 0 and not skill_patches and not trend_entries:
+        print(_empty_store_message())
+        return 0
+
+    # JSON path — counts ONLY (T-33-01: no correction/output_snapshot/feedback_ids).
+    if as_json:
+        # Serialize eval_trend_count + recent commit shas (no feedback_ids).
+        recent_commits = [
+            e.get("commit_sha") for e in trend_entries
+            if e.get("commit_sha")
+        ]
+        payload = {
+            "skill_id": skill_id,
+            "verdict_buckets": {
+                v: int(verdicts[v]["count"]) for v in ("good", "needs_work", "bad")
+            },
+            "patch_count": len(skill_patches),
+            "eval_trend_count": len(trend_entries),
+            "recent_commit_shas": recent_commits,
+        }
+        import json as _json
+        print(_json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    # Human path — rich.table.Table rendering.
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title=f"Feedback stats: {skill_id}", show_lines=False)
+    table.add_column("Verdict", style="bold")
+    table.add_column("Count", justify="right")
+    table.add_column("Weighted", justify="right")
+    table.add_column("First ts")
+    table.add_column("Last ts")
+    for v in ("good", "needs_work", "bad"):
+        style = _VERDICT_STYLES[v]
+        b = verdicts[v]
+        table.add_row(
+            f"[{style}]{v}[/{style}]",
+            str(b["count"]),
+            f"{float(b['weighted']):.1f}",
+            str(b["first_ts"] or "—"),
+            str(b["last_ts"] or "—"),
+        )
+    console.print(table)
+
+    # Patch history summary.
+    print(f"\nApplied patches for {skill_id}: {len(skill_patches)}")
+    for p in skill_patches[-5:]:
+        pid = getattr(p, "patch_id", "?")
+        ts = getattr(p, "ts_applied", None) or getattr(p, "ts_queued", "?")
+        print(f"  {pid}  {ts}")
+
+    # Eval-score trend (sparkline + last-N entries).
+    if trend_entries:
+        # Pull mean_delta per entry where present.
+        deltas: list[float] = []
+        for e in trend_entries:
+            score = e.get("eval_score") or {}
+            md = score.get("mean_delta")
+            try:
+                if md is not None:
+                    deltas.append(float(md))
+            except (TypeError, ValueError):
+                pass
+        spark = _sparkline(deltas) if deltas else ""
+        print(f"\nEval-score trend (last {len(trend_entries)} apply entries):")
+        if spark:
+            print(f"  mean_delta sparkline: {spark}")
+        if len(trend_entries) < runs:
+            print(
+                f"  (need more data for full trend: have "
+                f"{len(trend_entries)}, want {runs})"
+            )
+    return 0
+
+
+def _render_cross_skill_view(
+    *,
+    store,
+    top_n: int,
+    as_json: bool,
+    hermes_home,
+) -> int:
+    """OBS-02 — cross-skill view: top-N negative + zero-feedback list."""
+    summary = store.summary()
+
+    # Empty-store branch (T-33-05).
+    if not summary:
+        print(_empty_store_message())
+        return 0
+
+    # Parse bucket keys "<skill>:<source>:<verdict>" → per_skill tally.
+    per_skill: dict[str, dict[str, int]] = {}
+    for key, bucket in summary.items():
+        parts = key.split(":")
+        if len(parts) != 3:
+            continue
+        skill, _source, verdict = parts
+        if verdict not in ("good", "needs_work", "bad"):
+            continue
+        skill_row = per_skill.setdefault(
+            skill, {"good": 0, "needs_work": 0, "bad": 0}
+        )
+        skill_row[verdict] += int(bucket.get("count", 0))
+
+    # Top-N by negative feedback (needs_work + bad).
+    neg_counts = {
+        s: c["needs_work"] + c["bad"] for s, c in per_skill.items()
+    }
+    top_negative = sorted(neg_counts.items(), key=lambda x: -x[1])[:top_n]
+
+    # Zero-feedback skills — from bundled movie-experts/ scan.
+    bundled: list[str] = []
+    bundled_root = hermes_home / "skills" / "movie-experts"
+    try:
+        if bundled_root.is_dir():
+            bundled = sorted(
+                p.name for p in bundled_root.iterdir()
+                if p.is_dir() and not p.name.startswith("_")
+            )
+    except OSError as exc:
+        logger.warning(
+            "failed to scan bundled movie-experts for zero-feedback list: %s",
+            exc,
+        )
+    zero_feedback = [s for s in bundled if s not in per_skill]
+
+    if as_json:
+        import json as _json
+        payload = {
+            "top_negative": [
+                {"skill_id": s, "neg_count": n} for s, n in top_negative
+            ],
+            "zero_feedback": zero_feedback,
+            "total_skills_with_feedback": len(per_skill),
+        }
+        print(_json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(
+        title=f"Top-{len(top_negative)} skills by negative feedback",
+        show_lines=False,
+    )
+    table.add_column("Skill", style="bold")
+    table.add_column("needs_work", justify="right")
+    table.add_column("bad", justify="right")
+    table.add_column("good", justify="right")
+    for skill, _neg in top_negative:
+        c = per_skill.get(skill, {"good": 0, "needs_work": 0, "bad": 0})
+        table.add_row(
+            skill,
+            str(c["needs_work"]),
+            str(c["bad"]),
+            str(c["good"]),
+        )
+    console.print(table)
+
+    if zero_feedback:
+        print(f"\nZero-feedback bundled skills ({len(zero_feedback)}):")
+        for s in zero_feedback[:20]:
+            print(f"  {s}")
+        if len(zero_feedback) > 20:
+            print(f"  ... and {len(zero_feedback) - 20} more")
+    else:
+        print("\n(no zero-feedback bundled skills detected)")
+    return 0
+
+
+def _render_source_breakdown(
+    *,
+    store,
+    skill_filter: str | None,
+    as_json: bool,
+) -> int:
+    """OBS-03 — source breakdown: per-source verdict distribution."""
+    per_source: dict[str, dict[str, int]] = {}
+    any_data = False
+    for source in _SOURCES:
+        summary = store.summary(source=source, skill_id=skill_filter)
+        verdicts = _collapse_verdicts(summary)
+        per_source[source] = {
+            v: int(verdicts[v]["count"]) for v in ("good", "needs_work", "bad")
+        }
+        if any(per_source[source].values()):
+            any_data = True
+
+    if not any_data:
+        print(_empty_store_message())
+        return 0
+
+    if as_json:
+        import json as _json
+        payload = {"by_source": per_source}
+        if skill_filter:
+            payload["skill_filter"] = skill_filter
+        print(_json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Verdict distribution by source", show_lines=False)
+    table.add_column("Source", style="bold")
+    table.add_column("good", justify="right")
+    table.add_column("needs_work", justify="right")
+    table.add_column("bad", justify="right")
+    for source in _SOURCES:
+        c = per_source[source]
+        style_good = _VERDICT_STYLES["good"]
+        style_nw = _VERDICT_STYLES["needs_work"]
+        style_bad = _VERDICT_STYLES["bad"]
+        table.add_row(
+            source,
+            f"[{style_good}]{c['good']}[/{style_good}]",
+            f"[{style_nw}]{c['needs_work']}[/{style_nw}]",
+            f"[{style_bad}]{c['bad']}[/{style_bad}]",
+        )
+    console.print(table)
+    return 0
+
+
+def _stats_hermes_home():
+    """Resolve HERMES_HOME for the stats handlers (isolated for testability).
+
+    Stats is read-only and never resolves paths from operator input —
+    this helper exists only to keep ``_cmd_stats`` body readable.
+    """
+    from hermes_constants import get_hermes_home
+    return get_hermes_home()
+
+
+def _cmd_stats(args) -> int:
+    """``hermes curator stats`` — read-only observability (OBS-01/02/03).
+
+    Pure aggregation over FeedbackStore (P29) + audit log (P32) +
+    evolution queue (P31). NEVER mutates state (T-33-02).
+
+    Modes:
+      - ``stats <skill_id>``             → per-skill dashboard (OBS-01)
+      - ``stats --all [--top N]``        → cross-skill view (OBS-02)
+      - ``stats --by-source [--skill X]`` → source breakdown (OBS-03)
+
+    Flags:
+      --runs N   trend depth (default 10; OBS-01)
+      --top N    cross-skill top-N (default 10; OBS-02)
+      --json     emit counts-only JSON (T-33-01: no correction text)
+    """
+    # LAZY imports — zero module-level agent.evolution imports
+    # (P31 runtime-isolation invariant; T-33-06).
+    from agent.feedback_store import FeedbackStore
+    from agent.curator_audit import read_audit
+    from agent.evolution import read_queue
+    from hermes_cli.feedback import _resolve_evolution_dir
+
+    hermes_home = _stats_hermes_home()
+    evolution_dir = _resolve_evolution_dir()
+    store = FeedbackStore()
+
+    if getattr(args, "all_skills", False):
+        return _render_cross_skill_view(
+            store=store,
+            top_n=int(getattr(args, "top", 10) or 10),
+            as_json=bool(getattr(args, "as_json", False)),
+            hermes_home=hermes_home,
+        )
+    if getattr(args, "by_source", False):
+        return _render_source_breakdown(
+            store=store,
+            skill_filter=getattr(args, "skill_filter", None),
+            as_json=bool(getattr(args, "as_json", False)),
+        )
+    skill_id = getattr(args, "skill_id", None)
+    if skill_id:
+        return _render_per_skill_dashboard(
+            store=store,
+            skill_id=skill_id,
+            runs=int(getattr(args, "runs", 10) or 10),
+            as_json=bool(getattr(args, "as_json", False)),
+            read_audit_fn=read_audit,
+            read_queue_fn=read_queue,
+            evolution_dir=evolution_dir,
+        )
+    # No args — ambiguous; print usage hint and return 0.
+    print(
+        "usage: hermes curator stats [<skill_id>] [--all] [--by-source] "
+        "[--runs N] [--top N] [--skill <id>] [--json]"
+    )
+    print(
+        "Pick one of: a skill_id (per-skill view), --all (cross-skill), "
+        "or --by-source (source breakdown)."
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # argparse wiring (called from hermes_cli.main)
 # ---------------------------------------------------------------------------
 
@@ -1003,6 +1430,43 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
         help="List eligible patches without applying",
     )
     p_auto.set_defaults(func=_cmd_auto_apply_eligible)
+
+    # Phase 33 Plan 01 — `hermes curator stats` (OBS-01/02/03, read-only)
+    p_stats = subs.add_parser(
+        "stats",
+        help="Per-skill / cross-skill / by-source feedback stats "
+        "(read-only; OBS-01/02/03). Aggregates over FeedbackStore (P29) "
+        "+ audit log (P32) + evolution queue (P31).",
+    )
+    p_stats.add_argument(
+        "skill_id", nargs="?", default=None,
+        help="Skill to show (omit with --all/--by-source for cross-skill view)",
+    )
+    p_stats.add_argument(
+        "--all", dest="all_skills", action="store_true",
+        help="Cross-skill view (top-N negative feedback, zero-feedback list)",
+    )
+    p_stats.add_argument(
+        "--by-source", dest="by_source", action="store_true",
+        help="Source breakdown (CLI / kais_aigc / manual verdict distribution)",
+    )
+    p_stats.add_argument(
+        "--top", type=int, default=10,
+        help="Top-N for --all view (default: 10)",
+    )
+    p_stats.add_argument(
+        "--runs", type=int, default=10,
+        help="Eval-score trend depth (default: 10; OBS-01)",
+    )
+    p_stats.add_argument(
+        "--skill", dest="skill_filter", default=None,
+        help="Skill filter for --by-source",
+    )
+    p_stats.add_argument(
+        "--json", dest="as_json", action="store_true",
+        help="Emit machine-readable JSON (counts only — no correction text)",
+    )
+    p_stats.set_defaults(func=_cmd_stats)
 
 
 def cli_main(argv=None) -> int:

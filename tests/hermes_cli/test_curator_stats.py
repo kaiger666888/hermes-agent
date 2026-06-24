@@ -253,9 +253,11 @@ class TestStatsAll:
         curator_cli = stats_env["curator_cli"]
 
         store = store_mod.FeedbackStore()
-        for i in range(5):
+        # Use real bundled skill names (FeedbackRecord validates skill_id).
+        skills = ["screenplay", "editor", "colorist", "composer", "animator"]
+        for i, skill_id in enumerate(skills):
             _seed_verdicts(
-                store, skill_id=f"skill_{i}",
+                store, skill_id=skill_id,
                 counts={"needs_work": 10 - i, "bad": 0, "good": 0},
             )
 
@@ -263,9 +265,9 @@ class TestStatsAll:
         rc = curator_cli._cmd_stats(_ns(all_skills=True, top=2))
         out = capsys.readouterr().out
         assert rc == 0
-        # skill_0 (highest negative) MUST be in top.
-        assert "skill_0" in out
-        # skill_4 (lowest negative) should NOT be in top-2.
+        # screenplay (highest negative, 10 needs_work) MUST be in top.
+        assert "screenplay" in out
+        # animator (lowest negative, 6 needs_work) should NOT be in top-2.
         # (We can't strictly assert absence because zero-feedback footer
         # may list it, but the top section is bounded.)
 
@@ -355,7 +357,7 @@ class TestJsonOutput:
         store.record_feedback(
             _make_record(
                 skill_id="screenplay", verdict="good",
-                correction=CORRECTION_PHRASE, sha256="z" * 64,
+                correction=CORRECTION_PHRASE, sha256="f" * 64,
             )
         )
 
