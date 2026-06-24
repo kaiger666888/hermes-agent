@@ -298,6 +298,18 @@ def _scan_once(
                 "kais inbox ingest failed for %s: %s", entry.name, exc
             )
             _move_to_errors(entry.path, errors_dir)
+        except UnicodeDecodeError as exc:
+            # Encoding failure at raw_bytes.decode("utf-8") — surface the
+            # actual encoding cause instead of letting it fall through to
+            # the generic "unexpected failure" branch. Matters when the
+            # kais-aigc exporter emits UTF-16 / GBK / Latin-1.
+            logger.warning(
+                "kais inbox ingest failed (encoding) for %s: %s "
+                "(file is not valid UTF-8 — re-export as UTF-8)",
+                entry.name,
+                exc,
+            )
+            _move_to_errors(entry.path, errors_dir)
         except OSError as exc:
             logger.warning(
                 "kais inbox ingest failed for %s: %s", entry.name, exc
