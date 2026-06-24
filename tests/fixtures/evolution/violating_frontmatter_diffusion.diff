@@ -1,0 +1,14 @@
+--- a/skills/movie-experts/test_skill/SKILL.md
++++ b/skills/movie-experts/test_skill/SKILL.md
+@@ -1,7 +1,7 @@
+ ---
+ name: test_skill
+ description: Minimal SKILL.md for evolution pipeline tests.
+ metadata:
+   hermes:
+-    expert_id: test_skill
+-    related_skills: [a, b]
++    expert_id: test_skill
++    related_skills: [b, a]
+     tags: [test]
+ ---
