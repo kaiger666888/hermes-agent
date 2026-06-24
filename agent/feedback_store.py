@@ -341,10 +341,15 @@ class FeedbackStore:
         # ── 2. Append record entry to dedup registry (audit log).
         # Supersession events are appended separately in _mark_superseded
         # when a correction happens (BEFORE this point in the flow).
+        # CR-01: skill_id + source are stored so the CORRECTION path can
+        # resolve the older record's actual bucket file even when the
+        # newer record lands in a different (skill_id, source) bucket.
         dedup_entry = {
             "sha256": record.output_snapshot.sha256,
             "verdict": record.verdict,
             "record_id": record_id,
+            "skill_id": record.skill_id,
+            "source": record.source,
             "ts": record.ts.isoformat(),
             "status": "active",
         }
@@ -436,12 +441,22 @@ class FeedbackStore:
         # supersession event to the registry BEFORE the new record's entry
         # is appended in step 2 of record_feedback (T-29-11 mitigation).
         older_verdict = existing["verdict"]
+        # CR-01: prefer the stored skill_id/source for the older record;
+        # legacy entries (pre-CR-01) lack these fields, so fall back to
+        # the incoming record's fields as an approximation. This preserves
+        # the old (buggy) behavior for legacy data while fixing new writes.
+        older_skill = existing.get("skill_id") or record.skill_id
+        older_source = existing.get("source") or record.source
         self._mark_superseded(
             sha=sha,
             older_record_id=existing["record_id"],
             older_verdict=older_verdict,
+            older_skill_id=older_skill,
+            older_source=older_source,
             newer_record_id=record_id,
             newer_verdict=record.verdict,
+            newer_skill_id=record.skill_id,
+            newer_source=record.source,
             newer_ts=record.ts,
         )
         logger.info(
@@ -457,9 +472,19 @@ class FeedbackStore:
         # contributes weight). Recompute the older verdict bucket so the
         # index reflects the correction immediately. The newer verdict's
         # bucket is recomputed in step 3 of record_feedback below.
-        older_bucket_key = (
-            f"{record.skill_id}:{record.source}:{older_verdict}"
-        )
+        #
+        # CR-01: derive the older bucket key from the STORED entry's
+        # skill_id + source, NOT from the incoming record. The same sha256
+        # can legitimately appear in two different buckets (e.g. an operator
+        # reviewing the same output first via source="cli" then via
+        # source="manual"). Older entries written before CR-01's schema
+        # bump lack skill_id/source — fall back to the incoming record's
+        # fields (preserves legacy behavior; the wrong-bucket risk only
+        # existed when the older record was in a different bucket anyway,
+        # and legacy entries would have hit that bug regardless).
+        older_skill = existing.get("skill_id") or record.skill_id
+        older_source = existing.get("source") or record.source
+        older_bucket_key = f"{older_skill}:{older_source}:{older_verdict}"
         self._recompute_single_bucket(older_bucket_key)
         return record_id
 
@@ -503,7 +528,18 @@ class FeedbackStore:
             }
         else:
             # No records of this verdict remain in the bucket file.
-            self._index["buckets"].pop(bucket_key, None)
+            # WR-04: preserve the bucket key with zeroed counts rather
+            # than popping it. The bucket FILE may still contain the
+            # superseded record's bytes (audit trail); dropping the key
+            # silently from index.json makes summary() underreport and
+            # breaks the docstring's "count retains the raw line count
+            # (audit)" promise. Zero the counts + ts range instead.
+            self._index["buckets"][bucket_key] = {
+                "count": 0,
+                "weighted_count": 0.0,
+                "first_ts": None,
+                "last_ts": None,
+            }
 
     def _mark_superseded(
         self,
@@ -511,8 +547,12 @@ class FeedbackStore:
         sha: str,
         older_record_id: str,
         older_verdict: str,
+        older_skill_id: str,
+        older_source: str,
         newer_record_id: str,
         newer_verdict: str,
+        newer_skill_id: str,
+        newer_source: str,
         newer_ts: datetime,
     ) -> None:
         """Mark an older record as superseded by a newer correction.
@@ -521,8 +561,10 @@ class FeedbackStore:
 
         1. **Append supersession event** to ``dedup/sha256-registry.jsonl``
            (append-only audit log). Records older_record_id + older_verdict
-           + newer_record_id + newer_verdict + ts. This is the audit trail
-           and the source of truth for ``_superseded_record_ids`` on reload.
+           + older skill_id/source + newer_record_id + newer_verdict +
+           newer skill_id/source + ts. CR-01: skill_id + source are
+           persisted on BOTH sides so the post-restart CORRECTION path
+           can resolve each bucket precisely.
         2. **Update in-memory ``_sha256_index[sha]``** to point at the
            newer record (status=active, supersedes=older_record_id). The
            older record's status is implicitly superseded (the sha's active
@@ -539,19 +581,41 @@ class FeedbackStore:
             sha: the shared sha256.
             older_record_id: the record_id of the superseded record.
             older_verdict: the verdict of the superseded record.
+            older_skill_id: skill_id of the superseded record's bucket.
+            older_source: source of the superseded record's bucket.
             newer_record_id: the record_id of the newer (active) record.
             newer_verdict: the verdict of the newer (active) record.
+            newer_skill_id: skill_id of the newer record's bucket.
+            newer_source: source of the newer record's bucket.
             newer_ts: the timestamp of the newer record (used for the
                 registry event ts and the active pointer ts).
         """
+        # CR-02 self-supersession guard: if older_record_id == newer_record_id
+        # the migration retry or correction path is about to mark a record
+        # superseded by itself. _make_record_id is deterministic given
+        # (ts, sha256), so a re-migration of the same file produces the
+        # same id; without this guard, query() would filter the record out
+        # of its own active set. Log + no-op instead.
+        if older_record_id == newer_record_id:
+            logger.warning(
+                "self-supersession prevented: sha256=%s record_id=%s "
+                "(likely a crash-retry of the same file)",
+                sha[:8],
+                older_record_id,
+            )
+            return
         ts_iso = newer_ts.isoformat()
         event = {
             "sha256": sha,
             "event": "superseded",
             "older_record_id": older_record_id,
             "older_verdict": older_verdict,
+            "older_skill_id": older_skill_id,
+            "older_source": older_source,
             "newer_record_id": newer_record_id,
             "newer_verdict": newer_verdict,
+            "newer_skill_id": newer_skill_id,
+            "newer_source": newer_source,
             "ts": ts_iso,
         }
         self._dedup_registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -560,10 +624,14 @@ class FeedbackStore:
             f.flush()
             os.fsync(f.fileno())
 
-        # Update in-memory active pointer for this sha.
+        # Update in-memory active pointer for this sha. CR-01: carry
+        # skill_id + source so a post-restart CORRECTION can find the
+        # newer bucket without re-reading the record.
         self._sha256_index[sha] = {
             "record_id": newer_record_id,
             "verdict": newer_verdict,
+            "skill_id": newer_skill_id,
+            "source": newer_source,
             "ts": ts_iso,
             "status": "active",
             "supersedes": older_record_id,
@@ -701,9 +769,17 @@ class FeedbackStore:
                         older_id = entry["older_record_id"]
                         sha = entry["sha256"]
                         self._superseded_record_ids.add(older_id)
+                        # CR-01: pull newer_skill_id/newer_source from the
+                        # event so the post-restart CORRECTION path can
+                        # resolve the newer bucket. Older entries written
+                        # before CR-01 lack these fields; .get() returns
+                        # None and the correction path's `or` fallback
+                        # kicks in (legacy behavior preserved).
                         self._sha256_index[sha] = {
                             "record_id": entry["newer_record_id"],
                             "verdict": entry["newer_verdict"],
+                            "skill_id": entry.get("newer_skill_id"),
+                            "source": entry.get("newer_source"),
                             "ts": entry["ts"],
                             "status": "active",
                             "supersedes": older_id,
@@ -711,9 +787,15 @@ class FeedbackStore:
                     else:
                         # Regular record entry — set active pointer.
                         sha = entry["sha256"]
+                        # CR-01: preserve skill_id + source. Legacy entries
+                        # written before CR-01 lack these keys — .get()
+                        # returns None and the CORRECTION path falls back
+                        # to the incoming record's fields.
                         self._sha256_index[sha] = {
                             "record_id": entry["record_id"],
                             "verdict": entry["verdict"],
+                            "skill_id": entry.get("skill_id"),
+                            "source": entry.get("source"),
                             "ts": entry["ts"],
                             "status": entry.get("status", "active"),
                         }
