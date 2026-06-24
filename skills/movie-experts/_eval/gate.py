@@ -707,13 +707,29 @@ def rebuild_baseline(
     out_dir = baseline_dir / skill_id
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "scores.json"
-    # Atomic write: temp file + os.replace.
-    tmp_path = out_path.with_suffix(".json.tmp")
-    tmp_path.write_text(
-        json.dumps(cache, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    # WR-01: atomic write via a UNIQUE tmp file + os.replace. The
+    # previous implementation used a fixed ``scores.json.tmp`` path,
+    # so two concurrent --rebuild-baseline runs for the same skill
+    # (e.g. in a CI matrix) would share the same .tmp path and
+    # overwrite each other's bytes mid-write. tempfile.NamedTemporaryFile
+    # gives a per-run unique name; os.replace is atomic on POSIX+Windows.
+    import tempfile
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        dir=str(out_dir), prefix="scores.", suffix=".tmp"
     )
-    tmp_path.replace(out_path)
+    tmp_file = Path(tmp_path)
+    try:
+        import os as _os
+        with _os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(cache, indent=2, ensure_ascii=False) + "\n")
+        _os.replace(tmp_path, out_path)
+    except Exception:
+        # Best-effort cleanup of the orphan tmp file on failure.
+        try:
+            tmp_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
     logger.info("rebuilt baseline -> %s (n=%d)", out_path, len(per_prompt))
     return out_path
 
