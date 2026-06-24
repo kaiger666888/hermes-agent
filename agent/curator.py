@@ -1537,23 +1537,32 @@ def _scan_for_hot_skills(
     Returns:
         Sorted list of skill_ids crossing both thresholds.
     """
-    buckets = getattr(getattr(store, "_index", {}), "get", lambda *a: {})(
-        "buckets", {}
-    )
-    if not buckets and isinstance(getattr(store, "_index", None), dict):
-        buckets = store._index.get("buckets", {})
+    # WR-03: FeedbackStore._index is ALWAYS a dict[str, Any] after __init__
+    # (feedback_store.py:263, 707, 716, 720, 725, 839 — every assignment site
+    # is ``self._index = {...}`` or ``self._index["..."] = ...``). The prior
+    # ``getattr(getattr(store, "_index", {}), "get", lambda *a: {})("buckets", {})``
+    # chain assumed _index might be a non-dict — dead defensive code. Read
+    # the canonical way.
+    _index = getattr(store, "_index", None)
+    buckets: Dict[str, Any] = {}
+    if isinstance(_index, dict):
+        buckets = _index.get("buckets", {}) or {}
 
     # Sum negative counts per skill across all sources.
     neg_counts: Dict[str, int] = {}
     for key, info in buckets.items():
-        # key format: "{skill_id}:{source}:{verdict}"
+        # key format: "{skill_id}:{source}:{verdict}" — strict 3-part
+        # parse matching feedback_store.py:505-508 (``parts = key.split(":")``
+        # with ``len(parts) != 3: return`` then 3-way unpack). The prior
+        # lenient parse (``skill_id = ":".join(parts[:-2])``) silently merged
+        # ``skill_id:source`` into the skill_id when a skill_id contained a
+        # colon, diverging from the canonical parse and producing wrong counts.
         parts = key.split(":")
-        if len(parts) < 3:
+        if len(parts) != 3:
             continue
-        verdict = parts[-1]
+        skill_id, _source, verdict = parts
         if verdict not in ("needs_work", "bad"):
             continue
-        skill_id = ":".join(parts[:-2])  # handle skill_ids with colons (rare)
         try:
             count = int(info.get("count", 0)) if isinstance(info, dict) else 0
         except (TypeError, ValueError):
