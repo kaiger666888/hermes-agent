@@ -371,19 +371,27 @@ def _cmd_rebuild_index(args) -> int:
 
 
 def _resolve_repo_root() -> Path:
-    """Walk up from cwd looking for the ``.git`` directory.
+    """Resolve the git repo root via ``git rev-parse --show-toplevel``.
+
+    WR-01: previously this walked up from cwd looking for ANY ``.git``
+    directory, which could match an unrelated git repo (e.g., a dotfiles
+    repo containing ``~/.config``). ``git rev-parse --show-toplevel`` is
+    authoritative and also handles the worktree / submodule cases where
+    ``.git`` is a FILE rather than a directory.
 
     Raises SystemExit if not inside a git work tree. Used by handlers that
     need to invoke git (apply / revert / gate subprocess).
     """
-    cwd = Path.cwd()
-    for candidate in [cwd, *cwd.parents]:
-        if (candidate / ".git").exists():
-            return candidate
-    raise SystemExit(
-        "must run inside the hermes-agent git repo "
-        "(no .git directory found walking up from cwd)"
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, encoding="utf-8",
     )
+    if result.returncode != 0 or not result.stdout.strip():
+        raise SystemExit(
+            "must run inside the hermes-agent git repo "
+            "(git rev-parse --show-toplevel failed)"
+        )
+    return Path(result.stdout.strip())
 
 
 def _resolve_evolution_dir() -> Path:

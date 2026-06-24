@@ -135,12 +135,19 @@ def _append_jsonl(path: Path, record: dict[str, Any]) -> None:
         f.write(line + "\n")
 
 
-def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+def _read_jsonl(path: Path, *, strict: bool = False) -> list[dict[str, Any]]:
     """Read a JSONL file, skipping + logging malformed lines.
 
     Mirrors the ``_read_bucket_records`` pattern at
     agent/feedback_store.py:654 — malformed lines are logged at WARNING
     with line number and skipped, never raised.
+
+    WR-03: for audit-critical files (``applied.jsonl``, ``rejected.jsonl``,
+    ``insights.jsonl``), pass ``strict=True`` to raise on malformed lines
+    instead of silently skipping. A malformed entry in an audit trail
+    means a patch that WAS applied/committed is invisible to
+    ``read_queue(status="applied")`` — operators cannot rollback what
+    they cannot see.
     """
     if not path.exists():
         return []
@@ -153,6 +160,11 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
             try:
                 parsed = json.loads(stripped)
             except json.JSONDecodeError as exc:
+                if strict:
+                    raise ValueError(
+                        f"malformed JSON at {path}:{lineno} ({exc}) — "
+                        f"audit-critical file requires manual recovery"
+                    ) from exc
                 logger.warning(
                     "malformed JSON at %s:%d (%s) — skipping line",
                     path, lineno, exc,
@@ -161,6 +173,11 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
             if isinstance(parsed, dict):
                 out.append(parsed)
             else:
+                if strict:
+                    raise ValueError(
+                        f"non-object JSON at {path}:{lineno} — audit-"
+                        f"critical file requires manual recovery"
+                    )
                 logger.warning(
                     "non-object JSON at %s:%d — skipping line", path, lineno
                 )
@@ -251,11 +268,16 @@ def move_patch(
         dest_filename = REJECTED_FILENAME
 
     updated = PatchRecord.model_validate(raw)
-    _append_jsonl(evolution_dir / dest_filename, raw)
 
-    # Rewrite queue.jsonl WITHOUT the moved record.
+    # WR-02: safer ordering — remove from queue FIRST, then append to
+    # destination. A crash between the two writes leaves the patch "in
+    # flight" (neither pending nor applied/rejected), which the operator
+    # can recover from insights.jsonl + git history. A crash after the
+    # OLD order (append-then-rewrite) left the patch in BOTH files — a
+    # duplicate that could trigger a double-apply on the next approve.
     remaining = [r for j, r in enumerate(records) if j != target_idx]
     _atomic_rewrite_jsonl(queue_path, remaining)
+    _append_jsonl(evolution_dir / dest_filename, raw)
 
     logger.info(
         "moved patch %s from %s to %s",
@@ -290,7 +312,10 @@ def read_queue(
             f"{sorted(_STATUS_TO_FILENAME)}, got {status!r}"
         )
     path = evolution_dir / filename
-    raw_records = _read_jsonl(path)
+    # WR-03: applied/rejected are audit-critical — raise on malformed
+    # lines so operators notice data loss rather than silently skipping.
+    strict = status in ("applied", "rejected")
+    raw_records = _read_jsonl(path, strict=strict)
     out: list[PatchRecord] = []
     for raw in raw_records:
         try:
