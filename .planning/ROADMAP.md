@@ -135,10 +135,10 @@
   7. **FOUND-08 milestone-wide preservation check:** Across all 6 phases, zero new expert_id directories created, zero DAG node changes, zero frontmatter `expert_id` / `related_skills` edits on bundled skills — verified by sha256 snapshot diff against v5.0 close state
   8. **v5/v4 refs byte-intact milestone-wide check:** snowflake-method.md / e-konte-format.md / scamper-variations.md / dreamina-cli-baseline.md / v86-pipeline-mapping.md remain byte-intact across all of v6.0 (additive-only patches per EVOL-02 scope discipline)
 **UI hint:** yes (dashboard + cross-skill view are operator-facing observability surfaces)
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 - [x] 33-01-PLAN.md — `hermes curator stats` CLI (per-skill / cross-skill / source-breakdown) + tests (OBS-01/02/03) — Wave 1 — **COMPLETE 2026-06-25** (18 tests green, Ruff clean, runtime isolation 0, FOUND-08 byte-intact; OBS-01/02/03 satisfied)
 - [x] 33-02-PLAN.md — `_shared/v6-feedback-loop-architecture.md` canonical doc + skills-mapping.yaml `v6_ref_signoffs:` section (SC-4/5) — Wave 2 — **COMPLETE 2026-06-25** (305-line architecture doc with 10 H2 sections + ASCII data flow + bilingual EN+CN; skills-mapping.yaml v6_ref_signoffs with 1 entry mirroring 10-field v5 schema; 14 new TestArchitectureDoc + TestSkillsMappingV6 tests green; SC-4 + SC-5 satisfied; v5_ref_signoffs byte-intact; FOUND-08 preserved)
-- [ ] 33-03-PLAN.md — README corpus tree + glossary 4 EN-first bilingual entries + SC-7/SC-8 milestone-wide byte-intact checks (SC-6/7/8) — Wave 3
+- [x] 33-03-PLAN.md — README corpus tree + glossary 4 EN-first bilingual entries + SC-7/SC-8 milestone-wide byte-intact checks (SC-6/7/8) — Wave 3
 
 ---
 
@@ -229,7 +229,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 | 30. Eval Gate Reuse | 2/2 | Complete    | 2026-06-24 |
 | 31. Knowledge Evolution Pipeline | 2/2 | Complete    | 2026-06-24 |
 | 32. Curator Upgrade + Audit | 2/2 | Complete    | 2026-06-24 |
-| 33. Observability + Integration Close-out | 3/3 | Complete    | 2026-06-25 |
+| 33. Observability + Integration Close-out | 3/3 | Complete    | 2026-06-24 |
 
 ---
 
