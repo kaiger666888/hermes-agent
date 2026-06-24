@@ -170,7 +170,12 @@ def _load_decay_window_days_from_config() -> int:
 
         cfg = load_config()
     except Exception as exc:  # noqa: BLE001 — config load must never crash
-        logger.debug("failed to load config for feedback: %s", exc)
+        logger.warning(
+            "failed to load cli-config.yaml for feedback.decay_window_days; "
+            "using default %d: %s",
+            DEFAULT_DECAY_WINDOW_DAYS,
+            exc,
+        )
         return DEFAULT_DECAY_WINDOW_DAYS
     if not isinstance(cfg, dict):
         return DEFAULT_DECAY_WINDOW_DAYS
