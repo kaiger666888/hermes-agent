@@ -82,7 +82,9 @@
   4. Regression detection rejects the patch if ANY single prompt's score drops more than the per-prompt threshold (default 1.0) — even if the mean is acceptable, single-prompt regressions block merge
   5. **v5/v4 refs byte-intact check:** This phase touches only `_eval/runner.py` extension + new gate scripts — no changes to any bundled SKILL.md or `references/*.md` bytes (verified by sha256 snapshot diff against v5.0 close state)
 **Hermes-core touch:** No — `_eval/` is offline developer tooling (per runner.py docstring: "This module is OFFLINE DEVELOPER TOOLING. It is not imported by the Hermes runtime and does not call `registry.register`"). Pure eval-tooling extension.
-**Plans:** TBD
+**Plans:** 2/2 plans created
+- [ ] 30-01-PLAN.md — parse_judge_scores() extension to runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config load + CLI surface) — covers GATE-01 (foundation), GATE-02, GATE-04
+- [ ] 30-02-PLAN.md — paired-t significance via stdlib + hardcoded t-table + --rebuild-baseline + multi-skill detection + baseline cache staleness — covers GATE-03, completes GATE-01
 
 ### Phase 31: Knowledge Evolution Pipeline
 
@@ -217,7 +219,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 |-------|----------------|--------|-----------|
 | 28. Feedback Ingestion MVP | 2/2 | Complete    | 2026-06-24 |
 | 29. Feedback Store | 2/2 | Complete    | 2026-06-24 |
-| 30. Eval Gate Reuse | 0/? | Not started | - |
+| 30. Eval Gate Reuse | 0/2 | Not started | - |
 | 31. Knowledge Evolution Pipeline | 0/? | Not started | - |
 | 32. Curator Upgrade + Audit | 0/? | Not started | - |
 | 33. Observability + Integration Close-out | 0/? | Not started | - |
