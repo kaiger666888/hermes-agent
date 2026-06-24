@@ -52,6 +52,30 @@ SUPPORTED_DECISIONS = frozenset({"A", "B", "tie"})
 # canonical decision token.
 _DECISION_RE = re.compile(r"<decision>\s*(A|B|tie)\s*</decision>", re.IGNORECASE)
 
+# Phase 30 GATE-02/04 enabler: the 4 per-dimension names that
+# judge_prompt.md asks the judge to score (1-5 each). Used by
+# parse_judge_scores() to lift the numeric scores the v1 harness
+# discarded (30-RESEARCH.md Pitfall 1). Order matches judge_prompt.md.
+_SCORE_DIMENSIONS: tuple[str, ...] = (
+    "industry_accuracy",
+    "professional_depth",
+    "actionability",
+    "language_quality",
+)
+
+# One compiled regex per dimension. Matches ``<dim>: <score>`` where
+# score is 1-5 with optional decimal (e.g. ``4`` or ``4.5``). Case-
+# insensitive on the dimension name. The capture group is the numeric
+# token; range validation happens in parse_judge_scores() so the regex
+# can stay simple (no ReDoS surface — fixed pattern per dimension).
+_SCORE_DIMENSION_RES: dict[str, re.Pattern[str]] = {
+    dim: re.compile(
+        rf"{re.escape(dim)}:\s*([1-5](?:\.\d+)?)",
+        re.IGNORECASE,
+    )
+    for dim in _SCORE_DIMENSIONS
+}
+
 logger = logging.getLogger("eval.runner")
 
 # Path to the Jinja2 judge prompt template, resolved relative to this
@@ -109,6 +133,59 @@ def parse_judge_decision(raw_text: str) -> str:
     if token == "b":
         return "B"
     return "tie"
+
+
+# --------------------------------------------------------------------------- #
+# Numeric score extraction (Phase 30 GATE-02/04 enabler)
+# --------------------------------------------------------------------------- #
+
+
+def parse_judge_scores(raw_text: str) -> dict[str, float]:
+    """Extract the 4 per-dimension numeric scores from a judge response.
+
+    The judge_prompt.md instructs the judge to emit each dimension as
+    ``<dimension_name>: <score 1-5> — <justification>``. The v1 harness
+    parsed ONLY the ``<decision>A|B|tie</decision>`` tag and discarded
+    these numeric scores (30-RESEARCH.md Pitfall 1). Phase 30 lifts them
+    so GATE-02 (mean delta) and GATE-04 (per-prompt regression) can be
+    evaluated — both are numeric by definition.
+
+    Returns a dict mapping each successfully-parsed dimension name to its
+    float score in ``[1.0, 5.0]``. Dimensions that are missing, out of
+    range, or non-numeric are silently dropped (the caller decides how to
+    treat absence — the gate treats an empty dict as a failed prompt).
+
+    Fail-safe: if NO dimensions are found, returns an empty dict.
+
+    T-00-09: never logs the raw judge text (information disclosure).
+    """
+    scores: dict[str, float] = {}
+    for dim, pattern in _SCORE_DIMENSION_RES.items():
+        m = pattern.search(raw_text)
+        if m is None:
+            continue
+        try:
+            val = float(m.group(1))
+        except (ValueError, TypeError):
+            # Non-numeric token in the capture group — silently drop.
+            continue
+        if 1.0 <= val <= 5.0:
+            scores[dim] = val
+        # Out-of-range scores are silently dropped (treated as missing).
+    return scores
+
+
+def composite_score(scores: dict[str, float]) -> float | None:
+    """Return the mean of available dimension scores, or None if empty.
+
+    Pure function. Used by the gate to collapse per-dimension scores into
+    a single 1-5 composite per prompt for GATE-02 (mean delta) and GATE-04
+    (per-prompt regression) threshold checks.
+    """
+    if not scores:
+        return None
+    vals = list(scores.values())
+    return sum(vals) / len(vals)
 
 
 # --------------------------------------------------------------------------- #
@@ -254,21 +331,34 @@ def run_position_swap(
     them via :func:`_final_verdict`.
 
     Returns a verdict dict with keys:
-      ``prompt_id``, ``ordering_ab``, ``ordering_ba``, ``final``.
+      ``prompt_id``, ``ordering_ab``, ``ordering_ba``, ``final``
+    (backward-compat with v1) PLUS the Phase 30 numeric-score keys:
+      ``raw_ab``, ``raw_ba`` — raw judge response strings (lets the
+        gate re-parse if needed)
+      ``scores_ab``, ``scores_ba`` — per-dimension numeric scores lifted
+        via :func:`parse_judge_scores` (enables GATE-02/04 numeric
+        thresholds; 30-RESEARCH.md Pitfall 1 mitigation)
     """
     msgs_ab = build_judge_messages(prompt, answer_a, answer_b, swap=False)
     raw_ab = _call_judge(judge_client, msgs_ab, judge_model, swap=False)
     ordering_ab = parse_judge_decision(raw_ab)
+    scores_ab = parse_judge_scores(raw_ab)
 
     msgs_ba = build_judge_messages(prompt, answer_a, answer_b, swap=True)
     raw_ba = _call_judge(judge_client, msgs_ba, judge_model, swap=True)
     ordering_ba = parse_judge_decision(raw_ba)
+    scores_ba = parse_judge_scores(raw_ba)
 
     return {
         "prompt_id": prompt_id,
         "ordering_ab": ordering_ab,
         "ordering_ba": ordering_ba,
         "final": _final_verdict(ordering_ab, ordering_ba),
+        # Phase 30 numeric-score extension (backward-compatible addition).
+        "raw_ab": raw_ab,
+        "raw_ba": raw_ba,
+        "scores_ab": scores_ab,
+        "scores_ba": scores_ba,
     }
 
 
