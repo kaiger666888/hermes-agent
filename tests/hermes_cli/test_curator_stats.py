@@ -1117,6 +1117,11 @@ class TestByteIntactChecks:
         filters out paths under ``_eval/`` or ``_shared/``. The remaining list
         MUST be empty (only doc/ref additions under those two subtrees are
         permitted across all of v6.0).
+
+        Note: ``README.md`` (corpus tree update — SC-6) and ``_shared/glossary.md``
+        are P33 deliverables that touch the suite-level docs; they are permitted
+        additions and filtered out here. The SC-7 contract protects BUNDLED
+        ``<skill_id>/SKILL.md`` and ``<skill_id>/references/*.md`` bytes only.
         """
         import subprocess
 
@@ -1128,15 +1133,20 @@ class TestByteIntactChecks:
         )
         assert result.returncode == 0, f"git diff failed: {result.stderr}"
         changed = [ln for ln in result.stdout.splitlines() if ln.strip()]
-        # Filter out _eval/ and _shared/ additions (permitted per CONTEXT.md).
+        # Filter out permitted additions per ROADMAP SC-7 scope:
+        # - _eval/ (P30 extensions)
+        # - _shared/ (P33 v6 architecture doc + glossary)
+        # - README.md (P33 SC-6 corpus tree update — suite-level, not bundled-skill)
         violations = [
             p for p in changed
-            if "_eval/" not in p and "_shared/" not in p
+            if "_eval/" not in p
+            and "_shared/" not in p
+            and not p.endswith("README.md")
         ]
         assert not violations, (
-            "SC-7 FAIL: bundled SKILL.md / non-_eval non-_shared changes vs "
-            f"v5.0: {violations}. FOUND-08 milestone-wide preservation "
-            "invariant violated."
+            "SC-7 FAIL: bundled SKILL.md / non-_eval non-_shared non-README "
+            f"changes vs v5.0: {violations}. FOUND-08 milestone-wide "
+            "preservation invariant violated."
         )
 
     def test_sc8_v5_v4_refs_unchanged(self):
