@@ -532,6 +532,35 @@ feedback:
   # Default 180 days (6 months). Operators can tune + restart Hermes.
   decay_window_days: 180
 
+  # ── Curator feedback-scan (Phase 32 — CURATE-01/02/05) ──────────────
+  # The curator's ADDITIVE feedback-scan phase runs whenever the curator
+  # does a real (non-dry-run) pass. It scans the FeedbackStore for bundled
+  # skills crossing the negative-feedback threshold, invokes the EVOL
+  # pipeline (insights → diff → queue), and logs a propose event to the
+  # tamper-evident audit log. Bundled skills NEVER auto-apply (human-in-
+  # loop approve required); agent-created skills may semi-auto when
+  # auto_apply_enabled is true AND both confidence signals pass.
+  curator:
+    # Minimum total negative feedback (needs_work + bad) across all sources
+    # for a skill to be considered "hot". Default 3.
+    feedback_threshold_count: 3
+
+    # Minimum distinct UTC calendar days spanned by the negative feedback.
+    # FeedbackRecord has no session_id field (Open Q #1 RESOLVED) — distinct
+    # UTC days are the session-diversity proxy. Default 2.
+    feedback_threshold_sessions: 2
+
+    # CURATE-05 semi-automatic apply path for agent-created skills ONLY.
+    # Default OFF — operator must explicitly opt in. Bundled skills NEVER
+    # auto-apply regardless of this flag (T-32-05).
+    auto_apply_enabled: false
+
+    # Two-signal confidence gate (both must pass for auto_apply_eligible=True):
+    #   1. eval gate mean_delta >= auto_apply_min_delta
+    #   2. evidence_count (feedback records in the chain) >= auto_apply_min_evidence
+    auto_apply_min_delta: 0.1
+    auto_apply_min_evidence: 3
+
 # =============================================================================
 # Session Reset Policy (Messaging Platforms)
 # =============================================================================

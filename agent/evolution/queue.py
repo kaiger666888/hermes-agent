@@ -108,6 +108,16 @@ class PatchRecord(BaseModel):
     ts_applied: str | None = None
     reason: str | None = None
     ts_rejected: str | None = None
+    # P32 additive (Plan 01 Task 4): CURATE-05 auto-apply eligibility marker.
+    # Defaults preserve P31 behavior — existing patches are NOT auto-apply
+    # eligible. Plan 02's CLI handler may flip this for agent-created skills
+    # after the two-signal confidence check passes; bundled skills NEVER
+    # set this to True (is_bundled gate in _feedback_scan_phase).
+    auto_apply_eligible: bool = False
+    # P32 additive (Plan 01 Task 4): confidence score snapshot for the
+    # auto-apply decision (CURATE-05). None preserves P31 behavior.
+    # Shape: {"mean_delta": float, "evidence_count": int, "reason": str}
+    confidence_score: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def _status_in_allowed_set(self) -> "PatchRecord":

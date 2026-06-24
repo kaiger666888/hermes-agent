@@ -204,6 +204,78 @@ def get_consolidate() -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Feedback-scan config (Phase 32 — CURATE-01/02/05)
+# ---------------------------------------------------------------------------
+
+DEFAULT_FEEDBACK_THRESHOLD_COUNT = 3
+DEFAULT_FEEDBACK_THRESHOLD_SESSIONS = 2
+DEFAULT_AUTO_APPLY_ENABLED = False
+DEFAULT_AUTO_APPLY_MIN_DELTA = 0.1
+DEFAULT_AUTO_APPLY_MIN_EVIDENCE = 3
+
+
+def _load_feedback_config() -> Dict[str, Any]:
+    """Read ``feedback.curator.*`` keys from cli-config.yaml.
+
+    Returns a dict (possibly empty). Tolerates missing config file or
+    missing ``feedback`` / ``feedback.curator`` sections. All getters below
+    apply documented defaults on top of whatever this returns.
+    """
+    try:
+        from hermes_cli.config import load_config
+        cfg = load_config()
+    except Exception as e:
+        logger.debug("Failed to load config for feedback.curator: %s", e)
+        return {}
+    if not isinstance(cfg, dict):
+        return {}
+    fb = cfg.get("feedback") or {}
+    if not isinstance(fb, dict):
+        return {}
+    cur = fb.get("curator") or {}
+    if not isinstance(cur, dict):
+        return {}
+    return cur
+
+
+def get_feedback_threshold_count() -> int:
+    cfg = _load_feedback_config()
+    try:
+        return int(cfg.get("feedback_threshold_count", DEFAULT_FEEDBACK_THRESHOLD_COUNT))
+    except (TypeError, ValueError):
+        return DEFAULT_FEEDBACK_THRESHOLD_COUNT
+
+
+def get_feedback_threshold_sessions() -> int:
+    cfg = _load_feedback_config()
+    try:
+        return int(cfg.get("feedback_threshold_sessions", DEFAULT_FEEDBACK_THRESHOLD_SESSIONS))
+    except (TypeError, ValueError):
+        return DEFAULT_FEEDBACK_THRESHOLD_SESSIONS
+
+
+def get_auto_apply_enabled() -> bool:
+    cfg = _load_feedback_config()
+    return bool(cfg.get("auto_apply_enabled", DEFAULT_AUTO_APPLY_ENABLED))
+
+
+def get_auto_apply_min_delta() -> float:
+    cfg = _load_feedback_config()
+    try:
+        return float(cfg.get("auto_apply_min_delta", DEFAULT_AUTO_APPLY_MIN_DELTA))
+    except (TypeError, ValueError):
+        return DEFAULT_AUTO_APPLY_MIN_DELTA
+
+
+def get_auto_apply_min_evidence() -> int:
+    cfg = _load_feedback_config()
+    try:
+        return int(cfg.get("auto_apply_min_evidence", DEFAULT_AUTO_APPLY_MIN_EVIDENCE))
+    except (TypeError, ValueError):
+        return DEFAULT_AUTO_APPLY_MIN_EVIDENCE
+
+
+# ---------------------------------------------------------------------------
 # Idle / interval check
 # ---------------------------------------------------------------------------
 
@@ -1425,6 +1497,324 @@ def _render_candidate_list() -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Phase 32 — Feedback-scan phase (CURATE-01/02/03 additive extension)
+# ---------------------------------------------------------------------------
+#
+# Runtime isolation: agent/curator.py IS Hermes runtime. The feedback-scan
+# phase imports agent.evolution.* lazily INSIDE _feedback_scan_phase so the
+# module-level grep for "^from agent.evolution" / "^import agent.evolution"
+# returns 0 (P31 invariant preserved).
+
+
+def _scan_for_hot_skills(
+    store: Any,
+    *,
+    threshold_count: int,
+    threshold_sessions: int,
+) -> List[str]:
+    """Identify skills crossing the negative-feedback threshold.
+
+    Iterates ``store._index["buckets"]`` keys of form
+    ``"{skill_id}:{source}:{verdict}"`` (Pitfall #4 — FeedbackStore has no
+    ``list_skill_ids()`` method). Sums negative verdict counts
+    (``needs_work`` + ``bad``) across all sources per skill. Returns skills
+    where the summed negative count >= threshold_count AND the feedback
+    spans >= threshold_sessions distinct UTC calendar days.
+
+    Open Question #1 RESOLVED: FeedbackRecord has no ``session_id`` field
+    (verified in agent/feedback_schema.py). We use distinct UTC calendar
+    days derived from ``record.ts.date()`` as the session-diversity proxy.
+    This is an approximation — two feedback records on the same day from
+    different actual sessions count as one "session". Documented here so
+    the approximation is reviewable.
+
+    Args:
+        store: FeedbackStore instance.
+        threshold_count: Minimum total negative feedback count.
+        threshold_sessions: Minimum distinct UTC days spanned.
+
+    Returns:
+        Sorted list of skill_ids crossing both thresholds.
+    """
+    buckets = getattr(getattr(store, "_index", {}), "get", lambda *a: {})(
+        "buckets", {}
+    )
+    if not buckets and isinstance(getattr(store, "_index", None), dict):
+        buckets = store._index.get("buckets", {})
+
+    # Sum negative counts per skill across all sources.
+    neg_counts: Dict[str, int] = {}
+    for key, info in buckets.items():
+        # key format: "{skill_id}:{source}:{verdict}"
+        parts = key.split(":")
+        if len(parts) < 3:
+            continue
+        verdict = parts[-1]
+        if verdict not in ("needs_work", "bad"):
+            continue
+        skill_id = ":".join(parts[:-2])  # handle skill_ids with colons (rare)
+        try:
+            count = int(info.get("count", 0)) if isinstance(info, dict) else 0
+        except (TypeError, ValueError):
+            count = 0
+        neg_counts[skill_id] = neg_counts.get(skill_id, 0) + count
+
+    # Filter by count threshold first (cheap), then by session diversity.
+    candidates = [
+        sid for sid, c in neg_counts.items()
+        if c >= threshold_count
+    ]
+    if not candidates:
+        return []
+
+    # Session diversity: distinct UTC calendar days from record.ts.date().
+    hot: List[str] = []
+    for skill_id in candidates:
+        records = store.query(skill_id=skill_id)
+        neg_records = [
+            r for r in records
+            if getattr(r, "verdict", None) in ("needs_work", "bad")
+        ]
+        distinct_days: set = set()
+        for r in neg_records:
+            ts = getattr(r, "ts", None)
+            if ts is not None:
+                try:
+                    distinct_days.add(ts.date())
+                except (AttributeError, TypeError):
+                    # ts might be a string in legacy data; parse defensively.
+                    try:
+                        from datetime import datetime as _dt
+                        distinct_days.add(_dt.fromisoformat(str(ts)).date())
+                    except (ValueError, TypeError):
+                        continue
+        if len(distinct_days) >= threshold_sessions:
+            hot.append(skill_id)
+    return sorted(hot)
+
+
+def _compute_confidence(
+    *,
+    eval_score: Dict[str, Any],
+    evidence_count: int,
+    min_delta: float,
+    min_evidence: int,
+) -> Dict[str, Any]:
+    """Two-signal confidence score for CURATE-05 auto-apply eligibility.
+
+    Both signals must meet thresholds (LOCKED in CONTEXT.md CURATE-05):
+      1. eval_score["mean_delta"] >= min_delta (positive improvement)
+      2. evidence_count >= min_evidence (sufficient feedback basis)
+
+    Args:
+        eval_score: Gate result dict (expects "mean_delta" key).
+        evidence_count: Number of feedback records in the evidence chain.
+        min_delta: Minimum mean_delta threshold (default 0.1).
+        min_evidence: Minimum evidence_count threshold (default 3).
+
+    Returns:
+        ``{"eligible": bool, "mean_delta": float, "evidence_count": int,
+           "reason": str}``. ``eligible`` is True ONLY when both signals
+        pass. Bundled-skill gating happens in _feedback_scan_phase (this
+        function is signal-pure — it does not know about bundled vs agent).
+    """
+    try:
+        mean_delta = float(eval_score.get("mean_delta", 0.0))
+    except (TypeError, ValueError):
+        mean_delta = 0.0
+    eligible = mean_delta >= min_delta and evidence_count >= min_evidence
+    if eligible:
+        reason = "both signals pass (mean_delta + evidence_count)"
+    elif mean_delta < min_delta:
+        reason = f"mean_delta {mean_delta:.3f} < {min_delta}"
+    else:
+        reason = f"evidence_count {evidence_count} < {min_evidence}"
+    return {
+        "eligible": eligible,
+        "mean_delta": mean_delta,
+        "evidence_count": evidence_count,
+        "reason": reason,
+    }
+
+
+def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
+    """ADDITIVE feedback-scan phase: propose patches for hot bundled skills.
+
+    Invoked at the END of ``_llm_pass`` AFTER ``save_state(state2)``,
+    INSIDE the ``if not dry_run:`` guard. This phase is INDEPENDENT of the
+    consolidation gate (``consolidate`` flag) per CONTEXT.md — it runs
+    whenever the curator does a real (non-dry-run) pass.
+
+    Pipeline per hot skill:
+      1. aggregate_feedback (EVOL-01) → list of insights
+      2. For each insight: emit_evol02_instructions (EVOL-02 LLM) →
+         generate_patch_from_knowledge_point (EVOL-02 diff) →
+         PatchRecord (status="pending") → append_patch (EVOL-03 queue) →
+         append_audit(action="propose")
+
+    Bundled NEVER auto-apply (T-32-05): even when confidence passes,
+    ``auto_apply_eligible`` stays False for bundled skills. Plan 02's CLI
+    handler re-checks before any apply.
+
+    All imports of agent.evolution.* are LAZY inside this function body
+    (runtime isolation — module-level imports forbidden per P31 invariant).
+
+    Failure isolation (T-32-03): the entire body is wrapped in
+    try/except Exception that logs WARNING and returns an error dict. The
+    pre-v6 phases that already completed are preserved.
+
+    Returns:
+        ``{"scanned": int, "proposed": [patch_id, ...]}`` on success,
+        ``{"scanned": 0, "proposed": [], "error": str}`` on failure.
+    """
+    try:
+        # Lazy imports (runtime isolation — P31 invariant).
+        from agent.feedback_store import FeedbackStore
+        from agent.evolution import (
+            aggregate_feedback,
+            make_aggregation_client,
+            generate_patch_from_knowledge_point,
+            emit_evol02_instructions,
+            append_patch,
+        )
+        from agent.evolution.queue import PatchRecord
+        from agent.curator_audit import append_audit
+        from tools.skill_usage import is_bundled
+        from hermes_constants import get_hermes_home
+
+        threshold_count = get_feedback_threshold_count()
+        threshold_sessions = get_feedback_threshold_sessions()
+
+        # Construct FeedbackStore from HERMES_HOME.
+        try:
+            store = FeedbackStore(hermes_home=get_hermes_home())
+        except Exception as exc:
+            logger.warning(
+                "curator feedback-scan: FeedbackStore init failed: %s", exc,
+            )
+            return {"scanned": 0, "proposed": [], "error": str(exc)}
+
+        hot_skills = _scan_for_hot_skills(
+            store,
+            threshold_count=threshold_count,
+            threshold_sessions=threshold_sessions,
+        )
+        if not hot_skills:
+            logger.info("curator feedback-scan: no skills cross threshold")
+            return {"scanned": 0, "proposed": []}
+
+        # Construct LLM client (fail-fast on missing OPENROUTER_API_KEY).
+        try:
+            client, model = make_aggregation_client()
+        except Exception as exc:
+            logger.warning(
+                "curator feedback-scan: LLM client init failed: %s", exc,
+            )
+            return {"scanned": len(hot_skills), "proposed": [], "error": str(exc)}
+
+        evolution_dir = get_hermes_home() / "skills" / ".feedback" / "evolution"
+        proposed: List[str] = []
+
+        for skill_id in hot_skills:
+            try:
+                insights = aggregate_feedback(
+                    skill_id=skill_id, store=store,
+                    client=client, model=model,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "curator feedback-scan: aggregate_feedback failed "
+                    "for %s: %s", skill_id, exc,
+                )
+                continue
+
+            # Load current file contents for this skill (for diff generation).
+            # We read SKILL.md + references/*.md under the skill directory.
+            skill_dir = get_hermes_home() / "skills" / "movie-experts" / skill_id
+            if not skill_dir.exists():
+                # Agent-created skills live elsewhere; bundled under movie-experts.
+                # Try the flat layout.
+                skill_dir = get_hermes_home() / "skills" / skill_id
+            current_files: Dict[str, str] = {}
+            if skill_dir.exists():
+                for f in [skill_dir / "SKILL.md"] + list(
+                    (skill_dir / "references").glob("*.md")
+                    if (skill_dir / "references").exists() else []
+                ):
+                    if f.is_file():
+                        try:
+                            rel = str(f.relative_to(get_hermes_home().parent))
+                            current_files[rel] = f.read_text(encoding="utf-8")
+                        except (OSError, ValueError):
+                            pass
+
+            bundled = is_bundled(skill_id)
+
+            for insight in insights:
+                try:
+                    instructions = emit_evol02_instructions(
+                        insight=insight, current_files=current_files,
+                        client=client, model=model,
+                    )
+                    if not instructions:
+                        continue
+                    diff = generate_patch_from_knowledge_point(
+                        insight=insight, current_files=current_files,
+                        instructions=instructions,
+                    )
+                    import hashlib
+                    from datetime import datetime as _dt, timezone as _tz
+                    ts_unix = int(_dt.now(_tz.utc).timestamp())
+                    sha = hashlib.sha256(
+                        diff.encode("utf-8")
+                    ).hexdigest()[:16]
+                    patch_id = f"{skill_id}_{ts_unix}_{sha}"
+                    record = PatchRecord(
+                        patch_id=patch_id,
+                        skill_id=skill_id,
+                        insight_id=insight.insight_id,
+                        unified_diff=diff,
+                        feedback_chain=insight.evidence_chain,
+                        llm_rationale=insight.rationale,
+                        eval_gate_score={},
+                        status="pending",
+                        ts_queued=_dt.now(_tz.utc).isoformat(),
+                        # Bundled NEVER auto-apply eligible (T-32-05).
+                        auto_apply_eligible=False,
+                        confidence_score=None,
+                    )
+                    append_patch(record, evolution_dir)
+                    append_audit(
+                        action="propose",
+                        patch_id=patch_id,
+                        skill_id=skill_id,
+                        operator="system",
+                        feedback_ids=insight.evidence_chain,
+                    )
+                    proposed.append(patch_id)
+                    logger.info(
+                        "curator feedback-scan: proposed patch %s for %s "
+                        "(bundled=%s)",
+                        patch_id, skill_id, bundled,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "curator feedback-scan: insight %s failed for %s: %s",
+                        insight.insight_id, skill_id, exc,
+                    )
+                    continue
+
+        return {"scanned": len(hot_skills), "proposed": proposed}
+    except Exception as exc:
+        # T-32-03: scan failure must NEVER abort the curator run.
+        logger.warning(
+            "curator feedback-scan phase failed (non-fatal): %s", exc,
+            exc_info=True,
+        )
+        return {"scanned": 0, "proposed": [], "error": str(exc)}
+
+
 def run_curator_review(
     on_summary: Optional[Callable[[str], None]] = None,
     synchronous: bool = False,
@@ -1563,6 +1953,25 @@ def run_curator_review(
             except Exception as e:
                 logger.debug("Curator report write failed: %s", e, exc_info=True)
             save_state(state2)
+            # Phase 32 ADDITIVE: feedback-scan runs whenever not dry_run,
+            # INDEPENDENT of the consolidate gate (CONTEXT.md: scan is a
+            # separate post-v6 phase). Wrapped in try/except so scan
+            # failure never aborts the run (T-32-03).
+            if not dry_run:
+                try:
+                    fb = _feedback_scan_phase(start)
+                    if fb.get("proposed"):
+                        final_summary = (
+                            f"{final_summary}; feedback-scan: proposed "
+                            f"{len(fb['proposed'])} patch(es)"
+                        )
+                        state2 = load_state()
+                        state2["last_run_summary"] = final_summary
+                        save_state(state2)
+                except Exception as exc:
+                    logger.warning(
+                        "curator feedback-scan phase failed: %s", exc,
+                    )
             if on_summary:
                 try:
                     on_summary(f"curator: {final_summary}")
@@ -1669,6 +2078,26 @@ def run_curator_review(
             logger.debug("Curator report write failed: %s", e, exc_info=True)
 
         save_state(state2)
+
+        # Phase 32 ADDITIVE: feedback-scan runs whenever not dry_run,
+        # INDEPENDENT of the consolidate gate (CONTEXT.md: scan is a
+        # separate post-v6 phase). Wrapped in try/except so scan
+        # failure never aborts the run (T-32-03).
+        if not dry_run:
+            try:
+                fb = _feedback_scan_phase(start)
+                if fb.get("proposed"):
+                    final_summary = (
+                        f"{final_summary}; feedback-scan: proposed "
+                        f"{len(fb['proposed'])} patch(es)"
+                    )
+                    state2 = load_state()
+                    state2["last_run_summary"] = final_summary
+                    save_state(state2)
+            except Exception as exc:
+                logger.warning(
+                    "curator feedback-scan phase failed: %s", exc,
+                )
 
         if on_summary:
             try:

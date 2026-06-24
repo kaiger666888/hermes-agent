@@ -1,0 +1,70 @@
+{
+  "scenarios": {
+    "below_threshold_same_day": {
+      "description": "2 needs_work records on the same UTC day — below both count (3) and sessions (2) thresholds",
+      "skill_id": "screenplay",
+      "expert_id": "screenplay",
+      "records": [
+        {
+          "verdict": "needs_work",
+          "correction": "missing three-act section",
+          "ts": "2026-06-01T10:00:00+00:00"
+        },
+        {
+          "verdict": "needs_work",
+          "correction": "weak character motivation",
+          "ts": "2026-06-01T14:00:00+00:00"
+        }
+      ],
+      "expected_hot": false
+    },
+    "above_threshold_two_days": {
+      "description": "3 needs_work records across 2 distinct UTC days — crosses both count (3) and sessions (2) thresholds",
+      "skill_id": "screenplay",
+      "expert_id": "screenplay",
+      "records": [
+        {
+          "verdict": "needs_work",
+          "correction": "missing three-act section",
+          "ts": "2026-06-01T10:00:00+00:00"
+        },
+        {
+          "verdict": "bad",
+          "correction": "dialogue feels flat",
+          "ts": "2026-06-02T11:00:00+00:00"
+        },
+        {
+          "verdict": "needs_work",
+          "correction": "weak ending",
+          "ts": "2026-06-03T09:00:00+00:00"
+        }
+      ],
+      "expected_hot": true
+    },
+    "bundled_crosses_threshold": {
+      "description": "A bundled skill crosses the threshold — proposed but auto_apply_eligible stays False (T-32-05)",
+      "skill_id": "screenplay",
+      "expert_id": "screenplay",
+      "is_bundled": true,
+      "records": [
+        {
+          "verdict": "needs_work",
+          "correction": "issue 1",
+          "ts": "2026-06-01T10:00:00+00:00"
+        },
+        {
+          "verdict": "bad",
+          "correction": "issue 2",
+          "ts": "2026-06-02T11:00:00+00:00"
+        },
+        {
+          "verdict": "needs_work",
+          "correction": "issue 3",
+          "ts": "2026-06-03T09:00:00+00:00"
+        }
+      ],
+      "expected_hot": true,
+      "expected_auto_apply_eligible": false
+    }
+  }
+}
