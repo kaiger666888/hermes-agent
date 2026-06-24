@@ -198,14 +198,26 @@ See full archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 ---
 
-## Current Milestone: None (awaiting operator decision)
+## Current Milestone: v6.0 — Self-Evolution & Feedback Loop
 
-v5.0 milestone archived 2026-06-19. Operator may:
+**Goal:** 让 movie-experts skill suite 从「静态知识层」进化为「带反馈闭环的自学习系统」—— 专家给出意见后,调用者(含 kais-aigc-platform 审核系统)能反馈结果,反馈驱动 eval-gated 的 SKILL.md / refs 改进。
 
-- Start v6 via `/gsd:new-milestone` (suggested candidates from v5.0 REQUIREMENTS.md FUTURE-10/11/12: live-run validation / cross-repo drift detection / Vogler-Truby-设计思维 methodology expansion)
-- Run `/gsd:review-backlog` to triage open issues
-- Run `/gsd:progress` to view state
-- Polish v5.0 deferred items (FUTURE-10 live-run validation of dreamina CLI integration prompts)
+**Target features:**
+
+1. **反馈采集通道 (Feedback Ingestion)** ⭐ 核心 MVP —— 多源接入:CLI 用户反馈 + kais-aigc-platform 审核反馈 + 手工标注;标准化数据结构 `{skill_id, output_snapshot, verdict, correction, source, ts}`
+2. **反馈存储 (Feedback Store)** —— `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 按 skill 索引;Curator 可查询累积反馈
+3. **反馈→知识库回流 (Feedback-to-Knowledge Pipeline)** —— LLM 抽取可执行知识点 → 生成候选 patch → **eval gate**(vs baseline LLM-as-judge)→ 通过阈值才 merge
+4. **Curator 升级** —— 从「只 archive agent-created」扩展为「能 propose patch 给 bundled skill」;保留 **human-in-loop approve**;审批日志可追溯
+5. **可观测性 + A/B** —— 每 skill dashboard(反馈计数 / patch 历史 / eval score 趋势)+ 双盲 A/B 对比工具
+
+**Key context:**
+
+- **范式跃迁**:从 v1-v5 的「人工 curate 静态知识」转为「反馈驱动动态学习」。这是 movie-experts 第一次真正具备 self-improvement 能力
+- **范围相对 v5 扩张点(需用户明确接受):** v6 不再是「纯 skill 内容交付」,需要触动 Hermes 核心 —— `agent/curator.py` 扩展、新增反馈接入 endpoint 或文件 watcher。这是 v5→v6 的根本性 scope shift
+- **沿用 scope 纪律:** 不引入新 expert_id,不动 DAG 节点;v5.0 / v4.0 知识资产 byte-intact
+- **前置调研结论:** 当前缺三块闭环(eval→回流 / 发现→入库 / A/B 验证);Curator 现在明确不碰 bundled skill,需要扩展作用域或新增专门的 evolution agent
+- **kais-aigc-platform 接入是 must-have:** 反馈源至少包含 kais-aigc-platform 审核结果(verdicts / retry 信号 / 修改 diff);具体接入方式(文件 / HTTP / webhook)在 requirement 阶段决定
+- **MVP 边界:** v6 不做全自动 skill 改写;所有 bundled-skill patch 必须 human-in-loop approve;agent-created skill 可走半自动
 
 ---
 
@@ -305,4 +317,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation milestone shipped (30/30 reqs, 6/6 phases, audit PASSED, FOUND-08 preserved). 2 new _shared refs + 18 SKILL.md body patches + 6 stub patches + 3 cross-cutting updates.*
+*Last updated: 2026-06-24 — v6.0 Self-Evolution & Feedback Loop milestone started (paradigm shift: static knowledge → feedback-driven self-learning). Scope expansion from v5: touches Hermes core (curator extension + feedback ingestion). Research skipped per operator; requirements next.*
