@@ -78,6 +78,16 @@ class TestVerifyAdditiveOnly:
         )
         assert verify_additive_only(diff) is True
 
+    def test_wr05_skips_no_newline_at_end_of_file_marker(self) -> None:
+        # WR-05: unified diffs use "\ No newline at end of file" as a
+        # metadata marker. This must not be mistaken for content (and
+        # must not break the additive-only check).
+        diff = (
+            "--- a/x\n+++ b/x\n@@ -1,1 +1,2 @@\n a\n+b\n"
+            "\\ No newline at end of file\n"
+        )
+        assert verify_additive_only(diff) is True
+
     def test_accepts_fixture_additive_diff(self) -> None:
         diff = ADDITIVE_DIFF.read_text(encoding="utf-8")
         assert verify_additive_only(diff) is True

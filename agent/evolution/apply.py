@@ -122,6 +122,14 @@ def verify_additive_only(diff_text: str) -> bool:
             if d < b:
                 return False  # hunk shrinks the file
             continue
+        # WR-07: skip unified-diff "\ No newline at end of file" metadata
+        # markers. These start with a literal backslash and are neither
+        # additions nor removals — they're file-level metadata. Without
+        # this explicit skip they'd fall through to the implicit context
+        # branch (harmless today, but fragile if future content lines
+        # ever start with backslash).
+        if line.startswith("\\"):
+            continue
         # Content line.
         if line.startswith("-"):
             # Not a file header (skipped above) → it's a removal.
@@ -543,13 +551,17 @@ def _ensure_git_author(repo_root: Path) -> None:
     )
     if email_check.stdout.strip():
         return  # already set
+    # WR-06: make the scope explicit. `git config <k> <v>` without a scope
+    # defaults to --local inside a repo, but implicit behavior could
+    # surprise operators when GIT_CONFIG_GLOBAL / GIT_CONFIG_NOSYSTEM
+    # env vars are set unusually. Explicit --local removes ambiguity.
     subprocess.run(
-        ["git", "config", "user.email", _FALLBACK_AUTHOR_EMAIL],
+        ["git", "config", "--local", "user.email", _FALLBACK_AUTHOR_EMAIL],
         cwd=str(repo_root), check=True,
         capture_output=True, text=True, encoding="utf-8",
     )
     subprocess.run(
-        ["git", "config", "user.name", _FALLBACK_AUTHOR_NAME],
+        ["git", "config", "--local", "user.name", _FALLBACK_AUTHOR_NAME],
         cwd=str(repo_root), check=True,
         capture_output=True, text=True, encoding="utf-8",
     )
