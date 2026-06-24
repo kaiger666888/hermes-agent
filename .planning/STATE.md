@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: executing
-last_updated: "2026-06-24T11:28:31Z"
+status: ready_to_plan
+last_updated: 2026-06-24T11:55:18.094Z
 last_activity: 2026-06-24 -- Phase 29 complete (FeedbackStore + STORE-04 dedup + delegation)
 progress:
   total_phases: 6
@@ -11,6 +11,7 @@ progress:
   total_plans: 4
   completed_plans: 4
   percent: 33
+stopped_at: Phase 29 complete (2/2) — ready to discuss Phase 30
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -24,14 +25,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 29 — feedback store
+**Current focus:** Phase 30 — eval gate reuse
 
 ## Current Position
 
-Phase: 29 complete; Phase 30 + 31 next (parallel-eligible wave)
-Plan: 29-02 complete (Phase 29 done — all 4 STORE reqs satisfied)
-Status: Phase 29 closed. Next: plan P30 or P31 (parallel-eligible, disjoint files).
-Last activity: 2026-06-24 -- Phase 29 complete (FeedbackStore + STORE-04 dedup + delegation)
+Phase: 30
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-24
 
 ### Progress
 
