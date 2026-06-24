@@ -1051,7 +1051,48 @@ class TestRollbackCmdInvalidSha:
 
         assert exit_code != 0
         captured = capsys.readouterr()
-        assert "not found" in captured.err.lower() or "not found" in captured.out.lower()
+        # WR-07: shape-validation rejects "notasha" before git is invoked.
+        # The message is "is not a valid SHA or ref — refusing" (shape
+        # check) OR "commit ... not found" (git verify) depending on
+        # which gate fired. Accept either.
+        combined = (captured.err + captured.out).lower()
+        assert "not a valid sha" in combined or "not found" in combined, (
+            f"expected SHA-rejection message, got: err={captured.err!r} "
+            f"out={captured.out!r}"
+        )
+
+    def test_option_like_sha_rejected_by_shape_check(
+        self, monkeypatch, tmp_path, capsys,
+    ):
+        """WR-07 regression: an option-like commit_sha is rejected by
+        the shape check BEFORE it reaches git. The prior code passed it
+        to `git rev-parse --verify --help` which exits 0 (--help short-
+        circuits to the man page), then to `git revert --help --no-edit`
+        which also exits 0 (no revert performed but rc=0 misleading).
+        The shape check rejects option-like values outright.
+
+        We bypass argparse (which would itself reject `-d` as an unknown
+        option) by constructing the Namespace directly — the WR-07
+        defense is in _cmd_rollback's shape check, not in argparse.
+        """
+        from hermes_cli.feedback import _cmd_rollback
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        args = argparse.Namespace(commit_sha="--help", yes=True)
+
+        run_mock = MagicMock()
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root",
+            return_value=tmp_path,
+        ), patch("subprocess.run", run_mock):
+            exit_code = _cmd_rollback(args)
+
+        assert exit_code != 0
+        # subprocess.run should NEVER be called — shape check fires first.
+        run_mock.assert_not_called()
+        captured = capsys.readouterr()
+        assert "not a valid sha" in (captured.err + captured.out).lower()
 
 
 class TestRollbackCmdHappyPath:

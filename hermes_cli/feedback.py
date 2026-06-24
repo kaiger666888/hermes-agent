@@ -1005,8 +1005,33 @@ def _cmd_rollback(args) -> int:
     repo_root = _resolve_repo_root()
 
     # Validate the commit SHA exists BEFORE invoking revert.
+    # WR-07: defense-in-depth against option-injection. A commit_sha that
+    # starts with `-` (e.g. `--help`) would be parsed by git as an option
+    # flag rather than a rev: `git rev-parse --verify --help` exits 0
+    # (because --help short-circuits to the man page), then
+    # `git revert --help --no-edit` prints help and exits 0 (no revert
+    # performed but rc=0 is misleading). Two-layer defense:
+    #   1. Shape-validate the SHA: hex chars only, 7-40 chars, OR a git
+    #      ref-pattern (refs/heads/X, HEAD, HEAD~N). Reject anything that
+    #      starts with `-` before it reaches git.
+    #   2. Pass `--` to `git revert` so even a shape-validated rev is
+    #      treated as positional. (`git rev-parse --verify` cannot take
+    #      `--` — it would treat the arg as a path. So shape validation
+    #      is the primary guard for rev-parse.)
+    # Lower severity because the operator IS the user supplying the SHA
+    # (no privilege boundary crossed).
+    import re as _re
+    sha = args.commit_sha
+    _SHA_RE = _re.compile(r"^(?:[0-9a-fA-F]{7,40}|refs/[^/\s]+|HEAD(?:[~^][0-9]+)*)$")
+    if not _SHA_RE.match(sha):
+        print(
+            f"commit {sha!r} is not a valid SHA or ref — refusing",
+            file=sys.stderr,
+        )
+        return 1
+
     verify = subprocess.run(
-        ["git", "rev-parse", "--verify", args.commit_sha],
+        ["git", "rev-parse", "--verify", sha],
         cwd=str(repo_root),
         capture_output=True,
         text=True,
@@ -1016,8 +1041,11 @@ def _cmd_rollback(args) -> int:
         print(f"commit {args.commit_sha} not found", file=sys.stderr)
         return 1
 
+    # `--no-edit` BEFORE `--` so --no-edit is still parsed as an option,
+    # and `--` ensures args.commit_sha is treated as a rev even if it
+    # somehow started with `-` (defense-in-depth on top of shape check).
     revert_result = subprocess.run(
-        ["git", "revert", args.commit_sha, "--no-edit"],
+        ["git", "revert", "--no-edit", "--", sha],
         cwd=str(repo_root),
         capture_output=True,
         text=True,
