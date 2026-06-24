@@ -35,10 +35,10 @@
 
 ### Eval Gate (GATE) — 防退化
 
-- [ ] **GATE-01**: Patch 进入 review queue 前必须经过 LLM-as-judge 对比 baseline(复用 `skills/movie-experts/_eval/runner.py` 既有 harness)
-- [ ] **GATE-02**: 通过阈值 —— patch 在 benchmark prompts 上的平均得分不得低于 baseline − δ(默认 δ=0.3,4 分制),否则直接拒绝,不进入 review queue
-- [ ] **GATE-03**: A/B 双盲对比工具 —— 候选 patch vs baseline 在同一 prompt 集上位置交换评分,输出统计显著性报告
-- [ ] **GATE-04**: Regression detection —— patch 不能让任何单一 prompt 的 score 下降超过 per-prompt 阈值(默认 1.0),否则整体拒绝
+- [x] **GATE-01**: Patch 进入 review queue 前必须经过 LLM-as-judge 对比 baseline(复用 `skills/movie-experts/_eval/runner.py` 既有 harness)
+- [x] **GATE-02**: 通过阈值 —— patch 在 benchmark prompts 上的平均得分不得低于 baseline − δ(默认 δ=0.3,4 分制),否则直接拒绝,不进入 review queue
+- [x] **GATE-03**: A/B 双盲对比工具 —— 候选 patch vs baseline 在同一 prompt 集上位置交换评分,输出统计显著性报告
+- [x] **GATE-04**: Regression detection —— patch 不能让任何单一 prompt 的 score 下降超过 per-prompt 阈值(默认 1.0),否则整体拒绝
 
 ### Curator Upgrade (CURATE)
 

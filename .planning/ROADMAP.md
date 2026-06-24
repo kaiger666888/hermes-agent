@@ -28,7 +28,7 @@
 
 - [x] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
 - [x] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引 — **shipped 2026-06-24 (STORE-01..04 satisfied, 150/151 feedback-subsystem tests green)**
-- [ ] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection
+- [x] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection (completed 2026-06-24)
 - [ ] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback
 - [ ] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径
 - [ ] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out
@@ -219,7 +219,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 |-------|----------------|--------|-----------|
 | 28. Feedback Ingestion MVP | 2/2 | Complete    | 2026-06-24 |
 | 29. Feedback Store | 2/2 | Complete    | 2026-06-24 |
-| 30. Eval Gate Reuse | 0/2 | Not started | - |
+| 30. Eval Gate Reuse | 2/2 | Complete    | 2026-06-24 |
 | 31. Knowledge Evolution Pipeline | 0/? | Not started | - |
 | 32. Curator Upgrade + Audit | 0/? | Not started | - |
 | 33. Observability + Integration Close-out | 0/? | Not started | - |
