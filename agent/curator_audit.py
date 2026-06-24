@@ -45,6 +45,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -229,6 +230,17 @@ def append_audit(
 
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # WR-01: flush + fsync so the audit entry is durable on disk
+        # before we report success. A single write() longer than
+        # PIPE_BUF (4KB on POSIX) is NOT guaranteed atomic — entries
+        # with rich eval_score dicts and CN feedback_ids easily exceed
+        # that. A crash mid-write would leave a partial JSON line that
+        # the next append_audit rejects as AuditChainError ("audit log
+        # tail is malformed"), bricking the chain until manual repair.
+        # fsync is the minimum durability guarantee for an append-only
+        # chain whose integrity derives from every entry being present.
+        f.flush()
+        os.fsync(f.fileno())
 
     logger.info(
         "appended audit entry %s action=%s patch_id=%s skill_id=%s",
