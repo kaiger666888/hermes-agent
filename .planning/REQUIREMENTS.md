@@ -12,11 +12,11 @@
 
 ### Feedback Ingestion (INGEST) ⭐ MVP 核心
 
-- [ ] **INGEST-01**: Hermes CLI 用户可在 conversation 内对 movie-expert 的输出提交反馈 —— verdict (`good` / `needs_work` / `bad`) + 自由文本 correction + 可选修订后的输出
-- [ ] **INGEST-02**: kais-aigc-platform 审核反馈自动 ingest(至少一种接入路径 —— 文件交换 / HTTP endpoint / webhook,在 plan-phase 决定),含审核 verdict + retry 信号 + 修改 diff
+- [x] **INGEST-01**: Hermes CLI 用户可在 conversation 内对 movie-expert 的输出提交反馈 —— verdict (`good` / `needs_work` / `bad`) + 自由文本 correction + 可选修订后的输出
+- [x] **INGEST-02**: kais-aigc-platform 审核反馈自动 ingest(至少一种接入路径 —— 文件交换 / HTTP endpoint / webhook,在 plan-phase 决定),含审核 verdict + retry 信号 + 修改 diff
 - [x] **INGEST-03**: 反馈数据结构标准化为单一 JSON schema,所有源(CLI / kais-aigc / 手工)走同一 schema,字段含 `skill_id, expert_id, source, verdict, correction, output_snapshot, ts`
 - [x] **INGEST-04**: 反馈含 `output_snapshot`(原始 LLM 输出 sha256 + 元数据:prompt / model / params),用于后续 eval 对比与去重
-- [ ] **INGEST-05**: 手工标注工具(CLI 子命令)支持批量导入历史输出 + 标注,用于冷启动 / baseline 构建
+- [x] **INGEST-05**: 手工标注工具(CLI 子命令)支持批量导入历史输出 + 标注,用于冷启动 / baseline 构建
 
 ### Feedback Store (STORE)
 

@@ -26,7 +26,7 @@
 
 ## Phases
 
-- [ ] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
+- [x] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
 - [ ] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引
 - [ ] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection
 - [ ] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback
@@ -50,9 +50,9 @@
   5. Every feedback record carries `output_snapshot` with the original LLM output sha256 + prompt + model + params metadata — enough to reproduce and dedupe later
 **Scope note:** This is the must-have MVP. The exact kais-aigc接入方式 (file/HTTP/webhook) is a plan-phase decision, not a roadmap decision. The phase MUST ship a working ingest path; the choice of transport is not allowed to block the phase.
 **Hermes-core touch:** Yes — new feedback-ingestion entrypoints / CLI subcommands / watchers under `~/.hermes/skills/.feedback/` ingest path. Not a pure-skill phase.
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 - [x] 28-01-PLAN.md — Feedback schema (FeedbackRecord + OutputSnapshot + validators) + snapshot capture + atomic write path (foundation)
-- [ ] 28-02-PLAN.md — /feedback slash command + hermes feedback {import,watch,submit} CLI + kais file watcher + JSONL batch import (three ingest sources)
+- [x] 28-02-PLAN.md — /feedback slash command + hermes feedback {import,watch,submit} CLI + kais file watcher + JSONL batch import (three ingest sources)
 
 ### Phase 29: Feedback Store
 

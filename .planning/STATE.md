@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
 status: executing
-last_updated: "2026-06-24T05:44:49.221Z"
+last_updated: "2026-06-24T06:14:00.000Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 17
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 28 (feedback-ingestion-mvp) — EXECUTING
-Plan: 2 of 2 (Plan 01 complete: schema + snapshot + atomic write — 45 tests green, FOUND-08 verified)
-Status: Ready to execute Plan 02 (/feedback slash command + kais-aigc watcher + JSONL importer)
-Last activity: 2026-06-24 — Plan 28-01 SUMMARY committed (3 task commits: f4179e152, 10fe966f4, 1744a26f2)
+Phase: 28 (feedback-ingestion-mvp) — COMPLETE
+Plan: 2 of 2 (both plans complete: schema + snapshot + atomic write; slash command + watcher + JSONL importer — 76 tests green, FOUND-08 verified)
+Status: Phase 28 shipped. Ready to plan Phase 29 (Feedback Store).
+Last activity: 2026-06-24 — Plan 28-02 SUMMARY committed (2 task commits: 92f32917d, 11737fd0c)
 
 ### Progress
 
@@ -44,8 +44,8 @@ v5.0 kais-movie-agent V8.6 Adaptation:
                                [██████████] 100% Complete (Phases 22-27, shipped 2026-06-19)
 
 v6.0 Self-Evolution & Feedback Loop:
-  Phase 28 (Feedback Ingestion MVP)        [█         ] 50% Plan 01 complete (schema + snapshot + atomic write); Plan 02 next (slash cmd + watcher + JSONL importer)
-  Phase 29 (Feedback Store)                [          ] 0% Not started — depends on P28
+  Phase 28 (Feedback Ingestion MVP)        [██████████] 100% Complete (Plan 01 schema+snapshot+write; Plan 02 CLI+watcher+JSONL — 76 tests green, FOUND-08 verified)
+  Phase 29 (Feedback Store)                [          ] 0% Not started — next, depends on P28 (now unblocked)
   Phase 30 (Eval Gate Reuse)               [          ] 0% Not started — parallel-eligible with P31 after P29
   Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 after P29
   Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — depends on P29 + P31
@@ -56,8 +56,8 @@ v6.0 Self-Evolution & Feedback Loop:
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 28 | Feedback Ingestion MVP | Not started | Covers INGEST-01..05. MUST run first — core functional guarantee ships here. kais-aigc-platform接入 (INGEST-02) is must-have MVP; transport choice at plan-phase. Hermes-core touch (new ingest entrypoints). |
-| 29 | Feedback Store | Not started | Covers STORE-01..04. Depends on P28 normalized schema. New persistence layer under `~/.hermes/skills/.feedback/`. |
+| 28 | Feedback Ingestion MVP | **Complete** | Shipped 2026-06-24. INGEST-01..05 covered. Plan 01 (schema + snapshot + atomic write — 45 tests) + Plan 02 (/feedback slash cmd + hermes feedback {import,watch,submit} + kais file watcher + JSONL atomic batch import — 31 new tests). 76/76 tests green, Ruff clean, FOUND-08 preserved, zero new deps. |
+| 29 | Feedback Store | Not started | Covers STORE-01..04. Depends on P28 normalized schema (now available). New persistence layer under `~/.hermes/skills/.feedback/`. |
 | 30 | Eval Gate Reuse | Not started | Covers GATE-01..04. Parallel-eligible with P31 (disjoint files). Extends `_eval/runner.py` (offline dev tooling, no runtime touch). |
 | 31 | Knowledge Evolution Pipeline | Not started | Covers EVOL-01, EVOL-03, EVOL-04, EVOL-05. Parallel-eligible with P30. Builds review queue + approve/apply mechanics. |
 | 32 | Curator Upgrade + Audit | Not started | Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. |
@@ -94,11 +94,12 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 ## Performance Metrics (v6.0)
 
 - v6.0 phases total: 6 (Phases 28-33, continuing from v5.0 phase 27)
-- v6.0 phases completed: 0
+- v6.0 phases completed: 1 (Phase 28 — Feedback Ingestion MVP, shipped 2026-06-24)
 - v6.0 requirements total: 26
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
-- v6.0 plans completed: 0 / TBD (per phase)
+- v6.0 requirements completed: 5 (INGEST-01, INGEST-02, INGEST-03, INGEST-04, INGEST-05 — all covered by Phase 28)
+- v6.0 plans completed: 2 / 2 (Phase 28 Plan 01 + Plan 02)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -129,6 +130,10 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | EVOL-02 mapped to Phase 32 (not Phase 31) | The candidate-patch generator is invoked BY the Curator's proposal path in practice (CURATE-01 extends curator to propose patches, which uses EVOL-02's diff generator as its engine). Phase 31 builds the review queue + approve/apply mechanics; Phase 32 implements EVOL-02 as the engine Curator calls. Keeps dependency graph clean. | Applied 2026-06-24 — REQUIREMENTS.md traceability + ROADMAP.md coverage table reflect this |
 | Hermes core touch accepted (v5→v6 scope expansion) | v6 (unlike v1-v5) modifies `agent/curator.py` (CURATE-01) + adds new ingestion endpoints/watchers (INGEST-02). This is explicitly accepted in PROJECT.md §"Current Milestone: v6.0" Key context. Pure-skill phases still occur but core touch is unavoidable. | Applied 2026-06-24 — P28 + P29 + P32 success criteria all annotate "Hermes-core touch: Yes" |
 | FOUND-08 + scope discipline carried from v3.0 onward | Every phase verifies "no new expert_id, no DAG node change, no v5/v4 ref byte-change". P31 SC #5-6 + P33 SC #7-8 explicitly check. | Applied 2026-06-24 — every phase touching bundled SKILL.md has explicit preservation criterion |
+| stdlib os.scandir polling for kais-aigc watcher (no watchdog dep) | Portable across Linux/macOS/Windows/Termux (CONTEXT.md Claude's-discretion). 1s default interval fast enough for batch file-exchange. Watchdog-style cross-platform Observer adds zero MVP benefit. | Applied 2026-06-24 — P28 Plan 02 watch_inbox_kais() ships stdlib-only polling |
+| Atomic all-or-nothing JSONL batch import | CONTEXT.md D-INGEST-03 recommendation. On any line error returns (0, errors) WITHOUT writing — preserves operator trust. Line-numbered errors with field-level Pydantic messages. | Applied 2026-06-24 — P28 Plan 02 import_jsonl() atomic contract enforced by tests |
+| Anti-spoofing source override in kais watcher | Crafted file in inbox-kais/ cannot pollute 'cli' or 'manual' provenance. Watcher FORCES raw['source'] = 'kais_aigc' regardless of JSON content. | Applied 2026-06-24 — P28 Plan 02 T-28-07 mitigation in _scan_once() |
+| /feedback skill_id resolution via _SKILL_INVOCATION_PREFIX marker scan | Verified format in agent/skill_commands.py:550-553. Backward scan for most recent user msg starting with the marker, regex-extract quoted skill name. When no marker found, clear error + write nothing — never silently default. | Applied 2026-06-24 — P28 Plan 02 HermesCLI._handle_feedback_command (Pitfall #4 mitigation) |
 
 ### Decisions (carried forward — relevant to v6.0)
 
