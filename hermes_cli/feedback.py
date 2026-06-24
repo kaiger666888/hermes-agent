@@ -911,6 +911,29 @@ def _cmd_approve(args) -> int:
             evolution_dir=evolution_dir,
             commit_sha=result.commit_sha,
         )
+        # Phase 32 Plan 02 — audit-log append (single source of truth).
+        # The audit append is wired HERE (inside _cmd_approve) so EVERY
+        # approve caller (``hermes feedback approve`` directly AND
+        # ``hermes curator approve`` wrapper AND CURATE-05 auto-apply via
+        # _cmd_auto_apply_eligible) gets the audit entry automatically.
+        # Best-effort (try/except WARNING): audit failure MUST NOT block
+        # the apply that just succeeded (RESEARCH A4 / T-32-12).
+        try:
+            from agent.curator_audit import append_audit
+            from hermes_cli.curator import _get_operator
+            append_audit(
+                action="apply",
+                patch_id=args.patch_id,
+                skill_id=match.skill_id,
+                operator=_get_operator(),
+                commit_sha=result.commit_sha,
+                eval_score=match.eval_gate_score,
+            )
+        except Exception as exc:  # noqa: BLE001 — best-effort (T-32-12)
+            logger.warning(
+                "audit log append failed for apply %s: %s",
+                args.patch_id, exc,
+            )
         print(f"applied {args.patch_id} as commit {result.commit_sha[:12]}")
         return 0
     finally:

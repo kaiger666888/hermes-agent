@@ -469,17 +469,13 @@ class TestGetOperator:
         assert op  # non-empty
 
     def test_falls_back_to_unknown_on_failure(self, monkeypatch):
-        import builtins
         from hermes_cli import curator as curator_cli
 
-        real_import = builtins.__import__
+        # getpass is imported at module top-level; patch the bound function.
+        def raise_runtime(*a, **kw):
+            raise RuntimeError("simulated failure")
 
-        def fake_import(name, *args, **kwargs):
-            if name == "getpass":
-                raise ImportError("simulated")
-            return real_import(name, *args, **kwargs)
-
-        monkeypatch.setattr(builtins, "__import__", fake_import)
+        monkeypatch.setattr("getpass.getuser", raise_runtime)
         op = curator_cli._get_operator()
         assert op == "unknown"
 

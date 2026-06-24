@@ -5,15 +5,30 @@ table, triggers a run, pauses/resumes, and pins/unpins skills.
 
 This module intentionally has no side effects at import time — main.py wires
 the argparse subparsers on demand.
+
+Phase 32 Plan 02 (CURATE-04 + CURATE-05) appends 5 subcommands AFTER the
+existing p_rollback block: ``queue``, ``approve``, ``reject``,
+``audit-log``, ``auto-apply-eligible``. The first three are thin wrappers
+around P31's ``_cmd_review_queue`` / ``_cmd_approve`` / ``_cmd_reject`` in
+``hermes_cli.feedback`` — single source of truth. ``audit-log`` reads the
+sha256-chained audit trail (CURATE-04). ``auto-apply-eligible`` (CURATE-05)
+implements the semi-automatic apply path for agent-created skills, routing
+through ``_cmd_approve`` per Architectural Constraint #1 Option A (never
+calls ``apply_patch_transaction`` directly — P31 structural invariant
+``TestNonBypassableHumanInLoop`` passes UNCHANGED).
 """
 
 from __future__ import annotations
 
 import argparse
+import getpass
+import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def _fmt_ts(ts: Optional[str]) -> str:
@@ -489,6 +504,296 @@ def _cmd_list_archived(args) -> int:
 
 
 # ---------------------------------------------------------------------------
+# v6 Curator Upgrade handlers (CURATE-04 + CURATE-05)
+#
+# These handlers are THIN WRAPPERS around P31 commands in
+# hermes_cli.feedback (single source of truth for queue/approve/reject) plus
+# a new audit-log reader and the CURATE-05 semi-automatic apply path.
+#
+# Architectural Constraint #1 (LOAD-BEARING):
+#   ``_cmd_auto_apply_eligible`` DELEGATES to ``_cmd_approve`` — it does NOT
+#   call ``apply_patch_transaction`` directly. This keeps the P31 structural
+#   invariant ``TestNonBypassableHumanInLoop`` green UNCHANGED.
+#
+# All ``from agent.evolution import ...`` / ``from agent.curator_audit
+# import ...`` calls are LAZY (inside handler bodies) so this module has
+# ZERO module-level agent.evolution imports (runtime isolation preserved).
+# ---------------------------------------------------------------------------
+
+
+def _get_operator() -> str:
+    """Resolve the operator username for audit-log entries.
+
+    Tries ``getpass.getuser()``; falls back to ``"unknown"`` if the call
+    fails (e.g., no controlling terminal, env stripped, import error).
+    """
+    try:
+        return getpass.getuser()
+    except Exception as exc:  # noqa: BLE001 — best-effort username
+        logger.debug("getpass.getuser failed: %s", exc)
+        return "unknown"
+
+
+def _resolve_skill_from_patch(patch_id: str) -> str:
+    """Best-effort resolve skill_id from a patch_id across all queue files.
+
+    Scans pending/applied/rejected queue files. Returns ``"unknown"`` if
+    the patch_id is not present in any status file (the audit entry is
+    still recorded — losing the skill_id is preferable to losing the
+    audit entry).
+    """
+    try:
+        from agent.evolution import read_queue
+        from hermes_cli.feedback import _resolve_evolution_dir
+    except ImportError as exc:
+        logger.debug("evolution queue not importable: %s", exc)
+        return "unknown"
+    try:
+        evo_dir = _resolve_evolution_dir()
+        for status in ("pending", "applied", "rejected"):
+            try:
+                records = read_queue(evolution_dir=evo_dir, status=status)
+            except Exception:  # noqa: BLE001 — queue read is best-effort
+                continue
+            for r in records:
+                if r.patch_id == patch_id:
+                    return r.skill_id
+    except Exception as exc:  # noqa: BLE001 — skill resolve is best-effort
+        logger.debug("skill resolve failed for %s: %s", patch_id, exc)
+    return "unknown"
+
+
+def _cmd_queue(args) -> int:
+    """``hermes curator queue [--skill X] [--status pending|applied|rejected]``.
+
+    Thin wrapper — delegates to P31 ``_cmd_review_queue`` in
+    :mod:`hermes_cli.feedback` (single source of truth for queue rendering).
+    """
+    from hermes_cli.feedback import _cmd_review_queue
+    return _cmd_review_queue(args)
+
+
+def _cmd_approve_curator(args) -> int:
+    """``hermes curator approve <patch_id> [--yes]``.
+
+    Thin wrapper — delegates to P31 ``_cmd_approve`` (the single source of
+    truth for ``apply_patch_transaction`` invocation per the P31 structural
+    invariant). The audit-log append is wired INSIDE ``_cmd_approve`` itself
+    (extended in Plan 02) so EVERY approve caller (curator wrapper AND
+    direct ``hermes feedback approve``) gets the audit entry — single source
+    of truth per RESEARCH A4.
+
+    This wrapper exists for operator UX (``hermes curator`` is the
+    discoverable namespace for CURATE-04) and does not duplicate logic.
+    """
+    from hermes_cli.feedback import _cmd_approve
+    return _cmd_approve(args)
+
+
+def _cmd_reject_curator(args) -> int:
+    """``hermes curator reject <patch_id> <reason>``.
+
+    Thin wrapper — delegates to P31 ``_cmd_reject`` for the queue lifecycle.
+    On success (rc == 0), appends an audit entry with ``action="reject"``.
+
+    The audit append is best-effort (try/except WARNING) per RESEARCH A4 /
+    T-32-12 — a failed audit write MUST NOT block the reject.
+    """
+    from hermes_cli.feedback import _cmd_reject
+    rc = _cmd_reject(args)
+    if rc == 0:
+        try:
+            from agent.curator_audit import append_audit
+            append_audit(
+                action="reject",
+                patch_id=args.patch_id,
+                skill_id=_resolve_skill_from_patch(args.patch_id),
+                operator=_get_operator(),
+            )
+        except Exception as exc:  # noqa: BLE001 — audit is best-effort (T-32-12)
+            logger.warning(
+                "audit log append failed for reject %s: %s",
+                args.patch_id, exc,
+            )
+    return rc
+
+
+def _cmd_audit_log(args) -> int:
+    """``hermes curator audit-log [--action X] [--since D] [--skill Y] [--verify]``.
+
+    CURATE-04 — query and optionally verify the tamper-evident audit trail.
+
+    ``--verify`` walks the sha256 chain via :func:`verify_chain` and reports
+    any breaks (exit 1 on break, exit 0 on valid/empty). Without
+    ``--verify``, prints matching entries as
+    ``{ts} {action:10s} {patch_id} skill={skill_id}``.
+    """
+    from agent.curator_audit import read_audit, verify_chain
+
+    if getattr(args, "verify", False):
+        breaks = verify_chain()
+        if breaks:
+            print(f"audit chain: {len(breaks)} break(s) detected:")
+            for b in breaks:
+                print(f"  line {b.get('line', '?')}: {b.get('error', '?')}")
+            return 1
+        print("audit chain: OK (all entries verify)")
+        return 0
+
+    entries = read_audit(
+        action=getattr(args, "action", None),
+        since=getattr(args, "since", None),
+        skill=getattr(args, "skill", None),
+    )
+    if not entries:
+        print("(no audit entries match)")
+        return 0
+    for e in entries:
+        ts = e.get("ts", "?")
+        action = str(e.get("action", "?"))
+        patch_id = e.get("patch_id", "?")
+        skill_id = e.get("skill_id", "?")
+        print(f"{ts} {action:10s} {patch_id} skill={skill_id}")
+    return 0
+
+
+def _cmd_auto_apply_eligible(args) -> int:
+    """``hermes curator auto-apply-eligible [--dry-run]`` — CURATE-05.
+
+    Semi-automatic apply path for agent-created skills ONLY. Default OFF
+    (config gate). Two-signal confidence required (mean_delta >= threshold
+    AND evidence_count >= threshold). Bundled skills NEVER auto-apply
+    (defense-in-depth via :func:`is_agent_created` recheck even if the
+    proposer incorrectly marked the patch eligible).
+
+    Architectural Constraint #1 (Option A):
+        This handler DELEGATES to ``_cmd_approve`` for each eligible patch.
+        It does NOT call ``apply_patch_transaction`` directly. The P31
+        structural invariant ``TestNonBypassableHumanInLoop`` therefore
+        passes UNCHANGED — ``apply_patch_transaction`` is still called only
+        from ``_cmd_approve``.
+
+    The audit entry uses ``action="auto_apply"`` (distinct from
+    ``action="apply"`` so operators can filter auto vs manual in the audit
+    log).
+    """
+    # LAZY imports preserve runtime isolation.
+    from agent.curator import (
+        get_auto_apply_enabled,
+        get_auto_apply_min_delta,
+        get_auto_apply_min_evidence,
+    )
+    from agent.curator_audit import append_audit
+    from agent.evolution import read_queue
+    from hermes_cli.feedback import _cmd_approve, _resolve_evolution_dir
+    from tools.skill_usage import is_agent_created
+
+    # Step 1: config gate — default OFF (T-32-09).
+    if not get_auto_apply_enabled():
+        print(
+            "auto-apply disabled in config "
+            "(feedback.curator.auto_apply_enabled=false)"
+        )
+        return 0
+
+    min_delta = get_auto_apply_min_delta()
+    min_evidence = get_auto_apply_min_evidence()
+
+    # Step 2: scan pending queue.
+    evo_dir = _resolve_evolution_dir()
+    pending = read_queue(evolution_dir=evo_dir, status="pending")
+
+    # Step 3: filter — two-signal confidence + agent-created + marked eligible.
+    eligible = []
+    skipped = []
+    for p in pending:
+        if not p.auto_apply_eligible:
+            skipped.append((p.patch_id, p.skill_id, "not marked eligible"))
+            continue
+        if not is_agent_created(p.skill_id):
+            # T-32-05 defense-in-depth: bundled NEVER auto even if the
+            # proposer incorrectly marked it eligible.
+            skipped.append(
+                (p.patch_id, p.skill_id, "bundled skill: auto-apply forbidden")
+            )
+            logger.info(
+                "skipped bundled skill %s for auto-apply (forbidden)",
+                p.skill_id,
+            )
+            continue
+        score = p.confidence_score or {}
+        mean_delta = float(score.get("mean_delta", 0))
+        evidence_count = int(score.get("evidence_count", 0))
+        if mean_delta < min_delta:
+            skipped.append(
+                (p.patch_id, p.skill_id,
+                 f"low mean_delta ({mean_delta} < {min_delta})")
+            )
+            continue
+        if evidence_count < min_evidence:
+            skipped.append(
+                (p.patch_id, p.skill_id,
+                 f"low evidence_count ({evidence_count} < {min_evidence})")
+            )
+            continue
+        eligible.append(p)
+
+    # Step 4: --dry-run lists without applying.
+    if getattr(args, "dry_run", False):
+        print(f"eligible for auto-apply ({len(eligible)}):")
+        for p in eligible:
+            print(f"  {p.patch_id} skill={p.skill_id}")
+        if skipped:
+            print(f"\nskipped ({len(skipped)}):")
+            for pid, sid, reason in skipped:
+                print(f"  {pid} skill={sid}: {reason}")
+        return 0
+
+    # Log skipped at INFO so operators can trace why a patch was bypassed.
+    for pid, sid, reason in skipped:
+        logger.info("auto-apply skipped %s (%s): %s", pid, sid, reason)
+
+    # Step 5: apply each eligible patch via _cmd_approve (Option A).
+    applied = 0
+    failures = 0
+    for p in eligible:
+        # Construct an argparse.Namespace with yes=True (the operator's
+        # explicit opt-in is running the command). _cmd_approve is the
+        # single legitimate caller of apply_patch_transaction.
+        ns = argparse.Namespace(patch_id=p.patch_id, yes=True)
+        rc = _cmd_approve(ns)
+        if rc == 0:
+            applied += 1
+            # Audit entry with action="auto_apply" (distinct from "apply").
+            try:
+                append_audit(
+                    action="auto_apply",
+                    patch_id=p.patch_id,
+                    skill_id=p.skill_id,
+                    operator=_get_operator(),
+                    eval_score=p.eval_gate_score,
+                )
+            except Exception as exc:  # noqa: BLE001 — best-effort (T-32-12)
+                logger.warning(
+                    "audit log append failed for auto_apply %s: %s",
+                    p.patch_id, exc,
+                )
+        else:
+            failures += 1
+            logger.error(
+                "auto-apply failed for %s: rc=%d", p.patch_id, rc,
+            )
+            # Best-effort — one failure does not abort the batch.
+
+    # Step 6: summary.
+    print(
+        f"auto-applied {applied} patch(es), skipped {len(skipped)}, "
+        f"failed {failures}"
+    )
+    return 0 if failures == 0 else 1
+
+
+# ---------------------------------------------------------------------------
 # argparse wiring (called from hermes_cli.main)
 # ---------------------------------------------------------------------------
 
@@ -601,6 +906,92 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
         help="Skip confirmation prompt",
     )
     p_rollback.set_defaults(func=_cmd_rollback)
+
+    # ── v6 Curator Upgrade subcommands (CURATE-04 + CURATE-05) ──────────
+    # All ``from agent.evolution import ...`` / ``from agent.curator_audit
+    # import ...`` calls in the handlers below are LAZY (inside handler
+    # bodies) — this module has zero module-level agent.evolution imports,
+    # preserving the runtime-isolation invariant documented at the top of
+    # ``agent/evolution/__init__.py``.
+
+    p_queue = subs.add_parser(
+        "queue",
+        help="List pending evolution patches (delegates to "
+        "`hermes feedback review-queue`)",
+    )
+    p_queue.add_argument(
+        "--skill", dest="skill", default=None,
+        help="Filter by skill_id",
+    )
+    p_queue.add_argument(
+        "--status", dest="status", default="pending",
+        choices=["pending", "applied", "rejected"],
+        help="Patch status filter (default: pending)",
+    )
+    p_queue.set_defaults(func=_cmd_queue)
+
+    p_approve = subs.add_parser(
+        "approve",
+        help="Approve + apply a pending patch (delegates to "
+        "`hermes feedback approve`; logs apply to audit trail)",
+    )
+    p_approve.add_argument(
+        "patch_id", help="Patch ID from `hermes curator queue`"
+    )
+    p_approve.add_argument(
+        "-y", "--yes", action="store_true",
+        help="Confirm apply (REQUIRED — no default-yes path; mirrors P31)",
+    )
+    p_approve.set_defaults(func=_cmd_approve_curator)
+
+    p_reject = subs.add_parser(
+        "reject",
+        help="Reject a pending patch with a reason (delegates to "
+        "`hermes feedback reject`; logs reject to audit trail)",
+    )
+    p_reject.add_argument("patch_id", help="Patch ID to reject")
+    p_reject.add_argument(
+        "reason", help="Rejection reason (recorded in audit log)",
+    )
+    p_reject.set_defaults(func=_cmd_reject_curator)
+
+    p_audit = subs.add_parser(
+        "audit-log",
+        help="Inspect the patch audit trail "
+        "(~/.hermes/skills/.audit/log.jsonl) — query or verify sha256 chain",
+    )
+    p_audit.add_argument(
+        "--action", dest="action", default=None,
+        choices=["propose", "approve", "reject", "apply",
+                 "rollback", "auto_apply"],
+        help="Filter by action",
+    )
+    p_audit.add_argument(
+        "--since", dest="since", default=None,
+        help="ISO date lower bound (e.g., 2026-06-01)",
+    )
+    p_audit.add_argument(
+        "--skill", dest="skill", default=None,
+        help="Filter by skill_id",
+    )
+    p_audit.add_argument(
+        "--verify", dest="verify", action="store_true",
+        help="Walk the sha256 chain and report breaks",
+    )
+    p_audit.set_defaults(func=_cmd_audit_log)
+
+    p_auto = subs.add_parser(
+        "auto-apply-eligible",
+        help="Apply all agent-created patches meeting two-signal "
+        "confidence (CURATE-05; default OFF; bundled NEVER auto). "
+        "Routes through _cmd_approve — apply_patch_transaction is "
+        "STILL called only from _cmd_approve per P31 invariant.",
+    )
+    p_auto.add_argument(
+        "--dry-run", dest="dry_run", action="store_true",
+        help="List eligible patches without applying",
+    )
+    p_auto.set_defaults(func=_cmd_auto_apply_eligible)
 
 
 def cli_main(argv=None) -> int:
