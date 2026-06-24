@@ -271,10 +271,34 @@ def aggregate_feedback(
         return []
 
     summary = store.summary(skill_id=skill_id)
+    # CR-02: store.query() is typed list[FeedbackRecord] (Pydantic objects),
+    # but build_aggregation_user_prompt calls json.dumps(feedback_details)
+    # which raises TypeError on Pydantic models. Convert to dicts first,
+    # and attach record_id (computed via store._make_record_id) so the
+    # LLM can cite the same IDs the operator sees in feedback.jsonl.
+    # Tolerate pre-converted dicts (some test stubs pass dicts directly).
+    make_record_id = getattr(store, "_make_record_id", None)
+    records_as_dicts: list[dict] = []
+    for r in records:
+        if isinstance(r, dict):
+            d = dict(r)
+        else:
+            d = r.model_dump(mode="json")
+        if make_record_id is not None and "record_id" not in d:
+            try:
+                d["record_id"] = make_record_id(r)
+            except Exception as exc:
+                # Defensive: don't crash aggregation if record_id computation
+                # fails for one record — log and continue.
+                logger.warning(
+                    "record_id computation failed for a feedback record: %s",
+                    exc,
+                )
+        records_as_dicts.append(d)
     user_prompt = build_aggregation_user_prompt(
         skill_id=skill_id,
         feedback_summary=summary,
-        feedback_details=records,
+        feedback_details=records_as_dicts,
     )
     messages: list[dict[str, str]] = [
         {"role": "system", "content": AGGREGATION_SYSTEM_PROMPT},

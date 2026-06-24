@@ -571,15 +571,29 @@ def _cmd_evolve(args) -> int:
                     break
         ts = datetime.now(timezone.utc)
         ts_unix = int(ts.timestamp())
+        # CR-02: feedback[0] is typed FeedbackRecord (Pydantic) but may
+        # arrive as a dict from test stubs. Prefer an explicit record_id
+        # field when present; otherwise compute via store._make_record_id
+        # (only for real FeedbackRecord objects); fall back to "fb_dry_run".
+        first = feedback[0]
+        if isinstance(first, dict):
+            first_record_id = str(first.get("record_id") or "fb_dry_run")
+        elif hasattr(first, "record_id") and getattr(first, "record_id", None):
+            first_record_id = str(first.record_id)
+        else:
+            make_record_id = getattr(store, "_make_record_id", None)
+            if callable(make_record_id):
+                try:
+                    first_record_id = str(make_record_id(first))
+                except Exception:
+                    first_record_id = "fb_dry_run"
+            else:
+                first_record_id = "fb_dry_run"
         stub = InsightRecord(
             insight_id=f"{args.skill}_{ts_unix}_dryrun000",
             skill_id=args.skill,
             theme=f"[dry-run] stub for {args.skill}",
-            evidence_chain=[
-                feedback[0].get("record_id", "fb_dry_run")
-                if isinstance(feedback[0], dict)
-                else "fb_dry_run"
-            ],
+            evidence_chain=[first_record_id],
             rationale="dry-run stub — no LLM call made",
             proposed_addition="# Dry-run addition\n",
             insert_after_marker=marker,
