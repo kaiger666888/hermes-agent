@@ -82,9 +82,9 @@
   4. Regression detection rejects the patch if ANY single prompt's score drops more than the per-prompt threshold (default 1.0) — even if the mean is acceptable, single-prompt regressions block merge
   5. **v5/v4 refs byte-intact check:** This phase touches only `_eval/runner.py` extension + new gate scripts — no changes to any bundled SKILL.md or `references/*.md` bytes (verified by sha256 snapshot diff against v5.0 close state)
 **Hermes-core touch:** No — `_eval/` is offline developer tooling (per runner.py docstring: "This module is OFFLINE DEVELOPER TOOLING. It is not imported by the Hermes runtime and does not call `registry.register`"). Pure eval-tooling extension.
-**Plans:** 2/2 plans created
+**Plans:** 2/2 plans complete
 - [x] 30-01-PLAN.md — parse_judge_scores() extension to runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config load + CLI surface) — covers GATE-01 (foundation), GATE-02, GATE-04 — **shipped 2026-06-24 (4 commits, 43 new tests green, FOUND-08 + runtime isolation verified)**
-- [ ] 30-02-PLAN.md — paired-t significance via stdlib + hardcoded t-table + --rebuild-baseline + multi-skill detection + baseline cache staleness — covers GATE-03, completes GATE-01
+- [x] 30-02-PLAN.md — paired-t significance via stdlib + hardcoded t-table (GATE-03) + --rebuild-baseline + multi-skill detection + baseline cache staleness (completes GATE-01) — **shipped 2026-06-24 (4 commits, 30 new tests green, 100/101 eval tests pass, FOUND-08 + runtime isolation + scipy-free verified; Phase 30 COMPLETE)**
 
 ### Phase 31: Knowledge Evolution Pipeline
 
