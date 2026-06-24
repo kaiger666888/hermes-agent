@@ -212,6 +212,18 @@ class FeedbackRecord(BaseModel):
     @field_validator("skill_id", "expert_id")
     @classmethod
     def _known_expert(cls, v: str) -> str:
+        # Path-safety defense (WR-06): skill_id is interpolated into
+        # ``buckets/<skill_id>/<source>.jsonl`` paths and into the index
+        # bucket key ``"<skill_id>:<source>:<verdict>"`` (split on ``:``).
+        # Forbid characters that would let an attacker escape the bucket
+        # directory or poison the bucket-key parser. The known-expert
+        # allowlist below would already reject these in practice, but this
+        # is a class invariant independent of auto-discovery state.
+        if any(ch in v for ch in (":", "/", "\\")):
+            raise ValueError(
+                "skill_id must not contain ':', '/', or '\\' "
+                "(used in bucket paths and index keys)"
+            )
         known = _KNOWN_EXPERT_IDS
         if v not in known:
             raise ValueError(
