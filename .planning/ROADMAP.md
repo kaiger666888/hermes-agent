@@ -135,7 +135,10 @@
   7. **FOUND-08 milestone-wide preservation check:** Across all 6 phases, zero new expert_id directories created, zero DAG node changes, zero frontmatter `expert_id` / `related_skills` edits on bundled skills — verified by sha256 snapshot diff against v5.0 close state
   8. **v5/v4 refs byte-intact milestone-wide check:** snowflake-method.md / e-konte-format.md / scamper-variations.md / dreamina-cli-baseline.md / v86-pipeline-mapping.md remain byte-intact across all of v6.0 (additive-only patches per EVOL-02 scope discipline)
 **UI hint:** yes (dashboard + cross-skill view are operator-facing observability surfaces)
-**Plans:** TBD
+**Plans:** 3/3 plans created
+- [ ] 33-01-PLAN.md — `hermes curator stats` CLI (per-skill / cross-skill / source-breakdown) + tests (OBS-01/02/03) — Wave 1
+- [ ] 33-02-PLAN.md — `_shared/v6-feedback-loop-architecture.md` canonical doc + skills-mapping.yaml `v6_ref_signoffs:` section (SC-4/5) — Wave 2
+- [ ] 33-03-PLAN.md — README corpus tree + glossary 4 EN-first bilingual entries + SC-7/SC-8 milestone-wide byte-intact checks (SC-6/7/8) — Wave 3
 
 ---
 
