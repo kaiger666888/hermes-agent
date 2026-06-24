@@ -365,6 +365,14 @@ def read_audit(
             raise ValueError(
                 f"since must be ISO-8601 parseable, got {since!r}: {exc}"
             ) from exc
+        # CR-02: ``--since 2026-06-01`` parses as a naive datetime, but
+        # audit entries are always aware (``datetime.now(timezone.utc)
+        # .isoformat()`` → ``+00:00``). Without normalization, the
+        # naive-vs-aware comparison raised TypeError, was caught as
+        # "unparseable ts", and silently dropped every entry. Promote
+        # naive since to aware UTC (midnight UTC by convention).
+        if since_dt.tzinfo is None:
+            since_dt = since_dt.replace(tzinfo=timezone.utc)
 
     out: list[dict[str, Any]] = []
     for raw in lines:
@@ -378,6 +386,12 @@ def read_audit(
         if skill is not None and entry.get("skill_id") != skill:
             continue
         if since_dt is not None:
+            # WR-02: split parse from compare so the diagnostic is
+            # accurate. The TypeError from the comparison (naive vs
+            # aware — see CR-02) used to be caught here and logged
+            # misleadingly as "unparseable ts". Now the parse only
+            # catches genuine parse failures; the comparison is its
+            # own statement and operates on normalized-aware values.
             try:
                 entry_ts = datetime.fromisoformat(entry.get("ts", ""))
             except (ValueError, TypeError):
@@ -386,6 +400,11 @@ def read_audit(
                     entry.get("entry_id", "<unknown>"), entry.get("ts"),
                 )
                 continue
+            # CR-02: defensive — production writes are always aware, but
+            # legacy data or hand-edited fixtures could be naive. Promote
+            # to aware UTC so the comparison never raises TypeError.
+            if entry_ts.tzinfo is None:
+                entry_ts = entry_ts.replace(tzinfo=timezone.utc)
             if entry_ts < since_dt:
                 continue
         out.append(entry)

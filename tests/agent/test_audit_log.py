@@ -242,6 +242,61 @@ class TestReadAudit:
         assert len(entries) == 2
         assert all(e["action"] != "propose" for e in entries)
 
+    def test_filter_by_naive_since_normalizes_to_utc(self):
+        """CR-02 regression: ``--since 2026-06-02`` (naive, no tzinfo)
+        used to silently drop every entry because the aware entry_ts
+        raised TypeError on comparison and was caught as "unparseable
+        ts". After the fix, naive since is promoted to UTC midnight and
+        the comparison works correctly.
+        """
+        # Should behave identically to the aware variant above.
+        entries = read_audit(since="2026-06-02", path=VALID_FIXTURE)
+        assert len(entries) == 2
+        assert all(e["action"] != "propose" for e in entries)
+
+    def test_filter_by_naive_since_date_only(self):
+        """CR-02 regression: ``--since 2026-06-01`` (the exact example
+        from the CLI help text) used to silently drop every entry. After
+        the fix, it correctly returns all 3 fixture entries.
+        """
+        entries = read_audit(since="2026-06-01", path=VALID_FIXTURE)
+        assert len(entries) == 3
+
+    def test_filter_by_since_naive_entry_ts_promoted(self, tmp_path, monkeypatch):
+        """CR-02 defensive: a hand-edited legacy entry with a naive ts
+        (no tzinfo) is promoted to UTC rather than dropping the entry.
+        """
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        log_path = tmp_path / "skills" / ".audit" / "log.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        # Naive-ts entry + aware-ts entry, both after 2026-06-01 UTC.
+        naive_entry = {
+            "entry_id": "naive1",
+            "prev_sha256": GENESIS_PREV_SHA256,
+            "action": "propose",
+            "ts": "2026-06-15T10:00:00",  # naive — no +00:00
+            "operator": "t",
+            "patch_id": "p1",
+            "skill_id": "s1",
+            "feedback_ids": [],
+            "eval_score": {},
+            "commit_sha": None,
+        }
+        payload = {k: v for k, v in naive_entry.items() if k != "entry_sha256"}
+        naive_entry["entry_sha256"] = hashlib.sha256(
+            (GENESIS_PREV_SHA256 + json.dumps(payload, sort_keys=True,
+                                              separators=(",", ":"),
+                                              ensure_ascii=False)).encode("utf-8")
+        ).hexdigest()
+        log_path.write_text(
+            json.dumps(naive_entry, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        # Naive since + naive entry ts: both promoted to UTC, comparison works.
+        entries = read_audit(since="2026-06-01", path=log_path)
+        assert len(entries) == 1
+        assert entries[0]["entry_id"] == "naive1"
+
     def test_invalid_since_raises(self):
         with pytest.raises(ValueError, match="since must be ISO-8601"):
             read_audit(since="not-a-date", path=VALID_FIXTURE)

@@ -353,6 +353,31 @@ class TestAuditLogCmd:
         assert "p1" in out
         assert "p2" not in out
 
+    def test_naive_since_date_returns_entries(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """CR-02 regression: ``--since 2026-06-01`` (the exact example
+        from the CLI help) used to silently drop every entry because
+        the aware entry_ts raised TypeError vs the naive since_dt and
+        was caught as "unparseable ts". After the fix, naive since is
+        promoted to UTC midnight and the documented operator workflow
+        works.
+        """
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        from hermes_cli import curator as curator_cli
+        from agent import curator_audit
+
+        curator_audit.append_audit(
+            action="propose", patch_id="p1", skill_id="s1", operator="t",
+        )
+
+        args = argparse.Namespace(verify=False, action=None,
+                                  since="2026-06-01", skill=None)
+        rc = curator_cli._cmd_audit_log(args)
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "p1" in out
+
 
 # ---------------------------------------------------------------------------
 # Delegation: structural assertion that curator handlers forward to P31
