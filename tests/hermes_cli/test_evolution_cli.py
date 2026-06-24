@@ -559,3 +559,394 @@ class TestRejectCmd:
         exit_code = args.func(args)
 
         assert exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# approve — EVOL-04 non-bypassable human-in-loop + EVOL-05 atomic apply
+# ---------------------------------------------------------------------------
+
+
+class TestApproveCmdRequiresYes:
+    """Per Plan-checker Warning 2/3: ``--yes`` is REQUIRED (no default-yes)."""
+
+    def test_approve_without_yes_exits_nonzero_without_apply(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["approve", "some_patch_id"])  # no --yes
+
+        with patch(
+            "agent.evolution.apply_patch_transaction"
+        ) as mock_apply:
+            exit_code = args.func(args)
+
+        assert exit_code != 0
+        captured = capsys.readouterr()
+        assert "approval required" in captured.err.lower() or "--yes" in captured.err
+        # CRITICAL: apply_patch_transaction MUST NOT be called without --yes.
+        mock_apply.assert_not_called()
+
+
+class TestApproveCmdNotFound:
+    def test_approve_unknown_patch_exits_nonzero(self, monkeypatch, tmp_path, capsys):
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["approve", "unknown_pid", "--yes"])
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=tmp_path
+        ):
+            exit_code = args.func(args)
+
+        assert exit_code != 0
+        captured = capsys.readouterr()
+        assert "not found" in captured.err.lower() or "not found" in captured.out.lower()
+
+
+class TestApproveCmdAppliesAndMoves:
+    def test_approve_with_yes_calls_apply_and_moves(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        from hermes_cli.feedback import register_cli, _resolve_evolution_dir
+        from agent.evolution import PatchRecord, append_patch, ApplyResult, read_queue
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        evolution_dir = _resolve_evolution_dir()
+
+        record = PatchRecord(
+            patch_id="approve_target",
+            skill_id="screenplay",
+            insight_id="insight_1",
+            unified_diff="--- a/x.md\n+++ b/x.md\n@@ -1,1 +1,2 @@\n ctx\n+new\n",
+            feedback_chain=["fb_001"],
+            llm_rationale="x",
+            eval_gate_score={"verdict": "pass", "mean_delta": 0.1},
+            status="pending",
+            ts_queued=datetime.now(timezone.utc).isoformat(),
+        )
+        append_patch(record, evolution_dir)
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["approve", "approve_target", "--yes"])
+
+        fake_result = ApplyResult(
+            commit_sha="abc123def456789012",
+            files_modified=["skills/movie-experts/screenplay/SKILL.md"],
+        )
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=tmp_path
+        ), patch(
+            "agent.evolution.apply_patch_transaction",
+            return_value=fake_result,
+        ) as mock_apply:
+            exit_code = args.func(args)
+
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "applied" in captured.out.lower()
+        assert "abc123" in captured.out  # commit_sha[:12]
+        mock_apply.assert_called_once()
+
+        # The patch must have moved to applied.jsonl.
+        applied = read_queue(evolution_dir=evolution_dir, status="applied")
+        assert any(r.patch_id == "approve_target" for r in applied)
+
+
+class TestApproveCmdOnApplyError:
+    """ApplyError must NOT move the patch (stays pending)."""
+
+    def test_apply_error_keeps_patch_pending(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        from hermes_cli.feedback import register_cli, _resolve_evolution_dir
+        from agent.evolution import (
+            PatchRecord, append_patch, ApplyError,
+        )
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        evolution_dir = _resolve_evolution_dir()
+
+        record = PatchRecord(
+            patch_id="err_target",
+            skill_id="screenplay",
+            insight_id="insight_1",
+            unified_diff="--- a/x.md\n+++ b/x.md\n",
+            feedback_chain=["fb_001"],
+            llm_rationale="x",
+            eval_gate_score={"verdict": "pass"},
+            status="pending",
+            ts_queued=datetime.now(timezone.utc).isoformat(),
+        )
+        append_patch(record, evolution_dir)
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["approve", "err_target", "--yes"])
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=tmp_path
+        ), patch(
+            "agent.evolution.apply_patch_transaction",
+            side_effect=ApplyError("FOUND-08 violation"),
+        ), patch(
+            "agent.evolution.move_patch"
+        ) as mock_move:
+            exit_code = args.func(args)
+
+        assert exit_code != 0
+        captured = capsys.readouterr()
+        assert "apply failed" in captured.err.lower() or "apply failed" in captured.out.lower()
+        # CRITICAL: patch must NOT move to applied on ApplyError.
+        mock_move.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# rollback — EVOL-05 git revert
+# ---------------------------------------------------------------------------
+
+
+class TestRollbackCmdRequiresYes:
+    """``--yes`` is required — git revert is destructive."""
+
+    def test_rollback_without_yes_exits_nonzero_no_revert(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["rollback", "abc123"])  # no --yes
+
+        with patch("subprocess.run") as mock_run:
+            exit_code = args.func(args)
+
+        assert exit_code != 0
+        captured = capsys.readouterr()
+        assert "--yes" in captured.err
+        mock_run.assert_not_called()
+
+
+class TestRollbackCmdInvalidSha:
+    def test_invalid_sha_exits_nonzero(self, monkeypatch, tmp_path, capsys):
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["rollback", "notasha", "--yes"])
+
+        # Make git rev-parse fail (sha doesn't exist).
+        def fake_run(cmd, **kwargs):
+            mock_result = MagicMock()
+            if "rev-parse" in cmd and "--verify" in cmd:
+                mock_result.returncode = 1
+                mock_result.stdout = ""
+                mock_result.stderr = "fatal: ambiguous argument"
+            else:
+                mock_result.returncode = 0
+                mock_result.stdout = ""
+                mock_result.stderr = ""
+            return mock_result
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=tmp_path
+        ), patch("subprocess.run", side_effect=fake_run):
+            exit_code = args.func(args)
+
+        assert exit_code != 0
+        captured = capsys.readouterr()
+        assert "not found" in captured.err.lower() or "not found" in captured.out.lower()
+
+
+class TestRollbackCmdHappyPath:
+    """Rollback a real commit in a tmp git repo."""
+
+    def test_rollback_reverts_commit(self, monkeypatch, tmp_path, capsys):
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+
+        # Set up a real tmp git repo with one commit.
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
+        env = os.environ.copy()
+        env["GIT_CONFIG_GLOBAL"] = "/dev/null"
+        env["GIT_CONFIG_SYSTEM"] = "/dev/null"
+        env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+        env["GIT_AUTHOR_NAME"] = "Test"
+        env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+        env["GIT_COMMITTER_NAME"] = "Test"
+
+        def git(*cmd):
+            return subprocess.run(
+                ["git", *cmd],
+                cwd=str(repo_root),
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                env=env,
+            )
+
+        git("init", "-b", "main")
+        (repo_root / "file.txt").write_text("v1\n", encoding="utf-8")
+        git("add", "file.txt")
+        git("commit", "-m", "initial")
+        commit_sha = git("rev-parse", "HEAD").stdout.strip()
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["rollback", commit_sha, "--yes"])
+
+        # Use the real subprocess for git revert (no patch).
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=repo_root
+        ):
+            # Need to pass through env vars for git author.
+            monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+            monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
+            monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+            monkeypatch.setenv("GIT_COMMITTER_NAME", "Test")
+            exit_code = args.func(args)
+
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "reverted" in captured.out.lower()
+        # Verify the revert commit exists.
+        log = subprocess.run(
+            ["git", "log", "--oneline"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+        ).stdout
+        assert "revert" in log.lower() or len(log.splitlines()) >= 2
+
+
+# ---------------------------------------------------------------------------
+# EVOL-04 structural invariant — non-bypassable human-in-loop
+# ---------------------------------------------------------------------------
+
+
+class TestNonBypassableHumanInLoop:
+    """The CRITICAL invariant: only ``_cmd_approve`` calls ``apply_patch_transaction``.
+
+    We parse ``hermes_cli/feedback.py`` with :mod:`ast` and walk every Call
+    node whose function name is ``apply_patch_transaction``. Each such Call
+    must be enclosed in a function definition named ``_cmd_approve``.
+
+    This is the structural enforcement of EVOL-04 — no auto-apply path
+    exists. If a future contributor adds ``apply_patch_transaction()`` inside
+    (say) ``_cmd_evolve`` or a curator module, this test fails and blocks
+    the regression.
+    """
+
+    def test_only_cmd_approve_calls_apply_patch_transaction(self):
+        feedback_path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "hermes_cli" / "feedback.py"
+        )
+        source = feedback_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        violators: list[str] = []
+
+        class _Walker(ast.NodeVisitor):
+            def __init__(self) -> None:
+                # Stack of enclosing FunctionDef names.
+                self.func_stack: list[str] = []
+
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                self.func_stack.append(node.name)
+                self.generic_visit(node)
+                self.func_stack.pop()
+
+            def visit_AsyncFunctionDef(self, node) -> None:
+                self.func_stack.append(node.name)
+                self.generic_visit(node)
+                self.func_stack.pop()
+
+            def visit_Call(self, node: ast.Call) -> None:
+                func = node.func
+                name: str | None = None
+                if isinstance(func, ast.Name):
+                    name = func.id
+                elif isinstance(func, ast.Attribute):
+                    name = func.attr
+                if name == "apply_patch_transaction":
+                    enclosing = self.func_stack[-1] if self.func_stack else "<module>"
+                    if enclosing != "_cmd_approve":
+                        violators.append(
+                            f"line {node.lineno}: apply_patch_transaction "
+                            f"called from {enclosing!r} (must be _cmd_approve)"
+                        )
+                self.generic_visit(node)
+
+        _Walker().visit(tree)
+
+        assert not violators, (
+            "EVOL-04 non-bypassable human-in-loop VIOLATED: "
+            + "; ".join(violators)
+        )
+
+    def test_apply_patch_transaction_not_called_in_agent_or_runtime(self):
+        """Beyond hermes_cli/feedback.py, the runtime must never call it.
+
+        Verifies the broader isolation: agent/, run_agent.py, cli.py, gateway/
+        contain zero ``apply_patch_transaction(`` calls (excluding the
+        evolution subpackage itself, which owns the function definition).
+        """
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        violators: list[str] = []
+        for sub in ("agent", "gateway", "run_agent.py", "cli.py"):
+            root = repo_root / sub
+            if root.is_file():
+                files = [root]
+            elif root.is_dir():
+                files = list(root.rglob("*.py"))
+            else:
+                continue
+            for f in files:
+                # Skip test files, __pycache__, evolution subpackage itself.
+                if "tests" in f.parts or "__pycache__" in f.parts:
+                    continue
+                if "agent/evolution" in str(f):
+                    continue
+                try:
+                    source = f.read_text(encoding="utf-8")
+                    tree = ast.parse(source)
+                except (SyntaxError, UnicodeDecodeError):
+                    continue
+
+                class _Walker(ast.NodeVisitor):
+                    def visit_Call(self, node: ast.Call) -> None:
+                        func = node.func
+                        name: str | None = None
+                        if isinstance(func, ast.Name):
+                            name = func.id
+                        elif isinstance(func, ast.Attribute):
+                            name = func.attr
+                        if name == "apply_patch_transaction":
+                            violators.append(str(f.relative_to(repo_root)))
+                        self.generic_visit(node)
+
+                _Walker().visit(tree)
+        assert not violators, (
+            "apply_patch_transaction called outside hermes_cli/feedback.py "
+            "in runtime code: " + ", ".join(violators)
+        )

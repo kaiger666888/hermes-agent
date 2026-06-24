@@ -780,30 +780,145 @@ def _cmd_reject(args) -> int:
 def _cmd_approve(args) -> int:
     """``hermes feedback approve <patch_id> [--yes]`` — EVOL-04 + EVOL-05.
 
-    STUB (Task 1) — full implementation lands in Task 2. Per Plan-checker
-    Warning 2/3, this stub MUST fail explicitly with a non-zero exit so
-    that if execution interrupts between Task 1 and Task 2 the operator
-    cannot accidentally treat approve as functional.
+    EVOL-04 non-bypassable human-in-loop: this is the ONLY code path in
+    the codebase that calls ``apply_patch_transaction``. Without ``--yes``,
+    the command refuses to apply and exits non-zero (no default-yes path).
+
+    On success: atomic git apply + commit (delegated to
+    ``apply_patch_transaction``), patch moves to applied.jsonl with the
+    commit_sha.
+
+    On ApplyError: working tree auto-reverted by apply_patch_transaction;
+    patch STAYS pending; operator can retry or reject.
     """
-    print(
-        "approve: not yet implemented — see Task 2 (EVOL-04 non-bypassable "
-        "human-in-loop apply transaction)",
-        file=sys.stderr,
+    # EVOL-04: --yes is explicit operator consent. No --yes → refuse.
+    if not args.yes:
+        print(
+            "approval required (pass --yes to confirm)",
+            file=sys.stderr,
+        )
+        return 1
+
+    # LAZY imports — apply_patch_transaction is the SOLE caller gate
+    # (TestNonBypassableHumanInLoop enforces this structurally via ast).
+    from agent.evolution import (
+        ApplyError,
+        apply_patch_transaction,
+        build_commit_message,
+        move_patch,
+        read_queue,
     )
-    return 2
+
+    evolution_dir = _resolve_evolution_dir()
+    repo_root = _resolve_repo_root()
+
+    # Look up the pending patch.
+    records = read_queue(evolution_dir=evolution_dir, status="pending")
+    match = next((r for r in records if r.patch_id == args.patch_id), None)
+    if not match:
+        print(
+            f"patch {args.patch_id} not found in pending queue",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Write the unified_diff to a temp .patch file for git apply.
+    patch_fd, patch_tmp_path = tempfile.mkstemp(
+        prefix=f"approve_{args.patch_id}_", suffix=".patch"
+    )
+    patch_tmp = Path(patch_tmp_path)
+    try:
+        os.close(patch_fd)
+        patch_tmp.write_text(match.unified_diff, encoding="utf-8")
+
+        commit_message = build_commit_message(
+            insight_summary=(match.llm_rationale or "")[:72],
+            feedback_ids=list(match.feedback_chain),
+            eval_verdict=str(
+                (match.eval_gate_score or {}).get("verdict", "unknown")
+            ),
+            eval_mean_delta=float(
+                (match.eval_gate_score or {}).get("mean_delta", 0.0)
+            ),
+        )
+
+        try:
+            result = apply_patch_transaction(
+                patch_path=patch_tmp,
+                repo_root=repo_root,
+                commit_message=commit_message,
+            )
+        except ApplyError as exc:
+            # Working tree already auto-reverted; patch stays pending.
+            print(
+                f"apply failed (working tree restored): {exc}",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Success: move patch to applied.jsonl with the commit_sha.
+        move_patch(
+            patch_id=args.patch_id,
+            target_status="applied",
+            evolution_dir=evolution_dir,
+            commit_sha=result.commit_sha,
+        )
+        print(f"applied {args.patch_id} as commit {result.commit_sha[:12]}")
+        return 0
+    finally:
+        patch_tmp.unlink(missing_ok=True)
 
 
 def _cmd_rollback(args) -> int:
     """``hermes feedback rollback <commit_sha> [--yes]`` — EVOL-05.
 
-    STUB (Task 1) — full implementation lands in Task 2. Per Plan-checker
-    Warning 2, this stub MUST fail explicitly.
+    Invokes ``git revert <commit_sha> --no-edit``. ``--yes`` is REQUIRED
+    (git revert is destructive — no default-yes path). Validates the SHA
+    exists before invoking revert (fail fast on typos).
     """
-    print(
-        "rollback: not yet implemented — see Task 2 (EVOL-05 git revert)",
-        file=sys.stderr,
+    if not args.yes:
+        print("rollback requires --yes", file=sys.stderr)
+        return 1
+
+    repo_root = _resolve_repo_root()
+
+    # Validate the commit SHA exists BEFORE invoking revert.
+    verify = subprocess.run(
+        ["git", "rev-parse", "--verify", args.commit_sha],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
-    return 2
+    if verify.returncode != 0:
+        print(f"commit {args.commit_sha} not found", file=sys.stderr)
+        return 1
+
+    revert_result = subprocess.run(
+        ["git", "revert", args.commit_sha, "--no-edit"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if revert_result.returncode != 0:
+        # Tail only — avoid dumping full git output (could contain diffs).
+        print(
+            f"git revert failed:\n{(revert_result.stderr or '')[-400:]}",
+            file=sys.stderr,
+        )
+        return 1
+
+    sha_result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    revert_sha = sha_result.stdout.strip()
+    print(f"reverted {args.commit_sha} as {revert_sha[:12]}")
+    return 0
 
 
 def cli_main(argv=None) -> int:
