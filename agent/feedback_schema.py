@@ -168,8 +168,13 @@ class OutputSnapshot(BaseModel):
     @field_validator("sha256")
     @classmethod
     def _sha256_is_64_hex(cls, v: str) -> str:
-        if not isinstance(v, str) or not _SHA256_HEX_RE.match(v):
-            raise ValueError("sha256 must be 64 lowercase hex characters")
+        # Pydantic v2 enforces ``sha256: str`` at the schema level before
+        # this validator runs, so non-str inputs surface as a Pydantic
+        # ValidationError ("Input should be a valid string") with a clear
+        # message — no isinstance check needed here. The regex below
+        # therefore only fires for actual strings.
+        if not _SHA256_HEX_RE.match(v):
+            raise ValueError("sha256 must be 64 hex characters (0-9, a-f, A-F)")
         return v.lower()
 
 
