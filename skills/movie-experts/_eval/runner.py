@@ -68,9 +68,19 @@ _SCORE_DIMENSIONS: tuple[str, ...] = (
 # insensitive on the dimension name. The capture group is the numeric
 # token; range validation happens in parse_judge_scores() so the regex
 # can stay simple (no ReDoS surface — fixed pattern per dimension).
+#
+# WR-05 fix: also tolerate markdown emphasis (``**industry_accuracy:**``)
+# and arbitrary whitespace around the colon. LLM judges commonly emit
+# scores with bold/italic markers or list prefixes that the strict
+# regex would silently drop, producing an empty scores dict and an
+# inconclusive verdict with no audit trail.
 _SCORE_DIMENSION_RES: dict[str, re.Pattern[str]] = {
     dim: re.compile(
-        rf"{re.escape(dim)}:\s*([1-5](?:\.\d+)?)",
+        # Allow any run of '*' / '_' / '-' / '+' before the dim name
+        # (markdown bold/italic + list markers), then ``dim`` (escaped),
+        # optional closing emphasis, optional whitespace, a colon,
+        # optional whitespace, then the numeric score.
+        rf"[\*\-_+]*\s*{re.escape(dim)}[\*\-_+]*\s*:\s*([1-5](?:\.\d+)?)",
         re.IGNORECASE,
     )
     for dim in _SCORE_DIMENSIONS
@@ -163,6 +173,14 @@ def parse_judge_scores(raw_text: str) -> dict[str, float]:
     for dim, pattern in _SCORE_DIMENSION_RES.items():
         m = pattern.search(raw_text)
         if m is None:
+            # WR-05: log when a dimension is expected but not found so
+            # operators have an audit trail for "judge emitted scores in
+            # a slightly different format". The fail-safe still holds
+            # (silently treat as missing), but the drop is no longer
+            # invisible. T-00-09: never logs the raw judge text.
+            logger.debug(
+                "dimension %s not found in judge response", dim,
+            )
             continue
         try:
             val = float(m.group(1))

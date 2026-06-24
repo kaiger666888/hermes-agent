@@ -790,14 +790,39 @@ class GateResult:
 
 
 def _load_answers_json(path: Path) -> list[str]:
-    """Load a JSON file containing a list of pre-generated answer strings."""
+    """Load a JSON file containing a list of pre-generated answer strings.
+
+    WR-06 fix: previously ``[str(x) for x in data]`` coerced JSON ``null``
+    to the string ``"None"`` and ``true``/integers to their repr, which
+    silently turned malformed answers files (e.g. ``[null, null]``) into
+    bogus answer text. Now: validate element types, skip ``None`` with a
+    warning, and raise ``ValueError`` for any other non-string type so
+    operators see the corruption at load time rather than producing
+    meaningless verdicts.
+    """
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list):
         raise ValueError(
             f"answers file {path} must contain a JSON list of strings"
         )
-    return [str(x) for x in data]
+    out: list[str] = []
+    for i, x in enumerate(data):
+        if x is None:
+            # JSON null — treat as a missing answer and warn.
+            logger.warning(
+                "answers file %s[%d] is JSON null; treating as missing "
+                "(skipping this prompt — alignment may drift)",
+                path, i,
+            )
+            continue
+        if not isinstance(x, str):
+            raise ValueError(
+                f"answers file {path}[{i}] must be a string, got "
+                f"{type(x).__name__} (value preview omitted for safety)"
+            )
+        out.append(x)
+    return out
 
 
 def _write_report(
