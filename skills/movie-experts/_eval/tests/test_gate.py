@@ -782,6 +782,217 @@ class TestGeneratePatchId:
 # --------------------------------------------------------------------------- #
 
 
+# --------------------------------------------------------------------------- #
+# TestPairedT — paired_t_stats() via stdlib statistics (GATE-03 stats layer)
+# --------------------------------------------------------------------------- #
+
+
+class TestPairedT:
+    def test_basic_negative_delta(self) -> None:
+        # candidate uniformly 1.0 below baseline -> mean_diff=-1.0, std=0
+        baseline = [4.0, 4.0, 4.0, 4.0, 4.0]
+        candidate = [3.0, 3.0, 3.0, 3.0, 3.0]
+        r = gate.paired_t_stats(baseline, candidate)
+        assert r["n"] == 5
+        assert r["df"] == 4
+        assert r["mean_diff"] == pytest.approx(-1.0, abs=1e-4)
+
+    def test_basic_positive_delta(self) -> None:
+        baseline = [3.0, 3.0, 3.0, 3.0, 3.0]
+        candidate = [4.0, 4.0, 4.0, 4.0, 4.0]
+        r = gate.paired_t_stats(baseline, candidate)
+        assert r["mean_diff"] == pytest.approx(1.0, abs=1e-4)
+        # t_stat should be positive (inf because std_diff == 0).
+        assert r["t_stat"] is not None
+
+    def test_zero_std_returns_inf_or_zero(self) -> None:
+        # Identical lists: diffs all 0 -> std_diff=0, mean_diff=0 -> t_stat=0.0
+        r = gate.paired_t_stats([3.0, 3.0, 3.0], [3.0, 3.0, 3.0])
+        assert r["std_diff"] == 0.0
+        assert r["mean_diff"] == 0.0
+        assert r["t_stat"] == 0.0
+
+    def test_n_less_than_2(self) -> None:
+        # Degenerate: only 1 sample -> t_stat is None.
+        r = gate.paired_t_stats([3.0], [3.0])
+        assert r["t_stat"] is None
+        assert r["n"] == 1
+        assert r["df"] == 0
+
+    def test_mismatched_lengths(self) -> None:
+        # Uses min length.
+        r = gate.paired_t_stats([4.0, 4.0, 4.0, 4.0, 4.0], [3.0, 3.0, 3.0])
+        assert r["n"] == 3
+        assert r["df"] == 2
+
+    def test_no_p_value_computed(self) -> None:
+        r = gate.paired_t_stats([4.0, 4.0, 4.0, 4.0, 4.0], [3.0, 3.0, 3.0, 3.0, 3.0])
+        assert r["p_value"] is None
+
+    def test_returns_required_fields(self) -> None:
+        r = gate.paired_t_stats([4.0, 4.0, 4.0], [3.0, 3.0, 3.0])
+        for key in ("t_stat", "n", "df", "mean_diff", "std_diff", "p_value"):
+            assert key in r, f"missing field {key!r} in paired_t_stats result"
+
+
+# --------------------------------------------------------------------------- #
+# TestIsSignificant — boolean significance via hardcoded t-table
+# --------------------------------------------------------------------------- #
+
+
+class TestIsSignificant:
+    def test_significant_at_df_4(self) -> None:
+        # crit(df=4) = 2.776; |t|=3.0 > 2.776 -> significant.
+        assert gate.is_significant(-3.0, df=4) is True
+
+    def test_not_significant_at_df_4(self) -> None:
+        # |t|=2.0 < 2.776 -> not significant.
+        assert gate.is_significant(-2.0, df=4) is False
+
+    def test_df_1_uses_12_706(self) -> None:
+        # crit(df=1) = 12.706.
+        assert gate.is_significant(13.0, df=1) is True
+        assert gate.is_significant(10.0, df=1) is False
+
+    def test_df_gt_30_uses_1_960(self) -> None:
+        assert gate.is_significant(2.5, df=40) is True
+        assert gate.is_significant(1.5, df=40) is False
+
+    def test_unknown_alpha_returns_false(self) -> None:
+        # Table only has alpha=0.05; alpha=0.01 must return False with warning.
+        assert gate.is_significant(-5.0, df=4, alpha=0.01) is False
+
+    def test_none_t_stat_returns_false(self) -> None:
+        assert gate.is_significant(None, df=4) is False
+
+    def test_round_down_for_unlisted_df(self) -> None:
+        # df=12 not in table; conservative round-down uses df=10 (2.228).
+        assert gate.is_significant(2.5, df=12) is True
+        assert gate.is_significant(2.0, df=12) is False
+
+
+# --------------------------------------------------------------------------- #
+# TestRejectLogSchema — paired_t block + operator_hint in reject JSON
+# --------------------------------------------------------------------------- #
+
+
+class TestRejectLogSchema:
+    def _setup_failing_gate(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> tuple[Path, Path]:
+        """Set up a gate run that fails (fail_mean) and return report + reject paths."""
+        prompts_path = tmp_path / "prompts.yaml"
+        prompts_path.write_text(
+            "expert_id: screenplay\n"
+            "prompts:\n"
+            + "\n".join(f"  - id: p{i}\n    text: p{i}" for i in range(5))
+            + "\n",
+            encoding="utf-8",
+        )
+        baseline_ans = tmp_path / "b.json"
+        candidate_ans = tmp_path / "c.json"
+        baseline_ans.write_text(
+            json.dumps([f"b{i}" for i in range(5)]), encoding="utf-8"
+        )
+        candidate_ans.write_text(
+            json.dumps([f"c{i}" for i in range(5)]), encoding="utf-8"
+        )
+
+        skill_file = (
+            tmp_git_repo
+            / "skills" / "movie-experts" / "screenplay" / "SKILL.md"
+        )
+        skill_file.write_text(
+            skill_file.read_text(encoding="utf-8") + "\n# c\n",
+            encoding="utf-8",
+        )
+        diff_result = subprocess.run(
+            ["git", "diff"], cwd=str(tmp_git_repo),
+            capture_output=True, text=True, encoding="utf-8", check=True,
+        )
+        patch_path = tmp_path / "c.patch"
+        patch_path.write_text(diff_result.stdout, encoding="utf-8")
+        subprocess.run(
+            ["git", "checkout", "--", "skills/movie-experts/screenplay/SKILL.md"],
+            cwd=str(tmp_git_repo), capture_output=True, check=True,
+        )
+
+        reports_dir = tmp_path / "reports"
+        # Low candidate scores + high cached baseline -> fail_mean.
+        judge = MockJudgeClient(
+            response_ab=_judge_response(
+                {
+                    "industry_accuracy": 2.0, "professional_depth": 2.0,
+                    "actionability": 2.0, "language_quality": 2.0,
+                },
+                "A",
+            ),
+            response_ba=_judge_response(
+                {
+                    "industry_accuracy": 2.0, "professional_depth": 2.0,
+                    "actionability": 2.0, "language_quality": 2.0,
+                },
+                "B",
+            ),
+        )
+        baseline_cache = reports_dir / "baseline_scores.json"
+        baseline_cache.parent.mkdir(parents=True, exist_ok=True)
+        baseline_cache.write_text(
+            json.dumps([5.0, 5.0, 5.0, 5.0, 5.0]), encoding="utf-8"
+        )
+
+        config = gate.load_gate_config(None, {})
+        result = gate.run_gate(
+            patch_path=patch_path,
+            skill_id="screenplay",
+            baseline_answers_path=baseline_ans,
+            candidate_answers_path=candidate_ans,
+            config=config,
+            repo_root=tmp_git_repo,
+            prompts_path=prompts_path,
+            judge_client=judge,
+            reports_dir=reports_dir,
+            baseline_scores_cache=baseline_cache,
+        )
+        assert result.verdict != "pass", "setup expected a failure verdict"
+        return result.report_path, result.reject_path
+
+    def test_paired_t_block_in_reject_log(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> None:
+        _, reject_path = self._setup_failing_gate(tmp_git_repo, tmp_path)
+        assert reject_path is not None and reject_path.is_file()
+        reject = json.loads(reject_path.read_text(encoding="utf-8"))
+        assert "paired_t" in reject, "reject log missing paired_t block"
+        pt = reject["paired_t"]
+        for k in ("t_stat", "n", "df", "mean_diff", "p_value",
+                  "significant_at_0.05", "note"):
+            assert k in pt, f"paired_t missing field {k!r}"
+        assert pt["p_value"] is None
+
+    def test_operator_hint_present(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> None:
+        _, reject_path = self._setup_failing_gate(tmp_git_repo, tmp_path)
+        reject = json.loads(reject_path.read_text(encoding="utf-8"))
+        assert "operator_hint" in reject
+        assert isinstance(reject["operator_hint"], str)
+        assert reject["operator_hint"].strip(), "operator_hint is empty"
+
+    def test_paired_t_in_report_always(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> None:
+        report_path, _ = self._setup_failing_gate(tmp_git_repo, tmp_path)
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        # Report is ALWAYS written, even on failure. paired_t should be there too.
+        assert "paired_t" in report, "report missing paired_t block"
+
+
+# --------------------------------------------------------------------------- #
+# TestGateCli — main() CLI surface
+# --------------------------------------------------------------------------- #
+
+
 class TestGateCli:
     def test_help_exits_zero(self, capsys) -> None:
         # --help MUST exit 0 and print usage (per SC #5).
