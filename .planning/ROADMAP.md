@@ -1,12 +1,20 @@
-# Roadmap: Movie-Experts Suite v2 — 短剧/微电影创作专家增强
+# Roadmap: v6.0 — Self-Evolution & Feedback Loop
 
-**Project:** RAG-augmented movie-expert skill suite (MESV2)
-**Current milestone:** None — last completed v5.0 on 2026-06-19
-**Next:** Operator decision (run `/gsd:new-milestone` to start v6 or polish v5.0 deferred items)
+**Milestone:** v6.0 — Self-Evolution & Feedback Loop
+**Started:** 2026-06-24
+**Predecessor:** v5.0 kais-movie-agent V8.6 Adaptation (shipped 2026-06-19, 30/30 reqs, audit PASSED)
+**Phase numbering:** Continues from v5.0 (which ended at Phase 27). v6.0 phases start at Phase 28. NOT reset.
+
+**Core functional guarantee:** 每个 movie-expert skill 在给出意见后,都能接收到调用者的反馈,反馈经 eval-gated pipeline 驱动 SKILL.md / refs 持续改进。
+
+**Paradigm shift (v5→v6):** From static knowledge curation to feedback-driven self-learning. **Scope expansion:** v6 (unlike v1-v5) DOES modify Hermes core (`agent/curator.py` extension + new feedback ingestion infrastructure). Pure-skill phases still occur (e.g. SKILL.md body patches teaching experts to REQUEST feedback), but core code touch is unavoidable per CURATE-01.
+
+**Granularity:** standard (target 5-7 phases, 3-6 requirements per phase)
+**Coverage:** 26 / 26 v1 requirements mapped (100%)
 
 ---
 
-## Milestones
+## Previous Milestones (archive)
 
 - ✅ **v1 — Movie-Experts Suite v2** — Phases 0-6 (shipped 2026-06-15) — [Full archive](./milestones/v1-ROADMAP.md)
 - ✅ **v2.0 PRFP — Pipeline Redesign from First Principles** — Phases 7-12 (shipped 2026-06-16) — design suite at `.planning/research/v2-pipeline-design/`
@@ -16,155 +24,186 @@
 
 ---
 
-## v5.0 Summary
-
-**v5.0 — kais-movie-agent V8.6 Adaptation** syncs hermes-agent's 16 active movie-experts to kais-movie-agent V8.4-V8.6 (commits `4fb57b4` V8.4 + `c22867d` V8.5 + `e41fa68` V8.6, all 2026-06-18). The consumer-side kais-movie-agent pipeline underwent three same-day shifts: (1) V8.4 expert mapping full update (drawer+animator→visual_executor, audio N:1 merge, continuity→continuity_auditor, scene_builder/storyboard_designer→cinematographer, NEW prompt_injector); (2) V8.5 dreamina CLI replacing jimeng-client + Step 7 角色资产库完整化 (L1-L4); (3) V8.6 管线精简 25→13 步, 审核门 12→8 个, Expert 调用 15→10 次. The gap is internal knowledge layer — hermes-agent experts still emit pre-V8.4 assumptions.
-
-6 phases, 30 requirements. Pure knowledge-layer increment (mirrors v4.0 scope discipline): no new expert_id, no DAG node change, no core architecture refactor. v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) PRESERVED, not replaced — V8.6 knowledge ADDED alongside.
-
----
-
 ## Phases
 
-- [ ] **Phase 22: dreamina CLI 知识基线** — Shared ref documenting dreamina CLI as sole image/video tool
-- [ ] **Phase 23: 视觉系 V8.6 sync** — visual_executor + prompt_injector + character_designer + cinematographer + colorist + style_genome
-- [ ] **Phase 24: 文学系 V8.6 sync** — hook_retention + creative_source + screenplay + script_auditor
-- [ ] **Phase 25: 听觉系 V8.6 sync** — audio_pipeline + 6 sub-step stubs
-- [ ] **Phase 26: 审核系 V8.6 sync** — continuity_auditor + compliance_gate + editor + theory_critic
-- [ ] **Phase 27: 集成 (Integration close-out)** — _shared/v86-pipeline-mapping.md + skills-mapping.yaml v5 sign-off + README corpus tree + glossary
+- [ ] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
+- [ ] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引
+- [ ] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection
+- [ ] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback
+- [ ] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径
+- [ ] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out
 
 ---
 
 ## Phase Details
 
-### Phase 22: dreamina CLI 知识基线
-**Goal**: Create the cross-expert shared reference documenting dreamina CLI as the canonical image/video generation tool per kais-movie-agent V8.5 — unblocking downstream expert V8.6 sync phases (P23 + P25 both reference this baseline).
-**Depends on**: Nothing (first phase of v5.0; produces `_shared/dreamina-cli-baseline.md` referenced by P23 VISUAL-02 + P25 AUDIO-02)
-**Requirements**: DREAMINA-01, DREAMINA-02, DREAMINA-03, DREAMINA-04, DREAMINA-05
-**Success Criteria** (what must be TRUE):
-  1. `skills/movie-experts/_shared/dreamina-cli-baseline.md` exists with `verified_date: 2026-06-19` documenting all 6 dreamina CLI sub-commands (text2image / image2image / multimodal2video / multiframe2video / frames2video / image_upscale) per kais-movie-agent V8.5 SKILL.md
-  2. dreamina-cli-baseline.md documents the L1/L2/L3/L4 character asset library strategy (L1 面部锚点→角色参考 / L2 造型卡片→智能参考 / L3 姿势包 / L4 表情标定) per V8.5 角色资产库完整化
-  3. dreamina-cli-baseline.md documents the async poll pattern (`--poll 0` submit + `dreamina query_result --submit_id` poll + `aria2c URL` download) per V8.5 integration
-  4. dreamina-cli-baseline.md documents the gold-team fallback path (gold-team now video/TTS/3D only; image generation does NOT route through gold-team per V8.5)
-  5. dreamina-cli-baseline.md documents explicit deprecation notice for jimeng-client.js (marked 废弃 in V8.5, retained in lib/ for compat reference only)
-  6. dreamina-cli-baseline.md has LICENSE.md attribution row with license_status declared
-  7. FOUND-08 preservation: no new expert_id directory created under `skills/movie-experts/`, no DAG node change, no rename — `_shared/` ref only
-**Plans**: 1 plan
-- [ ] 22-01-PLAN.md — Create _shared/dreamina-cli-baseline.md (header + 6 CLI signatures + L1-L4 strategy + async poll + gold-team fallback + jimeng-client deprecation + LICENSE attribution)
+### Phase 28: Feedback Ingestion MVP
 
-### Phase 23: 视觉系 V8.6 sync
-**Goal**: Update the 6 visual系 experts (visual_executor / prompt_injector / character_designer / cinematographer / colorist / style_genome) to reference V8.6 Step positions (Step 4 角色资产 / Step 5 场景 / Step 6 运镜+终审 / Step 7 视觉种子+风格化) and document dreamina CLI integration parameters, so they stop emitting pre-V8.4 assumptions.
-**Depends on**: Phase 22 (consumes `_shared/dreamina-cli-baseline.md` for VISUAL-02 + VISUAL-03 dreamina CLI parameters)
-**Requirements**: VISUAL-01, VISUAL-02, VISUAL-03, VISUAL-04, VISUAL-05, VISUAL-06, VISUAL-07
+**Goal:** Users (CLI operators + kais-aigc-platform审核系统 + 手工标注者) can submit structured feedback against any movie-expert output, and all feedback lands in a single normalized schema ready for downstream storage and learning.
+**Depends on:** Nothing (first phase — core functional guarantee ships here)
+**Requirements:** INGEST-01, INGEST-02, INGEST-03, INGEST-04, INGEST-05
 **Success Criteria** (what must be TRUE):
-  1. `visual_executor/SKILL.md` references V8.6 Step 4 (主角设计+资产库, alongside character_designer) AND Step 5 (场景设计, alongside cinematographer + style_genome) AND Step 7 (视觉种子+风格化, alongside prompt_injector + style_genome + colorist)
-  2. `visual_executor/SKILL.md` documents dreamina CLI integration — drawer sub-step uses `image2image` with L1+L2 references; animator sub-step uses `multimodal2video` / `multiframe2video` / `frames2video` per V8.5 (links to `_shared/dreamina-cli-baseline.md`)
-  3. `prompt_injector/SKILL.md` documents its V8.4-NEW role as Step 7 pre-node translating visual_intent + style_genome + character_assets into dreamina-compatible model_prompts (per V8.4 §2 of update notes)
-  4. `character_designer/SKILL.md` references V8.6 Step 4 AND documents L1/L2/L3/L4 asset output format feeding downstream visual_executor + dreamina CLI
-  5. `cinematographer/SKILL.md` references V8.6 Step 5 (场景设计) AND Step 6 (运镜+终审, alongside screenplay + script_auditor) AND Step 8 (运镜+节奏 alongside editor); explicitly preserves V8.4 folding of scene_builder + storyboard_designer (no resurrection)
-  6. `colorist/SKILL.md` references V8.6 Step 7 (视觉种子+风格化) co-role with visual_executor + prompt_injector + style_genome
-  7. `style_genome/SKILL.md` references V8.6 Step 2.5 (前置 style_genome after story framework per V8.4 §3) AND Step 5 (场景设计 alongside cinematographer + visual_executor) AND Step 7 (视觉种子+风格化)
-  8. FOUND-08 preservation: no new expert_id directory created, no DAG node change, no rename — only body edits to existing SKILL.md files; v4.0 methodology refs (e-konte-format.md under cinematographer, scamper-variations.md under style_genome) PRESERVED not replaced
-**Plans**: TBD
-**UI hint**: yes
+  1. Operator can submit feedback inside a Hermes CLI conversation against any movie-expert output — verdict (`good` / `needs_work` / `bad`) + free-text correction + optional revised output are accepted and persisted to disk
+  2. kais-aigc-platform review feedback (verdict + retry signal + modification diff) is ingestible via at least ONE of: file exchange / HTTP endpoint / webhook — concrete path chosen at plan-phase, but end-to-end ingest from a kais-aigc-platform-shaped source works
+  3. A manual-labeling CLI subcommand supports batch import of historical outputs + labels (cold-start / baseline construction path works on ≥10 sample outputs)
+  4. All three sources (CLI / kais-aigc / manual) emit the SAME JSON schema with fields `skill_id, expert_id, source, verdict, correction, output_snapshot, ts` — schema validation rejects malformed payloads with a clear error
+  5. Every feedback record carries `output_snapshot` with the original LLM output sha256 + prompt + model + params metadata — enough to reproduce and dedupe later
+**Scope note:** This is the must-have MVP. The exact kais-aigc接入方式 (file/HTTP/webhook) is a plan-phase decision, not a roadmap decision. The phase MUST ship a working ingest path; the choice of transport is not allowed to block the phase.
+**Hermes-core touch:** Yes — new feedback-ingestion entrypoints / CLI subcommands / watchers under `~/.hermes/skills/.feedback/` ingest path. Not a pure-skill phase.
+**Plans:** TBD
 
-### Phase 24: 文学系 V8.6 sync
-**Goal**: Update the 4 literary系 experts (hook_retention / creative_source / screenplay / script_auditor) to reference V8.6 Step positions (Step 1 hook+主题 atomic / Step 2 框架+大纲 atomic / Step 3 剧本+审计 atomic), aligning I/O contracts for the new atomic operations.
-**Depends on**: Phase 22 (soft dep — uses dreamina-cli-baseline.md terminology; can run parallel to P23/P25/P26)
-**Requirements**: LITERARY-01, LITERARY-02, LITERARY-03, LITERARY-04
-**Success Criteria** (what must be TRUE):
-  1. `hook_retention/SKILL.md` references V8.6 Step 1 merged role (爆款选题雷达 + 主题生成 in one atomic step, originally Step 1+2 per V8.6 §1) AND preserves V8.4 pre-fronting of style_genome as input
-  2. `creative_source/SKILL.md` references V8.6 Step 2 merged role (故事框架+大纲 in one atomic step alongside screenplay, originally Step 2.5+3 per V8.6 §2)
-  3. `screenplay/SKILL.md` references V8.6 Step 2 (框架+大纲 alongside creative_source) AND Step 3 (剧本+审计 atomic op alongside script_auditor, originally Step 5+5B+6 per V8.6 §3) AND Step 6 (时空剧本+终审 alongside cinematographer + script_auditor)
-  4. `script_auditor/SKILL.md` references V8.6 Step 3 (剧本+审计 atomic op) AND Step 6 (终审) — documents its V8.4 §4 pre-fronting role (Step 5 后 5维定量审计 drives Step 6 选剧本)
-  5. FOUND-08 preservation: no new expert_id directory created, no DAG node change — only body edits to existing SKILL.md files; v4.0 methodology ref (snowflake-method.md under creative_source) PRESERVED not replaced
-**Plans**: TBD
-**UI hint**: yes
+### Phase 29: Feedback Store
 
-### Phase 25: 听觉系 V8.6 sync
-**Goal**: Update `audio_pipeline` + 6 sub-step stubs (voicer / composer / foley / mixer / spatial_audio / lip_sync) to reference V8.6 Step positions (Step 7B 声音骨架 / Step 11 BGM+音效+口型统一) and document dreamina CLI `multimodal2video` audio binding, so audio experts align with the V8.6 atomic Step 11 merge.
-**Depends on**: Phase 22 (consumes `_shared/dreamina-cli-baseline.md` for AUDIO-02 multimodal2video audio binding)
-**Requirements**: AUDIO-01, AUDIO-02, AUDIO-03, AUDIO-04
+**Goal:** All ingested feedback persists durably, is queryable by Curator and dashboards, decays in weight over time, and is deduplicated so the same output snapshot cannot skew the learning signal.
+**Depends on:** Phase 28 (needs the normalized schema + ingest path)
+**Requirements:** STORE-01, STORE-02, STORE-03, STORE-04
 **Success Criteria** (what must be TRUE):
-  1. `audio_pipeline/SKILL.md` references V8.6 Step 7B (声音骨架: voicer + composer + foley sub-steps) AND Step 11 merged role (BGM+音效+口型统一 in one atomic step, originally Step 18+17B per V8.6 §6)
-  2. `audio_pipeline/SKILL.md` documents dreamina CLI `multimodal2video` audio binding (@Audio N reference syntax per V8.3) when audio assets feed video generation (links to `_shared/dreamina-cli-baseline.md`)
-  3. Sub-step stubs (voicer / composer / foley / mixer / spatial_audio / lip_sync) under `audio_pipeline/references/` updated with V8.6 Step position annotations (Step 7B for skeleton, Step 11 for final mix)
-  4. `audio_pipeline/SKILL.md` clarifies V8.4 merge boundary — 6 audio experts merged into N:1 audio_pipeline with `sub_steps` preservation per skills-mapping.yaml revisit_resolution Phase 18 v3.0
-  5. FOUND-08 preservation: no new expert_id directory created, no DAG node change, no merge re-opening — audio_pipeline N:1 merge boundary from Phase 15 v3.0 preserved
-**Plans**: TBD
-**UI hint**: yes
+  1. `~/.hermes/skills/.feedback/` directory exists with `skill_id/source/` sub-directory layout; feedback records append as jsonl files (one file per skill_id+source bucket)
+  2. An `index.json` file is queryable by `skill_id` / `verdict` / `source` / `timestamp` — both the Curator (Phase 32) and dashboard (Phase 33) consume this single index, not parallel ad-hoc scans
+  3. Feedback older than N days (default 90, configurable in `config.yaml`) is marked with reduced weight in the index — `weighted_count` differs from raw `count` for old buckets, so downstream aggregation honors decay
+  4. Duplicate detection works: a second feedback with identical `output_snapshot.sha256` AND identical `verdict` is NOT double-counted; a second feedback with same sha256 but DIFFERENT verdict demotes the older record's weight (treated as a correction, not a fresh signal)
+**Hermes-core touch:** Yes — new persistence layer under `~/.hermes/skills/.feedback/`. Pure data plumbing, no bundled-SKILL.md changes.
+**Plans:** TBD
 
-### Phase 26: 审核系 V8.6 sync
-**Goal**: Update the 4 audit系 experts (continuity_auditor / compliance_gate / editor / theory_critic) to reference V8.6 8-gate structure (down from 12) and document their canonical atomic roles per V8.6 SKILL.md mapping table.
-**Depends on**: Phase 22 (soft dep — uses dreamina-cli-baseline.md terminology; can run parallel to P23/P24/P25)
-**Requirements**: AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04
-**Success Criteria** (what must be TRUE):
-  1. `continuity_auditor/SKILL.md` references V8.6 Step 9 (一致性检查 atomic role) AND documents V8.6 8-gate structure (down from 12) with which gate continuity lives at
-  2. `compliance_gate/SKILL.md` documents V8.6 8-gate structure AND which gate compliance review fires at (typically pre-publish gate)
-  3. `editor/SKILL.md` references V8.6 Step 8 (运镜+节奏 alongside cinematographer) AND documents V8.4 §6 pre-fronting role (剪辑节奏前置决定镜头数/时长/转场)
-  4. `theory_critic/SKILL.md` references V8.6 "按需补充调用" consultative role per kais-movie-agent V8.6 SKILL.md canonical mapping table
-  5. FOUND-08 preservation: no new expert_id directory created, no DAG node change — only body edits to existing SKILL.md files; Phase 13 v3.0 rename continuity→continuity_auditor + compliance_marketing→compliance_gate alias chains intact
-**Plans**: TBD
-**UI hint**: yes
+### Phase 30: Eval Gate Reuse
 
-### Phase 27: 集成 (Integration close-out)
-**Goal**: Produce the canonical V8.6 13-step → expert_id mapping reference, update README corpus tree, sign off the 2 new `_shared/` refs in skills-mapping.yaml, and add bilingual glossary entries — closing out v5.0 with audit-ready traceability.
-**Depends on**: Phase 22 (references `_shared/dreamina-cli-baseline.md`) + Phases 23/24/25/26 (verifies their SKILL.md updates against canonical mapping)
-**Requirements**: INTEGRATION-01, INTEGRATION-02, INTEGRATION-03, INTEGRATION-04, INTEGRATION-05, INTEGRATION-06
+**Goal:** Any candidate patch to a bundled movie-expert skill can be automatically scored against the baseline using the existing `_eval/runner.py` MT-Bench position-swap harness, with clear pass/fail thresholds and regression guards — before the patch ever reaches a human reviewer.
+**Depends on:** Phase 29 (needs stored `output_snapshot` baselines) — but the eval-gate CODE itself is disjoint from STORE code and can be developed in parallel
+**Parallel-eligible with:** Phase 31 (EVOL) — disjoint file ownership: P30 extends `skills/movie-experts/_eval/runner.py` + adds gate scripts; P31 builds the patch-generation pipeline. They share only the JSON schema contract from P28.
+**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04
 **Success Criteria** (what must be TRUE):
-  1. `skills/movie-experts/_shared/v86-pipeline-mapping.md` exists with `verified_date: 2026-06-19` documenting the canonical 13-step → expert_id mapping per kais-movie-agent V8.6 SKILL.md §"hermes-agent 专家 → 管线 Step 速查"
-  2. v86-pipeline-mapping.md documents the 8 review gates (down from 12) per V8.6 §2 — which gate each expert's output passes through
-  3. `skills/movie-experts/README.md` corpus tree updated to list the 2 new `_shared/` refs (dreamina-cli-baseline.md + v86-pipeline-mapping.md) with `verified_date: 2026-06-19`
-  4. `.planning/research/v2-pipeline-design/skills-mapping.yaml` adds `v5_ref_signoffs` section with 2 entries (dreamina-cli-baseline.md + v86-pipeline-mapping.md) including `verified_date`, `source`, `license_status: fair_use_paraphrase` (mirrors v4.0 Phase 21 DOC-02 pattern)
-  5. `_shared/glossary.md` adds new H3 bilingual entries for V8.6 terms — minimum 3 entries including at least: `### Atomic Step / 原子步骤`, `### Review Gate / 审核门`, `### L1 Identity Anchor / L1 身份锚点`
-  6. FOUND-08 final preservation check at v5.0 close: zero new expert_id directories created across Phases 22-27, zero DAG node changes, zero renames, v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) byte-intact
-  7. v86-pipeline-mapping.md has LICENSE.md attribution row with license_status declared
-**Plans**: TBD
-**UI hint**: yes
+  1. A candidate patch enters the gate by calling `_eval/runner.py` (or a thin wrapper) in patch-vs-baseline mode on the existing benchmark prompts — no new harness is built, the v1 MT-Bench position-swap code is REUSED
+  2. A patch whose mean score across benchmark prompts drops more than δ (default 0.3 on the 4-point rubric, configurable) below baseline is REJECTED at the gate and never enters the review queue — rejection is logged with score delta
+  3. A/B double-blind comparison tool runs candidate patch vs baseline on the same prompt set with position swapping and emits a statistical-significance report (not just a raw score)
+  4. Regression detection rejects the patch if ANY single prompt's score drops more than the per-prompt threshold (default 1.0) — even if the mean is acceptable, single-prompt regressions block merge
+  5. **v5/v4 refs byte-intact check:** This phase touches only `_eval/runner.py` extension + new gate scripts — no changes to any bundled SKILL.md or `references/*.md` bytes (verified by sha256 snapshot diff against v5.0 close state)
+**Hermes-core touch:** No — `_eval/` is offline developer tooling (per runner.py docstring: "This module is OFFLINE DEVELOPER TOOLING. It is not imported by the Hermes runtime and does not call `registry.register`"). Pure eval-tooling extension.
+**Plans:** TBD
+
+### Phase 31: Knowledge Evolution Pipeline
+
+**Goal:** Accumulated feedback is transformed into candidate patches (unified diffs against SKILL.md / `references/*.md`) that an operator can review, approve, and apply with full rollback — closing the self-learning loop.
+**Depends on:** Phase 29 (STORE — needs accumulated feedback) + Phase 30 (GATE — patches must pass eval before entering review queue)
+**Requirements:** EVOL-01, EVOL-03, EVOL-04, EVOL-05
+**Success Criteria** (what must be TRUE):
+  1. An LLM-based aggregation pass reads accumulated feedback for a skill, identifies common "what should improve" themes, and emits structured candidate insights — each insight carries an evidence chain pointing to the specific feedback IDs that motivated it
+  2. A patch review queue exists where the operator can inspect each pending patch with: source feedback chain, LLM extraction rationale, list of affected skills, and the eval-gate score from Phase 30
+  3. **Every bundled movie-expert skill patch requires operator approval before apply** — the human-in-loop gate is non-bypassable for bundled skills (agent-created skills may take the semi-automatic path per Phase 32 CURATE-05, but bundled skills NEVER auto-apply)
+  4. Patch apply performs an automatic git-commit with feedback IDs + eval score in the commit message; a rollback sub-command restores any historical version from the audit trail
+  5. **FOUND-08 preservation check:** Every applied patch preserves the expert_id and related_skills frontmatter of the target SKILL.md byte-for-byte (no new expert_id created, no DAG node rewired) — verified per-patch before commit
+  6. **v5/v4 refs byte-intact check (additive-only):** Patches to v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) and v5.0 refs (dreamina-cli-baseline.md / v86-pipeline-mapping.md) are ADDITIVE only — existing bytes preserved, new knowledge appended alongside (mirrors v4.0 + v5.0 scope discipline)
+**Hermes-core touch:** Mixed — pipeline orchestration code is new (under `~/.hermes/skills/.feedback/` tooling or a new module), but the patches it produces target bundled SKILL.md / refs (additive only). The git-commit + rollback machinery touches repo state.
+**Plans:** TBD
+
+### Phase 32: Curator Upgrade + Audit
+
+**Goal:** The Curator (currently limited to archiving agent-created skills) gains the ability to scan accumulated feedback, produce candidate patches against bundled movie-expert skills via the EVOL-02 generator, log every action to a tamper-evident audit trail, and expose operator CLI commands for queue management — with a semi-automatic path for high-confidence agent-created skill patches.
+**Depends on:** Phase 31 (needs the EVOL review queue + apply machinery) + Phase 29 (needs STORE for the feedback scan)
+**Requirements:** CURATE-01, CURATE-02, CURATE-03, CURATE-04, CURATE-05, EVOL-02
+**Success Criteria** (what must be TRUE):
+  1. `agent/curator.py` `run_curator_review` scope is extended — when accumulated negative feedback for a bundled skill crosses the threshold (default ≥3 `needs_work`/`bad` across ≥2 sessions, configurable), the Curator automatically triggers the EVOL pipeline (using the EVOL-02 unified-diff generator) to produce candidate patches that land in the Phase 31 review queue (still subject to human-in-loop approve per EVOL-04)
+  2. The EVOL-02 candidate-patch generator (knowledge point → unified diff against SKILL.md / `references/*.md`, preserving EN-structure + CN-prose bilingual style) is implemented and invoked by the Curator's proposal path
+  3. Every patch action (propose / approve / reject / apply / rollback) is recorded in `~/.hermes/skills/.audit/` with operator identity, timestamp, associated feedback IDs, eval score, and git commit sha — the log is append-only and queryable
+  4. Operator commands `hermes curator queue` (list pending patches), `hermes curator approve <id>`, and `hermes curator reject <id> <reason>` work end-to-end against the audit-backed queue
+  5. Agent-created skills can take a semi-automatic path: when eval gate passes AND confidence score ≥ threshold (default 0.8), a patch may auto-apply (still writes audit log); this behavior is globally toggleable via config (default follows PROJECT.md MVP boundary — bundled NEVER auto, agent-created conditional)
+  6. **Existing Curator behavior preserved:** The pre-v6 deterministic inactivity transitions + consolidation pass continue to work unchanged for agent-created skills — the bundled-skill proposal capability is ADDITIVE, not a replacement (regression test against pre-v6 curator behavior required)
+**Hermes-core touch:** Yes — direct modification of `agent/curator.py` (extending `run_curator_review` + new proposal path) + implementation of the EVOL-02 diff generator. This is the unavoidable scope expansion flagged in PROJECT.md.
+**Plans:** TBD
+
+### Phase 33: Observability + Integration Close-out
+
+**Goal:** Operators can observe feedback-driven learning health per-skill and across the whole movie-experts suite, and the v6.0 milestone ships a canonical architecture doc + skills-mapping sign-off + README/glossary close-out mirroring the v5.0 Phase 27 pattern.
+**Depends on:** Phase 28-32 all complete (needs the full feedback loop running to surface meaningful stats)
+**Requirements:** OBS-01, OBS-02, OBS-03 (+ integration close-out deliverables, no separate REQ-IDs)
+**Success Criteria** (what must be TRUE):
+  1. `hermes curator stats [skill_id]` emits a per-skill dashboard: feedback counts bucketed by verdict, patch history, eval score trend over the most recent N runs — operator can read skill health at a glance
+  2. `hermes curator stats --all` emits a cross-skill view: which skills received the most negative feedback, which patches produced the largest score uplift, which skills have gone long stretches with zero feedback (a prompt-coverage-gap signal)
+  3. A source breakdown view shows feedback volume + verdict distribution by source (CLI / kais-aigc-platform / manual) — operator can verify whether the kais-aigc-platform integration from Phase 28 is actually producing data
+  4. **Canonical architecture doc:** `_shared/v6-feedback-loop-architecture.md` is written, documenting the full feedback loop (ingest → store → gate → evolve → curate → observe) with data flow diagrams, the JSON schema, the eval-gate thresholds, and the human-in-loop boundaries — mirrors the v5.0 `v86-pipeline-mapping.md` close-out pattern
+  5. **skills-mapping.yaml v6 sign-offs:** A new `v6_ref_signoffs:` section is added (mirrors v4.0 `v4_ref_signoffs:` + v5.0 `v5_ref_signoffs:` schema) with entries for the new `_shared/v6-feedback-loop-architecture.md` ref, each carrying `verified_date` / `source` / `license_status`
+  6. **README + glossary close-out:** `skills/movie-experts/README.md` corpus tree updated to list the new v6 ref; glossary gains H3 entries for the 4 new v6 terms (Feedback Ingestion / Knowledge Evolution / Eval Gate / Curator Proposal) following the bilingual `### Term / 中文术语` convention
+  7. **FOUND-08 milestone-wide preservation check:** Across all 6 phases, zero new expert_id directories created, zero DAG node changes, zero frontmatter `expert_id` / `related_skills` edits on bundled skills — verified by sha256 snapshot diff against v5.0 close state
+  8. **v5/v4 refs byte-intact milestone-wide check:** snowflake-method.md / e-konte-format.md / scamper-variations.md / dreamina-cli-baseline.md / v86-pipeline-mapping.md remain byte-intact across all of v6.0 (additive-only patches per EVOL-02 scope discipline)
+**UI hint:** yes (dashboard + cross-skill view are operator-facing observability surfaces)
+**Plans:** TBD
 
 ---
 
 ## Critical Path
 
 ```
-Phase 22 (dreamina CLI baseline)  ──┐
-                                    ├─→  Phase 27 (Integration close-out)  ← MUST run last
-Phase 23 (视觉系)        ─┐          │       (references _shared/dreamina-cli-baseline.md
-Phase 24 (文学系)        ├─→ parallel │        from P22; verifies P23-26 SKILL.md updates
-Phase 25 (听觉系)        │   wave     │        against canonical mapping)
-Phase 26 (审核系)        ─┘          │
-                                    ─┘
+Phase 28 (Feedback Ingestion MVP)  ← MUST run first (core functional guarantee)
+        │
+        ▼
+Phase 29 (Feedback Store)          ← needs P28 normalized schema
+        │
+        ├──────────────┐
+        ▼              ▼
+Phase 30         Phase 31          ← P30 + P31 parallel-eligible (disjoint files:
+(Eval Gate)      (Evolution        P30 = _eval/ extension; P31 = pipeline code)
+        │         Pipeline)        share only the P28 JSON schema contract
+        │              │
+        └──────┬───────┘
+               ▼
+Phase 32 (Curator Upgrade)         ← needs P31 review queue + P29 feedback scan
+               │                      + implements EVOL-02 diff generator invoked
+               ▼                      by Curator's proposal path
+Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writes
+                                       canonical doc + skills-mapping sign-offs
 ```
 
-**Phase 22 MUST run first** — produces `_shared/dreamina-cli-baseline.md` referenced by Phase 23 (VISUAL-02) and Phase 25 (AUDIO-02).
+**Parallel-eligibility notes:**
 
-**Phases 23, 24, 25, 26 are independent** — touch disjoint expert directories (P23: visual_executor / prompt_injector / character_designer / cinematographer / colorist / style_genome; P24: hook_retention / creative_source / screenplay / script_auditor; P25: audio_pipeline + sub-steps; P26: continuity_auditor / compliance_gate / editor / theory_critic). Can run in parallel waves if `/gsd:execute-phase` supports it.
-
-**Phase 27 MUST run last** — close-out: references `_shared/dreamina-cli-baseline.md` from P22, writes canonical v86-pipeline-mapping.md verifying P23-26 SKILL.md Step references, and touches cross-cutting skills-mapping.yaml.
+- **Phase 30 ↔ Phase 31** — parallel-eligible. P30 extends `skills/movie-experts/_eval/runner.py` + adds gate scripts (offline developer tooling, no Hermes runtime touch). P31 builds the patch-generation pipeline under `~/.hermes/skills/.feedback/` tooling + new modules. Zero file ownership overlap. They coordinate via the shared JSON schema from P28. Critical path reflects this parallel wave.
+- **Phase 28 ↔ Phase 29** — strictly sequential. P29 STORE cannot persist what P28 INGEST has not yet normalized.
+- **Phase 32 ↔ anything** — NOT parallel. Curator upgrade consumes from P29 + P31 (review queue) + P30 (eval scores logged in audit).
+- **Phase 33** — strictly last. Close-out references all prior phases + writes the canonical architecture doc.
 
 ---
 
-## Coverage Validation
+## Coverage
 
-**Total v5.0 requirements:** 30 (all mapped, zero orphans)
+**26 / 26 v1 requirements mapped (100%):**
 
-| Phase | Requirements | Count |
-|-------|--------------|-------|
-| 22 — dreamina CLI 知识基线 | DREAMINA-01..05 | 5 |
-| 23 — 视觉系 V8.6 sync | VISUAL-01..07 | 7 |
-| 24 — 文学系 V8.6 sync | LITERARY-01..04 | 4 |
-| 25 — 听觉系 V8.6 sync | AUDIO-01..04 | 4 |
-| 26 — 审核系 V8.6 sync | AUDIT-01..04 | 4 |
-| 27 — 集成 close-out | INTEGRATION-01..06 | 6 |
-| **Total** | | **30 / 30 ✓** |
+| REQ-ID | Phase | Notes |
+|--------|-------|-------|
+| INGEST-01 | Phase 28 | CLI in-conversation feedback submission |
+| INGEST-02 | Phase 28 | kais-aigc-platform接入 (transport choice at plan-phase) |
+| INGEST-03 | Phase 28 | Single normalized JSON schema |
+| INGEST-04 | Phase 28 | output_snapshot with sha256 + metadata |
+| INGEST-05 | Phase 28 | Manual labeling CLI subcommand |
+| STORE-01 | Phase 29 | `~/.hermes/skills/.feedback/` directory layout + jsonl |
+| STORE-02 | Phase 29 | index.json queryable by skill_id/verdict/source/ts |
+| STORE-03 | Phase 29 | Time-decay weight (default 90 days, configurable) |
+| STORE-04 | Phase 29 | Dedup by sha256+verdict; correction demotion |
+| GATE-01 | Phase 30 | Reuse `_eval/runner.py` for patch-vs-baseline |
+| GATE-02 | Phase 30 | Pass threshold δ=0.3 on 4-point rubric |
+| GATE-03 | Phase 30 | A/B double-blind position-swap + significance report |
+| GATE-04 | Phase 30 | Per-prompt regression detection (threshold 1.0) |
+| EVOL-01 | Phase 31 | LLM feedback→candidate insight aggregation |
+| EVOL-02 | Phase 32 | Unified-diff patch generation (invoked by Curator proposal path) |
+| EVOL-03 | Phase 31 | Patch review queue with evidence chains |
+| EVOL-04 | Phase 31 | Human-in-loop approve for bundled skills (non-bypassable) |
+| EVOL-05 | Phase 31 | Git-commit-on-apply + rollback subcommand |
+| CURATE-01 | Phase 32 | Extend `agent/curator.py` to propose bundled-skill patches |
+| CURATE-02 | Phase 32 | Auto-trigger EVOL on negative-feedback threshold |
+| CURATE-03 | Phase 32 | `~/.hermes/skills/.audit/` tamper-evident log |
+| CURATE-04 | Phase 32 | `hermes curator queue/approve/reject` CLI |
+| CURATE-05 | Phase 32 | Agent-created skill semi-automatic path (confidence ≥ 0.8) |
+| OBS-01 | Phase 33 | Per-skill dashboard (`hermes curator stats [skill_id]`) |
+| OBS-02 | Phase 33 | Cross-skill view (`hermes curator stats --all`) |
+| OBS-03 | Phase 33 | Source breakdown (CLI/kais-aigc/manual) |
 
-**Coverage check:**
-- ✓ Every v5.0 requirement mapped to exactly one phase (no orphans)
-- ✓ Every phase has 4-7 requirements (standard granularity, no over-split, no over-merge)
-- ✓ Critical path documented (P22 first, P23-26 parallel-eligible, P27 last)
-- ✓ FOUND-08 preservation criterion explicit in every phase
-- ✓ verified_date criterion explicit for every new ref
-- ✓ v4.0 methodology refs explicitly PRESERVED (not replaced) — V8.6 knowledge ADDED alongside
+**Coverage verification by category:**
+- INGEST (5): all → Phase 28 ✓
+- STORE (4): all → Phase 29 ✓
+- GATE (4): all → Phase 30 ✓
+- EVOL (5): 4 → Phase 31, 1 (EVOL-02) → Phase 32 ✓
+- CURATE (5): all → Phase 32 ✓
+- OBS (3): all → Phase 33 ✓
+- Total: 26 / 26 mapped, 0 orphaned, 0 duplicated ✓
+
+**Mapping clarification (EVOL-02 → Phase 32):** EVOL-02 (knowledge-point → candidate patch generation) is mapped to Phase 32 rather than Phase 31 because the candidate-patch generator is invoked BY the Curator's proposal path in practice (CURATE-01 extends curator to propose patches, which requires EVOL-02's diff generator as its engine). Phase 31 builds the review queue + approve/apply mechanics; Phase 32 wires the Curator as the trigger that produces patches via EVOL-02 and feeds them into the Phase 31 queue. This keeps the dependency graph clean: P31 builds the queue, P32 populates it via Curator + EVOL-02.
 
 ---
 
@@ -172,13 +211,13 @@ Phase 26 (审核系)        ─┘          │
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. dreamina CLI 知识基线 | 0/1 | Not started | - |
-| 23. 视觉系 V8.6 sync | 0/? | Not started | - |
-| 24. 文学系 V8.6 sync | 0/? | Not started | - |
-| 25. 听觉系 V8.6 sync | 0/? | Not started | - |
-| 26. 审核系 V8.6 sync | 0/? | Not started | - |
-| 27. 集成 close-out | 0/? | Not started | - |
+| 28. Feedback Ingestion MVP | 0/? | Not started | - |
+| 29. Feedback Store | 0/? | Not started | - |
+| 30. Eval Gate Reuse | 0/? | Not started | - |
+| 31. Knowledge Evolution Pipeline | 0/? | Not started | - |
+| 32. Curator Upgrade + Audit | 0/? | Not started | - |
+| 33. Observability + Integration Close-out | 0/? | Not started | - |
 
 ---
 
-*Last updated: 2026-06-19 — v5.0 kais-movie-agent V8.6 Adaptation roadmap created (6 phases, 30 reqs mapped). Phase 22 plan created (22-01-PLAN.md). Ready for /gsd:execute-phase 22.*
+*Last updated: 2026-06-24 — v6.0 Self-Evolution & Feedback Loop roadmap created (6 phases continuing from v5.0 Phase 27, 26/26 reqs mapped, Phase 28 ready for planning).*

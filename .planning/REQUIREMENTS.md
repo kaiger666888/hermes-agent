@@ -83,15 +83,45 @@
 
 ## Traceability
 
-(filled by roadmapper — every REQ-ID maps to exactly one phase)
+Filled by roadmapper — every REQ-ID maps to exactly one phase (see `.planning/ROADMAP.md` for full phase details).
 
 | REQ-ID | Phase | Notes |
 |--------|-------|-------|
-| INGEST-01..05 | TBD | — |
-| STORE-01..04 | TBD | — |
-| EVOL-01..05 | TBD | — |
-| GATE-01..04 | TBD | — |
-| CURATE-01..05 | TBD | — |
-| OBS-01..03 | TBD | — |
+| INGEST-01 | Phase 28 | CLI in-conversation feedback submission |
+| INGEST-02 | Phase 28 | kais-aigc-platform接入 (transport choice at plan-phase) |
+| INGEST-03 | Phase 28 | Single normalized JSON schema across all sources |
+| INGEST-04 | Phase 28 | output_snapshot with sha256 + prompt/model/params metadata |
+| INGEST-05 | Phase 28 | Manual labeling CLI subcommand for cold-start |
+| STORE-01 | Phase 29 | `~/.hermes/skills/.feedback/` layout, jsonl append |
+| STORE-02 | Phase 29 | index.json queryable by skill_id/verdict/source/ts |
+| STORE-03 | Phase 29 | Time-decay weight (default 90 days, configurable) |
+| STORE-04 | Phase 29 | Dedup by sha256+verdict; correction demotion |
+| GATE-01 | Phase 30 | Reuse `_eval/runner.py` for patch-vs-baseline |
+| GATE-02 | Phase 30 | Pass threshold δ=0.3 on 4-point rubric |
+| GATE-03 | Phase 30 | A/B double-blind position-swap + significance report |
+| GATE-04 | Phase 30 | Per-prompt regression detection (threshold 1.0) |
+| EVOL-01 | Phase 31 | LLM feedback→candidate insight aggregation |
+| EVOL-02 | Phase 32 | Unified-diff patch generator (invoked by Curator proposal path) |
+| EVOL-03 | Phase 31 | Patch review queue with evidence chains |
+| EVOL-04 | Phase 31 | Human-in-loop approve for bundled skills (non-bypassable) |
+| EVOL-05 | Phase 31 | Git-commit-on-apply + rollback subcommand |
+| CURATE-01 | Phase 32 | Extend `agent/curator.py` to propose bundled-skill patches |
+| CURATE-02 | Phase 32 | Auto-trigger EVOL on negative-feedback threshold |
+| CURATE-03 | Phase 32 | `~/.hermes/skills/.audit/` tamper-evident log |
+| CURATE-04 | Phase 32 | `hermes curator queue/approve/reject` CLI |
+| CURATE-05 | Phase 32 | Agent-created skill semi-automatic path (confidence ≥ 0.8) |
+| OBS-01 | Phase 33 | Per-skill dashboard (`hermes curator stats [skill_id]`) |
+| OBS-02 | Phase 33 | Cross-skill view (`hermes curator stats --all`) |
+| OBS-03 | Phase 33 | Source breakdown (CLI/kais-aigc/manual) |
 
-**Total:** 26 requirements across 6 categories · 100% must map to phases (no orphans)
+**Totals:** 26 requirements across 6 categories · 26 / 26 mapped to phases (100%, no orphans, no duplicates)
+
+**Coverage by phase:**
+- Phase 28 (Feedback Ingestion MVP): INGEST-01..05 (5 reqs)
+- Phase 29 (Feedback Store): STORE-01..04 (4 reqs)
+- Phase 30 (Eval Gate Reuse): GATE-01..04 (4 reqs)
+- Phase 31 (Knowledge Evolution Pipeline): EVOL-01, EVOL-03, EVOL-04, EVOL-05 (4 reqs)
+- Phase 32 (Curator Upgrade + Audit): CURATE-01..05 + EVOL-02 (6 reqs)
+- Phase 33 (Observability + Integration Close-out): OBS-01..03 (3 reqs)
+
+**EVOL-02 mapping note:** Placed in Phase 32 (not Phase 31) because the candidate-patch generator is invoked by the Curator's proposal path in practice. Phase 31 builds the review queue + approve/apply mechanics; Phase 32 implements the EVOL-02 diff generator as the engine that the Curator calls to populate that queue.
