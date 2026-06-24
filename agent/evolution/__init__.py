@@ -28,6 +28,12 @@ from agent.evolution.apply import (
     verify_found08_byte_intact,
 )
 from agent.evolution.diff_generator import generate_additive_diff
+from agent.evolution.evol02_generator import (
+    EVOL02_SYSTEM_PROMPT,
+    _compose_bilingual_block,
+    emit_evol02_instructions,
+    generate_patch_from_knowledge_point,
+)
 from agent.evolution.insights import (
     AGGREGATION_SYSTEM_PROMPT,
     AggregationError,
@@ -56,6 +62,11 @@ __all__ = [
     "make_aggregation_client",
     # diff_generator (EVOL-02 placeholder)
     "generate_additive_diff",
+    # evol02_generator (EVOL-02 multi-instruction bilingual)
+    "EVOL02_SYSTEM_PROMPT",
+    "_compose_bilingual_block",
+    "emit_evol02_instructions",
+    "generate_patch_from_knowledge_point",
     # queue (EVOL-03)
     "FAILED_GATE_FILENAME",
     "PROTECTED_REFS",
