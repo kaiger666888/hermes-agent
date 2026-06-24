@@ -109,3 +109,22 @@ class TestGenerateAdditiveDiff:
             if ln.startswith("-") and not ln.startswith("---")
         ]
         assert minus_lines == [], f"generated diff has removal lines: {minus_lines}"
+
+    def test_wr04_rejects_marker_inside_frontmatter(self) -> None:
+        # WR-04: insert_after_marker matching a frontmatter key would
+        # insert INTO the YAML block, tripping SC-5. Reject upfront.
+        current = (
+            "---\n"
+            "expert_id: screenplay\n"
+            "name: screenplay\n"
+            "---\n"
+            "## Body\n"
+            "content\n"
+        )
+        with pytest.raises(ValueError, match="frontmatter"):
+            generate_additive_diff(
+                current_content=current,
+                proposed_addition="new section\n",
+                insert_after_marker="expert_id",
+                skill_md_path="x/SKILL.md",
+            )

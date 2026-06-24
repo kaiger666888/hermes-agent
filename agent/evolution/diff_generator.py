@@ -21,6 +21,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _frontmatter_end_offset(lines: list[str]) -> int | None:
+    """WR-04: return the 1-based line index of the closing ``---`` of the
+    YAML frontmatter block, or None if the file has no frontmatter.
+
+    ``lines`` is expected to be the output of ``splitlines(keepends=True)``.
+    The frontmatter block starts at line 1 (``---``) and ends at the next
+    ``---`` line. Returns the index of the closing ``---`` line such that
+    any insertion at ``insert_idx <= fm_end`` would land inside the block.
+    """
+    if not lines or not lines[0].startswith("---"):
+        return None
+    for i, line in enumerate(lines[1:], start=2):
+        if line.startswith("---"):
+            return i
+    # Opening --- with no closing — malformed; treat as no frontmatter
+    # so we don't spuriously block insertions in a corrupt file.
+    return None
+
+
 def generate_additive_diff(
     *,
     current_content: str,
@@ -75,6 +94,22 @@ def generate_additive_diff(
             f"({len(matches)} matches) — provide a longer unique context"
         )
     insert_idx = matches[0] + 1
+
+    # WR-04: reject insertions that would land INSIDE the YAML frontmatter
+    # block. The LLM is instructed (insights.py:69-70) to not propose
+    # frontmatter changes, but the marker substring search could still
+    # match a frontmatter key (e.g., insert_after_marker="expert_id").
+    # Inserting into frontmatter would trip the SC-5 byte-intact check
+    # AFTER mutating the tree (CR-04 hardens the ordering, but we still
+    # refuse here for defense-in-depth + clearer error messages).
+    fm_end = _frontmatter_end_offset(current_lines)
+    if fm_end is not None and insert_idx <= fm_end:
+        raise ValueError(
+            f"insert_after_marker {insert_after_marker!r} matches inside "
+            f"the YAML frontmatter block (line {matches[0] + 1} is at or "
+            f"before the closing '---' at line {fm_end}) — frontmatter is "
+            f"immutable (SC-5)"
+        )
 
     addition_lines = proposed_addition.replace("\r\n", "\n").splitlines(keepends=True)
     # Ensure the addition starts with a newline if the preceding line lacks one.
