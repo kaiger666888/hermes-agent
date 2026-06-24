@@ -532,6 +532,186 @@ def evaluate_candidate(
 
 
 # --------------------------------------------------------------------------- #
+# Multi-skill detection (T-30-07 mitigation — completes GATE-01)
+# --------------------------------------------------------------------------- #
+
+
+def detect_multi_skill_patch(patch_path: Path) -> set[str]:
+    """Return the set of distinct skills touched by a candidate patch.
+
+    Parses ``+++ b/skills/movie-experts/<skill>/...`` headers (via
+    :func:`extract_patched_files` — inherits the T-30-01 path-traversal
+    guard). Extracts the next path segment after ``skills/movie-experts/``
+    to get the skill_id directory.
+
+    Returns an empty set if no skills/movie-experts/ paths are found
+    (extract_patched_files raises ValueError on non-skills paths, so this
+    case only triggers on a truly empty patch — which extract_patched_files
+    handles separately).
+    """
+    files = extract_patched_files(patch_path)
+    skills: set[str] = set()
+    for f in files:
+        # f is repo-relative, guaranteed to start with _SKILLS_PREFIX.
+        remainder = f[len(_SKILLS_PREFIX):]
+        # First path segment is the skill directory.
+        skill = remainder.split("/", 1)[0] if "/" in remainder else remainder
+        if skill:
+            skills.add(skill)
+    return skills
+
+
+# --------------------------------------------------------------------------- #
+# Baseline cache: rebuild + load_cached (completes GATE-01)
+# --------------------------------------------------------------------------- #
+
+
+def rebuild_baseline(
+    skill_id: str,
+    prompts: list[dict[str, str]],
+    baseline_answers: list[str],
+    judge_client: Any,
+    judge_model: str,
+    baseline_dir: Path,
+    *,
+    skill_md_path: Path,
+    prompts_path: Path,
+) -> Path:
+    """Evaluate the baseline against itself and cache per-prompt composites.
+
+    Calls :func:`evaluate_candidate` with ``baseline_answers`` as BOTH the
+    baseline and candidate inputs — this produces per-prompt composite
+    scores for the current (unpatched) skill on the benchmark prompts.
+    Writes the result to ``<baseline_dir>/<skill_id>/scores.json`` with the
+    schema from 30-02-PLAN.md <interfaces>.
+
+    T-30-09 mitigation (Information Disclosure): scores.json contains only
+    composite scores + sha256 + ts + judge_model — no answer text, no API key.
+    T-30-11 mitigation (Repudiation): scores.json records baseline_skill_sha256
+    + prompts_path_sha256 so operators can verify provenance.
+
+    Atomic write (temp file + rename) to avoid corrupting the cache on a
+    partial write (Rule 3 mitigation against --rebuild-baseline overwrite
+    being destructive).
+    """
+    records = evaluate_candidate(
+        prompts=prompts,
+        baseline_answers=baseline_answers,
+        candidate_answers=baseline_answers,
+        judge_client=judge_client,
+        judge_model=judge_model,
+    )
+    per_prompt: list[float] = []
+    for rec in records:
+        c = rec.get("candidate_composite")
+        if c is not None:
+            per_prompt.append(float(c))
+
+    baseline_skill_sha256 = hashlib.sha256(
+        skill_md_path.read_bytes()
+    ).hexdigest()
+    prompts_path_sha256 = hashlib.sha256(
+        prompts_path.read_bytes()
+    ).hexdigest()
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    cache = {
+        "schema_version": 1,
+        "skill_id": skill_id,
+        "baseline_skill_sha256": baseline_skill_sha256,
+        "judge_model": judge_model,
+        "generated_at": generated_at,
+        "prompts_path_sha256": prompts_path_sha256,
+        "per_prompt_composites": per_prompt,
+    }
+
+    out_dir = baseline_dir / skill_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "scores.json"
+    # Atomic write: temp file + os.replace.
+    tmp_path = out_path.with_suffix(".json.tmp")
+    tmp_path.write_text(
+        json.dumps(cache, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    tmp_path.replace(out_path)
+    logger.info("rebuilt baseline -> %s (n=%d)", out_path, len(per_prompt))
+    return out_path
+
+
+def load_cached_baseline(
+    skill_id: str,
+    baseline_dir: Path,
+    *,
+    current_skill_md_path: Path,
+) -> tuple[list[float] | None, dict[str, Any] | None]:
+    """Load cached per-prompt composites + warn on staleness.
+
+    T-30-08 mitigation: structural validation of scores.json (schema_version,
+    64-hex sha256, list of floats in [1.0, 5.0]). Raises ValueError on
+    malformed.
+
+    Staleness (RESEARCH Pitfall 4): if cached ``baseline_skill_sha256`` does
+    not match the current SKILL.md sha256, logs a warning suggesting
+    ``--rebuild-baseline``. NON-BLOCKING — returns the cached composites
+    anyway (operator decides whether to refresh).
+
+    Returns ``(per_prompt_composites, raw_cache_dict)``. If no cache file
+    exists, returns ``(None, None)`` (first-run case; caller decides).
+    """
+    cache_path = baseline_dir / skill_id / "scores.json"
+    if not cache_path.is_file():
+        return None, None
+    raw = json.loads(cache_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"scores.json at {cache_path} must be a JSON object"
+        )
+    # Structural validation (T-30-08).
+    sv = raw.get("schema_version")
+    if sv != 1:
+        raise ValueError(
+            f"scores.json schema_version must be 1, got {sv!r}"
+        )
+    cached_sha = raw.get("baseline_skill_sha256")
+    if not (
+        isinstance(cached_sha, str)
+        and len(cached_sha) == 64
+    ):
+        raise ValueError(
+            "baseline_skill_sha256 must be a 64-char hex string"
+        )
+    composites = raw.get("per_prompt_composites")
+    if not isinstance(composites, list):
+        raise ValueError("per_prompt_composites must be a list")
+    validated: list[float] = []
+    for i, c in enumerate(composites):
+        if not isinstance(c, (int, float)):
+            raise ValueError(
+                f"per_prompt_composites[{i}] must be numeric, got "
+                f"{type(c).__name__}"
+            )
+        if not (1.0 <= float(c) <= 5.0):
+            raise ValueError(
+                f"per_prompt_composites[{i}]={c} out of [1.0, 5.0]"
+            )
+        validated.append(float(c))
+
+    # Staleness check (non-blocking).
+    current_sha = hashlib.sha256(
+        current_skill_md_path.read_bytes()
+    ).hexdigest()
+    if cached_sha != current_sha:
+        logger.warning(
+            "baseline stale (cached sha %s, current sha %s); "
+            "run --rebuild-baseline to refresh",
+            cached_sha[:12], current_sha[:12],
+        )
+
+    return validated, raw
+
+
+# --------------------------------------------------------------------------- #
 # GateResult + orchestrator
 # --------------------------------------------------------------------------- #
 
@@ -650,6 +830,25 @@ def run_gate(
     if not files:
         raise ValueError(f"patch {patch_path} touches no files")
 
+    # Multi-skill guard (T-30-07): runs BEFORE apply_patch so no working-
+    # tree mutation occurs on early exit. Operators pass --multi-skill
+    # (config["multi_skill"]=True) to bypass.
+    if not config.get("multi_skill", False):
+        skills_touched = detect_multi_skill_patch(patch_path)
+        if len(skills_touched) > 1:
+            warning = (
+                f"patch touches {len(skills_touched)} skills: "
+                f"{sorted(skills_touched)}; run gate per-skill OR pass "
+                f"--multi-skill"
+            )
+            logger.warning(warning)
+            return GateResult(
+                verdict="inconclusive",
+                exit_code=VERDICT_TO_EXIT["inconclusive"],
+                evidence={"reason": "multi_skill_patch", "warning": warning},
+                patch_id="",
+            )
+
     patch_id = generate_patch_id(skill_id, patch_path)
 
     # Step 2: apply patch. The ENTIRE eval+decide+report block lives
@@ -678,14 +877,41 @@ def run_gate(
             judge_model=judge_model,
         )
 
-        # Step 6: load baseline composite scores (from cache OR lazy-populate).
+        # Step 6: load baseline composite scores. Supports TWO cache formats:
+        #   (a) Plan 02 scores.json (dict with per_prompt_composites + sha256
+        #       provenance) — loaded via load_cached_baseline with staleness
+        #       warning (non-blocking).
+        #   (b) Plan 01 legacy plain JSON list — used by older tests / first-run
+        #       lazy population. Backward-compat preserved.
         baseline_composites: list[float] = []
         if baseline_scores_cache is not None and baseline_scores_cache.is_file():
-            cached = json.loads(
+            cached_raw = json.loads(
                 baseline_scores_cache.read_text(encoding="utf-8")
             )
-            if isinstance(cached, list):
-                baseline_composites = [float(x) for x in cached]
+            if isinstance(cached_raw, list):
+                # Legacy Plan 01 plain-list format.
+                baseline_composites = [float(x) for x in cached_raw]
+            elif isinstance(cached_raw, dict):
+                # Plan 02 scores.json schema. Validate + staleness check.
+                skill_md_path = (
+                    repo_root / _SKILLS_PREFIX / skill_id / "SKILL.md"
+                )
+                if skill_md_path.is_file():
+                    baseline_composites, _ = load_cached_baseline(
+                        skill_id=skill_id,
+                        baseline_dir=baseline_scores_cache.parent.parent,
+                        current_skill_md_path=skill_md_path,
+                    )
+                    if baseline_composites is None:
+                        baseline_composites = []
+                else:
+                    # SKILL.md not found at expected path — fall back to
+                    # reading composites directly (best-effort).
+                    comps = cached_raw.get("per_prompt_composites")
+                    if isinstance(comps, list):
+                        baseline_composites = [
+                            float(x) for x in comps
+                        ]
         candidate_composites: list[float] = []
         for i, rec in enumerate(per_prompt):
             c = rec.get("candidate_composite")
@@ -952,9 +1178,20 @@ def main(argv: list[str] | None = None) -> int:
         "--rebuild-baseline",
         action="store_true",
         help=(
-            "Force baseline cache rebuild (NOT YET IMPLEMENTED — full "
-            "impl lands in Plan 02; prints a notice and exits 0 if "
-            "passed alone)."
+            "Force baseline cache rebuild. Requires --skill + "
+            "--baseline-answers (pointing at freshly-generated baseline "
+            "answers) + --prompts-dir. Writes "
+            "_eval/baseline/<skill>/scores.json then exits 0. Does NOT "
+            "run a gate evaluation."
+        ),
+    )
+    parser.add_argument(
+        "--multi-skill",
+        action="store_true",
+        help=(
+            "Bypass the multi-skill guard. Use when a patch intentionally "
+            "touches multiple skills (e.g., a shared refs change). Without "
+            "this flag, multi-skill patches exit 3 (inconclusive)."
         ),
     )
     parser.add_argument(
@@ -969,17 +1206,66 @@ def main(argv: list[str] | None = None) -> int:
         format="[gate] %(levelname)s %(message)s",
     )
 
-    # --rebuild-baseline stub (Plan 02 scope).
-    if args.rebuild_baseline and args.patch is None:
-        print(
-            "--rebuild-baseline is not yet implemented in Plan 01. "
-            "Full implementation lands in Plan 02."
+    # --rebuild-baseline short-circuit: writes scores.json, exits 0.
+    if args.rebuild_baseline:
+        if not args.skill:
+            parser.error("--skill is required with --rebuild-baseline")
+        if not args.baseline_answers:
+            parser.error(
+                "--baseline-answers is required with --rebuild-baseline "
+                "(point at freshly-generated baseline answers JSON)"
+            )
+        # Resolve prompts path.
+        prompts_path = args.prompts_dir
+        if prompts_path is None:
+            prompts_path = (
+                Path(__file__).resolve().parent
+                / "prompts"
+                / f"{args.skill}_demo.yaml"
+            )
+        if not Path(prompts_path).is_file():
+            logger.error("prompts file not found: %s", prompts_path)
+            return VERDICT_TO_EXIT["inconclusive"]
+        # Resolve skill SKILL.md path for provenance.
+        repo_root = args.repo_root or Path.cwd()
+        skill_md_path = (
+            repo_root / _SKILLS_PREFIX / args.skill / "SKILL.md"
         )
+        if not skill_md_path.is_file():
+            logger.error("SKILL.md not found: %s", skill_md_path)
+            return VERDICT_TO_EXIT["inconclusive"]
+        # Pick judge client.
+        if args.dry_run:
+            judge_client: Any = runner._StubJudgeClient()
+        else:
+            try:
+                judge_client = runner.make_judge_client({})
+            except RuntimeError as exc:
+                logger.error("%s (use --dry-run for offline testing)", exc)
+                return VERDICT_TO_EXIT["inconclusive"]
+        judge_model = args.judge_model or _DEFAULT_JUDGE_MODEL
+        baseline_dir = (
+            args.reports_dir
+            or (Path(__file__).resolve().parent / "baseline")
+        )
+        prompts = runner.load_prompts(prompts_path)
+        baseline_answers = _load_answers_json(args.baseline_answers)
+        out = rebuild_baseline(
+            skill_id=args.skill,
+            prompts=prompts,
+            baseline_answers=baseline_answers,
+            judge_client=judge_client,
+            judge_model=judge_model,
+            baseline_dir=baseline_dir,
+            skill_md_path=skill_md_path,
+            prompts_path=Path(prompts_path),
+        )
+        print(f"baseline rebuilt: {out}")
         return 0
 
     # Required args for a gate run.
     if not args.patch:
-        parser.error("--patch is required (or pass --rebuild-baseline alone)")
+        parser.error("--patch is required (or pass --rebuild-baseline)")
     if not args.skill:
         parser.error("--skill is required")
     if not args.baseline_answers:
@@ -996,6 +1282,9 @@ def main(argv: list[str] | None = None) -> int:
         "judge_model": args.judge_model,
     }
     config = load_gate_config(args.config, cli_overrides)
+    # --multi-skill bypasses the multi-skill guard in run_gate.
+    if args.multi_skill:
+        config["multi_skill"] = True
 
     # Resolve prompts path.
     prompts_path = args.prompts_dir
