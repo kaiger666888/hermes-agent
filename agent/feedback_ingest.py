@@ -319,7 +319,31 @@ def _scan_once(
         # suppress re-scans of the now-gone file).
         content_sha_for_cache: str = f"stat-{stat.st_mtime_ns}-{stat.st_size}"
         try:
-            raw_bytes = Path(entry.path).read_bytes()
+            # WR-03: open with O_NOFOLLOW to atomically reject symlinks at
+            # open time, closing the TOCTOU window between the
+            # ``entry.is_symlink()`` pre-check above and the read. If an
+            # attacker swaps the entry for a symlink after the pre-check,
+            # O_NOFOLLOW raises ELOOP (POSIX) and we route to errors/.
+            # Windows lacks O_NOFOLLOW — getattr returns 0 and the
+            # pre-check remains the only defense there (documented gap).
+            no_follow = getattr(os, "O_NOFOLLOW", 0)
+            try:
+                fd = os.open(entry.path, os.O_RDONLY | no_follow)
+            except OSError as open_exc:
+                # ELOOP / EMLINKage = symlink (POSIX). Other OSErrors
+                # (permission, vanished) are also treated as ingest-fail.
+                logger.warning(
+                    "kais inbox open(O_NOFOLLOW) failed for %s: %s",
+                    entry.name,
+                    open_exc,
+                )
+                _move_to_errors(entry.path, errors_dir)
+                seen[key] = (stat.st_mtime, stat.st_size, content_sha_for_cache)
+                pending.pop(key, None)
+                continue
+            # fdopen takes ownership of fd; the context manager closes it.
+            with os.fdopen(fd, "rb") as f:
+                raw_bytes = f.read()
             content_sha_for_cache = hashlib.sha256(raw_bytes).hexdigest()
             raw = json.loads(raw_bytes.decode("utf-8"))
             # Anti-spoofing: force source regardless of JSON content (T-28-07).
