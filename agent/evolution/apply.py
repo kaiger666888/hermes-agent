@@ -169,7 +169,17 @@ def verify_found08_byte_intact(
 
     Returns:
         True iff the frontmatter block bytes match exactly.
+
+    CR-03: If ``frontmatter_block_before`` is empty (file had no
+    frontmatter before the patch), SC-5 (preserve existing frontmatter
+    bytes) is trivially satisfied — there is nothing to preserve. Only
+    files that HAD frontmatter are subject to the byte-equality check.
     """
+    # CR-03: empty before → no frontmatter to preserve → always intact.
+    # (Applies to patch-added files AND pre-existing files without
+    # frontmatter, e.g. non-SKILL.md refs.)
+    if not frontmatter_block_before:
+        return True
     after_content = skill_md_path_after.read_text(encoding="utf-8")
     after_block = _extract_frontmatter_block(after_content)
     return frontmatter_block_before == after_block
@@ -389,9 +399,31 @@ def apply_patch_transaction(
     # Read the patch text once (for additive-only check).
     patch_text = patch_path.read_text(encoding="utf-8")
 
+    # CR-04: additive-only check runs BEFORE `git apply` mutates the working
+    # tree. The check is pure text analysis of the patch — no reason to
+    # defer it. Running it first means a non-additive patch on a protected
+    # ref never touches the disk, eliminating the "applied then reverted"
+    # race that could leave a protected ref corrupted if the revert itself
+    # failed.
+    is_additive = verify_additive_only(patch_text)
+    if not is_additive:
+        touches_protected = any(
+            any(protected in f for protected in protected_refs)
+            for f in files
+        )
+        if touches_protected:
+            raise ApplyError(
+                f"SC-6 violation: patch is not additive-only and touches a "
+                f"protected v4/v5 ref (files={files})"
+            )
+        raise ApplyError(
+            f"patch is not additive-only (EVOL-02 scope discipline — "
+            f"evolution patches only ADD content; files={files})"
+        )
+
     applied = False
     try:
-        # Step 4: apply for real.
+        # Step 4: apply for real (additive-only already verified above).
         subprocess.run(
             ["git", "apply", str(patch_path)],
             cwd=str(repo_root), check=True,
@@ -414,28 +446,6 @@ def apply_patch_transaction(
                     f"FOUND-08 violation: frontmatter bytes drifted in {f!r} "
                     f"(SC-5 byte-level check — likely YAML re-serialization)"
                 )
-
-        # Step 5b: additive-only check — UNIVERSAL (EVOL-02 scope discipline
-        # says ALL evolution patches are additive-only). For protected v4/v5
-        # refs (SC-6), raise with the explicit SC-6 violation message;
-        # for other files, raise with the generic additive-only message.
-        is_additive = verify_additive_only(patch_text)
-        if not is_additive:
-            # Determine if any touched file is a protected ref for the
-            # error message specificity.
-            touches_protected = any(
-                any(protected in f for protected in protected_refs)
-                for f in files
-            )
-            if touches_protected:
-                raise ApplyError(
-                    f"SC-6 violation: patch is not additive-only and "
-                    f"touches a protected v4/v5 ref (files={files})"
-                )
-            raise ApplyError(
-                f"patch is not additive-only (EVOL-02 scope discipline — "
-                f"evolution patches only ADD content; files={files})"
-            )
 
         # Step 6: stage + commit.
         subprocess.run(

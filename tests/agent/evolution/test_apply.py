@@ -131,6 +131,17 @@ class TestVerifyFound08ByteIntact:
         after_path.write_text(modified, encoding="utf-8")
         assert verify_found08_byte_intact(before_block, after_path) is False
 
+    def test_cr03_passes_when_no_prior_frontmatter(self, tmp_path: Path) -> None:
+        # CR-03: a pre-existing file WITHOUT frontmatter (e.g. a refs/notes.md)
+        # that gains a frontmatter block via patch should NOT trip the
+        # byte-intact check — there was no frontmatter to preserve.
+        before_block = ""  # _extract_frontmatter_block returns "" for no-FM
+        after_path = tmp_path / "after.md"
+        after_path.write_text(
+            "---\nkey: value\n---\nbody content\n", encoding="utf-8"
+        )
+        assert verify_found08_byte_intact(before_block, after_path) is True
+
 
 # --------------------------------------------------------------------------- #
 # TestBuildCommitMessage
