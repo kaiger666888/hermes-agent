@@ -322,6 +322,18 @@ def paired_t_stats(
             "std_diff": None,
             "p_value": None,
         }
+    # WR-08 mitigation: low-power warning for small samples. The paired-t
+    # test has very low power at small df (e.g. df=1 needs |t|>=12.706 to
+    # declare significance). Operators lowering --min-prompts below 5 must
+    # be warned that significant_at_0.05 is essentially unattainable.
+    if n < 5:
+        logger.warning(
+            "paired_t_stats: n=%d is below the recommended minimum of 5; "
+            "paired-t has low power at this sample size — treat "
+            "significant_at_0.05 with caution (crit(df=%d)=%.3f)",
+            n, n - 1,
+            _CRITICAL_T_05_TWO_TAILED.get(n - 1, _CRITICAL_T_ASYMPTOTIC_05),
+        )
     diffs = [
         c - b for c, b in zip(candidate, baseline, strict=False)
     ]
@@ -1064,6 +1076,12 @@ def run_gate(
                 f"p_value not computed (stdlib only); "
                 f"|t_stat|={abs(t_val):.4f} "
                 f"{'>=' if sig else '<'} critical_t(df={df_val})={crit}"
+            )
+        # WR-08: surface low-power warning to operators in the note text.
+        if stats["n"] < 5:
+            note += (
+                " (WARNING: n<5 — paired-t has low power; treat "
+                "significant_at_0.05 with caution.)"
             )
         paired_t_block = {
             "t_stat": t_val,
