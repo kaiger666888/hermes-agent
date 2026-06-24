@@ -1074,17 +1074,57 @@ class FeedbackStore:
         sentinel.touch(exist_ok=True)
 
         migrated = 0
+        # CR-02: subdirectory for already-ingested sources on crash-retry.
+        # A prior run that crashed between record_feedback and the rename
+        # leaves the source file in incoming/ AND the record in buckets/.
+        # The dedup check below routes re-migrations here so the audit
+        # trail distinguishes "first migration" from "duplicate of an
+        # already-ingested record".
+        duplicate_dir = archive_dir / "duplicate"
+        duplicate_dir.mkdir(parents=True, exist_ok=True)
         for src_path in pending:
             try:
                 raw = json.loads(src_path.read_text(encoding="utf-8"))
                 record = FeedbackRecord(**raw)
-                # Append-first (RESEARCH Pitfall #4). record_feedback is
-                # idempotent on partial retries only via Plan 02's dedup;
-                # for Plan 01 a duplicate line is harmless (operator can
-                # dedup-repair later).
-                self.record_feedback(record)
-                # Move original to archive for audit (do NOT delete).
-                target = archive_dir / src_path.name
+                # CR-02: dedup check BEFORE record_feedback. If the sha256
+                # is already in the registry with the same verdict, this is
+                # a crash-retry of an already-ingested record — route to
+                # duplicate/ instead of letting record_feedback no-op silently
+                # (which would still need to move the source file out of
+                # incoming/, and the duplicate path makes the audit clear).
+                sha = record.output_snapshot.sha256
+                existing = self._sha256_index.get(sha)
+                if existing is not None and existing.get("verdict") == record.verdict:
+                    target_dir = duplicate_dir
+                    logger.info(
+                        "phase-28 migration: %s already ingested "
+                        "(record_id=%s); archiving to duplicate/",
+                        src_path.name,
+                        existing.get("record_id"),
+                    )
+                else:
+                    # Append-first (RESEARCH Pitfall #4). record_feedback is
+                    # idempotent on partial retries only via Plan 02's dedup;
+                    # for Plan 01 a duplicate line is harmless (operator can
+                    # dedup-repair later).
+                    self.record_feedback(record)
+                    target_dir = archive_dir
+                # CR-02: disambiguate archive filename on collision. Two
+                # Phase 28 runs can produce incoming files with the same
+                # basename (ts_compact is second-precision); a bare rename
+                # silently overwrites the earlier archive copy, destroying
+                # the audit trail. Append a counter suffix until the name
+                # is free.
+                target = target_dir / src_path.name
+                if target.exists():
+                    stem, suffix = src_path.stem, src_path.suffix
+                    i = 1
+                    while True:
+                        candidate = target_dir / f"{stem}.{i}{suffix}"
+                        if not candidate.exists():
+                            target = candidate
+                            break
+                        i += 1
                 src_path.rename(target)
                 migrated += 1
             except Exception as exc:  # noqa: BLE001 — migration must not crash init
