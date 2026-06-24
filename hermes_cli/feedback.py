@@ -691,6 +691,55 @@ def _cmd_evolve(args) -> int:
             )
 
             if verdict == "pass":
+                # CR-01 (CURATE-05): compute two-signal confidence and set
+                # auto_apply_eligible=True for agent-created skills whose
+                # gate score mean_delta >= threshold AND evidence_count >=
+                # threshold AND auto_apply_enabled config is on. Bundled
+                # skills NEVER set auto_apply_eligible=True (T-32-05).
+                # Without this, the CURATE-05 consumer
+                # (_cmd_auto_apply_eligible) filtered on auto_apply_eligible
+                # and ALWAYS skipped every pending patch — making CURATE-05
+                # dead code. The evolve path is the canonical producer of
+                # gated patches (it runs the eval gate; _feedback_scan_phase
+                # does not), so this is where the marker is set.
+                try:
+                    from agent.curator import (
+                        _compute_confidence,
+                        get_auto_apply_enabled,
+                        get_auto_apply_min_delta,
+                        get_auto_apply_min_evidence,
+                    )
+                    from tools.skill_usage import is_agent_created
+                except ImportError:
+                    # Defensive — if the import shape changes, fall back
+                    # to the P31 default (auto_apply_eligible=False).
+                    _compute_confidence = None
+                    is_agent_created = None
+                    get_auto_apply_enabled = None
+                    get_auto_apply_min_delta = None
+                    get_auto_apply_min_evidence = None
+
+                auto_apply = False
+                confidence = None
+                if (
+                    _compute_confidence is not None
+                    and is_agent_created is not None
+                    and get_auto_apply_enabled is not None
+                    and get_auto_apply_min_delta is not None
+                    and get_auto_apply_min_evidence is not None
+                ):
+                    bundled = not is_agent_created(args.skill)
+                    if not bundled and get_auto_apply_enabled():
+                        evidence_count = len(insight.evidence_chain)
+                        confidence = _compute_confidence(
+                            eval_score=score,
+                            evidence_count=evidence_count,
+                            min_delta=get_auto_apply_min_delta(),
+                            min_evidence=get_auto_apply_min_evidence(),
+                        )
+                        if confidence.get("eligible"):
+                            auto_apply = True
+
                 record = PatchRecord(
                     patch_id=patch_id,
                     skill_id=args.skill,
@@ -701,6 +750,8 @@ def _cmd_evolve(args) -> int:
                     eval_gate_score=score,
                     status="pending",
                     ts_queued=datetime.now(timezone.utc).isoformat(),
+                    auto_apply_eligible=auto_apply,
+                    confidence_score=confidence,
                 )
                 append_patch(record, evolution_dir)
                 passed += 1

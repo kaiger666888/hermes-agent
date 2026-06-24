@@ -21,6 +21,7 @@ Strict invariants:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -1839,13 +1840,32 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
                         insight=insight, current_files=current_files,
                         instructions=instructions,
                     )
-                    import hashlib
-                    from datetime import datetime as _dt, timezone as _tz
-                    ts_unix = int(_dt.now(_tz.utc).timestamp())
+                    # IN-02: use module-level imports (hashlib added at top,
+                    # datetime/timezone already imported at line 29) instead
+                    # of shadowing them inside the loop body.
+                    ts_unix = int(datetime.now(timezone.utc).timestamp())
                     sha = hashlib.sha256(
                         diff.encode("utf-8")
                     ).hexdigest()[:16]
                     patch_id = f"{skill_id}_{ts_unix}_{sha}"
+                    # CR-01 Part B (defense-in-depth + diagnostics): the
+                    # feedback-scan phase does NOT run the eval gate (CONTEXT.md
+                    # defers gate invocation to the evolve CLI), so
+                    # eval_gate_score stays {} and mean_delta defaults to 0.0.
+                    # _compute_confidence therefore returns eligible=False
+                    # regardless of evidence_count. auto_apply_eligible stays
+                    # False for ALL scan-produced patches — operators must
+                    # use `hermes feedback evolve` (which runs the gate) to
+                    # produce auto-apply-eligible patches. We still populate
+                    # confidence_score so the auto-apply CLI's skip reason is
+                    # informative ("mean_delta 0.000 < 0.1") rather than a
+                    # bare "not marked eligible" with no signal context.
+                    scan_confidence = _compute_confidence(
+                        eval_score={},  # gate not run in scan phase
+                        evidence_count=len(insight.evidence_chain),
+                        min_delta=get_auto_apply_min_delta(),
+                        min_evidence=get_auto_apply_min_evidence(),
+                    )
                     record = PatchRecord(
                         patch_id=patch_id,
                         skill_id=skill_id,
@@ -1855,10 +1875,12 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
                         llm_rationale=insight.rationale,
                         eval_gate_score={},
                         status="pending",
-                        ts_queued=_dt.now(_tz.utc).isoformat(),
-                        # Bundled NEVER auto-apply eligible (T-32-05).
+                        ts_queued=datetime.now(timezone.utc).isoformat(),
+                        # Bundled NEVER auto-apply eligible (T-32-05). Agent-
+                        # created scan-produced patches are also False because
+                        # the gate didn't run — see comment above.
                         auto_apply_eligible=False,
-                        confidence_score=None,
+                        confidence_score=scan_confidence,
                     )
                     append_patch(record, evolution_dir)
                     append_audit(

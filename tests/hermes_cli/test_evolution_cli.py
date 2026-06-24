@@ -378,6 +378,288 @@ class TestEvolveCmdFullPipeline:
 
 
 # ---------------------------------------------------------------------------
+# CR-01: CURATE-05 auto-apply eligibility marker on evolve-produced patches
+# ---------------------------------------------------------------------------
+
+
+class TestEvolveCmdAutoApplyEligible:
+    """CR-01 regression: ``hermes feedback evolve`` MUST set
+    ``auto_apply_eligible=True`` on the produced PatchRecord when ALL of:
+      - the skill is agent-created (NOT bundled)
+      - ``feedback.curator.auto_apply_enabled`` is True
+      - the gate passed AND ``mean_delta >= auto_apply_min_delta``
+      - ``evidence_count >= auto_apply_min_evidence``
+
+    Without this marker, the CURATE-05 consumer (_cmd_auto_apply_eligible)
+    filtered on ``auto_apply_eligible`` and skipped every pending patch —
+    making CURATE-05 dead code. Bundled skills MUST NEVER get the marker
+    (T-32-05 defense-in-depth).
+    """
+
+    def _build_repo_with_skill(self, tmp_path, *, skill_id: str) -> Path:
+        """Build a tmp git repo with a SKILL.md for *skill_id*."""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
+        (repo_root / ".git").mkdir()
+        skill_md = (
+            repo_root / "skills" / "movie-experts" / skill_id / "SKILL.md"
+        )
+        skill_md.parent.mkdir(parents=True)
+        skill_md.write_text(
+            "---\nname: " + skill_id + "\nmetadata:\n  hermes:\n    "
+            "expert_id: " + skill_id + "\n    related_skills: []\n---\n\n"
+            "# " + skill_id + " Expert\n\n## When to use\n\nTrigger.\n\n"
+            "## References\n\n- [X](x.md)\n",
+            encoding="utf-8",
+        )
+        return repo_root
+
+    def _make_passing_gate_mock(self, *, mean_delta: float = 0.15):
+        """Return a side_effect for ``hermes_cli.feedback._run_eval_gate``
+        that always reports a pass with the requested mean_delta.
+
+        Mocking _run_eval_gate directly (rather than subprocess.run) lets
+        us control the score dict shape exactly — the production report
+        filename is keyed on patch_id_for_report which is generated
+        dynamically inside _cmd_evolve, making subprocess-level mocking
+        fragile for assertions on score content.
+        """
+        def fake_gate(**kwargs):
+            return "pass", {
+                "verdict": "pass",
+                "mean_delta": mean_delta,
+                "per_prompt_max_drop": -0.3,
+            }
+        return fake_gate
+
+    def test_agent_created_with_signals_pass_marks_eligible(
+        self, monkeypatch, tmp_path,
+    ):
+        """Agent-created skill + auto_apply_enabled + signals pass →
+        PatchRecord.auto_apply_eligible=True + confidence_score populated.
+        End-to-end CURATE-05 producer path.
+        """
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        repo_root = self._build_repo_with_skill(tmp_path, skill_id="agent_x")
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["evolve", "--skill", "agent_x"])
+
+        sample_payload = json.loads(
+            (FIXTURES_DIR / "sample_insights.json").read_text(encoding="utf-8")
+        )
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.choices = [
+            MagicMock(message=MagicMock(content=json.dumps(sample_payload)))
+        ]
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        # 4 fake records so evidence_count >= 3.
+        fake_records = [
+            {"record_id": f"fb_{i:03d}", "verdict": "needs_work"}
+            for i in range(4)
+        ]
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=repo_root
+        ), patch(
+            "agent.evolution.make_aggregation_client",
+            return_value=(mock_client, "stub-model"),
+        ), patch(
+            "agent.feedback_store.FeedbackStore"
+        ) as mock_store_cls, patch(
+            "hermes_cli.feedback._run_eval_gate",
+            side_effect=self._make_passing_gate_mock(),
+        ), patch(
+            # CR-01: auto_apply_enabled must be ON for the marker to be set.
+            "agent.curator.get_auto_apply_enabled", return_value=True,
+        ), patch(
+            "agent.curator.get_auto_apply_min_delta", return_value=0.1,
+        ), patch(
+            # min_evidence=2 matches the sample_insights.json first insight
+            # evidence_chain length (["fb_001", "fb_002"]).
+            "agent.curator.get_auto_apply_min_evidence", return_value=2,
+        ), patch(
+            # agent_x is NOT in the bundled manifest → is_agent_created=True.
+            "tools.skill_usage.is_agent_created", return_value=True,
+        ):
+            mock_store = MagicMock()
+            mock_store.query.return_value = fake_records
+            mock_store.summary.return_value = {"needs_work": 4}
+            mock_store_cls.return_value = mock_store
+            exit_code = args.func(args)
+
+        assert exit_code == 0
+        queue_path = (
+            tmp_path / "hermes_home" / "skills" / ".feedback" /
+            "evolution" / "queue.jsonl"
+        )
+        assert queue_path.is_file()
+        from agent.evolution.queue import read_queue
+        records = read_queue(
+            evolution_dir=queue_path.parent, status="pending",
+        )
+        assert len(records) >= 1
+        for r in records:
+            assert r.skill_id == "agent_x"
+            # CR-01 headline assertion: the marker IS set.
+            assert r.auto_apply_eligible is True, (
+                "CR-01 regression: evolve-produced agent-created patch "
+                "must have auto_apply_eligible=True when auto_apply_enabled "
+                "is on and both signals pass"
+            )
+            assert r.confidence_score is not None
+            assert r.confidence_score["eligible"] is True
+            assert r.confidence_score["mean_delta"] >= 0.1
+            assert r.confidence_score["evidence_count"] >= 2
+
+    def test_bundled_skill_never_marked_eligible(
+        self, monkeypatch, tmp_path,
+    ):
+        """Bundled skill (is_agent_created=False) NEVER gets the marker
+        even when auto_apply_enabled is on and signals pass. T-32-05
+        defense-in-depth at the producer.
+        """
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        # Use 'screenplay' — a real bundled skill name.
+        repo_root = self._build_repo_with_skill(tmp_path, skill_id="screenplay")
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["evolve", "--skill", "screenplay"])
+
+        sample_payload = json.loads(
+            (FIXTURES_DIR / "sample_insights.json").read_text(encoding="utf-8")
+        )
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.choices = [
+            MagicMock(message=MagicMock(content=json.dumps(sample_payload)))
+        ]
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        fake_records = [
+            {"record_id": f"fb_{i:03d}", "verdict": "needs_work"}
+            for i in range(4)
+        ]
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=repo_root
+        ), patch(
+            "agent.evolution.make_aggregation_client",
+            return_value=(mock_client, "stub-model"),
+        ), patch(
+            "agent.feedback_store.FeedbackStore"
+        ) as mock_store_cls, patch(
+            "hermes_cli.feedback._run_eval_gate",
+            side_effect=self._make_passing_gate_mock(),
+        ), patch(
+            "agent.curator.get_auto_apply_enabled", return_value=True,
+        ), patch(
+            "agent.curator.get_auto_apply_min_delta", return_value=0.1,
+        ), patch(
+            "agent.curator.get_auto_apply_min_evidence", return_value=3,
+        ), patch(
+            # screenplay IS bundled → is_agent_created=False.
+            "tools.skill_usage.is_agent_created", return_value=False,
+        ):
+            mock_store = MagicMock()
+            mock_store.query.return_value = fake_records
+            mock_store.summary.return_value = {"needs_work": 4}
+            mock_store_cls.return_value = mock_store
+            exit_code = args.func(args)
+
+        assert exit_code == 0
+        queue_path = (
+            tmp_path / "hermes_home" / "skills" / ".feedback" /
+            "evolution" / "queue.jsonl"
+        )
+        assert queue_path.is_file()
+        from agent.evolution.queue import read_queue
+        records = read_queue(
+            evolution_dir=queue_path.parent, status="pending",
+        )
+        assert len(records) >= 1
+        for r in records:
+            # T-32-05: bundled NEVER auto-apply eligible, even when
+            # auto_apply_enabled is on and signals would otherwise pass.
+            assert r.auto_apply_eligible is False
+
+    def test_auto_apply_disabled_leaves_marker_false(
+        self, monkeypatch, tmp_path,
+    ):
+        """When auto_apply_enabled=false (the default), the marker stays
+        False even for agent-created skills with passing signals.
+        """
+        from hermes_cli.feedback import register_cli
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        repo_root = self._build_repo_with_skill(tmp_path, skill_id="agent_y")
+
+        parser = argparse.ArgumentParser(prog="hermes feedback")
+        register_cli(parser)
+        args = parser.parse_args(["evolve", "--skill", "agent_y"])
+
+        sample_payload = json.loads(
+            (FIXTURES_DIR / "sample_insights.json").read_text(encoding="utf-8")
+        )
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.choices = [
+            MagicMock(message=MagicMock(content=json.dumps(sample_payload)))
+        ]
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        fake_records = [
+            {"record_id": f"fb_{i:03d}", "verdict": "needs_work"}
+            for i in range(4)
+        ]
+
+        with patch(
+            "hermes_cli.feedback._resolve_repo_root", return_value=repo_root
+        ), patch(
+            "agent.evolution.make_aggregation_client",
+            return_value=(mock_client, "stub-model"),
+        ), patch(
+            "agent.feedback_store.FeedbackStore"
+        ) as mock_store_cls, patch(
+            "hermes_cli.feedback._run_eval_gate",
+            side_effect=self._make_passing_gate_mock(),
+        ), patch(
+            # auto_apply_enabled=False — default config.
+            "agent.curator.get_auto_apply_enabled", return_value=False,
+        ), patch(
+            "tools.skill_usage.is_agent_created", return_value=True,
+        ):
+            mock_store = MagicMock()
+            mock_store.query.return_value = fake_records
+            mock_store.summary.return_value = {"needs_work": 4}
+            mock_store_cls.return_value = mock_store
+            exit_code = args.func(args)
+
+        assert exit_code == 0
+        queue_path = (
+            tmp_path / "hermes_home" / "skills" / ".feedback" /
+            "evolution" / "queue.jsonl"
+        )
+        assert queue_path.is_file()
+        from agent.evolution.queue import read_queue
+        records = read_queue(
+            evolution_dir=queue_path.parent, status="pending",
+        )
+        assert len(records) >= 1
+        for r in records:
+            # auto_apply_enabled=False → marker stays False.
+            assert r.auto_apply_eligible is False
+
+
+# ---------------------------------------------------------------------------
 # review-queue
 # ---------------------------------------------------------------------------
 
