@@ -1700,14 +1700,30 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
     All imports of agent.evolution.* are LAZY inside this function body
     (runtime isolation — module-level imports forbidden per P31 invariant).
 
-    Failure isolation (T-32-03): the entire body is wrapped in
-    try/except Exception that logs WARNING and returns an error dict. The
-    pre-v6 phases that already completed are preserved.
+    Failure isolation (T-32-03): WR-05 narrowed the outer try to cover
+    ONLY the setup (imports, FeedbackStore, hot-skills scan, LLM client).
+    The main per-skill/per-insight loop has its own per-insight try/except
+    and unexpected errors propagate to the caller (_llm_pass), which has
+    its own try/except wrapper. The prior broad outer catch masked logic
+    bugs as "scan phase failed (non-fatal)" — making it impossible to
+    distinguish "config is broken" from "a single insight failed inside
+    the loop". The pre-v6 phases that already completed are preserved
+    regardless (this phase runs AFTER save_state in _llm_pass).
 
     Returns:
         ``{"scanned": int, "proposed": [patch_id, ...]}`` on success,
         ``{"scanned": 0, "proposed": [], "error": str}`` on failure.
     """
+    # WR-05: the outer try covers ONLY the setup (imports, FeedbackStore
+    # construction, hot-skills scan, LLM client init). After setup succeeds,
+    # the per-skill/per-insight loops run WITHOUT a broad outer catch —
+    # they already have per-insight try/except (T-32-03 failure isolation
+    # at the insight level). Unexpected programming errors in the loops
+    # now propagate to the caller (_llm_pass), which has its own
+    # try/except wrapper (lines 1962/2086). The prior broad outer catch
+    # masked logic bugs as "scan phase failed (non-fatal)" — making it
+    # impossible to distinguish "config is broken" from "a single insight
+    # failed inside the loop".
     try:
         # Lazy imports (runtime isolation — P31 invariant).
         from agent.feedback_store import FeedbackStore
@@ -1752,165 +1768,172 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
                 "curator feedback-scan: LLM client init failed: %s", exc,
             )
             return {"scanned": len(hot_skills), "proposed": [], "error": str(exc)}
-
-        evolution_dir = get_hermes_home() / "skills" / ".feedback" / "evolution"
-        proposed: List[str] = []
-
-        for skill_id in hot_skills:
-            try:
-                insights = aggregate_feedback(
-                    skill_id=skill_id, store=store,
-                    client=client, model=model,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "curator feedback-scan: aggregate_feedback failed "
-                    "for %s: %s", skill_id, exc,
-                )
-                continue
-
-            # Load current file contents for this skill (for diff generation).
-            # We read SKILL.md + references/*.md under the skill directory.
-            #
-            # CR-03: paths passed to the LLM MUST be repo-relative
-            # (``skills/movie-experts/<skill>/...``) so that the generated
-            # unified diff (with ``a/skills/movie-experts/...`` / ``b/...``
-            # fromfile/tofile) applies cleanly via ``apply_patch_transaction``,
-            # which resolves patch paths against the git repo root. The
-            # prior code computed ``f.relative_to(get_hermes_home().parent)``
-            # which yielded HERMES_HOME-relative paths like
-            # ``.hermes/skills/movie-experts/screenplay/SKILL.md`` —
-            # semantically wrong (the prompt says "repo-relative paths"),
-            # producing diffs that would not apply. Bundled skills live
-            # under ``<repo>/skills/movie-experts/<skill>/``; resolve via
-            # the git repo root (matching ``hermes_cli/feedback.py:557-563``
-            # which does the same for the ``evolve`` CLI).
-            repo_root = _resolve_repo_root_or_none()
-            skill_dir_repo = (
-                repo_root / "skills" / "movie-experts" / skill_id
-                if repo_root is not None else None
-            )
-            skill_dir_home = get_hermes_home() / "skills" / "movie-experts" / skill_id
-            if not skill_dir_home.exists():
-                # Agent-created skills live elsewhere; bundled under movie-experts.
-                # Try the flat layout.
-                skill_dir_home = get_hermes_home() / "skills" / skill_id
-            # Prefer the repo copy when available (canonical reference frame
-            # for unified diffs). Fall back to the HERMES_HOME copy if the
-            # repo tree is not accessible (e.g. running from a wheel install
-            # without a git checkout) — in that case the patch will still
-            # be produced but the operator must apply it manually.
-            if skill_dir_repo is not None and skill_dir_repo.exists():
-                scan_dir = skill_dir_repo
-                scan_root = repo_root
-            elif skill_dir_home.exists():
-                scan_dir = skill_dir_home
-                scan_root = get_hermes_home().parent
-            else:
-                scan_dir = None
-                scan_root = None
-            current_files: Dict[str, str] = {}
-            if scan_dir is not None and scan_root is not None:
-                for f in [scan_dir / "SKILL.md"] + list(
-                    (scan_dir / "references").glob("*.md")
-                    if (scan_dir / "references").exists() else []
-                ):
-                    if f.is_file():
-                        try:
-                            rel = str(f.relative_to(scan_root))
-                            current_files[rel] = f.read_text(encoding="utf-8")
-                        except (OSError, ValueError) as exc:
-                            # IN-03: log at DEBUG so silent skips are at
-                            # least traceable in verbose mode.
-                            logger.debug(
-                                "feedback-scan: skipping %s (%s)", f, exc,
-                            )
-
-            bundled = is_bundled(skill_id)
-
-            for insight in insights:
-                try:
-                    instructions = emit_evol02_instructions(
-                        insight=insight, current_files=current_files,
-                        client=client, model=model,
-                    )
-                    if not instructions:
-                        continue
-                    diff = generate_patch_from_knowledge_point(
-                        insight=insight, current_files=current_files,
-                        instructions=instructions,
-                    )
-                    # IN-02: use module-level imports (hashlib added at top,
-                    # datetime/timezone already imported at line 29) instead
-                    # of shadowing them inside the loop body.
-                    ts_unix = int(datetime.now(timezone.utc).timestamp())
-                    sha = hashlib.sha256(
-                        diff.encode("utf-8")
-                    ).hexdigest()[:16]
-                    patch_id = f"{skill_id}_{ts_unix}_{sha}"
-                    # CR-01 Part B (defense-in-depth + diagnostics): the
-                    # feedback-scan phase does NOT run the eval gate (CONTEXT.md
-                    # defers gate invocation to the evolve CLI), so
-                    # eval_gate_score stays {} and mean_delta defaults to 0.0.
-                    # _compute_confidence therefore returns eligible=False
-                    # regardless of evidence_count. auto_apply_eligible stays
-                    # False for ALL scan-produced patches — operators must
-                    # use `hermes feedback evolve` (which runs the gate) to
-                    # produce auto-apply-eligible patches. We still populate
-                    # confidence_score so the auto-apply CLI's skip reason is
-                    # informative ("mean_delta 0.000 < 0.1") rather than a
-                    # bare "not marked eligible" with no signal context.
-                    scan_confidence = _compute_confidence(
-                        eval_score={},  # gate not run in scan phase
-                        evidence_count=len(insight.evidence_chain),
-                        min_delta=get_auto_apply_min_delta(),
-                        min_evidence=get_auto_apply_min_evidence(),
-                    )
-                    record = PatchRecord(
-                        patch_id=patch_id,
-                        skill_id=skill_id,
-                        insight_id=insight.insight_id,
-                        unified_diff=diff,
-                        feedback_chain=insight.evidence_chain,
-                        llm_rationale=insight.rationale,
-                        eval_gate_score={},
-                        status="pending",
-                        ts_queued=datetime.now(timezone.utc).isoformat(),
-                        # Bundled NEVER auto-apply eligible (T-32-05). Agent-
-                        # created scan-produced patches are also False because
-                        # the gate didn't run — see comment above.
-                        auto_apply_eligible=False,
-                        confidence_score=scan_confidence,
-                    )
-                    append_patch(record, evolution_dir)
-                    append_audit(
-                        action="propose",
-                        patch_id=patch_id,
-                        skill_id=skill_id,
-                        operator="system",
-                        feedback_ids=insight.evidence_chain,
-                    )
-                    proposed.append(patch_id)
-                    logger.info(
-                        "curator feedback-scan: proposed patch %s for %s "
-                        "(bundled=%s)",
-                        patch_id, skill_id, bundled,
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "curator feedback-scan: insight %s failed for %s: %s",
-                        insight.insight_id, skill_id, exc,
-                    )
-                    continue
-
-        return {"scanned": len(hot_skills), "proposed": proposed}
     except Exception as exc:
-        # T-32-03: scan failure must NEVER abort the curator run.
+        # Setup failure — config broken, import failed, etc. T-32-03:
+        # scan failure must NEVER abort the curator run. The caller
+        # (_llm_pass) also wraps this whole call in try/except, but we
+        # return a structured error dict here so the summary includes
+        # the failure reason.
         logger.warning(
-            "curator feedback-scan phase failed (non-fatal): %s", exc,
+            "curator feedback-scan setup failed (non-fatal): %s", exc,
             exc_info=True,
         )
         return {"scanned": 0, "proposed": [], "error": str(exc)}
+
+    # Main loop — per-skill try/except + per-insight try/except provide
+    # failure isolation. Unexpected errors propagate to _llm_pass's
+    # try/except wrapper (no longer swallowed here).
+    evolution_dir = get_hermes_home() / "skills" / ".feedback" / "evolution"
+    proposed: List[str] = []
+
+    for skill_id in hot_skills:
+        try:
+            insights = aggregate_feedback(
+                skill_id=skill_id, store=store,
+                client=client, model=model,
+            )
+        except Exception as exc:
+            logger.warning(
+                "curator feedback-scan: aggregate_feedback failed "
+                "for %s: %s", skill_id, exc,
+            )
+            continue
+
+        # Load current file contents for this skill (for diff generation).
+        # We read SKILL.md + references/*.md under the skill directory.
+        #
+        # CR-03: paths passed to the LLM MUST be repo-relative
+        # (``skills/movie-experts/<skill>/...``) so that the generated
+        # unified diff (with ``a/skills/movie-experts/...`` / ``b/...``
+        # fromfile/tofile) applies cleanly via ``apply_patch_transaction``,
+        # which resolves patch paths against the git repo root. The
+        # prior code computed ``f.relative_to(get_hermes_home().parent)``
+        # which yielded HERMES_HOME-relative paths like
+        # ``.hermes/skills/movie-experts/screenplay/SKILL.md`` —
+        # semantically wrong (the prompt says "repo-relative paths"),
+        # producing diffs that would not apply. Bundled skills live
+        # under ``<repo>/skills/movie-experts/<skill>/``; resolve via
+        # the git repo root (matching ``hermes_cli/feedback.py:557-563``
+        # which does the same for the ``evolve`` CLI).
+        repo_root = _resolve_repo_root_or_none()
+        skill_dir_repo = (
+            repo_root / "skills" / "movie-experts" / skill_id
+            if repo_root is not None else None
+        )
+        skill_dir_home = get_hermes_home() / "skills" / "movie-experts" / skill_id
+        if not skill_dir_home.exists():
+            # Agent-created skills live elsewhere; bundled under movie-experts.
+            # Try the flat layout.
+            skill_dir_home = get_hermes_home() / "skills" / skill_id
+        # Prefer the repo copy when available (canonical reference frame
+        # for unified diffs). Fall back to the HERMES_HOME copy if the
+        # repo tree is not accessible (e.g. running from a wheel install
+        # without a git checkout) — in that case the patch will still
+        # be produced but the operator must apply it manually.
+        if skill_dir_repo is not None and skill_dir_repo.exists():
+            scan_dir = skill_dir_repo
+            scan_root = repo_root
+        elif skill_dir_home.exists():
+            scan_dir = skill_dir_home
+            scan_root = get_hermes_home().parent
+        else:
+            scan_dir = None
+            scan_root = None
+        current_files: Dict[str, str] = {}
+        if scan_dir is not None and scan_root is not None:
+            for f in [scan_dir / "SKILL.md"] + list(
+                (scan_dir / "references").glob("*.md")
+                if (scan_dir / "references").exists() else []
+            ):
+                if f.is_file():
+                    try:
+                        rel = str(f.relative_to(scan_root))
+                        current_files[rel] = f.read_text(encoding="utf-8")
+                    except (OSError, ValueError) as exc:
+                        # IN-03: log at DEBUG so silent skips are at
+                        # least traceable in verbose mode.
+                        logger.debug(
+                            "feedback-scan: skipping %s (%s)", f, exc,
+                        )
+
+        bundled = is_bundled(skill_id)
+
+        for insight in insights:
+            try:
+                instructions = emit_evol02_instructions(
+                    insight=insight, current_files=current_files,
+                    client=client, model=model,
+                )
+                if not instructions:
+                    continue
+                diff = generate_patch_from_knowledge_point(
+                    insight=insight, current_files=current_files,
+                    instructions=instructions,
+                )
+                # IN-02: use module-level imports (hashlib added at top,
+                # datetime/timezone already imported at line 29) instead
+                # of shadowing them inside the loop body.
+                ts_unix = int(datetime.now(timezone.utc).timestamp())
+                sha = hashlib.sha256(
+                    diff.encode("utf-8")
+                ).hexdigest()[:16]
+                patch_id = f"{skill_id}_{ts_unix}_{sha}"
+                # CR-01 Part B (defense-in-depth + diagnostics): the
+                # feedback-scan phase does NOT run the eval gate (CONTEXT.md
+                # defers gate invocation to the evolve CLI), so
+                # eval_gate_score stays {} and mean_delta defaults to 0.0.
+                # _compute_confidence therefore returns eligible=False
+                # regardless of evidence_count. auto_apply_eligible stays
+                # False for ALL scan-produced patches — operators must
+                # use `hermes feedback evolve` (which runs the gate) to
+                # produce auto-apply-eligible patches. We still populate
+                # confidence_score so the auto-apply CLI's skip reason is
+                # informative ("mean_delta 0.000 < 0.1") rather than a
+                # bare "not marked eligible" with no signal context.
+                scan_confidence = _compute_confidence(
+                    eval_score={},  # gate not run in scan phase
+                    evidence_count=len(insight.evidence_chain),
+                    min_delta=get_auto_apply_min_delta(),
+                    min_evidence=get_auto_apply_min_evidence(),
+                )
+                record = PatchRecord(
+                    patch_id=patch_id,
+                    skill_id=skill_id,
+                    insight_id=insight.insight_id,
+                    unified_diff=diff,
+                    feedback_chain=insight.evidence_chain,
+                    llm_rationale=insight.rationale,
+                    eval_gate_score={},
+                    status="pending",
+                    ts_queued=datetime.now(timezone.utc).isoformat(),
+                    # Bundled NEVER auto-apply eligible (T-32-05). Agent-
+                    # created scan-produced patches are also False because
+                    # the gate didn't run — see comment above.
+                    auto_apply_eligible=False,
+                    confidence_score=scan_confidence,
+                )
+                append_patch(record, evolution_dir)
+                append_audit(
+                    action="propose",
+                    patch_id=patch_id,
+                    skill_id=skill_id,
+                    operator="system",
+                    feedback_ids=insight.evidence_chain,
+                )
+                proposed.append(patch_id)
+                logger.info(
+                    "curator feedback-scan: proposed patch %s for %s "
+                    "(bundled=%s)",
+                    patch_id, skill_id, bundled,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "curator feedback-scan: insight %s failed for %s: %s",
+                    insight.insight_id, skill_id, exc,
+                )
+                continue
+
+    return {"scanned": len(hot_skills), "proposed": proposed}
 
 
 def run_curator_review(
