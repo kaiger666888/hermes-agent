@@ -597,3 +597,247 @@ class TestNoNewSubcommandBreakage:
         subs_action = parser._subparsers._group_actions[0]
         names = set(subs_action.choices.keys())
         assert "stats" in names, "stats subcommand not registered"
+
+
+# ---------------------------------------------------------------------------
+# TestArchitectureDoc — SC-4 (Phase 33 Plan 02)
+# ---------------------------------------------------------------------------
+#
+# Verifies that ``skills/movie-experts/_shared/v6-feedback-loop-architecture.md``
+# mirrors v86-pipeline-mapping.md structural conventions:
+#   - 4-line header metadata block (Source / Copyright / Last-verified /
+#     verified_date)
+#   - 7-9 H2 sections (CONTEXT.md 7-section logical outline + v86 convention
+#     footer sections — See Also / Source Citation / Refresh Cadence)
+#   - ASCII data-flow diagram present (no mermaid)
+#   - Bilingual body (>= 3 CJK characters)
+#   - Footer ownership line beginning ``*Owned by Phase 33``
+#
+# All ``open()`` calls pass ``encoding="utf-8"`` per CLAUDE.md PLW1514.
+
+
+class TestArchitectureDoc:
+    """``_shared/v6-feedback-loop-architecture.md`` structure — SC-4."""
+
+    DOC_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / "skills"
+        / "movie-experts"
+        / "_shared"
+        / "v6-feedback-loop-architecture.md"
+    )
+
+    def _read_doc(self) -> str:
+        return self.DOC_PATH.read_text(encoding="utf-8")
+
+    def test_metadata_header_block_present(self):
+        """Header has Source / Copyright / Last-verified / verified_date lines."""
+        doc = self._read_doc()
+        head = doc.split("\n\n", 1)[0]
+        assert "**Source:**" in head, "missing **Source:** metadata line"
+        assert "**Copyright:**" in head, "missing **Copyright:** metadata line"
+        assert "**Last-verified:**" in head, "missing **Last-verified:** line"
+        assert "**verified_date:**" in head, "missing **verified_date:** line"
+
+    def test_minimal_h2_section_count(self):
+        """File has >= 7 and <= 9 H2 headers (CONTEXT.md outline + footer)."""
+        doc = self._read_doc()
+        h2_lines = [ln for ln in doc.splitlines() if ln.startswith("## ")]
+        assert len(h2_lines) >= 7, (
+            f"too few H2 sections: {len(h2_lines)} (expected >= 7). "
+            f"Found: {h2_lines}"
+        )
+        assert len(h2_lines) <= 9, (
+            f"too many H2 sections: {len(h2_lines)} (expected <= 9). "
+            f"Found: {h2_lines}"
+        )
+
+    def test_required_sections_present(self):
+        """File contains the 7 CONTEXT.md logical section titles (case-insensitive)."""
+        doc = self._read_doc()
+        lower = doc.lower()
+        required = [
+            "overview",
+            "data flow",
+            "json schema",
+            "eval-gate threshold",
+            "human-in-loop",
+            "module ownership",
+            "roadmap reference",
+        ]
+        missing = [r for r in required if r not in lower]
+        assert not missing, (
+            f"missing required section titles (case-insensitive): {missing}"
+        )
+
+    def test_footer_ownership_line_present(self):
+        """Last non-empty line starts with ``*Owned by Phase 33``."""
+        doc = self._read_doc()
+        non_empty = [ln for ln in doc.splitlines() if ln.strip()]
+        assert non_empty, "doc is empty"
+        last = non_empty[-1].lstrip()
+        assert last.startswith("*Owned by Phase 33"), (
+            f"footer ownership line missing or malformed: {last!r}"
+        )
+
+    def test_ascii_diagram_present(self):
+        """File has a fenced code block with ASCII arrows / box-drawing chars.
+
+        Verifies D-diagram-format (ASCII chosen over mermaid per CONTEXT.md).
+        Looks for ``->``, ``│``, or ``▼`` inside at least one fenced block.
+        """
+        doc = self._read_doc()
+        # Split out fenced code blocks.
+        blocks = doc.split("```")
+        # Fenced blocks are at odd indices after split on ```` ``` ````.
+        fenced = [blocks[i] for i in range(1, len(blocks), 2)]
+        assert fenced, "no fenced code block found (expected ASCII diagram)"
+        ascii_chars = ("->", "│", "▼")
+        found = any(any(ch in blk for ch in ascii_chars) for blk in fenced)
+        assert found, (
+            "no ASCII-arrow/box-drawing chars found inside fenced code blocks"
+        )
+
+    def test_no_mermaid_block(self):
+        """File does NOT contain a mermaid fenced block (anti-pattern)."""
+        doc = self._read_doc()
+        assert "```mermaid" not in doc, (
+            "T-33-10 REGRESSION: mermaid block found in architecture doc "
+            "(CONTEXT.md D-diagram-format requires ASCII)"
+        )
+
+    def test_bilingual_chinese_in_body(self):
+        """Body contains at least 3 CJK characters (CLAUDE.md bilingual rule)."""
+        doc = self._read_doc()
+        cjk = [ch for ch in doc if "一" <= ch <= "鿿"]
+        assert len(cjk) >= 3, (
+            f"insufficient CJK characters for bilingual rule: {len(cjk)} (need >= 3)"
+        )
+
+    def test_see_also_and_source_citation_footer(self):
+        """File has ``## See Also`` AND ``## Source Citation`` sections (v86)."""
+        doc = self._read_doc()
+        assert "## See Also" in doc, "missing ## See Also section (v86 convention)"
+        assert "## Source Citation" in doc, (
+            "missing ## Source Citation section (v86 convention)"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestSkillsMappingV6 — SC-5 (Phase 33 Plan 02)
+# ---------------------------------------------------------------------------
+#
+# Verifies that ``.planning/research/v2-pipeline-design/skills-mapping.yaml``
+# has a ``v6_ref_signoffs:`` section mirroring the 8+ field v5_ref_signoffs
+# schema, with exactly one entry for the new architecture doc, and that the
+# v5_ref_signoffs section is byte-intact (still 2 entries).
+
+
+class TestSkillsMappingV6:
+    """``skills-mapping.yaml`` ``v6_ref_signoffs:`` section — SC-5."""
+
+    YAML_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / ".planning"
+        / "research"
+        / "v2-pipeline-design"
+        / "skills-mapping.yaml"
+    )
+
+    # 8 mandatory fields per RESEARCH §skills-mapping.yaml v5_ref_signoffs
+    # Schema Audit (ref_path, expert_owner, phase_added, requirement,
+    # verified_date, source, license_status, line_count, signed_off_by, notes).
+    REQUIRED_FIELDS = (
+        "ref_path",
+        "expert_owner",
+        "phase_added",
+        "requirement",
+        "verified_date",
+        "source",
+        "license_status",
+        "line_count",
+        "signed_off_by",
+        "notes",
+    )
+
+    def _load(self) -> dict:
+        import yaml  # PyYAML already pinned per CLAUDE.md
+
+        with open(self.YAML_PATH, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+
+    def test_v6_section_present(self):
+        """Top-level ``v6_ref_signoffs:`` key exists."""
+        data = self._load()
+        assert "v6_ref_signoffs" in data, (
+            "missing v6_ref_signoffs: key in skills-mapping.yaml"
+        )
+
+    def test_v6_entry_has_8_required_fields(self):
+        """The v6 architecture-doc entry has all 8+ required fields."""
+        data = self._load()
+        entries = data.get("v6_ref_signoffs") or []
+        assert entries, "v6_ref_signoffs: section is empty"
+        # Find the v6-feedback-loop-architecture.md entry.
+        arch_entries = [
+            e for e in entries
+            if "v6-feedback-loop-architecture" in str(e.get("ref_path", ""))
+        ]
+        assert arch_entries, (
+            "no v6-feedback-loop-architecture.md entry in v6_ref_signoffs"
+        )
+        entry = arch_entries[0]
+        missing = [f for f in self.REQUIRED_FIELDS if f not in entry]
+        assert not missing, (
+            f"v6 entry missing required fields: {missing}. "
+            f"Present keys: {sorted(entry.keys())}"
+        )
+
+    def test_v6_entry_ref_path_correct(self):
+        """ref_path equals the canonical architecture-doc path."""
+        data = self._load()
+        entries = data.get("v6_ref_signoffs") or []
+        arch = [
+            e for e in entries
+            if "v6-feedback-loop-architecture" in str(e.get("ref_path", ""))
+        ][0]
+        assert arch["ref_path"] == (
+            "skills/movie-experts/_shared/v6-feedback-loop-architecture.md"
+        ), f"unexpected ref_path: {arch['ref_path']!r}"
+
+    def test_v6_phase_added_format(self):
+        """phase_added matches ``v6.0-phase-3[23]`` (P32 or P33)."""
+        import re
+
+        data = self._load()
+        entries = data.get("v6_ref_signoffs") or []
+        arch = [
+            e for e in entries
+            if "v6-feedback-loop-architecture" in str(e.get("ref_path", ""))
+        ][0]
+        assert re.match(r"^v6\.0-phase-3[23]$", arch["phase_added"]), (
+            f"phase_added malformed: {arch['phase_added']!r}"
+        )
+
+    def test_v6_verified_date_format(self):
+        """verified_date is a YYYY-MM-DD string."""
+        import re
+
+        data = self._load()
+        entries = data.get("v6_ref_signoffs") or []
+        arch = [
+            e for e in entries
+            if "v6-feedback-loop-architecture" in str(e.get("ref_path", ""))
+        ][0]
+        assert re.match(r"^\d{4}-\d{2}-\d{2}$", str(arch["verified_date"])), (
+            f"verified_date malformed: {arch['verified_date']!r}"
+        )
+
+    def test_v5_byte_intact(self):
+        """v5_ref_signoffs still has exactly 2 entries (byte-intact)."""
+        data = self._load()
+        v5 = data.get("v5_ref_signoffs") or []
+        assert len(v5) == 2, (
+            f"v5_ref_signoffs byte-intact violation: expected 2 entries, "
+            f"got {len(v5)}. v5 section MUST be untouched by P33 Plan 02."
+        )
