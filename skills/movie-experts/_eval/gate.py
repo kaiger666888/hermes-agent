@@ -32,7 +32,9 @@ import argparse
 import hashlib
 import json
 import logging
+import math
 import re
+import statistics
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -72,6 +74,18 @@ _DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
 
 # Allowed ab_positions values (1 = no swap, 2 = swap).
 _ALLOWED_AB_POSITIONS = frozenset({1, 2})
+
+# Hardcoded critical-t table for the two-tailed paired t-test at alpha=0.05.
+# Source: standard t-distribution table. df is the key, critical |t| is value.
+# For df > 30 the table falls back to the asymptotic normal value 1.960
+# (T-30-10 mitigation: O(1) lookup, no unbounded loops, no scipy import).
+_CRITICAL_T_05_TWO_TAILED: dict[int, float] = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+    6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+    15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042,
+}
+# Asymptotic z-value for alpha=0.05 two-tailed (df -> infinity).
+_CRITICAL_T_ASYMPTOTIC_05 = 1.960
 
 # Gate only patches files under this prefix (T-30-01 mitigation).
 _SKILLS_PREFIX = "skills/movie-experts/"
@@ -262,6 +276,108 @@ def load_gate_config(
 
 
 # --------------------------------------------------------------------------- #
+# Paired-t significance — stdlib only, hardcoded t-table (GATE-03)
+# --------------------------------------------------------------------------- #
+
+
+def paired_t_stats(
+    baseline: list[float],
+    candidate: list[float],
+) -> dict[str, float | int | None]:
+    """Compute paired-t statistics using stdlib only (no scipy).
+
+    Implements the GATE-03 statistical-significance layer. Returns a dict
+    with keys: ``t_stat``, ``n``, ``df``, ``mean_diff``, ``std_diff``,
+    ``p_value``. ``p_value`` is ALWAYS ``None`` — stdlib has no t-distribution
+    CDF; callers use :func:`is_significant` for a boolean significance check
+    against the hardcoded critical-t table.
+
+    Degenerate cases:
+      - n < 2 (insufficient samples for stdev): returns t_stat=None.
+      - std_diff == 0 (all diffs identical):
+          * mean_diff == 0 -> t_stat = 0.0 (no change).
+          * mean_diff != 0 -> t_stat = +/-inf (perfectly consistent change).
+
+    Mismatched lengths use ``min(len(baseline), len(candidate))``.
+
+    T-30-10 mitigation: pure function over bounded inputs; no unbounded loops.
+    """
+    n = min(len(baseline), len(candidate))
+    if n < 2:
+        return {
+            "t_stat": None,
+            "n": n,
+            "df": n - 1,
+            "mean_diff": None,
+            "std_diff": None,
+            "p_value": None,
+        }
+    diffs = [
+        c - b for c, b in zip(candidate, baseline, strict=False)
+    ]
+    mean_diff = statistics.mean(diffs)
+    std_diff = statistics.stdev(diffs)  # sample stdev (n-1 denominator)
+    if std_diff == 0.0:
+        if mean_diff == 0.0:
+            t_stat: float | None = 0.0
+        else:
+            t_stat = math.inf if mean_diff > 0 else -math.inf
+    else:
+        t_stat = mean_diff / (std_diff / math.sqrt(n))
+    return {
+        "t_stat": round(t_stat, 4) if isinstance(t_stat, float) and math.isfinite(t_stat) else t_stat,
+        "n": n,
+        "df": n - 1,
+        "mean_diff": round(mean_diff, 4),
+        "std_diff": round(std_diff, 4),
+        "p_value": None,  # stdlib cannot compute; documented in note
+    }
+
+
+def is_significant(
+    t_stat: float | None,
+    df: int,
+    alpha: float = 0.05,
+) -> bool:
+    """Boolean significance check via hardcoded critical-t lookup.
+
+    Returns True iff ``|t_stat|`` exceeds the critical-t value for ``df``
+    at the given alpha. Only ``alpha=0.05`` is supported (the table has
+    no other alpha); any other alpha returns False with a logged warning.
+
+    For ``df`` not in the table:
+      - ``df > 30`` -> asymptotic normal 1.960.
+      - ``df < 30`` not listed -> conservative round-down to the nearest
+        listed df below (e.g. df=12 uses df=10's critical value 2.228).
+
+    T-30-08 mitigation: bounds-check df; never raises on unknown df.
+    T-30-10 mitigation: O(1) lookup, no unbounded work.
+    """
+    if t_stat is None:
+        return False
+    if alpha != 0.05:
+        logger.warning(
+            "is_significant: alpha=%.4f unsupported (table only has 0.05); "
+            "returning False", alpha,
+        )
+        return False
+    # Bound-check df (T-30-08).
+    if df < 1:
+        return False
+    crit = _CRITICAL_T_05_TWO_TAILED.get(df)
+    if crit is None:
+        if df > 30:
+            crit = _CRITICAL_T_ASYMPTOTIC_05
+        else:
+            # Conservative round-down: largest listed df <= requested df.
+            candidates = [k for k in _CRITICAL_T_05_TWO_TAILED if k <= df]
+            if not candidates:
+                return False
+            crit = _CRITICAL_T_05_TWO_TAILED[max(candidates)]
+    return abs(t_stat) > crit
+
+
+# --------------------------------------------------------------------------- #
 # Decision logic — GATE-02 + GATE-04 (pure function)
 # --------------------------------------------------------------------------- #
 
@@ -288,8 +404,6 @@ def decide_verdict(
 
     Returns ``(verdict, evidence_dict)``.
     """
-    import statistics
-
     n = min(len(baseline_scores), len(candidate_scores))
     if n < min_prompts:
         return "inconclusive", {"n_valid": n, "min_prompts": min_prompts}
@@ -459,6 +573,7 @@ def _write_report(
     judge_model: str,
     evidence: dict[str, Any],
     operator_hint: str | None = None,
+    paired_t: dict[str, Any] | None = None,
 ) -> None:
     """Write the gate report JSON (always) and reject log on failure.
 
@@ -483,6 +598,8 @@ def _write_report(
     }
     if operator_hint is not None:
         report["operator_hint"] = operator_hint
+    if paired_t is not None:
+        report["paired_t"] = paired_t
     report_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -616,20 +733,29 @@ def run_gate(
     if verdict != "pass":
         reject_path = reports_dir / f"{patch_id}.reject.json"
         if verdict == "fail_mean":
-            operator_hint = (
-                f"Patch rejected: mean delta "
-                f"{evidence.get('mean_delta', '?')} < "
-                f"-{config['delta_threshold']}. Override with "
-                f"--threshold-delta {config['delta_threshold'] + 0.2:.2f} "
-                f"if intentional."
-            )
+            mean_delta = evidence.get("mean_delta")
+            # Borderline check: within 0.1 of threshold.
+            if (
+                isinstance(mean_delta, (int, float))
+                and abs(mean_delta + config["delta_threshold"]) < 0.1
+            ):
+                operator_hint = (
+                    f"Override with --threshold-delta "
+                    f"{config['delta_threshold'] + 0.1:.2f} if intentional"
+                )
+            else:
+                operator_hint = (
+                    f"Patch rejected: mean delta {mean_delta} < "
+                    f"-{config['delta_threshold']}. Override with "
+                    f"--threshold-delta {config['delta_threshold'] + 0.2:.2f} "
+                    f"if intentional."
+                )
         elif verdict == "fail_regression":
             idx = evidence.get("regressing_prompt_idx", "?")
             operator_hint = (
-                f"Patch rejected: prompt {idx} regressed by "
-                f"{evidence.get('delta', '?')}. Override with "
-                f"--per-prompt-threshold "
-                f"{config['per_prompt_threshold'] + 0.5:.2f} if intentional."
+                f"Override with --per-prompt-threshold "
+                f"{config['per_prompt_threshold'] + 0.5:.2f} if intentional "
+                f"(prompt {idx} regressed by {evidence.get('delta', '?')})"
             )
         else:
             operator_hint = (
@@ -637,6 +763,52 @@ def run_gate(
                 f"valid prompts (< {config['min_prompts']}). Rerun with "
                 f"--min-prompts {evidence.get('n_valid', 1)} or add prompts."
             )
+
+    # Compute paired_t block from the per-prompt composites (GATE-03). Built
+    # once and included in BOTH the always-written report AND the reject log.
+    paired_t_block: dict[str, Any] | None = None
+    if baseline_composites and candidate_composites:
+        stats = paired_t_stats(baseline_composites, candidate_composites)
+        sig = is_significant(stats["t_stat"], stats["df"])
+        # Build an interpretable note (operators get significance signal
+        # without scipy — the p_value field stays None by design).
+        t_val = stats["t_stat"]
+        df_val = stats["df"]
+        crit = _CRITICAL_T_05_TWO_TAILED.get(df_val)
+        if crit is None:
+            crit = (
+                _CRITICAL_T_ASYMPTOTIC_05
+                if df_val > 30
+                else _CRITICAL_T_05_TWO_TAILED.get(
+                    max(
+                        (k for k in _CRITICAL_T_05_TWO_TAILED if k <= df_val),
+                        default=1,
+                    )
+                )
+            )
+        if t_val is None:
+            note = (
+                f"p_value not computed (stdlib only); t_stat=None "
+                f"(n={stats['n']} < 2)"
+            )
+        else:
+            note = (
+                f"p_value not computed (stdlib only); "
+                f"|t_stat|={abs(t_val):.4f} "
+                f"{'>=' if sig else '<'} critical_t(df={df_val})={crit}"
+            )
+        paired_t_block = {
+            "t_stat": t_val,
+            "n": stats["n"],
+            "df": df_val,
+            "mean_diff": stats["mean_diff"],
+            "std_diff": stats["std_diff"],
+            "p_value": None,
+            "significant_at_0.05": sig,
+            "note": note,
+        }
+
+    if reject_path is not None:
         _write_report(
             reject_path,
             schema_version=1,
@@ -649,6 +821,7 @@ def run_gate(
             judge_model=judge_model,
             evidence=evidence,
             operator_hint=operator_hint,
+            paired_t=paired_t_block,
         )
     _write_report(
         report_path,
@@ -661,6 +834,7 @@ def run_gate(
         per_prompt=per_prompt,
         judge_model=judge_model,
         evidence=evidence,
+        paired_t=paired_t_block,
     )
 
     logger.info(
