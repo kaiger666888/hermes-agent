@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -112,6 +113,14 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
         "--provider", default="", help="Provider name (default: empty)"
     )
     p_submit.set_defaults(func=_cmd_submit)
+
+    # ── rebuild-index (Phase 29 — operator repair tool) ──────────────
+    p_rebuild = subs.add_parser(
+        "rebuild-index",
+        help="Regenerate index.json from buckets/*.jsonl + dedup registry "
+        "(idempotent repair tool — use after manual edits or index corruption)",
+    )
+    p_rebuild.set_defaults(func=_cmd_rebuild_index)
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +233,38 @@ def _cmd_submit(args) -> int:
         return 1
 
     print(f"Feedback saved: {target}")
+    return 0
+
+
+def _cmd_rebuild_index(args) -> int:
+    """``hermes feedback rebuild-index`` — regenerate index.json from scratch.
+
+    Phase 29 operator repair tool (STORE-02 / SC-2). Reads every
+    ``buckets/<skill_id>/<source>.jsonl`` file + the
+    ``dedup/sha256-registry.jsonl`` audit log, then atomically rewrites
+    ``index.json`` with fresh counts + weighted_counts + supersession
+    state. Idempotent: running twice produces identical output.
+
+    Use cases:
+      - ``index.json`` corrupted or lost (RESEARCH Pitfall #5).
+      - ``feedback.decay_window_days`` retuned in config (refresh all
+        weighted_counts in one shot after restarting Hermes).
+      - Operator manually edited a bucket file (prune / merge).
+
+    The handler is thin: it instantiates :class:`FeedbackStore`, calls
+    :meth:`rebuild_index`, and prints the resulting bucket count.
+    """
+    from agent.feedback_store import FeedbackStore
+
+    try:
+        store = FeedbackStore()
+        store.rebuild_index()
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Error rebuilding index: {exc}", file=sys.stderr)
+        return 1
+
+    summary = store.summary()
+    print(f"Index rebuilt: {len(summary)} buckets.")
     return 0
 
 

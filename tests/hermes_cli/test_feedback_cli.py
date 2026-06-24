@@ -133,7 +133,11 @@ class TestRegisterCli:
 
 class TestCmdImport:
     def test_cmd_feedback_import_valid_file(self, tmp_path, monkeypatch):
-        """_cmd_import with valid_10.jsonl returns 0 and writes 10 files."""
+        """_cmd_import with valid_10.jsonl returns 0 and writes 10 records.
+
+        Phase 29 delegation: records land in buckets/<skill_id>/<source>.jsonl
+        (JSONL). We count total non-blank lines across bucket files.
+        """
         # Isolate HERMES_HOME so the write lands in tmp_path.
         home = tmp_path / ".hermes"
         home.mkdir()
@@ -143,6 +147,8 @@ class TestCmdImport:
         # Reload hermes_constants + feedback_ingest so get_hermes_home picks up.
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -153,8 +159,15 @@ class TestCmdImport:
         )
         rc = _cmd_import(ns)
         assert rc == 0
-        incoming = home / "skills" / ".feedback" / "incoming"
-        assert len(list(incoming.glob("*.json"))) == 10
+        # Phase 29 delegation: 10 records land as JSONL lines in buckets/.
+        buckets = home / "skills" / ".feedback" / "buckets"
+        total_lines = 0
+        for bucket_file in buckets.glob("*/*.jsonl"):
+            with open(bucket_file, encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        total_lines += 1
+        assert total_lines == 10
 
     def test_cmd_feedback_import_invalid_file_returns_nonzero(
         self, tmp_path, monkeypatch, capsys
@@ -167,6 +180,8 @@ class TestCmdImport:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -191,6 +206,8 @@ class TestCmdImport:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -245,7 +262,10 @@ class TestCmdWatch:
 
 class TestCmdSubmit:
     def test_cmd_submit_writes_record(self, tmp_path, monkeypatch):
-        """_cmd_submit constructs a FeedbackRecord(source='manual') and writes."""
+        """_cmd_submit constructs a FeedbackRecord(source='manual') and writes.
+
+        Phase 29 delegation: record lands in buckets/screenplay/manual.jsonl.
+        """
         home = tmp_path / ".hermes"
         home.mkdir()
         (home / "skills").mkdir()
@@ -253,6 +273,8 @@ class TestCmdSubmit:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -270,9 +292,11 @@ class TestCmdSubmit:
         )
         rc = _cmd_submit(ns)
         assert rc == 0
-        incoming = home / "skills" / ".feedback" / "incoming"
-        files = list(incoming.glob("*_manual_*.json"))
-        assert len(files) == 1
+        # Phase 29 delegation: record lands in buckets/screenplay/manual.jsonl
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "manual.jsonl"
+        assert bucket.is_file()
+        lines = [l for l in bucket.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert len(lines) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +310,10 @@ class TestSlashFeedback:
     def test_slash_feedback_persists(
         self, tmp_path, monkeypatch, capsys
     ):
-        """/feedback good 'nice work' against a prior skill output -> 1 file."""
+        """/feedback good 'nice work' against a prior skill output -> 1 record.
+
+        Phase 29 delegation: record lands in buckets/screenplay/cli.jsonl.
+        """
         home = tmp_path / ".hermes"
         home.mkdir()
         (home / "skills").mkdir()
@@ -294,6 +321,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -306,12 +335,13 @@ class TestSlashFeedback:
         stub = _make_stub_repl(conversation, agent=agent)
 
         stub._handle_feedback_command("/feedback good nice work")
-        incoming = home / "skills" / ".feedback" / "incoming"
-        files = list(incoming.glob("*_cli_*.json"))
-        assert len(files) == 1
+        # Phase 29 delegation: record lands in buckets/screenplay/cli.jsonl.
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        assert bucket.is_file()
+        lines = [l for l in bucket.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
         # Verify content: source=cli, verdict=good, correction="nice work".
-        with open(files[0], encoding="utf-8") as f:
-            payload = json.load(f)
         assert payload["source"] == "cli"
         assert payload["verdict"] == "good"
         assert payload["correction"] == "nice work"
@@ -328,6 +358,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -355,6 +387,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -375,7 +409,10 @@ class TestSlashFeedback:
     def test_slash_feedback_skill_id_resolution(
         self, tmp_path, monkeypatch
     ):
-        """Preceding skill-invocation user msg sets skill_id on the record."""
+        """Preceding skill-invocation user msg sets skill_id on the record.
+
+        Phase 29 delegation: record lands in buckets/editor/cli.jsonl.
+        """
         home = tmp_path / ".hermes"
         home.mkdir()
         (home / "skills").mkdir()
@@ -383,6 +420,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -392,11 +431,12 @@ class TestSlashFeedback:
         ]
         stub = _make_stub_repl(conversation, agent=_FakeAgent())
         stub._handle_feedback_command("/feedback needs_work too long")
-        incoming = home / "skills" / ".feedback" / "incoming"
-        files = list(incoming.glob("editor_cli_*.json"))
-        assert len(files) == 1
-        with open(files[0], encoding="utf-8") as f:
-            payload = json.load(f)
+        # Phase 29 delegation: record lands in buckets/editor/cli.jsonl.
+        bucket = home / "skills" / ".feedback" / "buckets" / "editor" / "cli.jsonl"
+        assert bucket.is_file()
+        lines = [l for l in bucket.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
         assert payload["skill_id"] == "editor"
 
     def test_slash_feedback_usage_when_no_args(
@@ -410,6 +450,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 
@@ -429,6 +471,8 @@ class TestSlashFeedback:
 
         import hermes_constants
         importlib.reload(hermes_constants)
+        from agent import feedback_store
+        importlib.reload(feedback_store)
         from agent import feedback_ingest
         importlib.reload(feedback_ingest)
 

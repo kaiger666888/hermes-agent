@@ -51,11 +51,28 @@ logger = logging.getLogger(__name__)
 def write_feedback_record(record: FeedbackRecord) -> Path:
     """Atomically persist a validated :class:`FeedbackRecord` to disk.
 
-    Writes under ``<HERMES_HOME>/skills/.feedback/incoming/`` using the
-    filename pattern ``{skill_id}_{source}_{ts_compact}.json`` where
-    ``ts_compact = record.ts.strftime("%Y%m%dT%H%M%S%fZ")``. Microsecond
-    precision + source disambiguation makes the filename sortable and
-    collision-resistant.
+    Phase 29 delegation: this function is a thin wrapper around
+    :class:`agent.feedback_store.FeedbackStore`. The signature is
+    preserved exactly so every Phase 28 caller (CLI ``/feedback`` slash
+    command, kais-aigc watcher, JSONL batch importer, ``hermes feedback
+    submit``) continues to work unchanged.
+
+    The returned :class:`Path` now points at the bucket file
+    ``buckets/<skill_id>/<source>.jsonl`` (append-only, may contain
+    multiple records after multiple writes) rather than the Phase 28
+    per-record ``incoming/{skill_id}_{source}_{ts_compact}.json`` file.
+    Phase 28 callers only use the path for display/logging (e.g.
+    ``print(f"Feedback saved: {target}")``), never for re-reading the
+    specific record, so this semantic change is safe. The record itself
+    is retrievable via :meth:`FeedbackStore.get_record` using the
+    record_id (returned by ``store.record_feedback`` internally).
+
+    Delegation also activates STORE-04 dedup: a second write with the
+    same ``output_snapshot.sha256`` and the same verdict is a no-op
+    (returns the existing bucket path without appending). A second
+    write with the same sha256 but a different verdict triggers the
+    correction path (older record marked superseded, weight=0 going
+    forward).
 
     Args:
         record: a validated FeedbackRecord (Pydantic validation has
@@ -63,43 +80,33 @@ def write_feedback_record(record: FeedbackRecord) -> Path:
             is called).
 
     Returns:
-        The :class:`Path` to the written file.
+        The :class:`Path` to the bucket file the record landed in
+        (``buckets/<skill_id>/<source>.jsonl``).
 
     Raises:
         OSError: if the directory cannot be created or the write fails
-            (propagated from ``atomic_json_write`` / ``mkdir``). The
-            caller is expected to handle this (the CLI prints a clear
-            error; the watcher logs and moves the file to ``errors/``).
+            (propagated from the store). The caller is expected to handle
+            this (the CLI prints a clear error; the watcher logs and
+            moves the file to ``errors/``).
 
     Notes:
-        - Uses :func:`utils.atomic_json_write` (temp + fsync +
-          ``os.replace``) so the target file is never left partially
-          written. If the process crashes mid-write, no file appears.
+        - :class:`FeedbackStore` runs lazy migration from Phase 28's flat
+          ``incoming/`` layout on first instantiation. If Phase 28 already
+          wrote records to ``incoming/`` before this code path activates
+          (e.g. a partial Phase 28 run before Phase 29 shipped), the
+          migration picks them up. This is the intended zero-downtime
+          cutover.
         - Resolves paths via :func:`hermes_constants.get_hermes_home` —
           respects the ``HERMES_HOME`` env var, never the raw home-dir call.
-        - The directory chain is created lazily on first write.
     """
-    target_dir = get_hermes_home() / "skills" / ".feedback" / "incoming"
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # Lazy import to avoid circular dependency: feedback_store imports
+    # feedback_schema (not feedback_ingest), but the lazy pattern keeps
+    # the modules decoupled for future refactors.
+    from agent.feedback_store import FeedbackStore
 
-    # Filename: {skill_id}_{source}_{ts_compact}.json
-    # ts_compact is sortable ASCII (Y...m...d...T...H...M...S...micro...Z).
-    ts_compact = record.ts.strftime("%Y%m%dT%H%M%S%fZ")
-    target = target_dir / f"{record.skill_id}_{record.source}_{ts_compact}.json"
-
-    atomic_json_write(
-        target,
-        record.model_dump(mode="json"),
-        indent=2,
-    )
-    logger.debug(
-        "wrote feedback record: skill_id=%s source=%s verdict=%s -> %s",
-        record.skill_id,
-        record.source,
-        record.verdict,
-        target,
-    )
-    return target
+    store = FeedbackStore()
+    store.record_feedback(record)
+    return store.bucket_path_for(record)
 
 
 # ---------------------------------------------------------------------------
