@@ -1,5 +1,32 @@
 # Milestones
 
+## v6.0 Self-Evolution & Feedback Loop (Shipped: 2026-06-24)
+
+**Phases completed:** 6 phases (28-33) · **Plans:** 13 · **Requirements:** 26 / 26 ✓
+**Tag:** `v6.0`
+**Audit:** [`v6.0-MILESTONE-AUDIT.md`](./milestones/v6.0-MILESTONE-AUDIT.md) — status: passed (26/26 reqs, 6/6 phases, 5/5 E2E flows, FOUND-08 preserved milestone-wide)
+
+**Paradigm shift:** v6 transitions movie-experts from "static knowledge layer" (v1-v5) to "feedback-driven self-learning system." First milestone where skills can evolve based on operator feedback without manual curation.
+
+**Key accomplishments:**
+
+- **Multi-source feedback ingestion** (P28 INGEST): Operator CLI `/feedback`, kais-aigc-platform file exchange watcher, manual JSONL batch import — all emit unified `FeedbackRecord` Pydantic schema with sha256-tagged `output_snapshot`.
+- **Durable feedback store** (P29 STORE): `FeedbackStore` class with bucketed JSONL persistence, atomic `index.json` single source of truth, linear time-decay `max(0.1, 1.0 - age/180)`, sha256 dedup + correction semantics (older superseded on verdict change).
+- **Eval gate** (P30 GATE): Extended v1 `_eval/runner.py` with `parse_judge_scores()` numeric extraction (load-bearing — v1 discarded them), `gate.py` orchestrator with mean δ=0.3 + per-prompt 1.0 regression + stdlib paired-t significance (no scipy).
+- **Knowledge evolution pipeline** (P31 EVOL): LLM aggregation with evidence chains, difflib-based additive diff generator, JSONL review queue, atomic `apply_patch_transaction` with FOUND-08 byte-intact + additive-only checks. **Non-bypassable human-in-loop enforced structurally** — `apply_patch_transaction` has exactly ONE caller (`_cmd_approve`); AST-walk test guards invariant.
+- **Curator upgrade + audit** (P32 CURATE + EVOL-02): `agent/curator.py:run_curator_review` extended with feedback-scan phase (lazy imports preserve runtime isolation). EVOL-02 LLM-driven bilingual diff generator. Tamper-evident sha256-chained audit log at `~/.hermes/skills/.audit/log.jsonl`. Semi-automatic path for agent-created skills via `_cmd_approve` delegation (Option A preserves P31 invariant).
+- **Observability + close-out** (P33 OBS): `hermes curator stats` with rich tables (per-skill dashboard, cross-skill view, source breakdown) + `--json` counts-only flag. Canonical `_shared/v6-feedback-loop-architecture.md` (305 lines, mirrors v86 pattern). skills-mapping.yaml `v6_ref_signoffs:`. 4 new bilingual glossary entries.
+
+**Hermes-core scope expansion (v5→v6):** v6 touches Hermes runtime directly (`agent/curator.py` extension + new feedback/evolution/curator_audit modules). Pre-v6 curator behavior preserved per SC-6 regression coverage (additive extension only).
+
+**Code review discipline:** 51 findings addressed across the milestone (16 CR + 35 WR) — every BLOCKER + WARNING fixed or documented.
+
+**Known deferred items at close:** 3 (see STATE.md) — pre-existing v3.0 quick_task + P28 live-REPL UAT + P28 verification gap. All non-blocking; documented for future operator UAT.
+
+---
+
+---
+
 ## v5.0 kais-movie-agent V8.6 Adaptation (Shipped: 2026-06-19)
 
 **Phases completed:** 6 phases (22-27) · **Requirements:** 30 / 30 ✓ · **Commits:** 17

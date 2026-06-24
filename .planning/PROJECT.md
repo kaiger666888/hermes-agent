@@ -198,26 +198,47 @@ See full archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 ---
 
-## Current Milestone: v6.0 — Self-Evolution & Feedback Loop
+## Current State (post-v6.0)
+
+**Last shipped:** v6.0 Self-Evolution & Feedback Loop (2026-06-24) — [Audit](./milestones/v6.0-MILESTONE-AUDIT.md)
+
+**Paradigm:** movie-experts is now a **feedback-driven self-learning system** (transition completed in v6). Skills can evolve based on operator feedback without manual curation. The Hermes runtime gained a feedback/evolution/audit sublayer alongside the existing curator module.
+
+**v6.0 capabilities shipped:**
+- Multi-source feedback ingestion: `/feedback` CLI + kais-aigc file watcher + JSONL import (P28)
+- Durable FeedbackStore with time-decay + dedup (P29)
+- Eval gate (`_eval/gate.py`) with δ=0.3 mean + 1.0 per-prompt regression (P30)
+- Knowledge evolution pipeline with non-bypassable human-in-loop (P31)
+- Curator extension + EVOL-02 diff generator + sha256-chained audit log (P32)
+- Observability (`hermes curator stats`) + canonical architecture doc (P33)
+
+**Hermes-core touch (v5→v6 expansion):** `agent/curator.py` extended with feedback-scan phase (lazy imports preserve runtime isolation). New modules: `agent/feedback_schema.py`, `agent/feedback_ingest.py`, `agent/feedback_store.py`, `agent/feedback_snapshot.py`, `agent/curator_audit.py`, `agent/evolution/{insights,diff_generator,queue,apply,evol02_generator}.py`.
+
+**Next milestone:** Not yet planned. Run `/gsd:new-milestone` to start.
+
+---
+
+## Previous Milestone: v6.0 — Self-Evolution & Feedback Loop ✅ SHIPPED 2026-06-24
 
 **Goal:** 让 movie-experts skill suite 从「静态知识层」进化为「带反馈闭环的自学习系统」—— 专家给出意见后,调用者(含 kais-aigc-platform 审核系统)能反馈结果,反馈驱动 eval-gated 的 SKILL.md / refs 改进。
 
-**Target features:**
+**Delivered (26/26 requirements satisfied):**
 
-1. **反馈采集通道 (Feedback Ingestion)** ⭐ 核心 MVP —— 多源接入:CLI 用户反馈 + kais-aigc-platform 审核反馈 + 手工标注;标准化数据结构 `{skill_id, output_snapshot, verdict, correction, source, ts}`
-2. **反馈存储 (Feedback Store)** —— `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 按 skill 索引;Curator 可查询累积反馈
-3. **反馈→知识库回流 (Feedback-to-Knowledge Pipeline)** —— LLM 抽取可执行知识点 → 生成候选 patch → **eval gate**(vs baseline LLM-as-judge)→ 通过阈值才 merge
-4. **Curator 升级** —— 从「只 archive agent-created」扩展为「能 propose patch 给 bundled skill」;保留 **human-in-loop approve**;审批日志可追溯
-5. **可观测性 + A/B** —— 每 skill dashboard(反馈计数 / patch 历史 / eval score 趋势)+ 双盲 A/B 对比工具
+1. ✅ **反馈采集通道 (Feedback Ingestion)** (P28 INGEST-01..05) — 多源接入:CLI `/feedback` + kais-aigc file watcher + 手工 JSONL import;统一 `FeedbackRecord` schema with sha256-tagged `output_snapshot`
+2. ✅ **反馈存储 (Feedback Store)** (P29 STORE-01..04) — `FeedbackStore` class with bucketed JSONL, atomic `index.json`, linear time-decay `max(0.1, 1.0 - age/180)`, sha256 dedup + correction semantics
+3. ✅ **eval gate** (P30 GATE-01..04) — Extended v1 `_eval/runner.py` with `parse_judge_scores()` numeric extraction + `gate.py` orchestrator (δ=0.3 mean + 1.0 per-prompt regression + stdlib paired-t significance, no scipy)
+4. ✅ **反馈→知识库回流 (Knowledge Evolution Pipeline)** (P31 EVOL-01, EVOL-03..05) — LLM aggregation with evidence chains + difflib additive diff + JSONL review queue + atomic `apply_patch_transaction` with FOUND-08 byte-intact + additive-only checks. **Non-bypassable human-in-loop enforced structurally** (AST-walk test guards single-caller invariant)
+5. ✅ **Curator 升级 + EVOL-02** (P32 CURATE-01..05, EVOL-02) — `agent/curator.py:run_curator_review` extended with feedback-scan phase (lazy imports preserve runtime isolation). EVOL-02 LLM-driven bilingual diff generator. Tamper-evident sha256-chained audit log. Semi-automatic path for agent-created skills via `_cmd_approve` delegation (Option A preserves P31 invariant)
+6. ✅ **可观测性 + close-out** (P33 OBS-01..03) — `hermes curator stats` with rich tables (per-skill dashboard / cross-skill view / source breakdown) + `--json` counts-only flag. Canonical `_shared/v6-feedback-loop-architecture.md`. skills-mapping.yaml `v6_ref_signoffs:`. 4 new bilingual glossary entries
 
-**Key context:**
+**Key outcomes:**
 
-- **范式跃迁**:从 v1-v5 的「人工 curate 静态知识」转为「反馈驱动动态学习」。这是 movie-experts 第一次真正具备 self-improvement 能力
-- **范围相对 v5 扩张点(需用户明确接受):** v6 不再是「纯 skill 内容交付」,需要触动 Hermes 核心 —— `agent/curator.py` 扩展、新增反馈接入 endpoint 或文件 watcher。这是 v5→v6 的根本性 scope shift
-- **沿用 scope 纪律:** 不引入新 expert_id,不动 DAG 节点;v5.0 / v4.0 知识资产 byte-intact
-- **前置调研结论:** 当前缺三块闭环(eval→回流 / 发现→入库 / A/B 验证);Curator 现在明确不碰 bundled skill,需要扩展作用域或新增专门的 evolution agent
-- **kais-aigc-platform 接入是 must-have:** 反馈源至少包含 kais-aigc-platform 审核结果(verdicts / retry 信号 / 修改 diff);具体接入方式(文件 / HTTP / webhook)在 requirement 阶段决定
-- **MVP 边界:** v6 不做全自动 skill 改写;所有 bundled-skill patch 必须 human-in-loop approve;agent-created skill 可走半自动
+- **范式跃迁完成**:从 v1-v5 的「人工 curate 静态知识」转为「反馈驱动动态学习」。movie-experts 现在具备 self-improvement 能力
+- **Hermes-core scope expansion accepted** (v5→v6):v6 touches Hermes runtime directly (`agent/curator.py` extension + new modules). Pre-v6 curator behavior preserved per SC-6 regression coverage
+- **Code review discipline:** 51 findings addressed milestone-wide (16 CR + 35 WR) — every BLOCKER + WARNING fixed or documented
+- **FOUND-08 milestone-wide preservation:** zero bundled SKILL.md changes across v6.0 (verified via SC-7 git diff); v4/v5 refs byte-intact (SC-8)
+
+**See:** [Audit report](./milestones/v6.0-MILESTONE-AUDIT.md) · [MILESTONES.md entry](./MILESTONES.md) · Tag `v6.0`
 
 ---
 

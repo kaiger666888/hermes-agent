@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: milestone_complete
-last_updated: 2026-06-24T23:31:45.938Z
-last_activity: 2026-06-25 -- Phase 33 Plan 03 complete; v6.0 milestone SHIPPED (SC-6/7/8 all PASS, FOUND-08 preserved)
+status: Awaiting next milestone
+last_updated: "2026-06-24T23:37:14.309Z"
+last_activity: 2026-06-24 — Milestone v6.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 13
   completed_plans: 13
   percent: 100
-stopped_at: Milestone complete (Phase 33 was final phase)
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -29,10 +28,10 @@ stopped_at: Milestone complete (Phase 33 was final phase)
 
 ## Current Position
 
-Phase: 33
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-24
+Phase: Milestone v6.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-24 — Milestone v6.0 completed and archived
 
 ### Progress
 
@@ -235,5 +234,4 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 
 ## Operator Next Steps
 
-- Execute Phase 33 Plan 03 (FINAL): `/gsd:execute-phase 33` (README corpus tree update + glossary 4 bilingual entries + milestone-wide SC-7/SC-8 byte-intact verification)
-- After Plan 03: v6.0 milestone complete — archive + tag v6.0
+- Start the next milestone with /gsd-new-milestone
