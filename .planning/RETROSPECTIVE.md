@@ -62,6 +62,57 @@
 
 ---
 
+## Milestone: v6.0 — Self-Evolution & Feedback Loop
+
+**Shipped:** 2026-06-24
+**Phases:** 6 (P28-P33) | **Plans:** 13 | **Requirements:** 26/26 ✓
+**Duration:** ~2 days (2026-06-24 → 2026-06-25)
+
+### What Was Built
+
+- **P28 Feedback Ingestion:** `agent/feedback_schema.py` + `feedback_ingest.py` + `feedback_snapshot.py`; `/feedback` slash command + `hermes feedback {import,watch,submit}` CLI
+- **P29 Feedback Store:** `agent/feedback_store.py:FeedbackStore` with bucketed JSONL + atomic index + linear time-decay + sha256 dedup/correction + `rebuild-index` CLI
+- **P30 Eval Gate:** Extended `_eval/runner.py` with `parse_judge_scores()` (load-bearing fix) + `_eval/gate.py` orchestrator (δ=0.3 mean + 1.0 per-prompt + stdlib paired-t)
+- **P31 Knowledge Evolution:** `agent/evolution/{insights,diff_generator,queue,apply}.py` + 6 new CLI subcommands + structural non-bypassable human-in-loop (AST-walk test)
+- **P32 Curator Upgrade:** `agent/curator_audit.py` (sha256 chain) + `agent/evolution/evol02_generator.py` (bilingual EN+CN) + `agent/curator.py:run_curator_review` extension (lazy imports) + 6 new curator CLI subcommands
+- **P33 Observability:** `hermes curator stats` with rich tables + canonical `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + 4 new glossary entries
+
+### What Worked
+
+1. **Locked decisions via smart-discuss upfront** — Batching 4 grey-area proposals per phase minimized operator round-trips. User accepted all recommendations across all 6 phases (24/24 grey areas).
+2. **Per-phase code-review + auto-fix loop** — 51 findings addressed milestone-wide; zero blockers reached audit. Defects stayed localized.
+3. **Structural invariants via AST-walk tests** — P31's `TestNonBypassableHumanInLoop` survived P32's CURATE-05 auto-apply addition unchanged (Option A delegation). Structural enforcement > runtime checks.
+4. **Hybrid persistence pattern** — Direct append for `buckets/*.jsonl` + `atomic_json_write` only for small `index.json`. Avoided O(N²) overhead the original proposal would have introduced.
+5. **RESEARCH.md Open Questions RESOLVED convention** — Plan-checker flagged missing markers as blockers; planner forced to resolve inline.
+6. **Stdlib-only `_eval/` convention preserved** — P30 paired-t via stdlib + hardcoded t-table (no scipy). Zero new dependencies milestone-wide.
+
+### What Was Inefficient
+
+1. **Auto-extracted MILESTONES.md accomplishments noisy** — SDK extractor picked up Rule 1 bug notes + section headers. Required manual rewrite.
+2. **CURATE-05 dead-code false-positive (P32 CR-01)** — Auto-apply producer wasn't wired to set `auto_apply_eligible=True`. Caught in review but slipped past executor self-check.
+3. **Rate-limit hit mid-execution** — One genuine 429 on Plan 29-02 required session resume.
+
+### Patterns Established
+
+1. **Pydantic-first schema design** for all new persistence records (FeedbackRecord, PatchRecord, InsightRecord, audit entry)
+2. **Lazy in-handler imports** for any `agent.evolution.*` or `agent.feedback_*` symbols inside runtime modules. Module-level imports forbidden — runtime isolation invariant.
+3. **Atomic write via `utils.atomic_json_write`** for any JSON state file (index, audit log via fsync, queue moves)
+4. **Bilingual EN+CN content composition** in EVOL-02 generator output (EN heading + body, then CN heading + body) per CLAUDE.md convention
+5. **FOUND-08 byte-intact + additive-only verifiers** as defense-in-depth inside `apply_patch_transaction` (additive BEFORE git apply, FOUND-08 AFTER)
+6. **Two-signal confidence** for any auto-apply path (eval gate delta AND evidence chain count)
+7. **CLI subparser registration via `register_cli(parent)`** pattern for all new operator commands
+
+### Key Lessons
+
+1. **Smart-discuss batch tables preserve user input in autonomous mode** — Presenting 4 grey areas per phase in one prompt kept user engaged without forcing 4 separate round-trips.
+2. **Research "load-bearing finding" framing changed plan priority** — P30 explicit label forced Plan 01 Task 1 to ship the parser first.
+3. **Structural test enforcement > runtime checks** — AST-walk tests survive refactors better than runtime assertions.
+4. **"Mirror v5.0 pattern" is a strong architectural anchor** — Reduced design ambiguity + sped up planning.
+5. **Code review fixer is non-negotiable for autonomous runs** — Every phase shipped with 5-13 findings. Without the auto-fix loop, these would have accumulated into audit blockers.
+6. **CONTEXT.md "Claude's Discretion" sections reduce round-trips** — Marking implementation details as discretion let planner proceed without another user prompt.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
