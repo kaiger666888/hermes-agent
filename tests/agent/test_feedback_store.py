@@ -835,3 +835,352 @@ class TestConfig:
         # Must NOT crash — should fall back to 180.
         store = feedback_store.FeedbackStore()
         assert store._decay_window_days == 180
+
+
+# ---------------------------------------------------------------------------
+# TestDedup (STORE-04 — Plan 02 Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestDedup:
+    """Same sha256 + same verdict → DUPLICATE (rejected, returns existing id)."""
+
+    def test_duplicate_rejected(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        sha = "a" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        rid_a = store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        rid_b = store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts1))
+
+        # B is a DUPLICATE — same sha + same verdict. Must return A's id.
+        assert rid_b == rid_a
+        # Bucket file has only 1 line (A). B was rejected before append.
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        lines = bucket.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 1
+
+    def test_duplicate_no_double_count(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "b" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        summary_after_a = store.summary()
+        wc_a = summary_after_a["screenplay:cli:good"]["weighted_count"]
+
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts1))
+        summary_after_b = store.summary()
+        wc_b = summary_after_b["screenplay:cli:good"]["weighted_count"]
+
+        # weighted_count must NOT have doubled.
+        assert abs(wc_b - wc_a) < 0.01, (
+            f"duplicate should not change weighted_count: {wc_a} -> {wc_b}"
+        )
+
+    def test_duplicate_returns_existing_record_id(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "c" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        rid_a = store.record_feedback(_make_record(sha256=sha, ts=ts0))
+        rid_b = store.record_feedback(_make_record(sha256=sha, ts=ts1))
+        assert rid_b == rid_a
+
+    def test_duplicate_does_not_append_registry(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        sha = "d" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, ts=ts0))
+        store.record_feedback(_make_record(sha256=sha, ts=ts1))
+
+        registry = home / "skills" / ".feedback" / "dedup" / "sha256-registry.jsonl"
+        lines = [
+            l for l in registry.read_text(encoding="utf-8").splitlines() if l.strip()
+        ]
+        # Only 1 regular record line for this sha (no duplicate line appended).
+        record_lines = [l for l in lines if '"event"' not in l]
+        assert len(record_lines) == 1, (
+            f"registry must have exactly 1 record line, got {len(record_lines)}: {record_lines}"
+        )
+
+    def test_new_sha256_always_writes(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        sha_x = "1" * 64
+        sha_y = "2" * 64
+        store.record_feedback(_make_record(sha256=sha_x, verdict="good"))
+        store.record_feedback(_make_record(sha256=sha_y, verdict="good"))
+
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        lines = bucket.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 2
+        summary = store.summary()
+        assert summary["screenplay:cli:good"]["count"] == 2
+
+
+# ---------------------------------------------------------------------------
+# TestCorrection (STORE-04 — Plan 02 Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestCorrection:
+    """Same sha256 + DIFFERENT verdict → CORRECTION (older demoted, newer wins)."""
+
+    def test_correction_demotes_older(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "e" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        rid_a = store.record_feedback(
+            _make_record(sha256=sha, verdict="good", ts=ts0)
+        )
+        rid_b = store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=ts1)
+        )
+
+        # by_sha256[sha] now points at B (active) with A superseded.
+        entry = store._sha256_index[sha]
+        assert entry["record_id"] == rid_b
+        assert entry["verdict"] == "needs_work"
+        assert entry["status"] == "active"
+        # A is in the superseded set.
+        assert rid_a in store._superseded_record_ids
+
+    def test_correction_weighted_count_older_bucket_drops(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "f" * 64
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        summary_after_a = store.summary()
+        assert summary_after_a["screenplay:cli:good"]["weighted_count"] > 0
+        # Now correct to needs_work.
+        store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=ts1)
+        )
+        summary_after_b = store.summary()
+        # Older (good) bucket weighted_count dropped to 0 (only record superseded).
+        assert summary_after_b["screenplay:cli:good"]["weighted_count"] == 0
+        # Raw count UNCHANGED (audit).
+        assert summary_after_b["screenplay:cli:good"]["count"] == 1
+
+    def test_correction_weighted_count_newer_bucket_gains(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "10" + "0" * 62  # 64 chars
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=ts1)
+        )
+        summary = store.summary()
+        # Newer bucket gains the new record's weight (~1.0 for fresh record).
+        assert summary["screenplay:cli:needs_work"]["weighted_count"] > 0
+        assert summary["screenplay:cli:needs_work"]["count"] == 1
+
+    def test_correction_query_excludes_superseded_by_default(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "11" + "0" * 62
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=ts1)
+        )
+
+        # good bucket: A is superseded → empty.
+        good_results = store.query(skill_id="screenplay", verdict="good")
+        assert good_results == []
+        # needs_work bucket: B active → 1 record.
+        nw_results = store.query(skill_id="screenplay", verdict="needs_work")
+        assert len(nw_results) == 1
+
+    def test_correction_query_include_superseded(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "12" + "0" * 62
+        ts0 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 6, 24, 13, 0, 0, tzinfo=timezone.utc)
+        store.record_feedback(_make_record(sha256=sha, verdict="good", ts=ts0))
+        store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=ts1)
+        )
+
+        results = store.query(skill_id="screenplay", include_superseded=True)
+        assert len(results) == 2
+
+    def test_correction_chain_three_records(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        sha = "13" + "0" * 62
+        t0 = datetime(2026, 6, 24, 10, 0, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 6, 24, 11, 0, 0, tzinfo=timezone.utc)
+        t2 = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+        rid_a = store.record_feedback(_make_record(sha256=sha, verdict="good", ts=t0))
+        rid_b = store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=t1)
+        )
+        rid_c = store.record_feedback(_make_record(sha256=sha, verdict="bad", ts=t2))
+
+        # by_sha256[sha] points at C (active); A and B both superseded.
+        entry = store._sha256_index[sha]
+        assert entry["record_id"] == rid_c
+        assert entry["verdict"] == "bad"
+        assert rid_a in store._superseded_record_ids
+        assert rid_b in store._superseded_record_ids
+        # query verdicts: each verdict bucket returns only the latest active one.
+        assert store.query(skill_id="screenplay", verdict="good") == []
+        assert store.query(skill_id="screenplay", verdict="needs_work") == []
+        assert len(store.query(skill_id="screenplay", verdict="bad")) == 1
+
+    def test_correction_supersession_persists_across_reload(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        sha = "14" + "0" * 62
+        t0 = datetime(2026, 6, 24, 10, 0, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 6, 24, 11, 0, 0, tzinfo=timezone.utc)
+        store1 = feedback_store.FeedbackStore()
+        rid_a = store1.record_feedback(_make_record(sha256=sha, verdict="good", ts=t0))
+        rid_b = store1.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=t1)
+        )
+
+        # Fresh store simulates a process restart.
+        store2 = feedback_store.FeedbackStore()
+        entry = store2._sha256_index[sha]
+        assert entry["record_id"] == rid_b
+        assert entry["verdict"] == "needs_work"
+        assert entry["status"] == "active"
+        assert rid_a in store2._superseded_record_ids
+        # query() on fresh store reflects correction.
+        assert store2.query(skill_id="screenplay", verdict="good") == []
+        assert len(store2.query(skill_id="screenplay", verdict="needs_work")) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestRebuildIndex (STORE-02 — Plan 02 Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestRebuildIndex:
+    """rebuild_index() regenerates index.json from buckets + registry."""
+
+    def test_rebuild_index_idempotent(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record(sha256="1" * 64, verdict="good"))
+        store.record_feedback(_make_record(sha256="2" * 64, verdict="good"))
+        store.record_feedback(
+            _make_record(skill_id="drawer", sha256="3" * 64, verdict="needs_work")
+        )
+
+        # Manually corrupt index.json (wipe buckets).
+        index_path = home / "skills" / ".feedback" / "index.json"
+        idx = json.loads(index_path.read_text(encoding="utf-8"))
+        idx["buckets"] = {}
+        idx["by_sha256"] = {}
+        atomic_write_to(index_path, idx)
+
+        store.rebuild_index()
+
+        rebuilt = json.loads(index_path.read_text(encoding="utf-8"))
+        # Two good in screenplay, one needs_work in drawer.
+        assert rebuilt["buckets"]["screenplay:cli:good"]["count"] == 2
+        assert rebuilt["buckets"]["drawer:cli:needs_work"]["count"] == 1
+        assert rebuilt["buckets"]["screenplay:cli:good"]["weighted_count"] > 0
+
+    def test_rebuild_index_clears_by_sha256(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record(sha256="4" * 64))
+        store.record_feedback(_make_record(sha256="5" * 64))
+
+        store.rebuild_index()
+
+        registry = home / "skills" / ".feedback" / "dedup" / "sha256-registry.jsonl"
+        index_path = home / "skills" / ".feedback" / "index.json"
+        rebuilt = json.loads(index_path.read_text(encoding="utf-8"))
+        # by_sha256 has both shas (from registry).
+        assert "4" * 64 in rebuilt["by_sha256"]
+        assert "5" * 64 in rebuilt["by_sha256"]
+
+    def test_rebuild_index_empty_store(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        # No records yet.
+        store.rebuild_index()
+        index_path = home / "skills" / ".feedback" / "index.json"
+        rebuilt = json.loads(index_path.read_text(encoding="utf-8"))
+        assert rebuilt["version"] == 1
+        assert rebuilt["buckets"] == {}
+        assert rebuilt["by_sha256"] == {}
+
+    def test_rebuild_index_preserves_supersession(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        sha = "15" + "0" * 62
+        t0 = datetime(2026, 6, 24, 10, 0, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 6, 24, 11, 0, 0, tzinfo=timezone.utc)
+        rid_a = store.record_feedback(_make_record(sha256=sha, verdict="good", ts=t0))
+        rid_b = store.record_feedback(
+            _make_record(sha256=sha, verdict="needs_work", ts=t1)
+        )
+
+        store.rebuild_index()
+
+        index_path = home / "skills" / ".feedback" / "index.json"
+        rebuilt = json.loads(index_path.read_text(encoding="utf-8"))
+        entry = rebuilt["by_sha256"][sha]
+        assert entry["record_id"] == rid_b
+        assert entry["verdict"] == "needs_work"
+        assert entry["status"] == "active"
+        # The supersession event is in the registry.
+        registry = home / "skills" / ".feedback" / "dedup" / "sha256-registry.jsonl"
+        reg_lines = [
+            l for l in registry.read_text(encoding="utf-8").splitlines() if l.strip()
+        ]
+        events = [json.loads(l) for l in reg_lines if '"event"' in l]
+        assert any(
+            e.get("event") == "superseded" and e.get("older_record_id") == rid_a
+            for e in events
+        )
+
+
+# ---------------------------------------------------------------------------
+# Helper: atomic write to index.json for test setup (corrupt-then-rebuild).
+# ---------------------------------------------------------------------------
+
+
+def atomic_write_to(path: Path, data: dict) -> None:
+    """Test helper: atomic JSON write (mirrors utils.atomic_json_write)."""
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass

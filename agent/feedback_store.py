@@ -247,6 +247,10 @@ class FeedbackStore:
         # In-memory dedup registry cache. Plan 01 leaves this empty
         # (no dedup branch yet); Plan 02 writes here on every record.
         self._sha256_index: dict[str, dict[str, Any]] = {}
+        # Set of record_ids that have been superseded by a newer correction.
+        # Populated from supersession events in dedup/sha256-registry.jsonl
+        # (Plan 02). Used by query() filtering + weighted_count recomputation.
+        self._superseded_record_ids: set[str] = set()
         self._load_sha256_index()
 
         # In-memory mirror of index.json — MUST be loaded BEFORE migration
@@ -280,19 +284,22 @@ class FeedbackStore:
         """
         return self._buckets_root / record.skill_id / f"{record.source}.jsonl"
 
-    # ── record_feedback (Plan 01 version — NO dedup branch yet) ──────────
+    # ── record_feedback (Plan 02: dedup / correction branch active) ─────
 
     def record_feedback(self, record: FeedbackRecord) -> str:
         """Persist a record + update the index atomically.
 
-        Plan 01 deliberately OMITS the sha256 dedup / correction branch
-        (STORE-04). Every call writes. Plan 02 inserts the dedup check
-        between ``_make_record_id`` and the bucket append, so duplicate
-        sha256+verdict pairs are rejected and same-sha256-different-verdict
-        pairs trigger supersession of the older record.
+        Plan 02 inserts the :meth:`_handle_dedup` check between
+        ``_make_record_id`` and the bucket append (STORE-04):
 
-        TODO(Plan 02 / STORE-04): consult ``self._sha256_index`` before
-        appending to implement duplicate-reject + correction-demote.
+        - **New sha256** — proceeds with normal write.
+        - **Same sha256 + same verdict (DUPLICATE)** — REJECTED. Returns
+          the existing record_id; no bucket append, no registry append,
+          no index change.
+        - **Same sha256 + different verdict (CORRECTION)** — appends a
+          supersession event to the registry marking the older record as
+          superseded (weight=0 going forward), then proceeds with the
+          normal write of the newer record.
 
         Args:
             record: a validated FeedbackRecord (Pydantic validation has
@@ -300,9 +307,20 @@ class FeedbackStore:
                 called).
 
         Returns:
-            The record_id (sortable + collision-resistant).
+            The record_id (sortable + collision-resistant). For DUPLICATE
+            writes, this is the EXISTING record_id, not a new one.
         """
         record_id = self._make_record_id(record)
+
+        # ── 0. Dedup / correction check (STORE-04) ────────────────────
+        # Must happen BEFORE any write. If the returned id differs from the
+        # computed id, this is a DUPLICATE — return the existing id without
+        # writing anything.
+        dedup_result = self._handle_dedup(record, record_id)
+        if dedup_result != record_id:
+            # DUPLICATE — existing record_id returned. Skip all writes.
+            return dedup_result
+
         bucket_key = f"{record.skill_id}:{record.source}:{record.verdict}"
         bucket_file = self.bucket_path_for(record)
         bucket_file.parent.mkdir(parents=True, exist_ok=True)
@@ -315,8 +333,9 @@ class FeedbackStore:
             f.flush()
             os.fsync(f.fileno())
 
-        # ── 2. Append to dedup registry (audit log; Plan 01 writes
-        # unconditionally — Plan 02 adds the dedup check before this).
+        # ── 2. Append record entry to dedup registry (audit log).
+        # Supersession events are appended separately in _mark_superseded
+        # when a correction happens (BEFORE this point in the flow).
         dedup_entry = {
             "sha256": record.output_snapshot.sha256,
             "verdict": record.verdict,
@@ -336,15 +355,14 @@ class FeedbackStore:
         # The bucket FILE holds all verdicts for (skill_id, source), but the
         # index bucket KEY includes verdict. So we filter records to the
         # matching verdict when computing count / weighted_count / ts range.
+        # Superseded records are excluded from weighted_count (weight=0 by
+        # STORE-04 contract); raw count still includes them (audit).
         all_records = self._read_bucket_records(bucket_file)
         verdict_records = [r for r in all_records if r.verdict == record.verdict]
         active_records = [
             r
             for r in verdict_records
-            if self._sha256_index.get(r.output_snapshot.sha256, {}).get(
-                "status", "active"
-            )
-            == "active"
+            if self._make_record_id(r) not in self._superseded_record_ids
         ]
         weighted_count = self._recompute_bucket_weighted_count(active_records)
 
@@ -370,6 +388,185 @@ class FeedbackStore:
             record_id,
         )
         return record_id
+
+    # ── Dedup / Correction (STORE-04) ───────────────────────────────────
+
+    def _handle_dedup(
+        self, record: FeedbackRecord, record_id: str
+    ) -> str:
+        """Consult the sha256 registry and decide whether to write.
+
+        Args:
+            record: the incoming FeedbackRecord.
+            record_id: the computed record_id for the incoming record.
+
+        Returns:
+            - The SAME ``record_id`` if the write should proceed (new sha256
+              or CORRECTION case).
+            - The EXISTING ``record_id`` if the write is a DUPLICATE and
+              must be skipped. The caller checks: if the returned id differs
+              from the computed id, return early without writing.
+        """
+        sha = record.output_snapshot.sha256
+        existing = self._sha256_index.get(sha)
+
+        if existing is None:
+            # New sha256 — no dedup action needed.
+            return record_id
+
+        if existing["verdict"] == record.verdict:
+            # DUPLICATE: identical sha256 + identical verdict. Do NOT
+            # double-count. Return the existing record_id; caller skips write.
+            logger.info(
+                "feedback duplicate detected: sha256=%s verdict=%s existing_record_id=%s",
+                sha[:8],
+                record.verdict,
+                existing["record_id"],
+            )
+            return existing["record_id"]
+
+        # CORRECTION: same sha256, different verdict. Mark the older record
+        # superseded (weight=0 going forward) and proceed with the write of
+        # the newer record. Order matters: _mark_superseded appends the
+        # supersession event to the registry BEFORE the new record's entry
+        # is appended in step 2 of record_feedback (T-29-11 mitigation).
+        older_verdict = existing["verdict"]
+        self._mark_superseded(
+            sha=sha,
+            older_record_id=existing["record_id"],
+            older_verdict=older_verdict,
+            newer_record_id=record_id,
+            newer_verdict=record.verdict,
+            newer_ts=record.ts,
+        )
+        logger.info(
+            "feedback correction: sha256=%s older_verdict=%s -> newer_verdict=%s "
+            "(older_record_id=%s weight zeroed)",
+            sha[:8],
+            older_verdict,
+            record.verdict,
+            existing["record_id"],
+        )
+        # After the older record is marked superseded, its bucket's
+        # weighted_count is now stale (the superseded record no longer
+        # contributes weight). Recompute the older verdict bucket so the
+        # index reflects the correction immediately. The newer verdict's
+        # bucket is recomputed in step 3 of record_feedback below.
+        older_bucket_key = (
+            f"{record.skill_id}:{record.source}:{older_verdict}"
+        )
+        self._recompute_single_bucket(older_bucket_key)
+        return record_id
+
+    def _recompute_single_bucket(self, bucket_key: str) -> None:
+        """Recompute one bucket's count/weighted_count/ts range from disk.
+
+        Helper for the correction path: when a record is marked superseded,
+        its original bucket's weighted_count must be refreshed. Reads the
+        bucket file for the (skill_id, source) pair, filters to the
+        bucket_key's verdict, excludes superseded records from
+        weighted_count, and updates ``self._index["buckets"][bucket_key]``.
+
+        If the bucket has no active records left, ``weighted_count`` drops
+        to 0.0 while ``count`` retains the raw line count (audit).
+
+        No-op if the bucket file does not exist (nothing to recompute).
+        """
+        parts = bucket_key.split(":")
+        if len(parts) != 3:
+            return
+        b_skill, b_source, b_verdict = parts
+        bucket_file = self._buckets_root / b_skill / f"{b_source}.jsonl"
+        if not bucket_file.is_file():
+            return
+        all_records = self._read_bucket_records(bucket_file)
+        verdict_records = [r for r in all_records if r.verdict == b_verdict]
+        active_records = [
+            r
+            for r in verdict_records
+            if self._make_record_id(r) not in self._superseded_record_ids
+        ]
+        if verdict_records:
+            ts_list = [r.ts for r in verdict_records]
+            self._index["buckets"][bucket_key] = {
+                "count": len(verdict_records),
+                "weighted_count": self._recompute_bucket_weighted_count(
+                    active_records
+                ),
+                "first_ts": min(ts_list).isoformat(),
+                "last_ts": max(ts_list).isoformat(),
+            }
+        else:
+            # No records of this verdict remain in the bucket file.
+            self._index["buckets"].pop(bucket_key, None)
+
+    def _mark_superseded(
+        self,
+        *,
+        sha: str,
+        older_record_id: str,
+        older_verdict: str,
+        newer_record_id: str,
+        newer_verdict: str,
+        newer_ts: datetime,
+    ) -> None:
+        """Mark an older record as superseded by a newer correction.
+
+        Three mutations happen atomically (T-29-10 / T-29-11 mitigations):
+
+        1. **Append supersession event** to ``dedup/sha256-registry.jsonl``
+           (append-only audit log). Records older_record_id + older_verdict
+           + newer_record_id + newer_verdict + ts. This is the audit trail
+           and the source of truth for ``_superseded_record_ids`` on reload.
+        2. **Update in-memory ``_sha256_index[sha]``** to point at the
+           newer record (status=active, supersedes=older_record_id). The
+           older record's status is implicitly superseded (the sha's active
+           pointer no longer references it).
+        3. **Add older_record_id to ``_superseded_record_ids``** so query()
+           filtering and weighted_count recomputation skip it.
+
+        NOTE: The older record's bytes are still in its bucket file (we do
+        NOT rewrite bucket files — they are append-only). The status is
+        reflected only in the index + registry. Bucket files remain the
+        raw audit trail (T-29-12).
+
+        Args:
+            sha: the shared sha256.
+            older_record_id: the record_id of the superseded record.
+            older_verdict: the verdict of the superseded record.
+            newer_record_id: the record_id of the newer (active) record.
+            newer_verdict: the verdict of the newer (active) record.
+            newer_ts: the timestamp of the newer record (used for the
+                registry event ts and the active pointer ts).
+        """
+        ts_iso = newer_ts.isoformat()
+        event = {
+            "sha256": sha,
+            "event": "superseded",
+            "older_record_id": older_record_id,
+            "older_verdict": older_verdict,
+            "newer_record_id": newer_record_id,
+            "newer_verdict": newer_verdict,
+            "ts": ts_iso,
+        }
+        self._dedup_registry_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self._dedup_registry_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+
+        # Update in-memory active pointer for this sha.
+        self._sha256_index[sha] = {
+            "record_id": newer_record_id,
+            "verdict": newer_verdict,
+            "ts": ts_iso,
+            "status": "active",
+            "supersedes": older_record_id,
+        }
+
+        # Track the older record_id as superseded for query() filtering +
+        # weighted_count recomputation.
+        self._superseded_record_ids.add(older_record_id)
 
     def _recompute_bucket_weighted_count(
         self, records: list[FeedbackRecord]
@@ -456,10 +653,23 @@ class FeedbackStore:
             self._write_index()
 
     def _load_sha256_index(self) -> None:
-        """Populate ``self._sha256_index`` from dedup/sha256-registry.jsonl.
+        """Populate ``self._sha256_index`` + ``self._superseded_record_ids``.
 
-        Tolerates missing file (empty dict). Skips blank lines. Logs and
-        skips malformed lines.
+        Reads ``dedup/sha256-registry.jsonl`` line-by-line in file order.
+        Two line shapes are supported (append-only audit log):
+
+        - **Record entry** (no ``event`` key or ``event == "active"``):
+          ``{"sha256", "verdict", "record_id", "ts", "status"}``. Sets the
+          current active pointer for the sha — a later active entry for the
+          same sha replaces the earlier one.
+        - **Supersession event** (``event == "superseded"``):
+          ``{"sha256", "event", "older_record_id", "older_verdict",
+             "newer_record_id", "newer_verdict", "ts"}``. Adds
+          ``older_record_id`` to ``self._superseded_record_ids`` and updates
+          ``self._sha256_index[sha]`` to point at the newer record.
+
+        Tolerates missing file (empty dict + empty set). Skips blank lines.
+        Logs and skips malformed lines.
         """
         if not self._dedup_registry_path.exists():
             return
@@ -470,20 +680,152 @@ class FeedbackStore:
                     continue
                 try:
                     entry = json.loads(stripped)
-                    sha = entry["sha256"]
-                    self._sha256_index[sha] = {
-                        "record_id": entry["record_id"],
-                        "verdict": entry["verdict"],
-                        "ts": entry["ts"],
-                        "status": entry.get("status", "active"),
-                    }
-                except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                except (OSError, json.JSONDecodeError) as exc:
                     logger.warning(
                         "malformed dedup entry at %s:%d: %s",
                         self._dedup_registry_path,
                         lineno,
                         exc,
                     )
+                    continue
+                try:
+                    event = entry.get("event")
+                    if event == "superseded":
+                        # Supersession event — mark older_record_id superseded
+                        # and update active pointer to newer.
+                        older_id = entry["older_record_id"]
+                        sha = entry["sha256"]
+                        self._superseded_record_ids.add(older_id)
+                        self._sha256_index[sha] = {
+                            "record_id": entry["newer_record_id"],
+                            "verdict": entry["newer_verdict"],
+                            "ts": entry["ts"],
+                            "status": "active",
+                            "supersedes": older_id,
+                        }
+                    else:
+                        # Regular record entry — set active pointer.
+                        sha = entry["sha256"]
+                        self._sha256_index[sha] = {
+                            "record_id": entry["record_id"],
+                            "verdict": entry["verdict"],
+                            "ts": entry["ts"],
+                            "status": entry.get("status", "active"),
+                        }
+                except (KeyError, TypeError) as exc:
+                    logger.warning(
+                        "malformed dedup entry at %s:%d: %s",
+                        self._dedup_registry_path,
+                        lineno,
+                        exc,
+                    )
+
+    # ── rebuild_index (operator repair tool) ────────────────────────────
+
+    def rebuild_index(self) -> None:
+        """Regenerate ``index.json`` from ``buckets/*.jsonl`` + dedup registry.
+
+        Idempotent operator repair tool (STORE-02 / SC-2). Clears the
+        in-memory index + sha256 cache + superseded record_id set, then
+        rebuilds them from the two immutable on-disk sources of truth:
+
+        1. ``dedup/sha256-registry.jsonl`` — append-only audit log. Replayed
+           in file order to restore ``_sha256_index`` + superseded state
+           (same logic as :meth:`_load_sha256_index`).
+        2. ``buckets/<skill_id>/<source>.jsonl`` — append-only record files.
+           Each record's effective status (active vs superseded) is derived
+           from ``_superseded_record_ids`` after the registry replay. Active
+           records contribute to ``weighted_count``; superseded records
+           remain in raw ``count`` (audit) but contribute weight 0.
+
+        After rebuilding in-memory state, atomically rewrites ``index.json``
+        via :func:`utils.atomic_json_write`.
+
+        Use cases:
+          - ``index.json`` corrupted or lost (Pitfall #5).
+          - Decay window retuned (refresh all weighted_counts in one shot).
+          - Operator manually edited a bucket file (manual prune / merge).
+
+        This method is exposed via the ``hermes feedback rebuild-index`` CLI.
+        """
+        # Reset in-memory state.
+        self._index = {
+            "version": _INDEX_VERSION,
+            "decay_window_days": self._decay_window_days,
+            "updated_ts": datetime.now(timezone.utc).isoformat(),
+            "buckets": {},
+            "by_sha256": {},
+        }
+        self._sha256_index = {}
+        self._superseded_record_ids = set()
+
+        # Replay the registry FIRST so supersession state is known before
+        # we read bucket files (determines which records contribute weight).
+        self._load_sha256_index()
+
+        # Walk every bucket file. Path shape: buckets/<skill_id>/<source>.jsonl
+        bucket_aggregates: dict[str, dict[str, Any]] = {}
+        for bucket_file in sorted(self._buckets_root.glob("*/*.jsonl")):
+            skill_id = bucket_file.parent.name
+            source = bucket_file.stem
+            records = self._read_bucket_records(bucket_file)
+            for r in records:
+                # Skip records that don't match the bucket's (skill_id, source)
+                # pair (defensive — bucket file should only contain matching
+                # records, but malformed writes are tolerated).
+                if r.skill_id != skill_id or r.source != source:
+                    continue
+                bucket_key = f"{skill_id}:{source}:{r.verdict}"
+                rid = self._make_record_id(r)
+                is_superseded = rid in self._superseded_record_ids
+
+                agg = bucket_aggregates.get(bucket_key)
+                if agg is None:
+                    agg = {
+                        "count": 0,
+                        "weighted_count": 0.0,
+                        "first_ts": r.ts.isoformat(),
+                        "last_ts": r.ts.isoformat(),
+                        "_active_records": [],
+                        "_ts_list": [],
+                    }
+                    bucket_aggregates[bucket_key] = agg
+                agg["count"] += 1
+                agg["_ts_list"].append(r.ts)
+                if r.ts.isoformat() < agg["first_ts"]:
+                    agg["first_ts"] = r.ts.isoformat()
+                if r.ts.isoformat() > agg["last_ts"]:
+                    agg["last_ts"] = r.ts.isoformat()
+                if not is_superseded:
+                    agg["_active_records"].append(r)
+
+        # Compute weighted_count per bucket + finalize the index dict.
+        for bucket_key, agg in bucket_aggregates.items():
+            weighted = self._recompute_bucket_weighted_count(
+                agg["_active_records"]
+            )
+            self._index["buckets"][bucket_key] = {
+                "count": agg["count"],
+                "weighted_count": weighted,
+                "first_ts": agg["first_ts"],
+                "last_ts": agg["last_ts"],
+            }
+
+        # Mirror sha256 state into the persisted index.
+        self._index["by_sha256"] = {
+            sha: dict(entry) for sha, entry in self._sha256_index.items()
+        }
+        self._index["updated_ts"] = datetime.now(timezone.utc).isoformat()
+        self._index["decay_window_days"] = self._decay_window_days
+
+        # Atomic index.json rewrite.
+        self._write_index()
+
+        logger.info(
+            "feedback index rebuilt: %d buckets, %d superseded record_ids",
+            len(self._index["buckets"]),
+            len(self._superseded_record_ids),
+        )
 
     # ── query / summary / get_record (STORE-02 Query API) ──────────────
 
@@ -545,12 +887,13 @@ class FeedbackStore:
                     continue
                 if until is not None and r.ts > until:
                     continue
-                # Supersession filter (Plan 02 mutates status; Plan 01 always active).
+                # Supersession filter (Plan 02). The bucket file holds both
+                # active and superseded records (immutable); query excludes
+                # superseded ones unless include_superseded=True. Record_id
+                # membership in _superseded_record_ids is the authoritative
+                # check (sha256 alone is ambiguous when corrections chain).
                 if not include_superseded:
-                    sha_status = self._sha256_index.get(
-                        r.output_snapshot.sha256, {}
-                    ).get("status", "active")
-                    if sha_status == "superseded":
+                    if self._make_record_id(r) in self._superseded_record_ids:
                         continue
                 results.append(r)
 
