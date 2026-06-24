@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: ready_to_plan
-last_updated: 2026-06-24T13:25:21.503Z
-last_activity: 2026-06-24 -- Phase 30 complete (eval gate reuse shipped — GATE-01/02/03/04 all covered)
+status: executing
+last_updated: "2026-06-24T22:30:00.000Z"
+last_activity: 2026-06-24 -- Phase 31 Plan 01 complete (agent/evolution/ engine layer)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
-stopped_at: Phase 30 complete (2/2) — ready to discuss Phase 31
+  total_plans: 8
+  completed_plans: 7
+  percent: 54
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,14 +24,14 @@ stopped_at: Phase 30 complete (2/2) — ready to discuss Phase 31
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 31 — knowledge evolution pipeline
+**Current focus:** Phase 31 — knowledge evolution pipeline (Plan 01 engine shipped; Plan 02 CLI next)
 
 ## Current Position
 
 Phase: 31
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-24
+Plan: 01 complete (02 next)
+Status: Executing — Plan 01 shipped, Plan 02 pending
+Last activity: 2026-06-24 -- Phase 31 Plan 01 complete (agent/evolution/ engine layer)
 
 ### Progress
 
@@ -48,7 +47,7 @@ v6.0 Self-Evolution & Feedback Loop:
   Phase 28 (Feedback Ingestion MVP)        [██████████] 100% Complete (Plan 01 schema+snapshot+write; Plan 02 CLI+watcher+JSONL — 76 tests green, FOUND-08 verified)
   Phase 29 (Feedback Store)                [██████████] 100% Complete (Plan 01 FeedbackStore foundation 49 tests; Plan 02 STORE-04 dedup + delegation + rebuild-index CLI — 26 new tests, 150/151 feedback-subsystem green, Phase 29 closed)
   Phase 30 (Eval Gate Reuse)               [██████████] 100% Complete (Plan 01 parse_judge_scores + gate.py orchestrator GATE-02/04 — 43 tests; Plan 02 paired-t significance + rebuild_baseline + multi-skill guard GATE-01/03 — 30 tests; 100/101 eval tests green, FOUND-08 + runtime isolation + scipy-free verified; Phase 30 CLOSED)
-  Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 next
+  Phase 31 (Knowledge Evolution Pipeline)  [██████░░░░] 50% Plan 01 shipped (engine layer — 60 tests green, FOUND-08 byte-intact + additive-only verified); Plan 02 CLI next
   Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — depends on P29 + P31
   Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
 ```
@@ -60,7 +59,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | 28 | Feedback Ingestion MVP | **Complete** | Shipped 2026-06-24. INGEST-01..05 covered. Plan 01 (schema + snapshot + atomic write — 45 tests) + Plan 02 (/feedback slash cmd + hermes feedback {import,watch,submit} + kais file watcher + JSONL atomic batch import — 31 new tests). 76/76 tests green, Ruff clean, FOUND-08 preserved, zero new deps. |
 | 29 | Feedback Store | **Complete** | Shipped 2026-06-24. STORE-01..04 satisfied. Plan 01 FeedbackStore foundation (49 tests, 2 Rule 1 bugs auto-fixed). Plan 02 STORE-04 sha256 dedup/correction branch + Phase 28 write_feedback_record delegation + rebuild_index method + hermes feedback rebuild-index CLI (26 new tests across TestDedup/TestCorrection/TestRebuildIndex/TestDelegation/TestRebuildIndexCLI; 150/151 feedback-subsystem green, 1 documented skip; 2 deviations auto-fixed). Phase 29 closed. |
 | 30 | Eval Gate Reuse | **Complete** | Shipped 2026-06-24. GATE-01..04 all covered. Plan 01: parse_judge_scores() + composite_score() in runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config + CLI) — 43 new tests. Plan 02: paired_t_stats() + is_significant() via stdlib statistics + hardcoded _CRITICAL_T_05_TWO_TAILED t-table (GATE-03, no scipy) + rebuild_baseline() with scores.json provenance cache + load_cached_baseline() with non-blocking staleness warning + detect_multi_skill_patch() with exit-3 early-exit guard + --rebuild-baseline/--multi-skill CLI flags — 30 new tests. 100/101 eval tests green (1 pre-existing openai-missing skip), FOUND-08 byte-intact, runtime isolation 0, scipy-free. Phase 30 CLOSED. |
-| 31 | Knowledge Evolution Pipeline | Not started | Covers EVOL-01, EVOL-03, EVOL-04, EVOL-05. Parallel-eligible with P30. Builds review queue + approve/apply mechanics. |
+| 31 | Knowledge Evolution Pipeline | **In progress** | Plan 01 shipped 2026-06-24. EVOL-01/03/04/05 engine layer: agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier). 60 new tests green, 7 commits, runtime isolation 0 matches. Plan 02 (CLI layer) next. |
 | 32 | Curator Upgrade + Audit | Not started | Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. |
 | 33 | Observability + Integration Close-out | Not started | Covers OBS-01..03 + integration deliverables. MUST run last. Writes `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + README + glossary. Mirrors v5.0 Phase 27 pattern. |
 
@@ -100,7 +99,7 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
 - v6.0 requirements completed: 16 (INGEST-01..05 from Phase 28 + STORE-01..04 from Phase 29 + GATE-01..04 from Phase 30 + ROADMAP-LEVEL annotations to follow)
-- v6.0 plans completed: 6 / 6 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 — Phases 31-33 not yet planned)
+- v6.0 plans completed: 7 / 8 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 + Phase 31 Plan 01 — engine layer shipped; Plan 02 CLI layer next, then Phases 32-33)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -154,6 +153,10 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | load_cached_baseline NON-BLOCKING on staleness (RESEARCH Pitfall 4) | Warns on sha mismatch (cached vs current SKILL.md sha256) but returns cached composites anyway. Operator decides whether to refresh via --rebuild-baseline. Avoids friction on every gate run. | Applied 2026-06-24 — P30 Plan 02 gate.py load_cached_baseline |
 | scores.json atomic write (temp + os.replace) | T-30-09 mitigation against --rebuild-baseline overwrite being destructive on partial write. Temp file written first, then atomically renamed into place. | Applied 2026-06-24 — P30 Plan 02 gate.py rebuild_baseline |
 | run_gate step 6 dual-format baseline cache support | Plan 02 scores.json (dict with per_prompt_composites + sha256 provenance) AND Plan 01 legacy plain-list JSON both supported. Backward-compat preserved for existing tests + first-run lazy population. | Applied 2026-06-24 — P30 Plan 02 gate.py run_gate |
+| EVOL-02 placeholder uses stdlib difflib (LLM emits structured add-after-marker) | LLMs unreliable at @@ -A,B +C,D @@ hunk syntax (RESEARCH A1). difflib.unified_diff is deterministic, testable, git-compatible. P32 will extend with LLM-generated rewrites. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/diff_generator.py |
+| Additive-only check is UNIVERSAL (all evolution patches) not just protected_refs | Plan action step 5d specified protected-only, but behavior bullet + EVOL-02 scope discipline require ALL evolution patches to be additive. Protected refs get explicit SC-6 error message; other files get generic additive-only message. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/apply.py (Rule 2 auto-fix) |
+| Deferred openai import in make_aggregation_client | RuntimeError on missing OPENROUTER_API_KEY must surface before SDK import. In envs without openai installed, top-of-function import masked the key-check error. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/insights.py (Rule 1 auto-fix) |
+| Local _extract_patched_files copy (gate.py under hyphenated path not importable) | skills/movie-experts/_eval/gate.py cannot be imported via normal Python import (hyphen in path). Reimplemented the T-30-01 path-traversal + WR-07 deletion-patch hardening locally with a code comment pointing to the canonical source. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/apply.py |
 
 ### Decisions (carried forward — relevant to v6.0)
 
@@ -208,17 +211,16 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 5. `skills/movie-experts/_eval/runner.py` (existing MT-Bench position-swap harness) — Phase 30 reuses this as eval gate
 6. `.planning/research/v2-pipeline-design/skills-mapping.yaml` — canonical expert mapping baseline (v3.0 + v4.0 + v5.0 signoffs; v6 adds `v6_ref_signoffs:` in P33)
 
-**Next action:** Plan Phase 31 (`/gsd:plan-phase 31` — Knowledge Evolution Pipeline, covers EVOL-01/03/04/05, parallel-eligible with the now-complete P30) OR plan Phase 32 (`/gsd:plan-phase 32` — Curator Upgrade, depends on P29 + P31).
+**Next action:** Execute Phase 31 Plan 02 (`/gsd:execute-phase 31` — CLI layer: hermes_cli/feedback.py extension with 6 new subcommands wiring the agent/evolution/ engine) OR plan Phase 32 (`/gsd:plan-phase 32` — Curator Upgrade, depends on P29 + P31).
 
-**Resume from interrupted phase:** Read `.planning/phases/30-eval-gate-reuse/30-02-SUMMARY.md` for the latest state.
+**Resume from interrupted phase:** Read `.planning/phases/31-knowledge-evolution-pipeline/31-01-SUMMARY.md` for the latest state.
 
 ---
 
-*Last updated: 2026-06-24 — Phase 30 COMPLETE (eval gate reuse shipped — GATE-01/02/03/04 all covered via Plan 01 + Plan 02). 16/26 v6.0 requirements satisfied. Next: Phase 31 plan OR Phase 32 plan.*
+*Last updated: 2026-06-24 — Phase 31 Plan 01 COMPLETE (knowledge evolution engine layer shipped — agent/evolution/ subpackage with EVOL-01/03/04/05 + FOUND-08 byte-intact + additive-only). 20/26 v6.0 requirements satisfied. Next: Phase 31 Plan 02 (CLI layer) OR Phase 32 plan.*
 
 ## Operator Next Steps
 
-- Plan Phase 31: `/gsd:plan-phase 31` (Knowledge Evolution Pipeline — covers EVOL-01/03/04/05; was parallel-eligible with P30, now unblocked)
+- Execute Phase 31 Plan 02: `/gsd:execute-phase 31` (CLI layer — hermes_cli/feedback.py extension with evolve / review-queue / show-patch / approve / reject / rollback subcommands; wires the agent/evolution/ engine into operator-invokable commands)
 - Plan Phase 32: `/gsd:plan-phase 32` (Curator Upgrade + Audit — covers CURATE-01..05 + EVOL-02; depends on P29 + P31)
-- Review ROADMAP.md critical path — Phase 30 is done; the P30/P31 parallel wave is now just P31
-- Confirm EVOL-02 → Phase 32 mapping (Curator invokes diff generator) is acceptable before planning P31/P32
+- Review ROADMAP.md critical path — Phase 31 Plan 01 done; Plan 02 (CLI) completes P31, then P32 (Curator) + P33 (Observability)

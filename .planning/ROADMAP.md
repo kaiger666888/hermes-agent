@@ -100,7 +100,7 @@
   6. **v5/v4 refs byte-intact check (additive-only):** Patches to v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) and v5.0 refs (dreamina-cli-baseline.md / v86-pipeline-mapping.md) are ADDITIVE only — existing bytes preserved, new knowledge appended alongside (mirrors v4.0 + v5.0 scope discipline)
 **Hermes-core touch:** Mixed — pipeline orchestration code is new (under `~/.hermes/skills/.feedback/` tooling or a new module), but the patches it produces target bundled SKILL.md / refs (additive only). The git-commit + rollback machinery touches repo state.
 **Plans:** 2 plans
-- [ ] 31-01-PLAN.md — agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — covers EVOL-01/03/04/05 engine layer
+- [x] 31-01-PLAN.md — agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — covers EVOL-01/03/04/05 engine layer — **shipped 2026-06-24 (7 commits, 60 new tests green, FOUND-08 byte-intact + additive-only + runtime isolation verified)**
 - [ ] 31-02-PLAN.md — hermes_cli/feedback.py extension with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + isolation grep verification + non-bypassable human-in-loop structural test — covers EVOL-01/03/04/05 CLI layer
 
 ### Phase 32: Curator Upgrade + Audit
