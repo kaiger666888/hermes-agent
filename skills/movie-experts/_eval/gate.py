@@ -77,12 +77,22 @@ _ALLOWED_AB_POSITIONS = frozenset({1, 2})
 
 # Hardcoded critical-t table for the two-tailed paired t-test at alpha=0.05.
 # Source: standard t-distribution table. df is the key, critical |t| is value.
-# For df > 30 the table falls back to the asymptotic normal value 1.960
-# (T-30-10 mitigation: O(1) lookup, no unbounded loops, no scipy import).
+# Critical-t is a DECREASING function of df, asymptoting to 1.960 (z) as
+# df -> infinity. The table covers df=1..40, 60, 120; for df>120 the
+# asymptotic z=1.960 is used (T-30-10 mitigation: O(1) lookup, no unbounded
+# loops, no scipy import).
 _CRITICAL_T_05_TWO_TAILED: dict[int, float] = {
     1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
     6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
     15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042,
+    # CR-02 fix: fill in df=31..40, 60, 120 to avoid the anti-conservative
+    # 1.960 fallback for df in [31, 120]. Without these entries, any df>30
+    # used 1.960 — but the true critical-t at df=31 is 2.040. Using 1.960
+    # made the test systematically MORE permissive than the true value,
+    # contradicting the docstring's "conservative" claim.
+    31: 2.040, 32: 2.037, 33: 2.035, 34: 2.032, 35: 2.030,
+    36: 2.028, 37: 2.026, 38: 2.024, 39: 2.023, 40: 2.021,
+    60: 2.000, 120: 1.980,
 }
 # Asymptotic z-value for alpha=0.05 two-tailed (df -> infinity).
 _CRITICAL_T_ASYMPTOTIC_05 = 1.960
@@ -346,12 +356,23 @@ def is_significant(
     no other alpha); any other alpha returns False with a logged warning.
 
     For ``df`` not in the table:
-      - ``df > 30`` -> asymptotic normal 1.960.
-      - ``df < 30`` not listed -> conservative round-down to the nearest
-        listed df below (e.g. df=12 uses df=10's critical value 2.228).
+      - ``df > 120`` -> asymptotic normal 1.960.
+      - Otherwise -> conservative: use the SMALLEST listed df that is
+        ``>= requested df``. Because critical-t is a decreasing function
+        of df, picking a larger-or-equal df would give a SMALLER-or-equal
+        critical-t (more permissive) — so to stay conservative we instead
+        pick the LARGEST listed df that is ``<= requested df`` (which
+        gives a LARGER-or-equal critical-t, harder to declare significance).
+        e.g. df=12 uses df=10's critical value 2.228 (true ~2.201 for
+        df=12); the test becomes slightly harder to pass than ideal.
 
     T-30-08 mitigation: bounds-check df; never raises on unknown df.
     T-30-10 mitigation: O(1) lookup, no unbounded work.
+
+    CR-02 fix: previously any df>30 used 1.960 (the asymptotic z), which
+    is ANTI-conservative for df in [31, 120] — the true critical-t at
+    df=31 is 2.040. The table now includes df=31..40, 60, 120; the
+    asymptotic fallback fires only for df>120.
     """
     if t_stat is None:
         return False
@@ -366,10 +387,12 @@ def is_significant(
         return False
     crit = _CRITICAL_T_05_TWO_TAILED.get(df)
     if crit is None:
-        if df > 30:
+        if df > 120:
             crit = _CRITICAL_T_ASYMPTOTIC_05
         else:
-            # Conservative round-down: largest listed df <= requested df.
+            # Conservative: largest listed df <= requested df. Because
+            # crit-t decreases with df, this yields a LARGER crit-t,
+            # making the test HARDER to pass (truly conservative).
             candidates = [k for k in _CRITICAL_T_05_TWO_TAILED if k <= df]
             if not candidates:
                 return False
@@ -1004,7 +1027,7 @@ def run_gate(
         if crit is None:
             crit = (
                 _CRITICAL_T_ASYMPTOTIC_05
-                if df_val > 30
+                if df_val > 120
                 else _CRITICAL_T_05_TWO_TAILED.get(
                     max(
                         (k for k in _CRITICAL_T_05_TWO_TAILED if k <= df_val),
