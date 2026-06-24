@@ -160,6 +160,20 @@ class TestExtractPatchedFiles:
         assert "skills/movie-experts/screenplay/SKILL.md" in files
         assert "skills/movie-experts/drawer/SKILL.md" in files
 
+    def test_rejects_deletion_patch(self, tmp_path: Path) -> None:
+        # WR-07: patch that deletes a file uses +++ /dev/null — the gate
+        # is for additive patches per EVOL-02 scope discipline.
+        patch = tmp_path / "delete.patch"
+        patch.write_text(
+            "--- a/skills/movie-experts/screenplay/SKILL.md\n"
+            "+++ /dev/null\n"
+            "@@ -1,1 +0,0 @@\n"
+            "-original content\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="(?i)deletion|/dev/null"):
+            gate.extract_patched_files(patch)
+
 
 # --------------------------------------------------------------------------- #
 # TestDecideVerdict — GATE-02 + GATE-04 core logic (pure function)

@@ -117,12 +117,31 @@ def extract_patched_files(patch_path: Path) -> list[str]:
     ``skills/movie-experts/`` OR contains ``..`` (path traversal).
     Raises ``ValueError`` with a clear message on violation.
 
+    WR-07 fix: detects file DELETION patches (``+++ /dev/null``) and
+    raises ``ValueError`` explicitly. Previously the regex silently
+    produced an empty ``files`` list, then run_gate raised the confusing
+    "patch touches no files" — but the patch DID touch a file (it
+    deleted one). The gate is for ADDITIVE patches per EVOL-02 scope
+    discipline; deletions must be rejected explicitly with a clear
+    message so operators know the gate is out-of-scope, not buggy.
+
     Returns a list of repo-relative POSIX paths touched by the patch.
     """
     text = patch_path.read_text(encoding="utf-8")
     files: list[str] = []
     seen: set[str] = set()
     for line in text.splitlines():
+        # WR-07: detect deletion patches before the +++ b/ regex fails to
+        # match. A deletion patch has ``+++ /dev/null`` and ``--- a/<path>``.
+        # Reject explicitly so operators see scope discipline, not a
+        # confusing "no files" error.
+        if line.startswith("+++ /dev/null"):
+            raise ValueError(
+                "patch contains file deletion (+++ /dev/null); the gate "
+                "only validates ADDITIVE patches per EVOL-02 scope "
+                "discipline. Delete the file directly in a separate "
+                "change outside the gate."
+            )
         m = _PATCH_FILE_RE.match(line)
         if m is None:
             continue
