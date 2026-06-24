@@ -421,7 +421,8 @@ skills/movie-experts/
     ├── RAG-INVOCATION-PATTERN.md
     ├── SKILL-LAYOUT.md                           (reference anatomy spec)
     ├── cognitive-resonance-metrics.md            (Phase 7C-1 NEW — 4-scale evaluation rubric)
-    └── quality-rubric.md                         (Phase 7C-2 NEW — 6-dim publish-gate rubric)
+    ├── quality-rubric.md                         (Phase 7C-2 NEW — 6-dim publish-gate rubric)
+    └── v6-feedback-loop-architecture.md          (Phase 33 v6.0 NEW — feedback-loop canonical architecture ref)
 ```
 
 ---

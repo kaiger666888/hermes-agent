@@ -481,3 +481,45 @@ Per REQUIREMENTS SCAMPER-04, `_shared/glossary.md` must have 8 new H3 entries: `
 ---
 
 **Phase 27 INTEGRATION-05 verification:** 3 / 3 minimum new H3 entries added (Atomic Step / Review Gate / L1 Identity Anchor), each with CN/EN/Context + kais-movie-agent V8.5/V8.6 出处. INTEGRATION-05 PASS (minimum 3 entries requirement satisfied).
+
+---
+
+## v6.0 additions (4 new feedback-loop terms)
+
+Phase 33 (Observability + Integration Close-out) adds 4 terms documenting the v6.0 feedback-driven learning paradigm. **v6.0 entries use EN-first header format** per Phase 33 CONTEXT.md; earlier entries retain CN-first format for backward compatibility (see footer note at the end of this section).
+
+### Curator Proposal / 策展提案
+
+**CN:** 策展提案 —— Curator(`agent/curator.py`)在 v6.0 中新增的自动触发能力:当某个 skill 的负面反馈(needs_work + bad)累计超过阈值时,Curator 自动触发 EVOL 知识进化管线,从历史反馈中聚合候选洞察、生成 unified-diff 补丁、入队等待人工审核。bundled(内置)skill 的补丁**永不自动 apply**(CURATE-05 强制约束);仅 agent-created skill 允许条件性自动 apply(需通过 Eval Gate)。所有 Curator Proposal 动作写入 `~/.hermes/skills/.audit/log.jsonl` 形成完整审计链。
+
+**EN:** Curator Proposal — A new auto-trigger capability added to Curator (`agent/curator.py`) in v6.0: when a skill's accumulated negative feedback (needs_work + bad) crosses a threshold, Curator automatically triggers the EVOL knowledge-evolution pipeline, aggregating candidate insights from historical feedback, generating unified-diff patches, and enqueuing them for human review. Bundled-skill patches are **NEVER auto-applied** (CURATE-05 hard constraint); only agent-created skills permit conditional auto-apply (subject to passing the Eval Gate). All Curator Proposal actions are written to `~/.hermes/skills/.audit/log.jsonl` forming a complete audit trail.
+
+**Context:** Requirement CURATE-01 / CURATE-02 (Phase 32). Architecture: see [`v6-feedback-loop-architecture.md`](./v6-feedback-loop-architecture.md) §Human-in-Loop Boundaries / 人工审核边界 for the bundled-vs-agent-created auto-apply boundary and §Module Ownership Map / 模块归属表 for the `agent/curator.py` + `agent/curator_audit.py` ownership split.
+
+### Eval Gate / 评估闸门
+
+**CN:** 评估闸门 —— v6.0 在 P30 引入的 patch-vs-baseline 评估机制,复用 `_eval/runner.py` 跑 MT-Bench 风格的 position-swap 双盲评测。对每个候选补丁,Eval Gate 在同一组 benchmark prompts 上分别跑 baseline 与 patched skill,计算 per-prompt 分差与 mean delta。通过阈值:mean_delta ≥ +0.3(平均提升)且 per-prompt 最大跌幅 ≤ 1.0(无单点崩盘)且 evidence_count ≥ 5(样本充足)。阈值可在 cli-config.yaml 中配置。Eval Gate 结果作为 audit-log 中 apply 事件的 `eval_score` 字段持久化,供 `hermes curator stats` 渲染趋势。
+
+**EN:** Eval Gate — The patch-vs-baseline evaluation mechanism introduced in v6.0 P30, reusing `_eval/runner.py` to run MT-Bench-style position-swap double-blind evaluation. For each candidate patch, the Eval Gate runs both baseline and patched skill on the same set of benchmark prompts, computing per-prompt score deltas and a mean delta. Pass thresholds: mean_delta ≥ +0.3 (average uplift) AND per-prompt max drop ≤ 1.0 (no single-point collapse) AND evidence_count ≥ 5 (sufficient sample). Thresholds are configurable in cli-config.yaml. Eval Gate results are persisted as the `eval_score` field of apply events in the audit log, surfaced as a trend by `hermes curator stats`.
+
+**Context:** Requirements GATE-01 / GATE-02 / GATE-03 / GATE-04 (Phase 30). Architecture: see [`v6-feedback-loop-architecture.md`](./v6-feedback-loop-architecture.md) §Eval-Gate Thresholds / 评估闸门阈值 for the δ=0.3 / per-prompt=1.0 / min-prompts=5 defaults and the configuration surface.
+
+### Feedback Ingestion / 知识反馈采集
+
+**CN:** 知识反馈采集 —— v6.0 在 P28 引入的多源反馈接入层,将三类来源(CLI `/feedback` 命令、kais-aigc-platform watcher 自动投递、`hermes feedback import` 手动导入)归一化到统一的 `FeedbackRecord` schema(skill_id / expert_id / source / verdict[good|needs_work|bad] / correction / output_snapshot / ts)。归一化后的记录写入 `~/.hermes/skills/.feedback/<skill_id>.jsonl`,供 FeedbackStore 查询、EVOL 聚合、Curator 统计。采集层对 correction 文本做敏感信息脱敏(API key / token / PII),并在 `--json` 输出时**仅暴露计数**不暴露 correction 原文(T-33-01 信息泄露防护)。
+
+**EN:** Feedback Ingestion — The multi-source feedback intake layer introduced in v6.0 P28, normalizing three source types (CLI `/feedback` command, kais-aigc-platform watcher auto-delivery, `hermes feedback import` manual import) into a unified `FeedbackRecord` schema (skill_id / expert_id / source / verdict[good|needs_work|bad] / correction / output_snapshot / ts). Normalized records are written to `~/.hermes/skills/.feedback/<skill_id>.jsonl` for FeedbackStore querying, EVOL aggregation, and Curator statistics. The intake layer scrubs sensitive information from correction text (API keys / tokens / PII), and `--json` output exposes **counts only**, never the correction text itself (T-33-01 information-disclosure mitigation).
+
+**Context:** Requirements INGEST-01 / INGEST-02 / INGEST-03 / INGEST-04 / INGEST-05 (Phase 28). Architecture: see [`v6-feedback-loop-architecture.md`](./v6-feedback-loop-architecture.md) §JSON Schema Reference / JSON 结构定义 for the FeedbackRecord field contract and §Data Flow / 反馈闭环数据流 for the ingest → store → gate → evolve → curate pipeline.
+
+### Knowledge Evolution / 知识进化
+
+**CN:** 知识进化 —— v6.0 在 P31/P32 引入的反馈驱动学习管线。EVOL 管线分四步:(1) LLM 从某 skill 的历史负面反馈中聚合出候选洞察(candidate insights,去重 + 加权);(2) 将候选洞察编译为对该 skill `references/*.md` 的 unified-diff 补丁;(3) 补丁入队 `~/.hermes/skills/.feedback/evolution/queue.jsonl` 等待人工审核(bundled skill 必须人工 approve,agent-created skill 可条件性自动 apply);(4) approve 后 apply 补丁到 refs 并生成 rollback commit。EVOL-02 要求每个补丁附带 unified-diff 格式以支持精确 rollback。整个流程通过 `hermes curator queue` / `approve` / `reject` / `audit-log` 子命令操作。
+
+**EN:** Knowledge Evolution — The feedback-driven learning pipeline introduced in v6.0 P31/P32. The EVOL pipeline has four steps: (1) an LLM aggregates candidate insights from a skill's historical negative feedback (deduped + weighted); (2) candidate insights are compiled into unified-diff patches against that skill's `references/*.md`; (3) patches are enqueued to `~/.hermes/skills/.feedback/evolution/queue.jsonl` awaiting human review (bundled skills require human approval; agent-created skills may conditionally auto-apply); (4) on approval, patches are applied to refs with a rollback commit generated. EVOL-02 requires every patch to carry unified-diff format for precise rollback. The entire flow is operated via the `hermes curator queue` / `approve` / `reject` / `audit-log` subcommands.
+
+**Context:** Requirements EVOL-01 / EVOL-02 / EVOL-03 / EVOL-04 / EVOL-05 (Phases 31 & 32). Architecture: see [`v6-feedback-loop-architecture.md`](./v6-feedback-loop-architecture.md) §Data Flow / 反馈闭环数据流 for the four-step pipeline and §Module Ownership Map / 模块归属表 for the `agent/evolution/` module ownership split.
+
+---
+
+*Phase 33 INTEGRATION close-out verification: 4 / 4 new H3 entries added (Curator Proposal / Eval Gate / Feedback Ingestion / Knowledge Evolution), each with CN/EN/Context + cross-reference to `v6-feedback-loop-architecture.md`. **v6.0 entries use EN-first header format** (e.g., `### Feedback Ingestion / 知识反馈采集`) per Phase 33 CONTEXT.md line 50-54 decision; **pre-v6 entries retain CN-first format** (e.g., `### 运镜 / cinematography / camera movement`) for backward compatibility — the two formats coexist deliberately and MUST NOT be reconciled (doing so would break the SC-7 byte-intact invariant on existing entries). Footer note present: T-33-14 mitigation.*
