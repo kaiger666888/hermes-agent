@@ -31,10 +31,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import os
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def register_cli(parent: argparse.ArgumentParser) -> None:
@@ -121,6 +126,93 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
         "(idempotent repair tool — use after manual edits or index corruption)",
     )
     p_rebuild.set_defaults(func=_cmd_rebuild_index)
+
+    # ── Phase 31 Knowledge Evolution Pipeline (EVOL-01/03/04/05) ──────
+    # All ``from agent.evolution import ...`` calls are LAZY (inside handler
+    # bodies) to preserve the runtime-isolation invariant:
+    # ``grep -n "^from agent.evolution\|^import agent.evolution" \
+    #      hermes_cli/feedback.py``
+    # must return 0 matches at module top level. The handlers are only
+    # dispatched when the operator invokes the corresponding subcommand.
+
+    # ── evolve (EVOL-01) ────────────────────────────────────────────
+    p_evolve = subs.add_parser(
+        "evolve",
+        help="Run LLM aggregation on accumulated feedback for a skill "
+        "(EVOL-01; writes insights.jsonl; optionally generates + gates patches)",
+    )
+    p_evolve.add_argument(
+        "--skill", required=True, help="Target skill_id (e.g. 'screenplay')"
+    )
+    p_evolve.add_argument(
+        "--model", default=None,
+        help="Override LLM model (default: HERMES_EVOLUTION_MODEL env or builtin default)",
+    )
+    p_evolve.add_argument(
+        "--dry-run", action="store_true",
+        help="Skip the LLM call; emit a stub insight (offline testing path)",
+    )
+    p_evolve.add_argument(
+        "--insights-only", action="store_true",
+        help="Write insights.jsonl then exit (skip patch generation + eval gate)",
+    )
+    p_evolve.set_defaults(func=_cmd_evolve)
+
+    # ── review-queue (EVOL-03) ──────────────────────────────────────
+    p_queue = subs.add_parser(
+        "review-queue",
+        help="List pending/applied/rejected patches in the review queue (EVOL-03)",
+    )
+    p_queue.add_argument(
+        "--skill", default=None, help="Filter by skill_id"
+    )
+    p_queue.add_argument(
+        "--status", choices=["pending", "applied", "rejected"],
+        default="pending", help="Filter by status (default: pending)",
+    )
+    p_queue.set_defaults(func=_cmd_review_queue)
+
+    # ── show-patch (EVOL-03) ────────────────────────────────────────
+    p_show = subs.add_parser(
+        "show-patch",
+        help="Show the full diff + rationale + feedback chain for a patch (EVOL-03)",
+    )
+    p_show.add_argument("patch_id", help="Patch ID to inspect")
+    p_show.set_defaults(func=_cmd_show_patch)
+
+    # ── approve (EVOL-04 + EVOL-05) ─────────────────────────────────
+    p_approve = subs.add_parser(
+        "approve",
+        help="Apply a pending patch atomically (EVOL-04 non-bypassable; "
+        "requires --yes for non-interactive consent)",
+    )
+    p_approve.add_argument("patch_id", help="Patch ID to approve + apply")
+    p_approve.add_argument(
+        "--yes", action="store_true",
+        help="Explicit operator consent (REQUIRED for non-interactive apply; "
+        "without --yes the command refuses to apply and exits non-zero)",
+    )
+    p_approve.set_defaults(func=_cmd_approve)
+
+    # ── reject (EVOL-03) ────────────────────────────────────────────
+    p_reject = subs.add_parser(
+        "reject", help="Reject a pending patch with a reason (EVOL-03)"
+    )
+    p_reject.add_argument("patch_id", help="Patch ID to reject")
+    p_reject.add_argument("reason", help="Rejection reason")
+    p_reject.set_defaults(func=_cmd_reject)
+
+    # ── rollback (EVOL-05) ──────────────────────────────────────────
+    p_rollback = subs.add_parser(
+        "rollback",
+        help="Revert an applied patch via ``git revert <commit_sha>`` (EVOL-05)",
+    )
+    p_rollback.add_argument("commit_sha", help="Commit SHA to revert")
+    p_rollback.add_argument(
+        "--yes", action="store_true",
+        help="Explicit operator consent (REQUIRED — git revert is destructive)",
+    )
+    p_rollback.set_defaults(func=_cmd_rollback)
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +358,452 @@ def _cmd_rebuild_index(args) -> int:
     summary = store.summary()
     print(f"Index rebuilt: {len(summary)} buckets.")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Phase 31 Knowledge Evolution Pipeline subcommand handlers
+# (EVOL-01 / EVOL-03 / EVOL-04 / EVOL-05)
+#
+# All ``from agent.evolution import ...`` are LAZY (inside handler bodies)
+# to preserve the runtime-isolation invariant. The handlers are dispatched
+# only when the operator invokes the corresponding subcommand.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_repo_root() -> Path:
+    """Walk up from cwd looking for the ``.git`` directory.
+
+    Raises SystemExit if not inside a git work tree. Used by handlers that
+    need to invoke git (apply / revert / gate subprocess).
+    """
+    cwd = Path.cwd()
+    for candidate in [cwd, *cwd.parents]:
+        if (candidate / ".git").exists():
+            return candidate
+    raise SystemExit(
+        "must run inside the hermes-agent git repo "
+        "(no .git directory found walking up from cwd)"
+    )
+
+
+def _resolve_evolution_dir() -> Path:
+    """Return the evolution persistence directory under HERMES_HOME.
+
+    Lazily creates it. Mirrors the FeedbackStore P29 directory pattern at
+    ``~/.hermes/skills/.feedback/evolution/``.
+    """
+    from hermes_constants import get_hermes_home
+
+    evolution_dir = get_hermes_home() / "skills" / ".feedback" / "evolution"
+    evolution_dir.mkdir(parents=True, exist_ok=True)
+    return evolution_dir
+
+
+def _gate_script_path() -> Path:
+    """Locate ``skills/movie-experts/_eval/gate.py`` relative to this module.
+
+    The hyphenated ``movie-experts`` directory makes normal import impossible,
+    so the gate is invoked via subprocess. The path is resolved from
+    ``__file__`` (not cwd) so it's stable regardless of where the operator
+    invokes the CLI.
+    """
+    return (
+        Path(__file__).resolve().parent.parent
+        / "skills" / "movie-experts" / "_eval" / "gate.py"
+    )
+
+
+def _run_eval_gate(
+    *,
+    patch_path: Path,
+    skill_id: str,
+    repo_root: Path,
+    reports_dir: Path,
+    patch_id_for_report: str,
+) -> "tuple[str, dict]":
+    """Invoke ``gate.py`` via subprocess and parse the verdict + score.
+
+    Per Plan-checker Warning 4: gate.py exposes ``--reports-dir`` (NOT
+    ``--report``); the gate writes ``<reports_dir>/<patch_id>.json``.
+
+    Args:
+        patch_path: Path to the unified diff to score.
+        skill_id: Target skill_id.
+        repo_root: Repo root for gate cwd.
+        reports_dir: Directory where the gate writes its JSON report.
+        patch_id_for_report: The patch_id used as the report filename stem
+            (gate writes ``<reports_dir>/<patch_id>.json``).
+
+    Returns:
+        ``(verdict_str, score_dict)``. ``verdict_str`` is one of
+        ``"pass"``/``"fail"``/``"inconclusive"``. ``score_dict`` is the
+        parsed JSON report (or an error-shaped dict on parse failure).
+    """
+    gate_path = _gate_script_path()
+    if not gate_path.is_file():
+        raise SystemExit(
+            f"gate.py not found at {gate_path} — run inside the hermes-agent repo"
+        )
+
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    # Argv-list only — NEVER shell=True (T-31-17 / T-30-02).
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(gate_path),
+            "--patch", str(patch_path),
+            "--skill", skill_id,
+            "--reports-dir", str(reports_dir),
+        ],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+
+    if result.returncode == 0:
+        verdict = "pass"
+    elif result.returncode == 3:
+        # gate.py multi-skill guard (per gate.py:1376-1383 --multi-skill flag).
+        verdict = "inconclusive"
+    else:
+        verdict = "fail"
+
+    # Read the report JSON the gate wrote.
+    report_path = reports_dir / f"{patch_id_for_report}.json"
+    score: dict
+    if report_path.is_file():
+        try:
+            score = json.loads(report_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            score = {
+                "verdict": verdict,
+                "reason": "report parse error",
+                "parse_error": str(exc),
+                "stderr_tail": (result.stderr or "")[-200:],
+            }
+    else:
+        score = {
+            "verdict": verdict,
+            "reason": "report file not written by gate",
+            "stdout_tail": (result.stdout or "")[-200:],
+            "stderr_tail": (result.stderr or "")[-200:],
+        }
+    return verdict, score
+
+
+def _cmd_evolve(args) -> int:
+    """``hermes feedback evolve --skill <id> [--model X] [--dry-run] [--insights-only]``.
+
+    EVOL-01 LLM aggregation pipeline:
+      1. Read feedback for the skill from FeedbackStore.
+      2. Aggregate via LLM into InsightRecords (or stub for --dry-run).
+      3. Append each to insights.jsonl.
+      4. Unless --insights-only: generate additive diffs, run the eval gate,
+         append passing patches to queue.jsonl, failing-gate to failed_gate.jsonl.
+
+    Operator-invoked + synchronous per CONTEXT.md D-EVOL-01. No retry on LLM
+    failure (RESEARCH Open Question 1 RESOLVED — operator can re-run).
+    """
+    # LAZY imports preserve runtime isolation.
+    from agent.evolution import (
+        AggregationError,
+        InsightRecord,
+        PatchRecord,
+        aggregate_feedback,
+        append_failed_gate,
+        append_patch,
+        generate_additive_diff,
+        make_aggregation_client,
+    )
+    from agent.feedback_store import FeedbackStore
+
+    evolution_dir = _resolve_evolution_dir()
+    repo_root = _resolve_repo_root()
+    store = FeedbackStore()  # uses get_hermes_home() internally.
+
+    feedback = store.query(skill_id=args.skill)
+    if not feedback:
+        print(f"no feedback for skill {args.skill}; nothing to evolve")
+        return 0
+
+    insights_path = evolution_dir / "insights.jsonl"
+
+    # --dry-run path: write a single stub insight, skip everything else.
+    if args.dry_run:
+        # Read current SKILL.md to pick a reasonable insert_after_marker.
+        skill_md_path = (
+            repo_root / "skills" / "movie-experts" / args.skill / "SKILL.md"
+        )
+        marker = "## References"
+        if skill_md_path.is_file():
+            content = skill_md_path.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                if line.startswith("## "):
+                    marker = line
+                    break
+        ts = datetime.now(timezone.utc)
+        ts_unix = int(ts.timestamp())
+        stub = InsightRecord(
+            insight_id=f"{args.skill}_{ts_unix}_dryrun000",
+            skill_id=args.skill,
+            theme=f"[dry-run] stub for {args.skill}",
+            evidence_chain=[
+                feedback[0].get("record_id", "fb_dry_run")
+                if isinstance(feedback[0], dict)
+                else "fb_dry_run"
+            ],
+            rationale="dry-run stub — no LLM call made",
+            proposed_addition="# Dry-run addition\n",
+            insert_after_marker=marker,
+            ts=ts.isoformat(),
+        )
+        with insights_path.open("a", encoding="utf-8") as fh:
+            fh.write(
+                json.dumps(stub.model_dump(), ensure_ascii=False) + "\n"
+            )
+        print(f"dry-run: 1 stub insight written to {insights_path}")
+        return 0
+
+    # Live LLM aggregation path.
+    try:
+        client, model = make_aggregation_client(model_override=args.model)
+    except RuntimeError as exc:
+        print(f"aggregation client construction failed: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        insights = aggregate_feedback(
+            skill_id=args.skill, store=store, client=client, model=model
+        )
+    except AggregationError as exc:
+        print(f"aggregation failed: {exc}", file=sys.stderr)
+        return 1
+
+    # Append insights to insights.jsonl (atomic per-line appends).
+    with insights_path.open("a", encoding="utf-8") as fh:
+        for insight in insights:
+            fh.write(
+                json.dumps(insight.model_dump(), ensure_ascii=False) + "\n"
+            )
+    print(f"generated {len(insights)} insights for {args.skill}")
+
+    if args.insights_only:
+        # RESEARCH Open Question 3 RESOLVED — skip patch generation + gate.
+        return 0
+
+    # Patch generation + eval gate per insight.
+    passed = 0
+    failed = 0
+    for insight in insights:
+        skill_md_path = (
+            repo_root / "skills" / "movie-experts" / args.skill / "SKILL.md"
+        )
+        if not skill_md_path.is_file():
+            logger.warning(
+                "SKILL.md missing for skill %s — skipping insight %s",
+                args.skill, insight.insight_id,
+            )
+            continue
+        current_content = skill_md_path.read_text(encoding="utf-8")
+        try:
+            diff = generate_additive_diff(
+                current_content=current_content,
+                proposed_addition=insight.proposed_addition,
+                insert_after_marker=insight.insert_after_marker,
+                skill_md_path=str(skill_md_path.relative_to(repo_root)),
+            )
+        except ValueError as exc:
+            logger.warning(
+                "diff generation failed for insight %s: %s",
+                insight.insight_id, exc,
+            )
+            continue
+
+        # Write diff to a temp patch file for the gate subprocess.
+        patch_fd, patch_tmp_path = tempfile.mkstemp(
+            prefix=f"evolve_{args.skill}_", suffix=".patch"
+        )
+        patch_tmp = Path(patch_tmp_path)
+        try:
+            os.close(patch_fd)
+            patch_tmp.write_text(diff, encoding="utf-8")
+
+            ts_unix = int(datetime.now(timezone.utc).timestamp())
+            diff_digest = hashlib.sha256(diff.encode("utf-8")).hexdigest()[:16]
+            patch_id = f"{args.skill}_{ts_unix}_{diff_digest}"
+
+            verdict, score = _run_eval_gate(
+                patch_path=patch_tmp,
+                skill_id=args.skill,
+                repo_root=repo_root,
+                reports_dir=evolution_dir / "gate_reports",
+                patch_id_for_report=patch_id,
+            )
+
+            if verdict == "pass":
+                record = PatchRecord(
+                    patch_id=patch_id,
+                    skill_id=args.skill,
+                    insight_id=insight.insight_id,
+                    unified_diff=diff,
+                    feedback_chain=list(insight.evidence_chain),
+                    llm_rationale=insight.rationale,
+                    eval_gate_score=score,
+                    status="pending",
+                    ts_queued=datetime.now(timezone.utc).isoformat(),
+                )
+                append_patch(record, evolution_dir)
+                passed += 1
+            else:
+                append_failed_gate(
+                    {
+                        "patch_id": patch_id,
+                        "insight_id": insight.insight_id,
+                        "skill_id": args.skill,
+                        "verdict": verdict,
+                        "score": score,
+                        "ts": datetime.now(timezone.utc).isoformat(),
+                    },
+                    evolution_dir,
+                )
+                failed += 1
+        finally:
+            patch_tmp.unlink(missing_ok=True)
+
+    print(
+        f"generated {len(insights)} insights, "
+        f"{passed} patches passed gate, "
+        f"{failed} failed gate"
+    )
+    return 0
+
+
+def _cmd_review_queue(args) -> int:
+    """``hermes feedback review-queue [--skill X] [--status pending|applied|rejected]``.
+
+    EVOL-03 — prints a table of patches in the requested status.
+    """
+    from agent.evolution import read_queue
+
+    evolution_dir = _resolve_evolution_dir()
+    records = read_queue(
+        evolution_dir=evolution_dir, status=args.status, skill_id=args.skill
+    )
+
+    if not records:
+        skill_hint = f" for {args.skill}" if args.skill else ""
+        print(f"(no {args.status} patches{skill_hint})")
+        return 0
+
+    # Table header.
+    print(
+        "PATCH_ID                        | SKILL       | VERDICT | MEAN_DELTA | #FB | SUMMARY"
+    )
+    print("-" * 90)
+    for r in records:
+        verdict = r.eval_gate_score.get("verdict", "?") if r.eval_gate_score else "?"
+        mean_delta = r.eval_gate_score.get("mean_delta", "?") if r.eval_gate_score else "?"
+        patch_id_short = r.patch_id[:30]
+        summary_short = (r.llm_rationale or "")[:40]
+        print(
+            f"{patch_id_short:<30} | {r.skill_id:<11} | {verdict:<7} | "
+            f"{str(mean_delta):<10} | {len(r.feedback_chain):<2} | {summary_short}"
+        )
+    return 0
+
+
+def _cmd_show_patch(args) -> int:
+    """``hermes feedback show-patch <patch_id>`` — EVOL-03.
+
+    Searches pending, applied, and rejected queues; prints full metadata +
+    the unified diff in a fenced block.
+    """
+    from agent.evolution import read_queue
+
+    evolution_dir = _resolve_evolution_dir()
+    match = None
+    for status in ("pending", "applied", "rejected"):
+        records = read_queue(evolution_dir=evolution_dir, status=status)
+        match = next((r for r in records if r.patch_id == args.patch_id), None)
+        if match:
+            break
+
+    if not match:
+        print(
+            f"patch {args.patch_id} not found in any queue file",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Patch: {match.patch_id}")
+    print(f"Skill: {match.skill_id}")
+    print(f"Insight: {match.insight_id}")
+    print(f"Status: {match.status}")
+    print(f"Feedback chain: {match.feedback_chain}")
+    print(f"Eval: {match.eval_gate_score}")
+    print()
+    print("Rationale:")
+    print(match.llm_rationale or "(none)")
+    print()
+    print("Unified diff:")
+    print("```diff")
+    print(match.unified_diff)
+    print("```")
+    return 0
+
+
+def _cmd_reject(args) -> int:
+    """``hermes feedback reject <patch_id> <reason>`` — EVOL-03.
+
+    Moves a pending patch to rejected.jsonl with the given reason.
+    """
+    from agent.evolution import move_patch
+
+    evolution_dir = _resolve_evolution_dir()
+    try:
+        updated = move_patch(
+            patch_id=args.patch_id,
+            target_status="rejected",
+            evolution_dir=evolution_dir,
+            reason=args.reason,
+        )
+    except KeyError as exc:
+        print(f"patch not found: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"rejected {updated.patch_id}: {args.reason}")
+    return 0
+
+
+def _cmd_approve(args) -> int:
+    """``hermes feedback approve <patch_id> [--yes]`` — EVOL-04 + EVOL-05.
+
+    STUB (Task 1) — full implementation lands in Task 2. Per Plan-checker
+    Warning 2/3, this stub MUST fail explicitly with a non-zero exit so
+    that if execution interrupts between Task 1 and Task 2 the operator
+    cannot accidentally treat approve as functional.
+    """
+    print(
+        "approve: not yet implemented — see Task 2 (EVOL-04 non-bypassable "
+        "human-in-loop apply transaction)",
+        file=sys.stderr,
+    )
+    return 2
+
+
+def _cmd_rollback(args) -> int:
+    """``hermes feedback rollback <commit_sha> [--yes]`` — EVOL-05.
+
+    STUB (Task 1) — full implementation lands in Task 2. Per Plan-checker
+    Warning 2, this stub MUST fail explicitly.
+    """
+    print(
+        "rollback: not yet implemented — see Task 2 (EVOL-05 git revert)",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def cli_main(argv=None) -> int:
