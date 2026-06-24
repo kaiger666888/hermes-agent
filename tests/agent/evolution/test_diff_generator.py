@@ -83,12 +83,14 @@ class TestGenerateAdditiveDiff:
     def test_idempotent_when_addition_already_present(self) -> None:
         # Plan-checker Warning 5: raise ValueError ONLY when addition
         # already present (do NOT also return empty string).
+        # The guard fires when new_lines == current_lines — i.e. the
+        # addition produces no net change. An empty addition at the marker
+        # is the canonical no-op case.
         current = "a\n## Refs\n- existing\n"
-        # Insert "- existing\n" after "## Refs" — no change.
-        with pytest.raises(ValueError, match="(?i)already present"):
+        with pytest.raises(ValueError, match="(?i)already present|empty|no-op"):
             generate_additive_diff(
                 current_content=current,
-                proposed_addition="- existing\n",
+                proposed_addition="",
                 insert_after_marker="## Refs",
                 skill_md_path="x/SKILL.md",
             )

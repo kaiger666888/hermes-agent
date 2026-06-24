@@ -15,7 +15,6 @@ from pydantic import ValidationError
 
 from agent.evolution.queue import (
     FAILED_GATE_FILENAME,
-    PATCH_STATUSES,
     PROTECTED_REFS,
     PatchRecord,
     append_failed_gate,
@@ -56,9 +55,20 @@ class TestPatchRecordSchema:
         assert rec.feedback_chain == ["fb_1", "fb_2"]
 
     def test_rejects_invalid_status(self) -> None:
-        rec = _make_patch_record()
+        # Construct directly — Pydantic v2 model_copy(update=...) does
+        # not re-run validators by default.
         with pytest.raises(ValidationError):
-            rec.model_copy(update={"status": "bogus"})
+            PatchRecord(
+                patch_id="x",
+                skill_id="test_skill",
+                insight_id="x",
+                unified_diff="diff",
+                feedback_chain=["fb_1"],
+                llm_rationale="r",
+                eval_gate_score={},
+                status="bogus",
+                ts_queued="2026-06-24T10:00:00+00:00",
+            )
 
     def test_protected_refs_tuple_is_canonical(self) -> None:
         # SC-6: the 5 v4/v5 protected refs MUST be listed.
@@ -225,8 +235,10 @@ class TestAppendFailedGate:
         evo_dir = tmp_path / "evolution"
         evo_dir.mkdir()
         append_failed_gate({"patch_id": "fp1", "skill_id": "x"}, evo_dir)
-        # read_queue should never surface failed_gate records.
-        for status in PATCH_STATUSES:
+        # read_queue should never surface failed_gate records — iterate
+        # only over the statuses read_queue accepts (failed_gate is NOT
+        # a read_queue-valid status; that's the point).
+        for status in ("pending", "applied", "rejected"):
             records = read_queue(evolution_dir=evo_dir, status=status)
             assert all(r.patch_id != "fp1" for r in records), \
                 f"failed_gate record leaked into status={status}"
