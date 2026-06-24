@@ -50,7 +50,9 @@
   5. Every feedback record carries `output_snapshot` with the original LLM output sha256 + prompt + model + params metadata — enough to reproduce and dedupe later
 **Scope note:** This is the must-have MVP. The exact kais-aigc接入方式 (file/HTTP/webhook) is a plan-phase decision, not a roadmap decision. The phase MUST ship a working ingest path; the choice of transport is not allowed to block the phase.
 **Hermes-core touch:** Yes — new feedback-ingestion entrypoints / CLI subcommands / watchers under `~/.hermes/skills/.feedback/` ingest path. Not a pure-skill phase.
-**Plans:** TBD
+**Plans:** 2 plans
+- [ ] 28-01-PLAN.md — Feedback schema (FeedbackRecord + OutputSnapshot + validators) + snapshot capture + atomic write path (foundation)
+- [ ] 28-02-PLAN.md — /feedback slash command + hermes feedback {import,watch,submit} CLI + kais file watcher + JSONL batch import (three ingest sources)
 
 ### Phase 29: Feedback Store
 
@@ -211,7 +213,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. Feedback Ingestion MVP | 0/? | Not started | - |
+| 28. Feedback Ingestion MVP | 0/2 | Planning complete | - |
 | 29. Feedback Store | 0/? | Not started | - |
 | 30. Eval Gate Reuse | 0/? | Not started | - |
 | 31. Knowledge Evolution Pipeline | 0/? | Not started | - |
