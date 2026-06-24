@@ -762,18 +762,19 @@ class TestGeneratePatchId:
         patch = tmp_path / "p.patch"
         patch.write_text("dummy", encoding="utf-8")
         patch_id = gate.generate_patch_id("screenplay", patch)
-        # Format: <skill>_<ts_unix>_<sha256[:8]>
+        # Format: <skill>_<ts_unix>_<sha256[:16]> (WR-04: 16 hex chars
+        # for collision resistance; was 8 before).
         parts = patch_id.split("_")
         assert parts[0] == "screenplay"
         assert len(parts) == 3
         assert parts[1].isdigit(), f"timestamp not numeric: {parts[1]}"
-        assert len(parts[2]) == 8, f"sha prefix not 8 chars: {parts[2]}"
+        assert len(parts[2]) == 16, f"sha prefix not 16 chars: {parts[2]}"
 
     def test_sha_matches_patch_bytes(self, tmp_path: Path) -> None:
         patch = tmp_path / "p.patch"
         patch.write_text("content", encoding="utf-8")
         patch_id = gate.generate_patch_id("drawer", patch)
-        expected_sha = hashlib.sha256(b"content").hexdigest()[:8]
+        expected_sha = hashlib.sha256(b"content").hexdigest()[:16]
         assert patch_id.endswith(expected_sha)
 
 

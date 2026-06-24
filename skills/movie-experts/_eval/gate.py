@@ -500,14 +500,20 @@ def decide_verdict(
 
 
 def generate_patch_id(skill_id: str, patch_path: Path) -> str:
-    """Return ``f"{skill_id}_{ts_unix}_{sha256[:8]}"`` per CONTEXT.md discretion.
+    """Return ``f"{skill_id}_{ts_unix}_{sha256[:16]}"`` per CONTEXT.md discretion.
 
     The timestamp makes patch IDs sortable + unique across runs; the sha
     prefix ties the ID to the exact patch bytes (traceability for P32
     audit trail).
+
+    WR-04 fix: previously sha was truncated to 8 hex chars, which left
+    only 32 bits of content addressing. Two runs of DIFFERENT patches
+    within the same second could also collide on ts_unix. Using 16 hex
+    chars (64 bits) makes the content-address portion collision-resistant
+    for any realistic batch-operator or CI loop.
     """
     ts_unix = int(datetime.now(timezone.utc).timestamp())
-    sha = hashlib.sha256(patch_path.read_bytes()).hexdigest()[:8]
+    sha = hashlib.sha256(patch_path.read_bytes()).hexdigest()[:16]
     return f"{skill_id}_{ts_unix}_{sha}"
 
 
