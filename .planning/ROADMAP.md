@@ -30,7 +30,7 @@
 - [x] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引 — **shipped 2026-06-24 (STORE-01..04 satisfied, 150/151 feedback-subsystem tests green)**
 - [x] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection (completed 2026-06-24)
 - [x] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback — **COMPLETE 2026-06-24**
-- [ ] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径
+- [x] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径 — **COMPLETE 2026-06-25 (CURATE-01..05 + EVOL-02 satisfied, 328 combined green, Option A preserves P31 TestNonBypassableHumanInLoop UNCHANGED)**
 - [ ] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out
 
 ---
@@ -116,9 +116,9 @@
   5. Agent-created skills can take a semi-automatic path: when eval gate passes AND confidence score ≥ threshold (default 0.8), a patch may auto-apply (still writes audit log); this behavior is globally toggleable via config (default follows PROJECT.md MVP boundary — bundled NEVER auto, agent-created conditional)
   6. **Existing Curator behavior preserved:** The pre-v6 deterministic inactivity transitions + consolidation pass continue to work unchanged for agent-created skills — the bundled-skill proposal capability is ADDITIVE, not a replacement (regression test against pre-v6 curator behavior required)
 **Hermes-core touch:** Yes — direct modification of `agent/curator.py` (extending `run_curator_review` + new proposal path) + implementation of the EVOL-02 diff generator. This is the unavoidable scope expansion flagged in PROJECT.md.
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 - [x] 32-01-PLAN.md — Engine layer: SC-6 regression test (FIRST) + agent/curator_audit.py (sha256-chained JSONL) + agent/evolution/evol02_generator.py (bilingual multi-instruction diff) + additive _feedback_scan_phase wired into run_curator_review — covers CURATE-01/02/03 + EVOL-02 (55 tests, 4 commits, 246 curator+evolution green, P31 invariant preserved, runtime isolation 0, FOUND-08 byte-intact)
-- [ ] 32-02-PLAN.md — CLI layer: hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve (Architectural Constraint #1 Option A) + audit-log --verify — covers CURATE-04/05
+- [x] 32-02-PLAN.md — CLI layer: hermes_cli/curator.py register_cli extended with 5 new subparsers (queue / approve / reject / audit-log / auto-apply-eligible), _cmd_approve in hermes_cli/feedback.py extended to call append_audit(action="apply") on success (single source of truth per RESEARCH A4), CURATE-05 Option A auto-apply (delegates to _cmd_approve — apply_patch_transaction still called only from _cmd_approve) — covers CURATE-04/05 — **shipped 2026-06-25 (2 commits, 34 new tests green, P31 TestNonBypassableHumanInLoop passes UNCHANGED — zero test amendment, apply_patch_transaction Call nodes in hermes_cli/curator.py = 0, runtime isolation 0, FOUND-08 byte-intact) — Phase 32 CLOSED**
 
 ### Phase 33: Observability + Integration Close-out
 

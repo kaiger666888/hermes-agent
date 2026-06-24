@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
 status: executing
-last_updated: "2026-06-25T00:07:24.000Z"
-last_activity: 2026-06-25 -- Phase 32 Plan 01 COMPLETE (engine layer shipped)
+last_updated: "2026-06-25T00:17:05.000Z"
+last_activity: 2026-06-25 -- Phase 32 COMPLETE (Plan 02 CLI + CURATE-05 auto-apply shipped; Option A preserves P31 invariant)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 92
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 32
-Plan: 01 COMPLETE (engine layer shipped — audit + EVOL-02 + feedback-scan)
-Status: Ready to execute Plan 02 (CLI layer)
-Last activity: 2026-06-25 -- Phase 32 Plan 01 COMPLETE
+Phase: 32 COMPLETE (Plan 01 engine + Plan 02 CLI/CURATE-05 shipped)
+Plan: 02 COMPLETE (CLI layer shipped — 5 new curator subcommands + CURATE-05 Option A auto-apply)
+Status: Phase 33 (Observability + Close-out) is next — MUST run last
+Last activity: 2026-06-25 -- Phase 32 Plan 02 COMPLETE
 
 ### Progress
 
@@ -48,7 +48,7 @@ v6.0 Self-Evolution & Feedback Loop:
   Phase 29 (Feedback Store)                [██████████] 100% Complete (Plan 01 FeedbackStore foundation 49 tests; Plan 02 STORE-04 dedup + delegation + rebuild-index CLI — 26 new tests, 150/151 feedback-subsystem green, Phase 29 closed)
   Phase 30 (Eval Gate Reuse)               [██████████] 100% Complete (Plan 01 parse_judge_scores + gate.py orchestrator GATE-02/04 — 43 tests; Plan 02 paired-t significance + rebuild_baseline + multi-skill guard GATE-01/03 — 30 tests; 100/101 eval tests green, FOUND-08 + runtime isolation + scipy-free verified; Phase 30 CLOSED)
   Phase 31 (Knowledge Evolution Pipeline)  [██████████] 100% Complete (Plan 01 engine layer — 60 tests; Plan 02 CLI layer — 27 tests; 87/87 green, EVOL-04 non-bypassable human-in-loop structurally enforced via TestNonBypassableHumanInLoop ast-walk, runtime isolation 0 matches, FOUND-08 byte-intact, RESEARCH 3/3 RESOLVED; Phase 31 CLOSED)
-  Phase 32 (Curator Upgrade + Audit)       [█████░░░░░] 50% Plan 01 COMPLETE (engine: audit + EVOL-02 + feedback-scan — 55 tests, 4 commits, P31 invariant preserved, runtime isolation 0)
+  Phase 32 (Curator Upgrade + Audit)       [██████████] 100% Complete (Plan 01 engine — 55 tests, 4 commits; Plan 02 CLI + CURATE-05 — 34 tests, 2 commits; 328 combined green, Option A preserves P31 TestNonBypassableHumanInLoop UNCHANGED, runtime isolation 0, FOUND-08 byte-intact; Phase 32 CLOSED)
   Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
 ```
 
@@ -60,7 +60,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | 29 | Feedback Store | **Complete** | Shipped 2026-06-24. STORE-01..04 satisfied. Plan 01 FeedbackStore foundation (49 tests, 2 Rule 1 bugs auto-fixed). Plan 02 STORE-04 sha256 dedup/correction branch + Phase 28 write_feedback_record delegation + rebuild_index method + hermes feedback rebuild-index CLI (26 new tests across TestDedup/TestCorrection/TestRebuildIndex/TestDelegation/TestRebuildIndexCLI; 150/151 feedback-subsystem green, 1 documented skip; 2 deviations auto-fixed). Phase 29 closed. |
 | 30 | Eval Gate Reuse | **Complete** | Shipped 2026-06-24. GATE-01..04 all covered. Plan 01: parse_judge_scores() + composite_score() in runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config + CLI) — 43 new tests. Plan 02: paired_t_stats() + is_significant() via stdlib statistics + hardcoded _CRITICAL_T_05_TWO_TAILED t-table (GATE-03, no scipy) + rebuild_baseline() with scores.json provenance cache + load_cached_baseline() with non-blocking staleness warning + detect_multi_skill_patch() with exit-3 early-exit guard + --rebuild-baseline/--multi-skill CLI flags — 30 new tests. 100/101 eval tests green (1 pre-existing openai-missing skip), FOUND-08 byte-intact, runtime isolation 0, scipy-free. Phase 30 CLOSED. |
 | 31 | Knowledge Evolution Pipeline | **Complete** | Shipped 2026-06-24. EVOL-01/03/04/05 fully covered. Plan 01: agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — 60 new tests, 7 commits. Plan 02: hermes_cli/feedback.py extended with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + TestNonBypassableHumanInLoop ast-walk structural invariant (only _cmd_approve calls apply_patch_transaction) — 27 new tests, 3 commits. 87/87 combined green, runtime isolation 0 matches, FOUND-08 byte-intact (0 SKILL.md changes), RESEARCH 3/3 Open Questions RESOLVED, VALIDATION nyquist_compliant=true. Phase 31 CLOSED. |
-| 32 | Curator Upgrade + Audit | **Plan 01 done** | Plan 01 shipped 2026-06-25. Engine layer: agent/curator_audit.py (sha256-chained JSONL, append/verify/read + 2 fixtures), agent/evolution/evol02_generator.py (multi-instruction bilingual diff generator extending P31 placeholder), agent/curator.py additive _feedback_scan_phase (lazy imports, try/except isolation, bundled-never-auto), PatchRecord additive extension (auto_apply_eligible + confidence_score). 55 new tests, 4 commits. 246 curator+evolution green, P31 TestNonBypassableHumanInLoop green, runtime isolation 0 module-level agent.evolution imports, FOUND-08 byte-intact. Open Q #1 RESOLVED (distinct UTC days as session proxy). Plan 02 (CLI layer: queue/approve/reject/audit-log + CURATE-05 auto-apply routing) next. |
+| 32 | Curator Upgrade + Audit | **Complete** | Shipped 2026-06-25. CURATE-01..05 + EVOL-02 fully covered. Plan 01: agent/curator_audit.py (sha256-chained JSONL append/verify/read + 2 fixtures), agent/evolution/evol02_generator.py (multi-instruction bilingual diff generator extending P31 placeholder), agent/curator.py additive _feedback_scan_phase (lazy imports, try/except isolation, bundled-never-auto), PatchRecord additive extension (auto_apply_eligible + confidence_score) — 55 new tests, 4 commits. Plan 02: hermes_cli/curator.py register_cli extended with 5 new subparsers (queue / approve / reject / audit-log / auto-apply-eligible), _cmd_approve in hermes_cli/feedback.py extended to call append_audit(action="apply") on success (single source of truth per RESEARCH A4), CURATE-05 Option A auto-apply (delegates to _cmd_approve — apply_patch_transaction still called only from _cmd_approve) — 34 new tests, 2 commits. 328 combined green (55+34 new + 27 P31 CLI + 267 engine regression - overlap), P31 TestNonBypassableHumanInLoop passes UNCHANGED (Option A — zero test amendment), apply_patch_transaction Call nodes in hermes_cli/curator.py = 0, runtime isolation 0 module-level agent.evolution imports, FOUND-08 byte-intact. Phase 32 CLOSED. |
 | 33 | Observability + Integration Close-out | Not started | Covers OBS-01..03 + integration deliverables. MUST run last. Writes `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + README + glossary. Mirrors v5.0 Phase 27 pattern. |
 
 ### Critical Path

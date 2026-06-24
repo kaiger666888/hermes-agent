@@ -45,8 +45,8 @@
 - [x] **CURATE-01**: 扩展 `agent/curator.py` 作用域 —— 从「只 archive agent-created skill」扩展为「能对 bundled movie-expert skill propose patch」(沿用 human-in-loop gate)
 - [x] **CURATE-02**: Curator 周期扫描累积反馈,当某 skill 负反馈达阈值(可配置,默认 ≥3 条 `needs_work`/`bad` 且跨 ≥2 个 session)自动触发 EVOL 流程
 - [x] **CURATE-03**: Patch audit log —— `~/.hermes/skills/.audit/` 记录每次 patch 的 operator / 时间 / 关联反馈 IDs / eval score / commit sha,可追溯
-- [ ] **CURATE-04**: Operator 命令 `hermes curator queue` —— 列出待审批 patches;`hermes curator approve <id>` / `hermes curator reject <id> <reason>` 完成审批
-- [ ] **CURATE-05**: Agent-created skill 半自动路径 —— eval gate 通过 + confidence score ≥ 阈值(默认 0.8)时可自动 apply(仍写 audit log),operator 可全局关闭此行为
+- [x] **CURATE-04**: Operator 命令 `hermes curator queue` —— 列出待审批 patches;`hermes curator approve <id>` / `hermes curator reject <id> <reason>` 完成审批
+- [x] **CURATE-05**: Agent-created skill 半自动路径 —— eval gate 通过 + confidence score ≥ 阈值(默认 0.8)时可自动 apply(仍写 audit log),operator 可全局关闭此行为
 
 ### Observability (OBS)
 
