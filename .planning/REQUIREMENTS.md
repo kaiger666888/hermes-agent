@@ -27,11 +27,11 @@
 
 ### Knowledge Evolution (EVOL)
 
-- [ ] **EVOL-01**: 反馈→可执行知识点抽取 —— LLM-based aggregation,跨多条反馈识别共性"应该改进什么",输出 candidate insights(结构化 JSON,带证据链指向具体反馈 IDs)
+- [x] **EVOL-01**: 反馈→可执行知识点抽取 —— LLM-based aggregation,跨多条反馈识别共性"应该改进什么",输出 candidate insights(结构化 JSON,带证据链指向具体反馈 IDs)
 - [ ] **EVOL-02**: 知识点→候选 patch 生成 —— 针对 SKILL.md 或 `references/*.md`,生成 unified diff(非整文件改写),保留原文风格与双语结构
-- [ ] **EVOL-03**: Patch review queue —— operator 可视化查看 pending patches,每条带 source 反馈链 + LLM 抽取理由 + 影响 skill 列表
-- [ ] **EVOL-04**: Human-in-loop approve workflow —— **所有 bundled movie-expert skill 的 patch 必须经 operator 审批才能 apply**(agent-created skill 可走半自动,见 CURATE-05)
-- [ ] **EVOL-05**: Patch apply + rollback —— apply 前自动 git-commit(带 feedback IDs + eval score 在 commit message);rollback 子命令可回滚到任意历史版本
+- [x] **EVOL-03**: Patch review queue —— operator 可视化查看 pending patches,每条带 source 反馈链 + LLM 抽取理由 + 影响 skill 列表
+- [x] **EVOL-04**: Human-in-loop approve workflow —— **所有 bundled movie-expert skill 的 patch 必须经 operator 审批才能 apply**(agent-created skill 可走半自动,见 CURATE-05)
+- [x] **EVOL-05**: Patch apply + rollback —— apply 前自动 git-commit(带 feedback IDs + eval score 在 commit message);rollback 子命令可回滚到任意历史版本
 
 ### Eval Gate (GATE) — 防退化
 

@@ -29,7 +29,7 @@
 - [x] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
 - [x] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引 — **shipped 2026-06-24 (STORE-01..04 satisfied, 150/151 feedback-subsystem tests green)**
 - [x] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection (completed 2026-06-24)
-- [ ] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback
+- [x] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback — **COMPLETE 2026-06-24**
 - [ ] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径
 - [ ] **Phase 33: Observability + Integration Close-out** - per-skill dashboard + cross-skill view + source breakdown + canonical architecture doc + skills-mapping.yaml v6 sign-offs + README/glossary close-out
 
@@ -101,7 +101,7 @@
 **Hermes-core touch:** Mixed — pipeline orchestration code is new (under `~/.hermes/skills/.feedback/` tooling or a new module), but the patches it produces target bundled SKILL.md / refs (additive only). The git-commit + rollback machinery touches repo state.
 **Plans:** 2 plans
 - [x] 31-01-PLAN.md — agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — covers EVOL-01/03/04/05 engine layer — **shipped 2026-06-24 (7 commits, 60 new tests green, FOUND-08 byte-intact + additive-only + runtime isolation verified)**
-- [ ] 31-02-PLAN.md — hermes_cli/feedback.py extension with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + isolation grep verification + non-bypassable human-in-loop structural test — covers EVOL-01/03/04/05 CLI layer
+- [x] 31-02-PLAN.md — hermes_cli/feedback.py extension with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + isolation grep verification + non-bypassable human-in-loop structural test — covers EVOL-01/03/04/05 CLI layer — **shipped 2026-06-24 (3 commits, 27 new tests green, TestNonBypassableHumanInLoop ast-walk verifies only _cmd_approve calls apply_patch_transaction, runtime isolation 0 matches, RESEARCH 3/3 Open Questions RESOLVED, VALIDATION nyquist_compliant=true) — Phase 31 CLOSED**
 
 ### Phase 32: Curator Upgrade + Audit
 
