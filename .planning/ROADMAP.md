@@ -27,7 +27,7 @@
 ## Phases
 
 - [x] **Phase 28: Feedback Ingestion MVP** - 多源反馈采集 (CLI / kais-aigc-platform / 手工) + 标准化 schema;核心功能担保落地
-- [ ] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引
+- [x] **Phase 29: Feedback Store** - `~/.hermes/skills/.feedback/` 持久化 + 时间衰减权重 + 去重 + 索引 — **shipped 2026-06-24 (STORE-01..04 satisfied, 150/151 feedback-subsystem tests green)**
 - [ ] **Phase 30: Eval Gate Reuse** - 扩展既有 `_eval/runner.py` 为 patch-vs-baseline gate + A/B 双盲 + regression detection
 - [ ] **Phase 31: Knowledge Evolution Pipeline** - 反馈→候选知识点→候选 patch→review queue→human-in-loop approve→apply/rollback
 - [ ] **Phase 32: Curator Upgrade + Audit** - 扩展 `agent/curator.py` 作用域到 bundled skill + patch audit log + operator CLI + 半自动路径
@@ -67,7 +67,7 @@
 **Hermes-core touch:** Yes — new persistence layer under `~/.hermes/skills/.feedback/`. Pure data plumbing, no bundled-SKILL.md changes.
 **Plans:** 2 plans
 - [x] 29-01-PLAN.md — FeedbackStore class (record_feedback + query + summary + get_record) + linear time-decay (STORE-03) + bucket jsonl layout (STORE-01) + lazy migration from Phase 28 incoming/ + index.json schema (STORE-02 foundation) — **shipped 2026-06-24 (49 tests green, 2 Rule 1 bugs auto-fixed)**
-- [ ] 29-02-PLAN.md — Phase 28 write_feedback_record delegation + sha256 dedup/correction branch (STORE-04) + hermes feedback rebuild-index CLI
+- [x] 29-02-PLAN.md — Phase 28 write_feedback_record delegation + sha256 dedup/correction branch (STORE-04) + hermes feedback rebuild-index CLI — **shipped 2026-06-24 (26 new tests green: 16 store unit + 10 integration; 150/151 feedback-subsystem tests green; 2 deviations auto-fixed; Phase 29 COMPLETE)**
 
 ### Phase 30: Eval Gate Reuse
 

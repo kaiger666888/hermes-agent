@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
 status: executing
-last_updated: "2026-06-24T09:03:00Z"
-last_activity: 2026-06-24 -- Phase 29 Plan 01 complete (FeedbackStore foundation)
+last_updated: "2026-06-24T11:28:31Z"
+last_activity: 2026-06-24 -- Phase 29 complete (FeedbackStore + STORE-04 dedup + delegation)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 25
+  completed_plans: 4
+  percent: 33
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 29
-Plan: 29-02 next (write_feedback_record delegation + STORE-04 dedup + rebuild-index CLI)
-Status: Plan 29-01 complete (FeedbackStore foundation shipped)
-Last activity: 2026-06-24 -- Phase 29 Plan 01 complete (FeedbackStore foundation)
+Phase: 29 complete; Phase 30 + 31 next (parallel-eligible wave)
+Plan: 29-02 complete (Phase 29 done — all 4 STORE reqs satisfied)
+Status: Phase 29 closed. Next: plan P30 or P31 (parallel-eligible, disjoint files).
+Last activity: 2026-06-24 -- Phase 29 complete (FeedbackStore + STORE-04 dedup + delegation)
 
 ### Progress
 
@@ -45,9 +45,9 @@ v5.0 kais-movie-agent V8.6 Adaptation:
 
 v6.0 Self-Evolution & Feedback Loop:
   Phase 28 (Feedback Ingestion MVP)        [██████████] 100% Complete (Plan 01 schema+snapshot+write; Plan 02 CLI+watcher+JSONL — 76 tests green, FOUND-08 verified)
-  Phase 29 (Feedback Store)                [█████░░░░░] 50% Plan 01 shipped (FeedbackStore + decay + index + migration — 49 tests green, 2 Rule 1 bugs auto-fixed). Plan 02 next (write_feedback_record delegation + STORE-04 + rebuild-index CLI).
-  Phase 30 (Eval Gate Reuse)               [          ] 0% Not started — parallel-eligible with P31 after P29
-  Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 after P29
+  Phase 29 (Feedback Store)                [██████████] 100% Complete (Plan 01 FeedbackStore foundation 49 tests; Plan 02 STORE-04 dedup + delegation + rebuild-index CLI — 26 new tests, 150/151 feedback-subsystem green, Phase 29 closed)
+  Phase 30 (Eval Gate Reuse)               [          ] 0% Not started — parallel-eligible with P31 next
+  Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 next
   Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — depends on P29 + P31
   Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
 ```
@@ -57,7 +57,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 28 | Feedback Ingestion MVP | **Complete** | Shipped 2026-06-24. INGEST-01..05 covered. Plan 01 (schema + snapshot + atomic write — 45 tests) + Plan 02 (/feedback slash cmd + hermes feedback {import,watch,submit} + kais file watcher + JSONL atomic batch import — 31 new tests). 76/76 tests green, Ruff clean, FOUND-08 preserved, zero new deps. |
-| 29 | Feedback Store | In Progress (Plan 01 complete) | Plan 01 shipped 2026-06-24: FeedbackStore class with record_feedback/query/summary/get_record + compute_weight + index.json schema + lazy migration (49 tests green, 2 Rule 1 bugs auto-fixed). Plan 02 next: write_feedback_record delegation + STORE-04 dedup + rebuild-index CLI. |
+| 29 | Feedback Store | **Complete** | Shipped 2026-06-24. STORE-01..04 satisfied. Plan 01 FeedbackStore foundation (49 tests, 2 Rule 1 bugs auto-fixed). Plan 02 STORE-04 sha256 dedup/correction branch + Phase 28 write_feedback_record delegation + rebuild_index method + hermes feedback rebuild-index CLI (26 new tests across TestDedup/TestCorrection/TestRebuildIndex/TestDelegation/TestRebuildIndexCLI; 150/151 feedback-subsystem green, 1 documented skip; 2 deviations auto-fixed). Phase 29 closed. |
 | 30 | Eval Gate Reuse | Not started | Covers GATE-01..04. Parallel-eligible with P31 (disjoint files). Extends `_eval/runner.py` (offline dev tooling, no runtime touch). |
 | 31 | Knowledge Evolution Pipeline | Not started | Covers EVOL-01, EVOL-03, EVOL-04, EVOL-05. Parallel-eligible with P30. Builds review queue + approve/apply mechanics. |
 | 32 | Curator Upgrade + Audit | Not started | Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. |
@@ -94,12 +94,12 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 ## Performance Metrics (v6.0)
 
 - v6.0 phases total: 6 (Phases 28-33, continuing from v5.0 phase 27)
-- v6.0 phases completed: 1 (Phase 28 — Feedback Ingestion MVP, shipped 2026-06-24)
+- v6.0 phases completed: 2 (Phase 28 — Feedback Ingestion MVP; Phase 29 — Feedback Store)
 - v6.0 requirements total: 26
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
-- v6.0 requirements completed: 8 (INGEST-01..05 from Phase 28 + STORE-01..03 from Phase 29 Plan 01)
-- v6.0 plans completed: 3 / 4 (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01)
+- v6.0 requirements completed: 12 (INGEST-01..05 from Phase 28 + STORE-01..04 from Phase 29 + ROADMAP-LEVEL annotations to follow)
+- v6.0 plans completed: 4 / 4 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 — Phases 30-33 not yet planned)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -137,6 +137,10 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | Plan 01 ships record_feedback WITHOUT STORE-04 dedup branch | Plan scope split per plan <objective>: Plan 01 = storage foundation; Plan 02 = dedup + wrapper delegation. TODO comment in source marks the exact insertion point for the sha256 dedup check. | Applied 2026-06-24 — P29 Plan 01 record_feedback unconditional write |
 | Index bucket count filters by verdict within shared source file | The bucket FILE is keyed by (skill_id, source) but the index bucket KEY is keyed by (skill_id, source, verdict). Auto-fixed Rule 1: filter to verdict_records = [r for r in all_records if r.verdict == record.verdict] before counting. | Applied 2026-06-24 — P29 Plan 01 record_feedback (Rule 1 bug fix) |
 | __init__ order: _load_or_init_index BEFORE _maybe_migrate_phase28_incoming | Migration calls record_feedback which needs self._index. Reordered so index loads first. | Applied 2026-06-24 — P29 Plan 01 FeedbackStore.__init__ (Rule 1 bug fix) |
+| Supersession tracked via _superseded_record_ids set (record_id-keyed) | by_sha256 is sha-keyed (one active entry per sha), but a sha can be superseded multiple times (chain of 3+ corrections). Set membership handles chains cleanly + supports query() filtering by record_id. | Applied 2026-06-24 — P29 Plan 02 FeedbackStore.__init__ + _load_sha256_index |
+| Older bucket weighted_count recomputed on correction | record_feedback only recomputes the newer verdict's bucket; without _recompute_single_bucket(older_bucket_key), the older verdict bucket retains stale weight>0 after its only record is superseded. Auto-fixed Rule 1. | Applied 2026-06-24 — P29 Plan 02 _handle_dedup (Rule 1 bug fix) |
+| Phase 28 test_rejects_when_hermes_home_unwritable SKIPPED on delegation path | Phase 29 delegation triggers hermes_cli.config.ensure_hermes_home which resets skills/ mode before the chmod-0500 trick can bite. Invariant tested directly on FeedbackStore in TestFeedbackStoreInit instead. | Applied 2026-06-24 — P29 Plan 02 tests/agent/test_feedback_ingest.py (Rule 3 fix) |
+| write_feedback_record return value semantics: bucket path (not per-record path) | Phase 29 delegation returns buckets/<skill_id>/<source>.jsonl, not Phase 28 per-record incoming/*.json. Safe change — callers use path for display only. | Applied 2026-06-24 — P29 Plan 02 agent/feedback_ingest.py |
 
 ### Decisions (carried forward — relevant to v6.0)
 
@@ -191,16 +195,17 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 5. `skills/movie-experts/_eval/runner.py` (existing MT-Bench position-swap harness) — Phase 30 reuses this as eval gate
 6. `.planning/research/v2-pipeline-design/skills-mapping.yaml` — canonical expert mapping baseline (v3.0 + v4.0 + v5.0 signoffs; v6 adds `v6_ref_signoffs:` in P33)
 
-**Next action:** `/gsd:plan-phase 28` to plan Feedback Ingestion MVP (covers INGEST-01..05, ships core functional guarantee, unblocks P29 + P30 + P31).
+**Next action:** `/gsd:plan-phase 30` OR `/gsd:plan-phase 31` to plan the parallel-eligible wave (P30 = Eval Gate Reuse, P31 = Knowledge Evolution Pipeline). Both are unblocked now that Phase 29 is complete.
 
-**Resume from interrupted phase:** Read `.planning/phases/28-feedback-ingestion-mvp/` once it exists (created by `/gsd:plan-phase 28`).
+**Resume from interrupted phase:** Read `.planning/phases/29-feedback-store/29-02-SUMMARY.md` for the latest state.
 
 ---
 
-*Last updated: 2026-06-24 — v6.0 Self-Evolution & Feedback Loop roadmap + state initialized (6 phases continuing from v5.0 Phase 27, 26/26 reqs mapped, Phase 28 ready for planning). Scope expansion from v5 accepted: touches Hermes core (agent/curator.py extension + feedback ingestion infra).*
+*Last updated: 2026-06-24 — Phase 29 complete (FeedbackStore + STORE-04 dedup + Phase 28 delegation + rebuild-index CLI). 12/26 v6.0 requirements satisfied. Next: parallel-eligible wave P30+P31.*
 
 ## Operator Next Steps
 
-- Plan Phase 28: `/gsd:plan-phase 28` (Feedback Ingestion MVP — covers INGEST-01..05, must-have)
+- Plan Phase 30: `/gsd:plan-phase 30` (Eval Gate Reuse — covers GATE-01..04; extends `_eval/runner.py`, parallel-eligible with P31)
+- Plan Phase 31: `/gsd:plan-phase 31` (Knowledge Evolution Pipeline — covers EVOL-01/03/04/05; parallel-eligible with P30)
 - Review ROADMAP.md critical path to confirm Phase 30/31 parallel wave is acceptable
 - Confirm EVOL-02 → Phase 32 mapping (Curator invokes diff generator) is acceptable before planning P31/P32
