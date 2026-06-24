@@ -288,11 +288,38 @@ def _scan_once(
                 try:
                     Path(entry.path).unlink()
                 except OSError as unlink_exc:
+                    # WR-01: post-ingest unlink failed (file locked, permission
+                    # revoked, NFS hiccup). The record WAS written to incoming/
+                    # and the bytes ARE in processed/, but the source file is
+                    # still in inbox/. Without intervention the next scan
+                    # silently skips it (seen cache hit), confusing operators
+                    # who expect "files in inbox/ are pending".
+                    #
+                    # Move the orphan to errors/ with a .unlink-failed suffix
+                    # so it is visible to the operator and not re-ingested
+                    # (the record already exists in incoming/). Best-effort:
+                    # if even the rename fails, log loudly — the data is safe.
                     logger.warning(
-                        "kais inbox unlink-after-copy failed for %s: %s",
+                        "kais inbox post-ingest unlink failed for %s: %s "
+                        "(record was written to incoming/ — relocating "
+                        "source to errors/ for manual cleanup)",
                         entry.name,
                         unlink_exc,
                     )
+                    orphan_target = errors_dir / (
+                        Path(entry.name).name + ".unlink-failed"
+                    )
+                    try:
+                        Path(entry.path).rename(orphan_target)
+                    except OSError as rename_exc:
+                        logger.warning(
+                            "kais inbox could not relocate orphaned source "
+                            "%s to errors/ (%s) — file remains in inbox/ "
+                            "and will be skipped on subsequent scans "
+                            "(seen cache); manual cleanup required",
+                            entry.name,
+                            rename_exc,
+                        )
         except (json.JSONDecodeError, ValidationError) as exc:
             logger.warning(
                 "kais inbox ingest failed for %s: %s", entry.name, exc
