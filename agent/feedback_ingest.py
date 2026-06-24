@@ -416,14 +416,31 @@ def _scan_once(
 
 
 def _move_to_errors(src_path: str, errors_dir: Path) -> None:
-    """Move a malformed file to the errors directory (sanitized name)."""
+    """Move a malformed file to the errors directory (sanitized name).
+
+    WR-02: disambiguates the destination filename on collision so two
+    malformed kais-aigc exports with the same basename (e.g. both named
+    ``feedback.json``) do not silently overwrite each other in
+    ``errors/``. Appends ``.{N}`` before the suffix until the name is free.
+    """
     src = Path(src_path)
     safe_name = Path(src.name).name
     target = errors_dir / safe_name
+    # WR-02: never overwrite an existing errors/ file — find a free name.
+    if target.exists():
+        stem, suffix = Path(safe_name).stem, Path(safe_name).suffix
+        i = 1
+        while True:
+            candidate = errors_dir / f"{stem}.{i}{suffix}"
+            if not candidate.exists():
+                target = candidate
+                break
+            i += 1
     try:
         src.rename(target)
     except OSError:
-        # Best-effort: if rename fails (cross-fs, target exists), overwrite.
+        # Best-effort: if rename fails (cross-fs), copy + unlink. target
+        # was already disambiguated above so write_bytes will not overwrite.
         try:
             target.write_bytes(src.read_bytes())
             src.unlink(missing_ok=True)
