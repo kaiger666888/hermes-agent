@@ -30,6 +30,7 @@ Per RESEARCH.md:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -197,7 +198,7 @@ def _scan_once(
     inbox_dir: Path,
     processed_dir: Path,
     errors_dir: Path,
-    seen: dict[str, tuple[float, int]],
+    seen: dict[str, tuple[float, int, str]],
     pending: dict[str, int],
 ) -> int:
     """Scan the inbox once and ingest any newly-stable files.
@@ -226,8 +227,15 @@ def _scan_once(
         processed_dir: where successfully-ingested files are moved.
         errors_dir: where malformed / invalid files are moved (so the
             loop does not retry them forever).
-        seen: mapping ``name -> (mtime, size)`` for files already
-            processed or in stable-seen state (skip on subsequent scans).
+        seen: mapping ``name -> (mtime, size, sha256)`` for files already
+            processed or in stable-seen state. CR-03: the sha256 of file
+            contents is included in the cache key so a sub-second rewrite
+            with identical mtime+size but DIFFERENT content (e.g. a
+            kais-aigc exporter emitting the same filename with a revised
+            verdict of the same byte length) is still re-ingested.
+            Backward-compat: legacy 2-tuple values are treated as a cache
+            miss on the sha256 comparison (forcing a re-read + re-hash),
+            which is the safe direction.
         pending: mapping ``name -> last observed size`` for files whose
             write is still in progress (waiting for stability).
 
@@ -262,16 +270,57 @@ def _scan_once(
             )
             continue
         key = entry.name
-        current = (stat.st_mtime, stat.st_size)
-        if seen.get(key) == current:
-            continue  # already processed and unchanged
+        # CR-03: first-tier fast check on (mtime, size). If these don't
+        # match the cached values, the file definitely changed — proceed
+        # to stability check. If they DO match, we still must verify the
+        # content hash because a same-second rewrite with identical size
+        # but different content (revised verdict of same byte length)
+        # would otherwise be skipped. We defer the hash until after this
+        # fast reject so the common case (genuinely unchanged file) only
+        # pays a stat call, not a full read.
+        cached = seen.get(key)
+        if cached is not None and len(cached) == 3:
+            cached_mtime, cached_size, _cached_sha = cached
+            if cached_mtime == stat.st_mtime and cached_size == stat.st_size:
+                # mtime + size match — verify content to defeat the
+                # sub-second-same-size-rewrite attack (CR-03).
+                try:
+                    raw_bytes_for_hash = Path(entry.path).read_bytes()
+                except OSError as exc:
+                    logger.warning(
+                        "kais inbox re-hash read failed for %s: %s",
+                        entry.name,
+                        exc,
+                    )
+                    # Treat as unstable — leave in pending, retry next scan.
+                    pending[key] = stat.st_size
+                    continue
+                content_sha = hashlib.sha256(raw_bytes_for_hash).hexdigest()
+                if content_sha == _cached_sha:
+                    continue  # truly identical content — skip
+                # Content differs but mtime+size matched — fall through to
+                # re-ingestion. The stability check below uses pending[key]
+                # which still holds the old size; force it to the current
+                # size so the 2-poll gate doesn't block the re-ingest.
+                logger.info(
+                    "kais inbox %s: content changed with same mtime+size; "
+                    "re-ingesting",
+                    entry.name,
+                )
+            # else: mtime/size differ — proceed to normal stability check.
         # 2-poll stability check (Pitfall #2).
         if pending.get(key) != stat.st_size:
             pending[key] = stat.st_size
             continue
         # Size is stable across 2 polls — attempt ingest.
+        # CR-03: content sha computed once on the successful read path;
+        # on error paths we fall back to a stat-only signature (the file
+        # is moving to errors/ anyway, so the seen cache just needs to
+        # suppress re-scans of the now-gone file).
+        content_sha_for_cache: str = f"stat-{stat.st_mtime_ns}-{stat.st_size}"
         try:
             raw_bytes = Path(entry.path).read_bytes()
+            content_sha_for_cache = hashlib.sha256(raw_bytes).hexdigest()
             raw = json.loads(raw_bytes.decode("utf-8"))
             # Anti-spoofing: force source regardless of JSON content (T-28-07).
             raw["source"] = "kais_aigc"
@@ -359,7 +408,9 @@ def _scan_once(
         # Mark seen regardless of outcome — do not retry files that errored
         # (they are now in errors/, so the next scan won't see them anyway,
         # but if a rename failed we don't want to spin forever).
-        seen[key] = current
+        # CR-03: cache (mtime, size, sha256) so a same-mtime+size rewrite
+        # with different content is detected + re-ingested on the next scan.
+        seen[key] = (stat.st_mtime, stat.st_size, content_sha_for_cache)
         pending.pop(key, None)
     return ingested
 
@@ -445,7 +496,7 @@ def watch_inbox_kais(
         f"Ctrl+C to stop."
     )
 
-    seen: dict[str, tuple[float, int]] = {}
+    seen: dict[str, tuple[float, int, str]] = {}
     pending: dict[str, int] = {}
     iter_count = 0
     while max_iterations is None or iter_count < max_iterations:
