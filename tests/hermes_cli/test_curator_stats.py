@@ -860,3 +860,302 @@ class TestSkillsMappingV6:
             f"v5_ref_signoffs byte-intact violation: expected 2 entries, "
             f"got {len(v5)}. v5 section MUST be untouched by P33 Plan 02."
         )
+
+
+# ---------------------------------------------------------------------------
+# TestReadmeCorpusTree — SC-6 (Phase 33 Plan 03)
+# ---------------------------------------------------------------------------
+#
+# Verifies that ``skills/movie-experts/README.md`` corpus tree ``_shared/``
+# block lists the new v6 architecture doc. Honors D-no-backfill: v5.0 entries
+# (dreamina-cli-baseline.md, v86-pipeline-mapping.md) are NOT required to be
+# backfilled — they live in the v5.0 summary section.
+#
+# All ``open()`` / ``read_text()`` calls pass ``encoding="utf-8"`` (PLW1514).
+
+
+class TestReadmeCorpusTree:
+    """README corpus tree ``_shared/`` block lists v6 architecture doc — SC-6."""
+
+    README_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / "skills"
+        / "movie-experts"
+        / "README.md"
+    )
+
+    def _read(self) -> str:
+        return self.README_PATH.read_text(encoding="utf-8")
+
+    def test_v6_ref_listed(self):
+        """README lists v6-feedback-loop-architecture.md within the _shared/ block.
+
+        The corpus tree has a ``_shared/`` directory listing block; the v6
+        architecture doc entry MUST appear within 20 lines of the ``_shared/``
+        block header (so it sits in the right section, not appended far away).
+        """
+        doc = self._read()
+        lines = doc.splitlines()
+        shared_idx = None
+        for i, ln in enumerate(lines):
+            if "_shared/" in ln and ("└──" in ln or "├──" in ln or ln.rstrip().endswith("_shared/")):
+                shared_idx = i
+                break
+        assert shared_idx is not None, "could not locate _shared/ block header"
+        window = "\n".join(lines[shared_idx : shared_idx + 25])
+        assert "v6-feedback-loop-architecture.md" in window, (
+            "v6-feedback-loop-architecture.md not listed within the _shared/ "
+            "corpus tree block (SC-6)."
+        )
+
+    def test_v5_entries_not_backfilled_documented(self):
+        """D-no-backfill: only the v6 entry needs adding.
+
+        This test documents the decision: README does NOT need to add
+        dreamina-cli-baseline.md or v86-pipeline-mapping.md to the corpus tree
+        (they are documented in the v5.0 summary section). The test merely
+        confirms the v6 entry was added (covered by test_v6_ref_listed); it
+        passes trivially once that test passes.
+        """
+        doc = self._read()
+        assert "v6-feedback-loop-architecture.md" in doc
+
+
+# ---------------------------------------------------------------------------
+# TestGlossaryEntries — SC-6 (Phase 33 Plan 03)
+# ---------------------------------------------------------------------------
+#
+# Verifies that ``skills/movie-experts/_shared/glossary.md`` has a new v6.0
+# section with 4 EN-first bilingual H3 entries, each with CN/EN/Context
+# subsections + cross-reference to the architecture doc, and a footer note
+# explaining the EN-first format shift.
+#
+# Existing CN-first entries remain byte-intact (T-33-11 mitigation).
+
+
+class TestGlossaryEntries:
+    """Glossary v6.0 section — 4 EN-first H3 entries + footer note — SC-6."""
+
+    GLOSSARY_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / "skills"
+        / "movie-experts"
+        / "_shared"
+        / "glossary.md"
+    )
+
+    def _read(self) -> str:
+        return self.GLOSSARY_PATH.read_text(encoding="utf-8")
+
+    def test_v6_section_header_present(self):
+        """Glossary has a new H2 section header mentioning v6.0 / v6 additions."""
+        doc = self._read()
+        # Accept any H2 that mentions v6 in the additions context.
+        v6_h2 = [
+            ln for ln in doc.splitlines()
+            if ln.startswith("## ") and "v6" in ln.lower()
+        ]
+        assert v6_h2, (
+            "no H2 section header mentioning v6 found in glossary.md "
+            "(expected e.g. '## v6.0 additions (4 new feedback-loop terms)')."
+        )
+
+    def test_4_h3_entries_present(self):
+        """Glossary has all 4 v6 H3 entries in EN-first format."""
+        doc = self._read()
+        expected = [
+            "### Curator Proposal / 策展提案",
+            "### Eval Gate / 评估闸门",
+            "### Feedback Ingestion / 知识反馈采集",
+            "### Knowledge Evolution / 知识进化",
+        ]
+        missing = [hdr for hdr in expected if hdr not in doc]
+        assert not missing, (
+            f"missing v6 glossary H3 entries: {missing}"
+        )
+
+    def test_each_entry_has_cn_en_context_subsections(self):
+        """Each of the 4 v6 H3 entries has **CN:** + **EN:** + **Context:** markers."""
+        doc = self._read()
+        # Split into H3-delimited chunks; find the 4 v6 entries.
+        markers = ["**CN:**", "**EN:**", "**Context:**"]
+        headers = [
+            "### Curator Proposal",
+            "### Eval Gate",
+            "### Feedback Ingestion",
+            "### Knowledge Evolution",
+        ]
+        # Naive approach: for each header, find the slice from that header
+        # to the next H3 (or end) and check all 3 markers appear.
+        lines = doc.splitlines()
+        for i, hdr in enumerate(headers):
+            # Find the header line index.
+            start = None
+            for idx, ln in enumerate(lines):
+                if ln.startswith(hdr):
+                    start = idx
+                    break
+            assert start is not None, f"header not found: {hdr}"
+            # Find the next H3 after start.
+            end = len(lines)
+            for j in range(start + 1, len(lines)):
+                if lines[j].startswith("### "):
+                    end = j
+                    break
+            chunk = "\n".join(lines[start:end])
+            for m in markers:
+                assert m in chunk, (
+                    f"{hdr} entry missing subsection marker {m!r}"
+                )
+
+    def test_each_entry_cross_refs_architecture_doc(self):
+        """Each v6 entry's Context subsection mentions v6-feedback-loop-architecture.md."""
+        doc = self._read()
+        lines = doc.splitlines()
+        headers = [
+            "### Curator Proposal",
+            "### Eval Gate",
+            "### Feedback Ingestion",
+            "### Knowledge Evolution",
+        ]
+        for hdr in headers:
+            start = None
+            for idx, ln in enumerate(lines):
+                if ln.startswith(hdr):
+                    start = idx
+                    break
+            assert start is not None, f"header not found: {hdr}"
+            end = len(lines)
+            for j in range(start + 1, len(lines)):
+                if lines[j].startswith("### "):
+                    end = j
+                    break
+            chunk = "\n".join(lines[start:end])
+            assert "v6-feedback-loop-architecture.md" in chunk, (
+                f"{hdr} entry Context subsection does not cross-reference "
+                "v6-feedback-loop-architecture.md (D-glossary-cross-ref)."
+            )
+
+    def test_existing_entries_byte_intact(self):
+        """Spot-check 3 existing CN-first H3 entries remain unchanged.
+
+        T-33-11 mitigation: existing entries MUST NOT be flipped to EN-first.
+        The canonical CN-first form is ``### <CN> / <EN> / <EN alt>``.
+        """
+        doc = self._read()
+        spot_checks = [
+            "### 运镜 / cinematography / camera movement",
+            "### 钩子 / hook",
+            "### 卡点 / paywall cliffhanger / paywall moment",
+        ]
+        for entry in spot_checks:
+            assert entry in doc, (
+                f"existing CN-first glossary entry missing or altered: {entry!r} "
+                f"(T-33-11: existing entries MUST remain byte-intact)."
+            )
+
+    def test_format_shift_footer_note_present(self):
+        """Glossary has a footer note explaining the EN-first format shift.
+
+        Operators reading older CN-first entries alongside v6 EN-first entries
+        need to see the rationale (T-33-14 mitigation).
+        """
+        doc = self._read()
+        lower = doc.lower()
+        # Footer note must mention both "en-first" and "cn-first" (or equivalents)
+        # and the v6 context. Loose match — exact wording is at author discretion.
+        assert "en-first" in lower or "english-first" in lower, (
+            "footer note does not mention EN-first format shift"
+        )
+        assert "cn-first" in lower or "chinese-first" in lower, (
+            "footer note does not mention CN-first retention"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestByteIntactChecks — SC-7 + SC-8 (Phase 33 Plan 03)
+# ---------------------------------------------------------------------------
+#
+# Milestone-wide byte-intact verification. SC-7 asserts that the only
+# skills/movie-experts/ changes vs v5.0 are under ``_eval/`` (P30 extensions)
+# or ``_shared/`` (P33 additions). SC-8 asserts the 5 v4/v5 _shared refs are
+# byte-identical to the v5.0 baseline.
+#
+# Uses ``git diff --name-only v5.0..HEAD`` via subprocess (shell=False).
+# If the ``v5.0`` git tag is absent, tests skip with a clear message.
+
+
+_V5_V4_REFS = (
+    "skills/movie-experts/_shared/snowflake-method.md",
+    "skills/movie-experts/_shared/e-konte-format.md",
+    "skills/movie-experts/_shared/scamper-variations.md",
+    "skills/movie-experts/_shared/dreamina-cli-baseline.md",
+    "skills/movie-experts/_shared/v86-pipeline-mapping.md",
+)
+
+
+def _v5_tag_present() -> bool:
+    """Return True if the ``v5.0`` git tag exists locally."""
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "tag", "-l", "v5.0"],
+        capture_output=True, text=True, cwd=str(Path(__file__).resolve().parent.parent.parent),
+    )
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
+class TestByteIntactChecks:
+    """SC-7 + SC-8 milestone-wide byte-intact checks."""
+
+    REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+    def test_sc7_bundled_skill_unchanged(self):
+        """SC-7: zero bundled SKILL.md / non-_eval non-_shared changes vs v5.0.
+
+        Runs ``git diff --name-only v5.0..HEAD -- skills/movie-experts/`` and
+        filters out paths under ``_eval/`` or ``_shared/``. The remaining list
+        MUST be empty (only doc/ref additions under those two subtrees are
+        permitted across all of v6.0).
+        """
+        import subprocess
+
+        if not _v5_tag_present():
+            pytest.skip("v5.0 git tag not present — SC-7 cannot run")
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "v5.0..HEAD", "--", "skills/movie-experts/"],
+            capture_output=True, text=True, cwd=str(self.REPO_ROOT),
+        )
+        assert result.returncode == 0, f"git diff failed: {result.stderr}"
+        changed = [ln for ln in result.stdout.splitlines() if ln.strip()]
+        # Filter out _eval/ and _shared/ additions (permitted per CONTEXT.md).
+        violations = [
+            p for p in changed
+            if "_eval/" not in p and "_shared/" not in p
+        ]
+        assert not violations, (
+            "SC-7 FAIL: bundled SKILL.md / non-_eval non-_shared changes vs "
+            f"v5.0: {violations}. FOUND-08 milestone-wide preservation "
+            "invariant violated."
+        )
+
+    def test_sc8_v5_v4_refs_unchanged(self):
+        """SC-8: the 5 v4/v5 _shared refs are byte-identical to v5.0 baseline.
+
+        Runs ``git diff --name-only v5.0..HEAD -- <5 explicit paths>`` and
+        asserts the output is empty (no changes to those refs across v6.0).
+        """
+        import subprocess
+
+        if not _v5_tag_present():
+            pytest.skip("v5.0 git tag not present — SC-8 cannot run")
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "v5.0..HEAD", "--", *_V5_V4_REFS],
+            capture_output=True, text=True, cwd=str(self.REPO_ROOT),
+        )
+        assert result.returncode == 0, f"git diff failed: {result.stderr}"
+        changed = [ln for ln in result.stdout.splitlines() if ln.strip()]
+        assert not changed, (
+            f"SC-8 FAIL: v4/v5 refs changed vs v5.0 baseline: {changed}. "
+            "These 5 refs MUST remain byte-intact across all of v6.0."
+        )
