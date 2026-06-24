@@ -229,6 +229,20 @@ def _scan_once(
     """
     ingested = 0
     for entry in os.scandir(inbox_dir):
+        # Symlink guard (RESEARCH review WR-03): reject symlinks before any
+        # stat / read / rename call. ``DirEntry.is_dir()`` and ``.is_file()``
+        # follow symlinks by default, so without this check a link pointing
+        # outside the watcher tree would be ingested (and the rename would
+        # move the link itself, orphaning the target). Also closes a
+        # low-severity info-leak vector (adversary links a sensitive file
+        # into inbox-kais/ named *.json).
+        if entry.is_symlink():
+            logger.warning(
+                "kais inbox ignoring symlink %s (symlinks are not followed "
+                "for safety)",
+                entry.name,
+            )
+            continue
         if entry.is_dir():
             continue
         if not entry.name.endswith(".json"):
