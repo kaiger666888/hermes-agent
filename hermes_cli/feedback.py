@@ -220,7 +220,7 @@ def _cmd_submit(args) -> int:
             ts=datetime.now(timezone.utc),
         )
     except ValidationError as exc:
-        print(f"Validation failed:", file=sys.stderr)
+        print("Validation failed:", file=sys.stderr)
         for err in exc.errors():
             loc = ".".join(str(x) for x in err.get("loc", ()))
             print(f"  {loc}: {err.get('msg', '?')}", file=sys.stderr)
