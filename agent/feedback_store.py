@@ -241,8 +241,7 @@ class FeedbackStore:
         self._dedup_dir.mkdir(parents=True, exist_ok=True)
         self._archive_root.mkdir(parents=True, exist_ok=True)
 
-        # Migration state — gated by _migrated so re-init is a no-op
-        # (Task 2 implements the real migration; Task 1 stubs it).
+        # Migration state — gated by _migrated so re-init is a no-op.
         self._migrated: bool = False
 
         # In-memory dedup registry cache. Plan 01 leaves this empty
@@ -250,13 +249,15 @@ class FeedbackStore:
         self._sha256_index: dict[str, dict[str, Any]] = {}
         self._load_sha256_index()
 
-        # Lazy migration from Phase 28 flat incoming/ layout.
-        # Task 1 leaves this as a no-op stub; Task 2 fills it in.
-        self._maybe_migrate_phase28_incoming()
-
-        # In-memory mirror of index.json — load existing or write default.
+        # In-memory mirror of index.json — MUST be loaded BEFORE migration
+        # so record_feedback calls during migration have self._index.
         self._index: dict[str, Any] = {}
         self._load_or_init_index()
+
+        # Lazy migration from Phase 28 flat incoming/ layout. Runs AFTER
+        # the index is loaded so record_feedback (which it calls) can
+        # update the index safely.
+        self._maybe_migrate_phase28_incoming()
 
     # ── record_id + paths ────────────────────────────────────────────────
 
@@ -332,10 +333,14 @@ class FeedbackStore:
         # ── 3. Update in-memory dedup cache + index ───────────────────
         self._sha256_index[record.output_snapshot.sha256] = dict(dedup_entry)
 
-        records = self._read_bucket_records(bucket_file)
+        # The bucket FILE holds all verdicts for (skill_id, source), but the
+        # index bucket KEY includes verdict. So we filter records to the
+        # matching verdict when computing count / weighted_count / ts range.
+        all_records = self._read_bucket_records(bucket_file)
+        verdict_records = [r for r in all_records if r.verdict == record.verdict]
         active_records = [
             r
-            for r in records
+            for r in verdict_records
             if self._sha256_index.get(r.output_snapshot.sha256, {}).get(
                 "status", "active"
             )
@@ -343,9 +348,9 @@ class FeedbackStore:
         ]
         weighted_count = self._recompute_bucket_weighted_count(active_records)
 
-        ts_list = [r.ts for r in records]
+        ts_list = [r.ts for r in verdict_records]
         self._index["buckets"][bucket_key] = {
-            "count": len(records),
+            "count": len(verdict_records),
             "weighted_count": weighted_count,
             "first_ts": min(ts_list).isoformat() if ts_list else record.ts.isoformat(),
             "last_ts": max(ts_list).isoformat() if ts_list else record.ts.isoformat(),
@@ -480,16 +485,193 @@ class FeedbackStore:
                         exc,
                     )
 
-    # ── Phase 28 migration (Task 2 fills this in) ──────────────────────
+    # ── query / summary / get_record (STORE-02 Query API) ──────────────
+
+    def query(
+        self,
+        *,
+        skill_id: str | None = None,
+        source: str | None = None,
+        verdict: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        include_superseded: bool = False,
+    ) -> list[FeedbackRecord]:
+        """Return records matching all supplied filters.
+
+        Filters compose by AND. Records are returned sorted by ``ts``
+        ascending (stable for downstream consumers like the P32 review
+        queue).
+
+        The ``include_superseded`` flag controls whether records whose
+        ``by_sha256`` entry has ``status="superseded"`` are returned.
+        Plan 01 has no superseded records (no dedup branch yet) so this
+        flag is a no-op today; Plan 02 activates it.
+
+        Args:
+            skill_id: optional skill filter.
+            source: optional source filter.
+            verdict: optional verdict filter.
+            since: optional inclusive lower-bound on ``ts``.
+            until: optional inclusive upper-bound on ``ts``.
+            include_superseded: include superseded records (default False).
+
+        Returns:
+            List of :class:`FeedbackRecord` instances, ``ts``-ascending.
+        """
+        # Determine which bucket files to scan.
+        if skill_id is not None and source is not None:
+            candidates = [self._buckets_root / skill_id / f"{source}.jsonl"]
+        elif skill_id is not None:
+            skill_dir = self._buckets_root / skill_id
+            candidates = (
+                sorted(skill_dir.glob("*.jsonl")) if skill_dir.is_dir() else []
+            )
+        elif source is not None:
+            candidates = sorted(self._buckets_root.glob(f"*/{source}.jsonl"))
+        else:
+            candidates = sorted(self._buckets_root.glob("*/*.jsonl"))
+
+        results: list[FeedbackRecord] = []
+        for path in candidates:
+            for r in self._read_bucket_records(path):
+                if skill_id is not None and r.skill_id != skill_id:
+                    continue
+                if source is not None and r.source != source:
+                    continue
+                if verdict is not None and r.verdict != verdict:
+                    continue
+                if since is not None and r.ts < since:
+                    continue
+                if until is not None and r.ts > until:
+                    continue
+                # Supersession filter (Plan 02 mutates status; Plan 01 always active).
+                if not include_superseded:
+                    sha_status = self._sha256_index.get(
+                        r.output_snapshot.sha256, {}
+                    ).get("status", "active")
+                    if sha_status == "superseded":
+                        continue
+                results.append(r)
+
+        results.sort(key=lambda r: r.ts)
+        return results
+
+    def summary(
+        self,
+        *,
+        skill_id: str | None = None,
+        source: str | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        """Return per-bucket summary dicts from ``index.json``.
+
+        Each value is ``{"count", "weighted_count", "first_ts", "last_ts"}``
+        computed at the last :meth:`record_feedback` call. Decay-weighted
+        values are "as of last write" not "as of now"; Plan 02's
+        ``rebuild-index`` command refreshes them.
+
+        Args:
+            skill_id: optional skill filter (parsed from bucket key prefix).
+            source: optional source filter (parsed from bucket key middle).
+
+        Returns:
+            Dict mapping bucket key (``"<skill_id>:<source>:<verdict>"``)
+            to its summary dict.
+        """
+        out: dict[str, dict[str, Any]] = {}
+        for key, bucket in self._index.get("buckets", {}).items():
+            parts = key.split(":")
+            if len(parts) != 3:
+                continue
+            b_skill, b_source, b_verdict = parts
+            if skill_id is not None and b_skill != skill_id:
+                continue
+            if source is not None and b_source != source:
+                continue
+            out[key] = dict(bucket)
+        return out
+
+    def get_record(self, record_id: str) -> FeedbackRecord | None:
+        """Return the record with the given record_id, or ``None``.
+
+        Linear scan over all bucket files. At v6 scale (~thousands of
+        records) this is acceptable (CONTEXT.md A4). For >100K records a
+        future phase can add a dedicated record_id index.
+        """
+        for bucket_file in sorted(self._buckets_root.glob("*/*.jsonl")):
+            for r in self._read_bucket_records(bucket_file):
+                if self._make_record_id(r) == record_id:
+                    return r
+        return None
+
+    # ── Phase 28 migration (lazy, idempotent) ───────────────────────────
 
     def _maybe_migrate_phase28_incoming(self) -> None:
-        """Lazy migration from Phase 28 flat ``incoming/`` layout.
+        """Migrate Phase 28's flat ``incoming/`` layout to buckets/.
 
-        Task 1 leaves this as a no-op stub. Task 2 implements the real
-        migration algorithm (append-first, then archive; idempotent via
-        ``_migrated`` flag + ``.migration-in-progress`` sentinel).
+        Triggered once per process on :meth:`__init__`. Idempotent via
+        the ``_migrated`` flag + ``.migration-in-progress`` sentinel
+        file. The algorithm is naturally crash-safe (RESEARCH Pitfall #4):
+
+          1. List ``incoming/*.json``. If empty, no-op.
+          2. Touch the sentinel (crash-recovery marker).
+          3. For each file: parse + validate as FeedbackRecord, call
+             :meth:`record_feedback` (which routes to the correct
+             ``buckets/<skill_id>/<source>.jsonl``), then move the
+             original to ``archive/phase-28-migration/`` for audit.
+          4. Remove the sentinel.
+
+        ORDER MATTERS: append-first, then move. If append succeeds but
+        the move fails, the next :meth:`__init__` re-appends (a harmless
+        duplicate that Plan 02's dedup catches) and retries the move.
+
+        Malformed files are logged at WARNING and left in ``incoming/``
+        for retry (RESEARCH Pitfall #4 — never crash init).
         """
-        # Idempotent guard — Task 2 will replace this body.
         if self._migrated:
             return
         self._migrated = True
+
+        if not self._incoming_dir.is_dir():
+            return
+        pending = sorted(self._incoming_dir.glob("*.json"))
+        if not pending:
+            return
+
+        archive_dir = self._archive_root / "phase-28-migration"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        sentinel = self._root / ".migration-in-progress"
+        sentinel.touch(exist_ok=True)
+
+        migrated = 0
+        for src_path in pending:
+            try:
+                raw = json.loads(src_path.read_text(encoding="utf-8"))
+                record = FeedbackRecord(**raw)
+                # Append-first (RESEARCH Pitfall #4). record_feedback is
+                # idempotent on partial retries only via Plan 02's dedup;
+                # for Plan 01 a duplicate line is harmless (operator can
+                # dedup-repair later).
+                self.record_feedback(record)
+                # Move original to archive for audit (do NOT delete).
+                target = archive_dir / src_path.name
+                src_path.rename(target)
+                migrated += 1
+            except Exception as exc:  # noqa: BLE001 — migration must not crash init
+                logger.warning(
+                    "phase-28 feedback migration skipped %s: %s "
+                    "(left in incoming/ for retry)",
+                    src_path.name,
+                    exc,
+                )
+
+        try:
+            sentinel.unlink(missing_ok=True)
+        except OSError as exc:
+            logger.debug("failed to remove migration sentinel: %s", exc)
+
+        if migrated > 0:
+            logger.info(
+                "phase-28 feedback migration: moved %d records from incoming/ to buckets/",
+                migrated,
+            )

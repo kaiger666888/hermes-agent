@@ -283,3 +283,555 @@ class TestDecay:
         bucket = index["buckets"]["screenplay:cli:good"]
         # weighted_count should be ~0.33 (60-day-old at 90-day window)
         assert abs(bucket["weighted_count"] - 0.33) < 0.02
+
+
+# ---------------------------------------------------------------------------
+# TestRecordFeedback
+# ---------------------------------------------------------------------------
+
+
+class TestRecordFeedback:
+    """record_feedback bucket layout + append semantics + index update."""
+
+    def test_bucket_layout(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", source="cli", verdict="good")
+        )
+
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        assert bucket.is_file()
+        lines = bucket.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 1
+
+    def test_append_only_semantics(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+
+        store.record_feedback(_make_record(sha256="a" * 64))
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        first_bytes = bucket.read_text(encoding="utf-8")
+
+        store.record_feedback(_make_record(sha256="b" * 64))
+        store.record_feedback(_make_record(sha256="c" * 64))
+
+        contents = bucket.read_text(encoding="utf-8")
+        # First line is unchanged (append-only).
+        assert contents.startswith(first_bytes)
+        assert len(contents.splitlines()) == 3
+
+    def test_returns_record_id_format(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        record_id = store.record_feedback(_make_record())
+        # Format: ^\d{16}_[0-9a-f]{8}$ (microsecond ts + 8-hex sha prefix)
+        import re
+
+        assert re.match(r"^\d{16}_[0-9a-f]{8}$", record_id), (
+            f"record_id {record_id!r} does not match expected format"
+        )
+
+    def test_bucket_key_uses_colon_separator(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", source="cli", verdict="good")
+        )
+
+        index = json.loads(
+            (home / "skills" / ".feedback" / "index.json").read_text(encoding="utf-8")
+        )
+        assert "screenplay:cli:good" in index["buckets"]
+        # _ separator would collide with skill_ids containing underscores.
+        assert "screenplay_cli_good" not in index["buckets"]
+
+    def test_index_updated_atomic(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        index_path = home / "skills" / ".feedback" / "index.json"
+        store = feedback_store.FeedbackStore()
+        mtime_before = index_path.stat().st_mtime_ns
+
+        store.record_feedback(_make_record())
+
+        mtime_after = index_path.stat().st_mtime_ns
+        assert mtime_after > mtime_before
+
+    def test_weighted_count_differs_from_count_for_old_record(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        old_ts = datetime.now(timezone.utc) - timedelta(days=100)
+        store.record_feedback(_make_record(ts=old_ts, sha256="1" * 64))
+
+        index = json.loads(
+            (home / "skills" / ".feedback" / "index.json").read_text(encoding="utf-8")
+        )
+        bucket = index["buckets"]["screenplay:cli:good"]
+        assert bucket["count"] == 1
+        # 100-day-old at 180-day window: weight = 1 - 100/180 = 0.444
+        assert 0.1 < bucket["weighted_count"] < 0.5
+
+    def test_weighted_count_equals_count_for_fresh_record(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record(ts=datetime.now(timezone.utc)))
+
+        index = json.loads(
+            (home / "skills" / ".feedback" / "index.json").read_text(encoding="utf-8")
+        )
+        bucket = index["buckets"]["screenplay:cli:good"]
+        assert bucket["count"] == 1
+        assert abs(bucket["weighted_count"] - 1.0) < 0.01
+
+    def test_multiple_verdicts_same_bucket_file(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", source="cli", verdict="good", sha256="1" * 64)
+        )
+        store.record_feedback(
+            _make_record(
+                skill_id="screenplay", source="cli", verdict="needs_work", sha256="2" * 64
+            )
+        )
+
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        lines = bucket.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 2  # verdict is a record attribute, not a file split
+
+
+# ---------------------------------------------------------------------------
+# TestQuery
+# ---------------------------------------------------------------------------
+
+
+class TestQuery:
+    """query() filters by skill_id / source / verdict / since / until."""
+
+    def test_query_by_skill_id(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record(skill_id="screenplay", sha256="1" * 64))
+        store.record_feedback(_make_record(skill_id="drawer", sha256="2" * 64))
+
+        results = store.query(skill_id="screenplay")
+        assert len(results) == 1
+        assert all(r.skill_id == "screenplay" for r in results)
+
+    def test_query_by_source(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", source="cli", sha256="1" * 64)
+        )
+        store.record_feedback(
+            _make_record(skill_id="screenplay", source="kais_aigc", sha256="2" * 64)
+        )
+
+        results = store.query(skill_id="screenplay", source="kais_aigc")
+        assert len(results) == 1
+        assert results[0].source == "kais_aigc"
+
+    def test_query_by_verdict(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", verdict="good", sha256="1" * 64)
+        )
+        store.record_feedback(
+            _make_record(skill_id="screenplay", verdict="needs_work", sha256="2" * 64)
+        )
+        store.record_feedback(
+            _make_record(skill_id="screenplay", verdict="bad", sha256="3" * 64)
+        )
+
+        results = store.query(skill_id="screenplay", verdict="needs_work")
+        assert len(results) == 1
+        assert results[0].verdict == "needs_work"
+
+    def test_query_composed_filters(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        t0 = datetime.now(timezone.utc) - timedelta(days=10)
+        t1 = datetime.now(timezone.utc) - timedelta(days=5)
+        t2 = datetime.now(timezone.utc)
+        store.record_feedback(
+            _make_record(
+                skill_id="screenplay",
+                source="cli",
+                verdict="good",
+                sha256="1" * 64,
+                ts=t0,
+            )
+        )
+        store.record_feedback(
+            _make_record(
+                skill_id="screenplay",
+                source="cli",
+                verdict="good",
+                sha256="2" * 64,
+                ts=t1,
+            )
+        )
+        store.record_feedback(
+            _make_record(
+                skill_id="screenplay",
+                source="kais_aigc",
+                verdict="good",
+                sha256="3" * 64,
+                ts=t2,
+            )
+        )
+
+        results = store.query(
+            skill_id="screenplay",
+            source="cli",
+            verdict="good",
+            since=t0 - timedelta(seconds=1),
+            until=t1 + timedelta(seconds=1),
+        )
+        assert len(results) == 2
+        assert all(r.source == "cli" for r in results)
+        assert all(r.verdict == "good" for r in results)
+
+    def test_query_since_until(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        t0 = datetime.now(timezone.utc) - timedelta(days=10)
+        t1 = datetime.now(timezone.utc) - timedelta(days=5)
+        t2 = datetime.now(timezone.utc)
+        store.record_feedback(_make_record(sha256="1" * 64, ts=t0))
+        store.record_feedback(_make_record(sha256="2" * 64, ts=t1))
+        store.record_feedback(_make_record(sha256="3" * 64, ts=t2))
+
+        assert len(store.query(skill_id="screenplay", since=t1)) == 2
+        assert len(store.query(skill_id="screenplay", until=t1)) == 2
+        assert (
+            len(store.query(skill_id="screenplay", since=t1, until=t2)) == 2
+        )
+
+    def test_query_returns_pydantic_instances(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        from agent.feedback_schema import FeedbackRecord
+
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record())
+        results = store.query(skill_id="screenplay")
+        assert len(results) == 1
+        assert isinstance(results[0], FeedbackRecord)
+
+    def test_query_empty_bucket(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        # screenplay has no records; query returns []
+        assert store.query(skill_id="screenplay") == []
+
+    def test_query_include_superseded_default_false(self, feedback_env):
+        feedback_env_mod = feedback_env["feedback_store"]
+        store = feedback_env_mod.FeedbackStore()
+        store.record_feedback(_make_record(sha256="1" * 64))
+        # Plan 01 has no superseded records yet — default returns all.
+        results = store.query(skill_id="screenplay", include_superseded=False)
+        assert len(results) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestSummary
+# ---------------------------------------------------------------------------
+
+
+class TestSummary:
+    """summary() returns per-bucket count/weighted_count/first_ts/last_ts."""
+
+    def test_summary_returns_per_bucket_counts(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        for i in range(3):
+            store.record_feedback(
+                _make_record(verdict="good", sha256=hex(i + 1)[2:] * 64)
+            )
+        for i in range(2):
+            store.record_feedback(
+                _make_record(
+                    verdict="needs_work", sha256=hex(i + 10)[2:] * 64
+                )
+            )
+
+        summary = store.summary()
+        assert "screenplay:cli:good" in summary
+        assert summary["screenplay:cli:good"]["count"] == 3
+        assert "screenplay:cli:needs_work" in summary
+        assert summary["screenplay:cli:needs_work"]["count"] == 2
+
+    def test_summary_weighted_count(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(_make_record(sha256="1" * 64))
+        summary = store.summary()
+        assert summary["screenplay:cli:good"]["weighted_count"] > 0
+
+    def test_summary_first_last_ts(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        t0 = datetime.now(timezone.utc) - timedelta(days=10)
+        t1 = datetime.now(timezone.utc)
+        store.record_feedback(_make_record(sha256="1" * 64, ts=t0))
+        store.record_feedback(_make_record(sha256="2" * 64, ts=t1))
+
+        summary = store.summary()
+        bucket = summary["screenplay:cli:good"]
+        first = datetime.fromisoformat(bucket["first_ts"])
+        last = datetime.fromisoformat(bucket["last_ts"])
+        assert abs((first - t0).total_seconds()) < 1
+        assert abs((last - t1).total_seconds()) < 1
+
+    def test_summary_filter_by_skill_id(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(skill_id="screenplay", sha256="1" * 64)
+        )
+        store.record_feedback(_make_record(skill_id="drawer", sha256="2" * 64))
+
+        summary = store.summary(skill_id="screenplay")
+        assert all(k.startswith("screenplay:") for k in summary)
+
+    def test_summary_filter_by_source(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        store.record_feedback(
+            _make_record(source="cli", sha256="1" * 64)
+        )
+        store.record_feedback(
+            _make_record(source="kais_aigc", sha256="2" * 64)
+        )
+
+        summary = store.summary(source="cli")
+        assert all(":cli:" in k for k in summary)
+
+    def test_summary_empty_store(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        assert store.summary() == {}
+
+
+# ---------------------------------------------------------------------------
+# TestGetRecord
+# ---------------------------------------------------------------------------
+
+
+class TestGetRecord:
+    """get_record() returns matching record or None."""
+
+    def test_get_record_returns_match(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        ts = datetime.now(timezone.utc)
+        sha = "f" * 64
+        record = _make_record(sha256=sha, ts=ts)
+        rid = store.record_feedback(record)
+
+        found = store.get_record(rid)
+        assert found is not None
+        assert found.output_snapshot.sha256 == sha
+
+    def test_get_record_unknown_returns_none(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        store = feedback_store.FeedbackStore()
+        assert store.get_record("nonexistent_record_id") is None
+
+
+# ---------------------------------------------------------------------------
+# TestMigration
+# ---------------------------------------------------------------------------
+
+
+class TestMigration:
+    """Lazy migration from Phase 28 flat incoming/ layout."""
+
+    def test_migrate_incoming_routes_to_buckets(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        # Pre-populate incoming/ with a Phase 28 flat-layout JSON file.
+        incoming = home / "skills" / ".feedback" / "incoming"
+        incoming.mkdir(parents=True, exist_ok=True)
+        record = _make_record(sha256="1" * 64)
+        src_file = incoming / "screenplay_cli_20260624T120000000000Z.json"
+        src_file.write_text(record.model_dump_json(), encoding="utf-8")
+
+        # Trigger migration by re-initializing the store. (The fixture's
+        # reload already created a store without incoming/ populated; we
+        # construct a new one now that incoming/ has files.)
+        store = feedback_store.FeedbackStore()
+
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        assert bucket.is_file()
+        lines = bucket.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 1
+        assert json.loads(lines[0])["output_snapshot"]["sha256"] == "1" * 64
+
+    def test_migration_idempotent(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        incoming = home / "skills" / ".feedback" / "incoming"
+        incoming.mkdir(parents=True, exist_ok=True)
+        record = _make_record(sha256="2" * 64)
+        src_file = incoming / "screenplay_cli_20260624T120000000000Z.json"
+        src_file.write_text(record.model_dump_json(), encoding="utf-8")
+
+        # First init migrates.
+        feedback_store.FeedbackStore()
+        # Second init should find incoming/ empty — no-op.
+        feedback_store.FeedbackStore()
+
+        # incoming/ should be empty.
+        assert list(incoming.glob("*.json")) == []
+
+    def test_migration_archives_originals(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        incoming = home / "skills" / ".feedback" / "incoming"
+        incoming.mkdir(parents=True, exist_ok=True)
+        record = _make_record(sha256="3" * 64)
+        src_name = "screenplay_cli_20260624T120000000000Z.json"
+        src_file = incoming / src_name
+        src_file.write_text(record.model_dump_json(), encoding="utf-8")
+
+        feedback_store.FeedbackStore()
+
+        archive = home / "skills" / ".feedback" / "archive" / "phase-28-migration"
+        archived = archive / src_name
+        assert archived.is_file()
+
+    def test_migration_no_incoming_noop(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        # No incoming/ dir or empty — no archive/phase-28-migration/ files.
+        store = feedback_store.FeedbackStore()
+        archive = home / "skills" / ".feedback" / "archive" / "phase-28-migration"
+        # Archive dir may exist (FeedbackStore creates it), but no files in it.
+        if archive.is_dir():
+            assert list(archive.glob("*.json")) == []
+
+    def test_migration_handles_malformed(self, feedback_env, caplog):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        incoming = home / "skills" / ".feedback" / "incoming"
+        incoming.mkdir(parents=True, exist_ok=True)
+        good = _make_record(sha256="4" * 64)
+        (incoming / "screenplay_cli_20260624T120000000000Z.json").write_text(
+            good.model_dump_json(), encoding="utf-8"
+        )
+        (incoming / "malformed.json").write_text(
+            "{not valid json", encoding="utf-8"
+        )
+
+        with caplog.at_level("WARNING"):
+            # Should NOT raise — migration logs + continues.
+            store = feedback_store.FeedbackStore()
+
+        # Valid record migrated; malformed still in incoming/.
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        assert bucket.is_file()
+        assert (incoming / "malformed.json").is_file()
+        # Valid one moved out of incoming/.
+        assert not (incoming / "screenplay_cli_20260624T120000000000Z.json").exists()
+
+    def test_migration_partial_recovery(self, feedback_env):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+        incoming = home / "skills" / ".feedback" / "incoming"
+        incoming.mkdir(parents=True, exist_ok=True)
+        archive = home / "skills" / ".feedback" / "archive" / "phase-28-migration"
+        archive.mkdir(parents=True, exist_ok=True)
+
+        r1 = _make_record(sha256="5" * 64)
+        r2 = _make_record(sha256="6" * 64)
+        f1 = incoming / "screenplay_cli_20260624T120000000001Z.json"
+        f2 = incoming / "screenplay_cli_20260624T120000000002Z.json"
+        f1.write_text(r1.model_dump_json(), encoding="utf-8")
+        f2.write_text(r2.model_dump_json(), encoding="utf-8")
+
+        # Simulate partial migration: manually archive f1 (as if a prior run
+        # migrated it but crashed before handling f2).
+        (archive / f1.name).write_text(r1.model_dump_json(), encoding="utf-8")
+        f1.unlink()
+
+        # Second init migrates only the remaining file (f2).
+        feedback_store.FeedbackStore()
+
+        # f2 is now archived; archive has both files.
+        assert (archive / f1.name).is_file()
+        assert (archive / f2.name).is_file()
+        assert list(incoming.glob("*.json")) == []
+        # Bucket has both records (f1 re-appended; f2 newly appended —
+        # harmless duplicate per RESEARCH Pitfall #4).
+        bucket = home / "skills" / ".feedback" / "buckets" / "screenplay" / "cli.jsonl"
+        assert bucket.is_file()
+
+
+# ---------------------------------------------------------------------------
+# TestConfig
+# ---------------------------------------------------------------------------
+
+
+class TestConfig:
+    """feedback.decay_window_days config override + fallback."""
+
+    def test_config_override_decay_window(self, feedback_env, monkeypatch):
+        feedback_store = feedback_env["feedback_store"]
+        home = feedback_env["home"]
+
+        # Monkeypatch the config loader used by _load_decay_window_days_from_config
+        # to return 90 days.
+        import hermes_cli.config
+
+        monkeypatch.setattr(
+            hermes_cli.config,
+            "load_config",
+            lambda: {"feedback": {"decay_window_days": 90}},
+        )
+
+        # 60-day-old record at 90-day window: weight = 1 - 60/90 = 0.333.
+        store = feedback_store.FeedbackStore()
+        assert store._decay_window_days == 90
+        ts = datetime.now(timezone.utc) - timedelta(days=60)
+        store.record_feedback(_make_record(ts=ts, sha256="7" * 64))
+
+        index = json.loads(
+            (home / "skills" / ".feedback" / "index.json").read_text(encoding="utf-8")
+        )
+        bucket = index["buckets"]["screenplay:cli:good"]
+        assert abs(bucket["weighted_count"] - 0.33) < 0.02
+
+    def test_config_missing_uses_default(self, feedback_env, monkeypatch):
+        feedback_store = feedback_env["feedback_store"]
+
+        import hermes_cli.config
+
+        monkeypatch.setattr(hermes_cli.config, "load_config", lambda: {})
+
+        store = feedback_store.FeedbackStore()
+        assert store._decay_window_days == 180
+
+    def test_config_invalid_value_uses_default(self, feedback_env, monkeypatch):
+        feedback_store = feedback_env["feedback_store"]
+
+        import hermes_cli.config
+
+        monkeypatch.setattr(
+            hermes_cli.config,
+            "load_config",
+            lambda: {"feedback": {"decay_window_days": "not-a-number"}},
+        )
+
+        # Must NOT crash — should fall back to 180.
+        store = feedback_store.FeedbackStore()
+        assert store._decay_window_days == 180
