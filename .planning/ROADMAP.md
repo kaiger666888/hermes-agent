@@ -116,7 +116,9 @@
   5. Agent-created skills can take a semi-automatic path: when eval gate passes AND confidence score ≥ threshold (default 0.8), a patch may auto-apply (still writes audit log); this behavior is globally toggleable via config (default follows PROJECT.md MVP boundary — bundled NEVER auto, agent-created conditional)
   6. **Existing Curator behavior preserved:** The pre-v6 deterministic inactivity transitions + consolidation pass continue to work unchanged for agent-created skills — the bundled-skill proposal capability is ADDITIVE, not a replacement (regression test against pre-v6 curator behavior required)
 **Hermes-core touch:** Yes — direct modification of `agent/curator.py` (extending `run_curator_review` + new proposal path) + implementation of the EVOL-02 diff generator. This is the unavoidable scope expansion flagged in PROJECT.md.
-**Plans:** TBD
+**Plans:** 2 plans
+- [ ] 32-01-PLAN.md — Engine layer: SC-6 regression test (FIRST) + agent/curator_audit.py (sha256-chained JSONL) + agent/evolution/evol02_generator.py (bilingual multi-instruction diff) + additive _feedback_scan_phase wired into run_curator_review — covers CURATE-01/02/03 + EVOL-02
+- [ ] 32-02-PLAN.md — CLI layer: hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve (Architectural Constraint #1 Option A) + audit-log --verify — covers CURATE-04/05
 
 ### Phase 33: Observability + Integration Close-out
 
