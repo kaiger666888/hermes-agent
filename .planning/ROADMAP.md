@@ -66,7 +66,7 @@
   4. Duplicate detection works: a second feedback with identical `output_snapshot.sha256` AND identical `verdict` is NOT double-counted; a second feedback with same sha256 but DIFFERENT verdict demotes the older record's weight (treated as a correction, not a fresh signal)
 **Hermes-core touch:** Yes — new persistence layer under `~/.hermes/skills/.feedback/`. Pure data plumbing, no bundled-SKILL.md changes.
 **Plans:** 2 plans
-- [ ] 29-01-PLAN.md — FeedbackStore class (record_feedback + query + summary + get_record) + linear time-decay (STORE-03) + bucket jsonl layout (STORE-01) + lazy migration from Phase 28 incoming/ + index.json schema (STORE-02 foundation)
+- [x] 29-01-PLAN.md — FeedbackStore class (record_feedback + query + summary + get_record) + linear time-decay (STORE-03) + bucket jsonl layout (STORE-01) + lazy migration from Phase 28 incoming/ + index.json schema (STORE-02 foundation) — **shipped 2026-06-24 (49 tests green, 2 Rule 1 bugs auto-fixed)**
 - [ ] 29-02-PLAN.md — Phase 28 write_feedback_record delegation + sha256 dedup/correction branch (STORE-04) + hermes feedback rebuild-index CLI
 
 ### Phase 30: Eval Gate Reuse

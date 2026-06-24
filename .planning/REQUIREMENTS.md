@@ -20,9 +20,9 @@
 
 ### Feedback Store (STORE)
 
-- [ ] **STORE-01**: `~/.hermes/skills/.feedback/` 持久化目录结构,按 `skill_id/source/` 分子目录,jsonl 格式追加写入
-- [ ] **STORE-02**: 反馈索引文件 `index.json`(按 skill_id / verdict / source / timestamp 可查询),Curator 与 dashboard 共用
-- [ ] **STORE-03**: 时间衰减权重 —— 超过 N 天(默认 90,可配置)的反馈权重降低,避免陈旧反馈主导学习方向
+- [x] **STORE-01**: `~/.hermes/skills/.feedback/` 持久化目录结构,按 `skill_id/source/` 分子目录,jsonl 格式追加写入 — *Phase 29 Plan 01 (2026-06-24)*
+- [x] **STORE-02**: 反馈索引文件 `index.json`(按 skill_id / verdict / source / timestamp 可查询),Curator 与 dashboard 共用 — *Phase 29 Plan 01 (2026-06-24)*
+- [x] **STORE-03**: 时间衰减权重 —— 超过 N 天(默认 90,可配置)的反馈权重降低,避免陈旧反馈主导学习方向 — *Phase 29 Plan 01 (2026-06-24, default 180 days per CONTEXT.md D-STORE-03)*
 - [ ] **STORE-04**: 反馈去重(同 `output_snapshot.sha256` + `verdict` 不重复计入;同 sha256 不同 verdict 视为修正,旧记录降权)
 
 ### Knowledge Evolution (EVOL)

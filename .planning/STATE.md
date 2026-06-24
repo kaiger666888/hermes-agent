@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: ready_to_plan
-last_updated: 2026-06-24T08:12:32.179Z
-last_activity: 2026-06-24
+status: executing
+last_updated: "2026-06-24T09:03:00Z"
+last_activity: 2026-06-24 -- Phase 29 Plan 01 complete (FeedbackStore foundation)
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 17
-stopped_at: Phase 28 complete (2/2) — ready to discuss Phase 29
+  total_plans: 4
+  completed_plans: 3
+  percent: 25
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +29,9 @@ stopped_at: Phase 28 complete (2/2) — ready to discuss Phase 29
 ## Current Position
 
 Phase: 29
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-24
+Plan: 29-02 next (write_feedback_record delegation + STORE-04 dedup + rebuild-index CLI)
+Status: Plan 29-01 complete (FeedbackStore foundation shipped)
+Last activity: 2026-06-24 -- Phase 29 Plan 01 complete (FeedbackStore foundation)
 
 ### Progress
 
@@ -46,7 +45,7 @@ v5.0 kais-movie-agent V8.6 Adaptation:
 
 v6.0 Self-Evolution & Feedback Loop:
   Phase 28 (Feedback Ingestion MVP)        [██████████] 100% Complete (Plan 01 schema+snapshot+write; Plan 02 CLI+watcher+JSONL — 76 tests green, FOUND-08 verified)
-  Phase 29 (Feedback Store)                [          ] 0% Not started — next, depends on P28 (now unblocked)
+  Phase 29 (Feedback Store)                [█████░░░░░] 50% Plan 01 shipped (FeedbackStore + decay + index + migration — 49 tests green, 2 Rule 1 bugs auto-fixed). Plan 02 next (write_feedback_record delegation + STORE-04 + rebuild-index CLI).
   Phase 30 (Eval Gate Reuse)               [          ] 0% Not started — parallel-eligible with P31 after P29
   Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 after P29
   Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — depends on P29 + P31
@@ -58,7 +57,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 28 | Feedback Ingestion MVP | **Complete** | Shipped 2026-06-24. INGEST-01..05 covered. Plan 01 (schema + snapshot + atomic write — 45 tests) + Plan 02 (/feedback slash cmd + hermes feedback {import,watch,submit} + kais file watcher + JSONL atomic batch import — 31 new tests). 76/76 tests green, Ruff clean, FOUND-08 preserved, zero new deps. |
-| 29 | Feedback Store | Not started | Covers STORE-01..04. Depends on P28 normalized schema (now available). New persistence layer under `~/.hermes/skills/.feedback/`. |
+| 29 | Feedback Store | In Progress (Plan 01 complete) | Plan 01 shipped 2026-06-24: FeedbackStore class with record_feedback/query/summary/get_record + compute_weight + index.json schema + lazy migration (49 tests green, 2 Rule 1 bugs auto-fixed). Plan 02 next: write_feedback_record delegation + STORE-04 dedup + rebuild-index CLI. |
 | 30 | Eval Gate Reuse | Not started | Covers GATE-01..04. Parallel-eligible with P31 (disjoint files). Extends `_eval/runner.py` (offline dev tooling, no runtime touch). |
 | 31 | Knowledge Evolution Pipeline | Not started | Covers EVOL-01, EVOL-03, EVOL-04, EVOL-05. Parallel-eligible with P30. Builds review queue + approve/apply mechanics. |
 | 32 | Curator Upgrade + Audit | Not started | Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. |
@@ -99,8 +98,8 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 - v6.0 requirements total: 26
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
-- v6.0 requirements completed: 5 (INGEST-01, INGEST-02, INGEST-03, INGEST-04, INGEST-05 — all covered by Phase 28)
-- v6.0 plans completed: 2 / 2 (Phase 28 Plan 01 + Plan 02)
+- v6.0 requirements completed: 8 (INGEST-01..05 from Phase 28 + STORE-01..03 from Phase 29 Plan 01)
+- v6.0 plans completed: 3 / 4 (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -135,6 +134,9 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | Atomic all-or-nothing JSONL batch import | CONTEXT.md D-INGEST-03 recommendation. On any line error returns (0, errors) WITHOUT writing — preserves operator trust. Line-numbered errors with field-level Pydantic messages. | Applied 2026-06-24 — P28 Plan 02 import_jsonl() atomic contract enforced by tests |
 | Anti-spoofing source override in kais watcher | Crafted file in inbox-kais/ cannot pollute 'cli' or 'manual' provenance. Watcher FORCES raw['source'] = 'kais_aigc' regardless of JSON content. | Applied 2026-06-24 — P28 Plan 02 T-28-07 mitigation in _scan_once() |
 | /feedback skill_id resolution via _SKILL_INVOCATION_PREFIX marker scan | Verified format in agent/skill_commands.py:550-553. Backward scan for most recent user msg starting with the marker, regex-extract quoted skill name. When no marker found, clear error + write nothing — never silently default. | Applied 2026-06-24 — P28 Plan 02 HermesCLI._handle_feedback_command (Pitfall #4 mitigation) |
+| Plan 01 ships record_feedback WITHOUT STORE-04 dedup branch | Plan scope split per plan <objective>: Plan 01 = storage foundation; Plan 02 = dedup + wrapper delegation. TODO comment in source marks the exact insertion point for the sha256 dedup check. | Applied 2026-06-24 — P29 Plan 01 record_feedback unconditional write |
+| Index bucket count filters by verdict within shared source file | The bucket FILE is keyed by (skill_id, source) but the index bucket KEY is keyed by (skill_id, source, verdict). Auto-fixed Rule 1: filter to verdict_records = [r for r in all_records if r.verdict == record.verdict] before counting. | Applied 2026-06-24 — P29 Plan 01 record_feedback (Rule 1 bug fix) |
+| __init__ order: _load_or_init_index BEFORE _maybe_migrate_phase28_incoming | Migration calls record_feedback which needs self._index. Reordered so index loads first. | Applied 2026-06-24 — P29 Plan 01 FeedbackStore.__init__ (Rule 1 bug fix) |
 
 ### Decisions (carried forward — relevant to v6.0)
 
