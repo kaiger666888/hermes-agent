@@ -183,6 +183,53 @@ class TestBuildCommitMessage:
         )
         assert "feedback: none" in msg
 
+    def test_cr05_strips_newlines_from_subject(self) -> None:
+        # CR-05: LLM-controlled insight_summary with embedded newlines
+        # must not forge a multi-line commit body.
+        msg = build_commit_message(
+            insight_summary="line1\nline2",
+            feedback_ids=["fb_1"],
+            eval_verdict="pass",
+            eval_mean_delta=0.1,
+        )
+        assert "\n" not in msg
+
+    def test_cr05_strips_pipes_from_subject(self) -> None:
+        # CR-05: pipes in subject would corrupt the | machine format.
+        msg = build_commit_message(
+            insight_summary="a|b|c",
+            feedback_ids=["fb_1"],
+            eval_verdict="pass",
+            eval_mean_delta=0.1,
+        )
+        # Pipe should be replaced with space.
+        subject = msg.split("feat(evolution): ", 1)[1].split(" | feedback:", 1)[0]
+        assert "|" not in subject
+
+    def test_cr05_drops_invalid_feedback_ids(self) -> None:
+        # CR-05: feedback_ids containing newlines / spaces / pipes are
+        # dropped; only well-formed IDs survive.
+        msg = build_commit_message(
+            insight_summary="x",
+            feedback_ids=["fb_valid_1", "bad id", "has\nnewline", "fb_valid_2"],
+            eval_verdict="pass",
+            eval_mean_delta=0.1,
+        )
+        assert "fb_valid_1" in msg
+        assert "fb_valid_2" in msg
+        assert "bad id" not in msg
+        assert "has\nnewline" not in msg
+
+    def test_cr05_coerces_unknown_verdict(self) -> None:
+        # CR-05: unknown eval_verdict coerced to "unknown".
+        msg = build_commit_message(
+            insight_summary="x",
+            feedback_ids=["fb_1"],
+            eval_verdict="totally bogus\nwith newline",
+            eval_mean_delta=0.1,
+        )
+        assert "eval: unknown:" in msg
+
 
 # --------------------------------------------------------------------------- #
 # TestRevertFiles

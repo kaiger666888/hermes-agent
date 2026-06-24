@@ -291,6 +291,23 @@ def revert_files(files: list[str], repo_root: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
+_FEEDBACK_ID_RE = re.compile(r"^[A-Za-z0-9_\-:]{1,64}$")
+"""CR-05: strict allowlist for feedback record IDs interpolated into the
+commit subject. Rejects newlines, pipes, and any structural bytes that
+could corrupt the machine-parseable ``feedback: <ids>`` field or inject
+git-commit-message body content."""
+
+_SUBJECT_SANITIZER_RE = re.compile(r"[\r\n|]")
+"""CR-05 / WR-05: strip newlines (would forge a multi-line commit body)
+and pipe characters (would corrupt the ``|``-separated machine format)
+from the LLM-controlled insight_summary before interpolation."""
+
+_KNOWN_EVAL_VERDICTS: frozenset[str] = frozenset({
+    "pass", "fail_mean", "fail_regression", "inconclusive",
+    "internal_error", "unknown",
+})
+
+
 def build_commit_message(
     *,
     insight_summary: str,
@@ -307,9 +324,24 @@ def build_commit_message(
     The format is machine-parseable so P32's audit log + P33's
     observability dashboard can extract feedback IDs + eval score from
     git history.
+
+    CR-05 / WR-05: all interpolated values are sanitized to prevent
+    commit-message injection:
+      - ``insight_summary`` (LLM-controlled): newlines + pipes stripped,
+        then truncated to 72 chars.
+      - ``feedback_ids`` (LLM-populated from FeedbackRecord record_ids):
+        each validated against :data:`_FEEDBACK_ID_RE`; violators dropped.
+      - ``eval_verdict``: must be one of :data:`_KNOWN_EVAL_VERDICTS`,
+        otherwise coerced to ``"unknown"``.
     """
-    subject = insight_summary[:72]
-    feedback_str = ",".join(feedback_ids) if feedback_ids else "none"
+    # Sanitize subject: strip newlines + pipes, truncate to 72 chars.
+    subject = _SUBJECT_SANITIZER_RE.sub(" ", insight_summary)[:72].strip()
+    # Validate feedback_ids against a strict pattern; drop violators.
+    safe_ids = [fid for fid in feedback_ids if _FEEDBACK_ID_RE.match(fid)]
+    feedback_str = ",".join(safe_ids) if safe_ids else "none"
+    # eval_verdict must be one of the known gate verdicts.
+    if eval_verdict not in _KNOWN_EVAL_VERDICTS:
+        eval_verdict = "unknown"
     eval_str = f"{eval_verdict}:{eval_mean_delta:.2f}"
     return (
         f"feat(evolution): {subject} | "
