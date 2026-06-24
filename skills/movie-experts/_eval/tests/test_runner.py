@@ -320,3 +320,194 @@ class TestMainFailFast:
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
             runner.make_judge_client({})
+
+
+# --------------------------------------------------------------------------- #
+# Phase 30 Plan 01 Task 1: parse_judge_scores + numeric run_position_swap
+# (GATE-02/04 enabler — lifts the per-dimension numeric scores the v1
+# harness discarded. See 30-RESEARCH.md Pitfall 1.)
+# --------------------------------------------------------------------------- #
+
+
+class TestParseJudgeScores:
+    """Cover parse_judge_scores — the GATE-02/04 numeric-score enabler."""
+
+    def test_well_formated(self) -> None:
+        # Judge emits all 4 dimensions in the format judge_prompt.md asks for.
+        text = (
+            "industry_accuracy: 4 — solid craft knowledge\n"
+            "professional_depth: 3 — some hand-wavy advice\n"
+            "actionability: 5 — ready to ship\n"
+            "language_quality: 4 — clean bilingual\n"
+            "<decision>A</decision>"
+        )
+        scores = runner.parse_judge_scores(text)
+        assert scores == {
+            "industry_accuracy": 4.0,
+            "professional_depth": 3.0,
+            "actionability": 5.0,
+            "language_quality": 4.0,
+        }
+
+    def test_case_insensitive(self) -> None:
+        # Dimension names may arrive in any case from the judge.
+        scores = runner.parse_judge_scores("Industry_Accuracy: 3 — ok")
+        assert scores == {"industry_accuracy": 3.0}
+
+    def test_missing_dimension(self) -> None:
+        # Only 3 of 4 dimensions present -> returned dict has only those 3.
+        text = (
+            "industry_accuracy: 4 — good\n"
+            "professional_depth: 3 — ok\n"
+            "actionability: 4 — good\n"
+        )
+        scores = runner.parse_judge_scores(text)
+        assert set(scores.keys()) == {
+            "industry_accuracy",
+            "professional_depth",
+            "actionability",
+        }
+        # No KeyError, no default imputation (the 4th dim is simply absent).
+        assert "language_quality" not in scores
+
+    def test_out_of_range_dropped(self) -> None:
+        # Score 9 is outside [1.0, 5.0] -> silently dropped.
+        scores = runner.parse_judge_scores("industry_accuracy: 9 — inflated")
+        assert scores == {}
+
+    def test_non_numeric_dropped(self) -> None:
+        # "good" is not a number -> silently dropped, no exception.
+        scores = runner.parse_judge_scores("industry_accuracy: good — vague")
+        assert scores == {}
+
+    def test_empty_when_no_dimensions(self) -> None:
+        # Text with no recognizable dimension -> empty dict (fail-safe).
+        scores = runner.parse_judge_scores("the judge rambled with no scores")
+        assert scores == {}
+
+    def test_decimal_score(self) -> None:
+        scores = runner.parse_judge_scores("industry_accuracy: 4.5 — strong")
+        assert scores == {"industry_accuracy": 4.5}
+
+
+class TestCompositeScore:
+    """composite_score returns the mean of available dimension scores."""
+
+    def test_mean_of_dimensions(self) -> None:
+        assert runner.composite_score({"a": 2.0, "b": 4.0}) == 3.0
+
+    def test_empty_returns_none(self) -> None:
+        assert runner.composite_score({}) is None
+
+    def test_single_dimension(self) -> None:
+        assert runner.composite_score({"a": 3.5}) == 3.5
+
+    def test_all_four_dimensions(self) -> None:
+        scores = {
+            "industry_accuracy": 4.0,
+            "professional_depth": 3.0,
+            "actionability": 5.0,
+            "language_quality": 4.0,
+        }
+        assert runner.composite_score(scores) == 4.0
+
+
+class _NumericMockJudgeClient:
+    """Mock judge client that returns canned responses with numeric scores.
+
+    Used by TestRunPositionSwapNumeric to verify run_position_swap lifts
+    the per-dimension scores alongside the existing A/B/tie decision.
+    """
+
+    def __init__(self, response_a: str, response_b: str) -> None:
+        self._response_a = response_a
+        self._response_b = response_b
+        self.calls: list[dict] = []
+
+    def chat_completions_create(self, **kwargs: object) -> dict:
+        swap = bool(kwargs.get("extra_body", {}).get("swap", False))
+        self.calls.append(kwargs)
+        content = self._response_b if swap else self._response_a
+        return {"choices": [{"message": {"content": content}}]}
+
+
+class TestRunPositionSwapNumeric:
+    """Verify run_position_swap returns numeric scores (Phase 30 extension)."""
+
+    _RESPONSE_AB = (
+        "industry_accuracy: 4 — good\n"
+        "professional_depth: 3 — ok\n"
+        "actionability: 4 — good\n"
+        "language_quality: 4 — clean\n"
+        "<decision>A</decision>"
+    )
+    _RESPONSE_BA = (
+        "industry_accuracy: 3 — weaker\n"
+        "professional_depth: 3 — ok\n"
+        "actionability: 3 — ok\n"
+        "language_quality: 3 — drift\n"
+        "<decision>B</decision>"
+    )
+
+    def test_returns_scores_ab_and_ba(self) -> None:
+        judge = _NumericMockJudgeClient(
+            response_a=self._RESPONSE_AB,
+            response_b=self._RESPONSE_BA,
+        )
+        verdict = runner.run_position_swap(
+            prompt="design a hook",
+            answer_a="baseline answer",
+            answer_b="candidate answer",
+            judge_client=judge,
+            judge_model="claude-sonnet-4-6",
+            prompt_id="hook-001",
+        )
+        assert "scores_ab" in verdict
+        assert "scores_ba" in verdict
+        assert isinstance(verdict["scores_ab"], dict)
+        assert isinstance(verdict["scores_ba"], dict)
+        # All values are floats in [1.0, 5.0].
+        for v in verdict["scores_ab"].values():
+            assert isinstance(v, float)
+            assert 1.0 <= v <= 5.0
+
+    def test_backward_compat_existing_keys(self) -> None:
+        # Existing return keys MUST remain unchanged (backward compat).
+        judge = _NumericMockJudgeClient(
+            response_a=self._RESPONSE_AB,
+            response_b=self._RESPONSE_BA,
+        )
+        verdict = runner.run_position_swap(
+            prompt="x",
+            answer_a="a",
+            answer_b="b",
+            judge_client=judge,
+            judge_model="m",
+            prompt_id="p-001",
+        )
+        # Pre-existing keys still present.
+        assert verdict["prompt_id"] == "p-001"
+        assert verdict["ordering_ab"] == "A"
+        assert verdict["ordering_ba"] == "B"
+        assert verdict["final"] == "tie"
+
+    def test_raw_ab_raw_ba_returned(self) -> None:
+        # raw_ab + raw_ba let gate.py re-parse if needed.
+        judge = _NumericMockJudgeClient(
+            response_a=self._RESPONSE_AB,
+            response_b=self._RESPONSE_BA,
+        )
+        verdict = runner.run_position_swap(
+            prompt="x",
+            answer_a="a",
+            answer_b="b",
+            judge_client=judge,
+            judge_model="m",
+            prompt_id="p-002",
+        )
+        assert "raw_ab" in verdict
+        assert "raw_ba" in verdict
+        assert isinstance(verdict["raw_ab"], str)
+        assert isinstance(verdict["raw_ba"], str)
+        assert "industry_accuracy" in verdict["raw_ab"]
+
