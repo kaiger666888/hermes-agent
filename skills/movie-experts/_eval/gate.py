@@ -1387,6 +1387,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Use runner._StubJudgeClient (no live API calls).",
     )
+    parser.add_argument(
+        "--no-answers-required",
+        action="store_true",
+        help=(
+            "Phase 31 evolution mode: skip the --baseline-answers / "
+            "--candidate-answers requirement and short-circuit to an "
+            "inconclusive verdict with a stub report. Used by the "
+            "`hermes feedback evolve` pipeline where answer pre-generation "
+            "is out of scope (v6 placeholder — Phase 32+ will generate "
+            "answers inline). Avoids the argparse-exit-2 / "
+            "fail_regression-exit-2 collision (CR-01 / WR-06)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -1456,6 +1469,38 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--patch is required (or pass --rebuild-baseline)")
     if not args.skill:
         parser.error("--skill is required")
+
+    # CR-01 / WR-06: Phase 31 evolution pipeline calls the gate without
+    # pre-generated answers (answer generation is out of scope for v6).
+    # Without --no-answers-required, argparse `parser.error()` exits with
+    # code 2 — colliding with VERDICT_TO_EXIT["fail_regression"] (also 2)
+    # and masking the real cause as a normal gate failure. With
+    # --no-answers-required we short-circuit to inconclusive + a stub
+    # report so the evolution pipeline records the patch as
+    # failed_gate (NOT silently mislabelled as fail_regression).
+    if args.no_answers_required:
+        if args.reports_dir is not None:
+            stub_report = {
+                "verdict": "inconclusive",
+                "reason": (
+                    "no-answers-required mode (Phase 31 evolution): "
+                    "answer pre-generation not yet wired"
+                ),
+            }
+            import json as _json
+            (Path(args.reports_dir)).mkdir(parents=True, exist_ok=True)
+            # Filename convention: callers pass patch_id via --reports-dir
+            # contents; the report stem matches what the caller parses.
+            # We write to <reports_dir>/latest.json as the conventional
+            # placeholder (Phase 32 will replace with named patch_id).
+            (Path(args.reports_dir) / "latest.json").write_text(
+                _json.dumps(stub_report), encoding="utf-8"
+            )
+        logger.info(
+            "no-answers-required mode: short-circuiting to inconclusive"
+        )
+        return VERDICT_TO_EXIT["inconclusive"]
+
     if not args.baseline_answers:
         parser.error("--baseline-answers is required")
     if not args.candidate_answers:

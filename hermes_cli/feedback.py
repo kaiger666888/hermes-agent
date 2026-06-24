@@ -447,6 +447,20 @@ def _run_eval_gate(
 
     reports_dir.mkdir(parents=True, exist_ok=True)
 
+    # CR-01: Phase 31 evolution does NOT pre-generate baseline / candidate
+    # answers (answer pre-generation is out of scope for v6). Pass
+    # --no-answers-required so gate.py short-circuits to inconclusive +
+    # writes a stub report, rather than hitting `parser.error()` which
+    # exits with code 2 and collides with VERDICT_TO_EXIT["fail_regression"].
+    #
+    # WR-07: pass --config if a committed gate_config.yaml exists next to
+    # gate.py so operator threshold tunings are respected.
+    gate_dir = gate_path.parent
+    gate_config_path = gate_dir / "gate_config.yaml"
+    config_args: list[str] = []
+    if gate_config_path.is_file():
+        config_args = ["--config", str(gate_config_path)]
+
     # Argv-list only — NEVER shell=True (T-31-17 / T-30-02).
     result = subprocess.run(
         [
@@ -455,6 +469,8 @@ def _run_eval_gate(
             "--patch", str(patch_path),
             "--skill", skill_id,
             "--reports-dir", str(reports_dir),
+            "--no-answers-required",
+            *config_args,
         ],
         cwd=str(repo_root),
         capture_output=True,
@@ -465,7 +481,17 @@ def _run_eval_gate(
     if result.returncode == 0:
         verdict = "pass"
     elif result.returncode == 3:
-        # gate.py multi-skill guard (per gate.py:1376-1383 --multi-skill flag).
+        # gate.py multi-skill guard (per gate.py:1376-1383 --multi-skill flag)
+        # OR --no-answers-required short-circuit (Phase 31 evolution).
+        verdict = "inconclusive"
+    elif result.returncode == 2:
+        # WR-06: gate.py uses exit-code 2 for BOTH `fail_regression`
+        # (VERDICT_TO_EXIT) AND `argparse.parser.error()` (missing required
+        # args). We disambiguate by checking whether gate.py wrote a
+        # report — if no report exists, it's the argparse-missing-args
+        # path (operator mis-supplied argv); surface as inconclusive so
+        # the patch lands in failed_gate.jsonl with a clear reason rather
+        # than being mislabelled as fail_regression.
         verdict = "inconclusive"
     else:
         verdict = "fail"
