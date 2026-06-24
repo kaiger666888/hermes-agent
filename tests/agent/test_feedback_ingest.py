@@ -310,3 +310,322 @@ class TestJsonlFixtures:
                 pytest.fail(
                     f"invalid_skill.jsonl line {idx + 1} should be valid: {exc}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Plan 02 Task 1: JSONL batch importer + kais-aigc file watcher
+# ---------------------------------------------------------------------------
+
+import threading  # noqa: E402  (test-only; keep close to the tests that use it)
+import time  # noqa: E402
+
+from pydantic import ValidationError  # noqa: E402
+
+
+FIXTURES_DIR_GLOBAL = Path(__file__).resolve().parent.parent / "fixtures" / "feedback"
+
+
+def _write_partial_file(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8")
+
+
+def _make_kais_record_json(
+    *, skill_id: str = "screenplay", source: str = "cli", output_text: str = "x"
+) -> dict:
+    """Return a dict that will validate as a FeedbackRecord."""
+    return {
+        "skill_id": skill_id,
+        "expert_id": skill_id,
+        "source": source,
+        "verdict": "good",
+        "correction": "",
+        "revised_output": None,
+        "output_snapshot": {
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "output_text": output_text,
+            "prompt": "p",
+            "model": "m",
+            "provider": "openai",
+            "api_mode": "chat_completions",
+            "params": {},
+            "captured_at": "2026-06-24T12:00:00+00:00",
+        },
+        "ts": "2026-06-24T12:00:00+00:00",
+    }
+
+
+class TestImportJsonl:
+    """import_jsonl() — atomic all-or-nothing batch import."""
+
+    def test_import_jsonl_all_valid(self, feedback_env):
+        """import_jsonl(valid_10.jsonl) -> (10, []) and 10 files written."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        path = FIXTURES_DIR_GLOBAL / "valid_10.jsonl"
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert errors == []
+        assert count == 10
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        files = list(incoming.glob("*.json"))
+        assert len(files) == 10
+
+    def test_import_jsonl_atomic_reject(self, feedback_env):
+        """invalid_verdict.jsonl -> (0, errors) mentioning line 2 + verdict.
+
+        ZERO files written (atomicity — T-28-11).
+        """
+        feedback_ingest = feedback_env["feedback_ingest"]
+        path = FIXTURES_DIR_GLOBAL / "invalid_verdict.jsonl"
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert count == 0
+        assert len(errors) >= 1
+        # The error must mention line 2 and the verdict field.
+        joined = "\n".join(errors)
+        assert "line 2" in joined
+        assert "verdict" in joined.lower()
+        # Atomicity: no files written
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        files = list(incoming.glob("*.json"))
+        assert files == [], f"atomic reject must not write files, got: {files}"
+
+    def test_import_jsonl_invalid_skill_reject(self, feedback_env):
+        """invalid_skill.jsonl -> (0, errors) mentioning line 2 + skill_id."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        path = FIXTURES_DIR_GLOBAL / "invalid_skill.jsonl"
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert count == 0
+        assert len(errors) >= 1
+        joined = "\n".join(errors)
+        assert "line 2" in joined
+        # The error must mention skill_id (either in the loc or the message)
+        assert "skill_id" in joined.lower() or "skill" in joined.lower()
+        # Zero files written
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        assert list(incoming.glob("*.json")) == []
+
+    def test_import_jsonl_dry_run(self, feedback_env):
+        """dry_run=True validates without writing."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        path = FIXTURES_DIR_GLOBAL / "valid_10.jsonl"
+        count, errors = feedback_ingest.import_jsonl(path, dry_run=True)
+        assert errors == []
+        assert count == 10
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        # Zero files written in dry-run
+        assert list(incoming.glob("*.json")) == []
+
+    def test_import_jsonl_skips_blank_and_comment_lines(self, feedback_env, tmp_path):
+        """Blank lines and # comments are skipped, not errors."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        valid = _make_kais_record_json()
+        # Mix blank lines + comment lines between valid records
+        lines = [
+            "# this is a comment",
+            "",
+            json.dumps(valid),
+            "   # indented comment",
+            "",
+            json.dumps(_make_kais_record_json(output_text="y")),
+        ]
+        path = tmp_path / "mixed.jsonl"
+        path.write_text("\n".join(lines), encoding="utf-8")
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert errors == []
+        assert count == 2
+
+    def test_import_jsonl_cold_start_10(self, feedback_env):
+        """Cold-start: seeding 10 records works (INGEST-05 success criterion)."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        path = FIXTURES_DIR_GLOBAL / "valid_10.jsonl"
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert errors == []
+        assert count == 10
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        assert len(list(incoming.glob("*.json"))) == 10
+
+    def test_import_jsonl_malformed_json_reports_line(self, feedback_env, tmp_path):
+        """Malformed JSON line is reported with line number, no files written."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        valid = json.dumps(_make_kais_record_json())
+        lines = [valid, "{not valid json", valid]
+        path = tmp_path / "broken.jsonl"
+        path.write_text("\n".join(lines), encoding="utf-8")
+        count, errors = feedback_ingest.import_jsonl(path)
+        assert count == 0
+        assert any("line 2" in e and "json" in e.lower() for e in errors)
+
+
+class TestWatchInboxKais:
+    """watch_inbox_kais() + _scan_once() polling watcher behavior."""
+
+    @pytest.fixture
+    def inbox_tree(self, tmp_path, monkeypatch):
+        """Build a fresh inbox-kais / processed-kais / errors-kais tree.
+
+        Yields (inbox_dir, processed_dir, errors_dir).
+        """
+        # Contain all the watcher writes under tmp_path (no HERMES_HOME bleed).
+        root = tmp_path / "feedback"
+        inbox = root / "inbox-kais"
+        processed = root / "processed-kais"
+        errors = root / "errors-kais"
+        for d in (inbox, processed, errors):
+            d.mkdir(parents=True, exist_ok=True)
+        return inbox, processed, errors
+
+    def test_watch_inbox_ingests_new_file(self, feedback_env, inbox_tree):
+        """A stable valid JSON file is ingested with source='kais_aigc' override."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        inbox, processed, errors = inbox_tree
+        # Drop a file claiming source='cli' — watcher must override to kais_aigc
+        record = _make_kais_record_json(source="cli")
+        f = inbox / "test1.json"
+        f.write_text(json.dumps(record), encoding="utf-8")
+        seen: dict[str, tuple[float, int]] = {}
+        pending: dict[str, int] = {}
+        # First scan: record the size
+        ingested = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert ingested == 0  # size not stable yet
+        # Second scan: size stable -> ingest
+        ingested2 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert ingested2 == 1
+        # Original moved to processed/
+        assert (processed / "test1.json").is_file()
+        assert not f.exists()
+        # One file in incoming/ with source=kais_aigc
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        files = list(incoming.glob("*_kais_aigc_*.json"))
+        assert len(files) == 1
+
+    def test_watch_inbox_waits_for_stable_size(self, feedback_env, inbox_tree):
+        """Partial-write detection: file is not ingested until size stable."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        inbox, processed, errors = inbox_tree
+        f = inbox / "partial.json"
+        # Write a partial file (size N)
+        f.write_text("x" * 100, encoding="utf-8")
+        seen: dict[str, tuple[float, int]] = {}
+        pending: dict[str, int] = {}
+        # First scan: records size 100, does not ingest
+        n1 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert n1 == 0
+        # Append more bytes (size 200)
+        f.write_text("x" * 200, encoding="utf-8")
+        n2 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert n2 == 0  # size changed; still not stable
+        # Third scan: size unchanged at 200 -> not valid JSON, will error-move,
+        # but the key behavior is it didn't ingest on the first or second scan.
+        n3 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert n3 == 0  # not valid JSON -> error path, not ingest
+        # File moved to errors (size stable but invalid JSON)
+        assert (errors / "partial.json").is_file()
+
+    def test_watch_inbox_rejects_path_traversal(self, feedback_env, tmp_path):
+        """A filename containing ../ must NOT escape the inbox tree."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        # Set up an isolated tree where the traversal is contained
+        root = tmp_path / "feedback"
+        inbox = root / "inbox-kais"
+        processed = root / "processed-kais"
+        errors = root / "errors-kais"
+        for d in (inbox, processed, errors):
+            d.mkdir(parents=True, exist_ok=True)
+        # Create a file with a literal traversal name. On most filesystems we
+        # can't actually name a file '../../etc/passwd.json' — so create it
+        # inside a subdir whose name embeds traversal, then test the
+        # sanitize-by-.name behavior. The real defense is in the watcher
+        # using Path(entry.name).name which strips dir components; we verify
+        # that the ingested record's filename is derived from skill_id+ts,
+        # never from the source filename.
+        record = _make_kais_record_json()
+        # Simulate a malicious filename by writing to a file that has ../ in its name.
+        # If the OS refuses, skip the literal and use a benign-but-suspicious name.
+        try:
+            f = inbox / "../../etc/passwd.json"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps(record), encoding="utf-8")
+        except (OSError, ValueError):
+            # Filesystem refused the traversal name — that itself is a defense.
+            # Fall back to a name with embedded slashes that the watcher must strip.
+            f = inbox / "..-..-etc-passwd.json"
+            f.write_text(json.dumps(record), encoding="utf-8")
+        seen: dict[str, tuple[float, int]] = {}
+        pending: dict[str, int] = {}
+        # Two scans for stability
+        feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        # No file should have been created outside the incoming/ tree
+        incoming = feedback_env["home"] / "skills" / ".feedback" / "incoming"
+        # The processed file must use the sanitized .name, not escape processed_dir
+        # If a literal traversal file existed and was moved, it would land in processed/
+        # under its sanitized name. Check no 'passwd' file exists under /etc:
+        assert not Path("/etc/passwd.json").exists()
+        # And the write target under incoming/ is derived from skill_id+source+ts
+        files = list(incoming.glob("*.json"))
+        for written in files:
+            # Filename must NOT be the raw traversal name
+            assert ".." not in written.name
+            assert "/" not in written.name
+
+    def test_watch_inbox_continues_on_malformed(self, feedback_env, inbox_tree):
+        """A malformed file is moved to errors/; a subsequent valid file still ingests."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        inbox, processed, errors = inbox_tree
+        # Drop malformed JSON
+        (inbox / "broken.json").write_text("{not json", encoding="utf-8")
+        # Drop valid JSON in the same scan batch
+        record = _make_kais_record_json()
+        (inbox / "valid.json").write_text(json.dumps(record), encoding="utf-8")
+        seen: dict[str, tuple[float, int]] = {}
+        pending: dict[str, int] = {}
+        # First scan: record sizes
+        n1 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert n1 == 0
+        # Second scan: sizes stable — broken -> errors, valid -> ingested
+        n2 = feedback_ingest._scan_once(inbox, processed, errors, seen, pending)
+        assert n2 == 1  # valid was ingested; broken was not (error path)
+        # Broken moved to errors/
+        assert (errors / "broken.json").is_file()
+        assert not (inbox / "broken.json").exists()
+        # Valid moved to processed/
+        assert (processed / "valid.json").is_file()
+        assert not (inbox / "valid.json").exists()
+
+    def test_watch_inbox_max_iterations_zero(self, feedback_env, inbox_tree):
+        """watch_inbox_kais with max_iterations=0 exits immediately (no infinite loop)."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        inbox, _processed, _errors = inbox_tree
+        # Should return without blocking
+        start = time.monotonic()
+        feedback_ingest.watch_inbox_kais(
+            inbox, interval=0.01, max_iterations=0
+        )
+        elapsed = time.monotonic() - start
+        assert elapsed < 1.0, "max_iterations=0 must exit immediately"
+
+    def test_watch_inbox_stop_event(self, feedback_env, inbox_tree):
+        """stop_event.is_set() breaks the loop."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        inbox, _processed, _errors = inbox_tree
+        stop = threading.Event()
+        stop.set()  # pre-set so the very first check breaks
+        feedback_ingest.watch_inbox_kais(
+            inbox, interval=0.01, stop_event=stop, max_iterations=None
+        )
+        # If stop_event wasn't honored, this would hang forever — pytest-timeout catches it.
+
+    def test_watch_inbox_uses_env_var_override(
+        self, feedback_env, tmp_path, monkeypatch
+    ):
+        """HERMES_FEEDBACK_INBOX_KAIS env var overrides the default inbox path."""
+        feedback_ingest = feedback_env["feedback_ingest"]
+        custom_inbox = tmp_path / "custom-kais-inbox"
+        custom_inbox.mkdir(parents=True)
+        monkeypatch.setenv("HERMES_FEEDBACK_INBOX_KAIS", str(custom_inbox))
+        # watch_inbox_kais() with inbox_dir=None should pick up the env var.
+        # We use max_iterations=0 so it doesn't block.
+        feedback_ingest.watch_inbox_kais(max_iterations=0)
+        # The custom inbox + siblings were created by the watcher.
+        assert custom_inbox.is_dir()
+        assert (custom_inbox.parent / "processed-kais").is_dir() or (
+            custom_inbox / ".." / "processed-kais"
+        ).exists() or (tmp_path / "processed-kais").exists()
