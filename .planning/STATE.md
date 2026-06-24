@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: ready_to_plan
-last_updated: 2026-06-24T11:55:18.094Z
-last_activity: 2026-06-24 -- Phase 29 complete (FeedbackStore + STORE-04 dedup + delegation)
+status: executing
+last_updated: "2026-06-24T12:47:08Z"
+last_activity: 2026-06-24 -- Phase 30 Plan 01 complete (eval gate foundation shipped)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
-stopped_at: Phase 29 complete (2/2) — ready to discuss Phase 30
+  total_plans: 6
+  completed_plans: 5
+  percent: 42
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -25,14 +24,14 @@ stopped_at: Phase 29 complete (2/2) — ready to discuss Phase 30
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 30 — eval gate reuse
+**Current focus:** Phase 30 — eval gate reuse (Plan 01 shipped, Plan 02 next)
 
 ## Current Position
 
 Phase: 30
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-24
+Plan: 02 (next — paired-t significance + --rebuild-baseline + multi-skill detection)
+Status: Plan 01 complete; Plan 02 not started
+Last activity: 2026-06-24 -- Phase 30 Plan 01 shipped (eval gate foundation: parse_judge_scores + gate.py orchestrator)
 
 ### Progress
 
@@ -47,7 +46,7 @@ v5.0 kais-movie-agent V8.6 Adaptation:
 v6.0 Self-Evolution & Feedback Loop:
   Phase 28 (Feedback Ingestion MVP)        [██████████] 100% Complete (Plan 01 schema+snapshot+write; Plan 02 CLI+watcher+JSONL — 76 tests green, FOUND-08 verified)
   Phase 29 (Feedback Store)                [██████████] 100% Complete (Plan 01 FeedbackStore foundation 49 tests; Plan 02 STORE-04 dedup + delegation + rebuild-index CLI — 26 new tests, 150/151 feedback-subsystem green, Phase 29 closed)
-  Phase 30 (Eval Gate Reuse)               [          ] 0% Not started — parallel-eligible with P31 next
+  Phase 30 (Eval Gate Reuse)               [█████░░░░░] 50% Plan 01 shipped (parse_judge_scores + gate.py orchestrator + GATE-02/04 — 43 new tests green, FOUND-08 + runtime isolation verified); Plan 02 next (paired-t + --rebuild-baseline + multi-skill)
   Phase 31 (Knowledge Evolution Pipeline)  [          ] 0% Not started — parallel-eligible with P30 next
   Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — depends on P29 + P31
   Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
@@ -59,7 +58,7 @@ v6.0 Self-Evolution & Feedback Loop:
 |-------|------|--------|-------|
 | 28 | Feedback Ingestion MVP | **Complete** | Shipped 2026-06-24. INGEST-01..05 covered. Plan 01 (schema + snapshot + atomic write — 45 tests) + Plan 02 (/feedback slash cmd + hermes feedback {import,watch,submit} + kais file watcher + JSONL atomic batch import — 31 new tests). 76/76 tests green, Ruff clean, FOUND-08 preserved, zero new deps. |
 | 29 | Feedback Store | **Complete** | Shipped 2026-06-24. STORE-01..04 satisfied. Plan 01 FeedbackStore foundation (49 tests, 2 Rule 1 bugs auto-fixed). Plan 02 STORE-04 sha256 dedup/correction branch + Phase 28 write_feedback_record delegation + rebuild_index method + hermes feedback rebuild-index CLI (26 new tests across TestDedup/TestCorrection/TestRebuildIndex/TestDelegation/TestRebuildIndexCLI; 150/151 feedback-subsystem green, 1 documented skip; 2 deviations auto-fixed). Phase 29 closed. |
-| 30 | Eval Gate Reuse | Not started | Covers GATE-01..04. Parallel-eligible with P31 (disjoint files). Extends `_eval/runner.py` (offline dev tooling, no runtime touch). |
+| 30 | Eval Gate Reuse | **In progress** | Plan 01 shipped 2026-06-24. parse_judge_scores() + composite_score() added to runner.py (load-bearing GATE-02/04 numeric enabler — v1 discarded per-dimension scores). gate.py orchestrator built (extract_patched_files + apply/revert + decide_verdict + load_gate_config + run_gate + main CLI). 4 commits, 43 new tests (14 runner + 29 gate), FOUND-08 byte-intact, runtime isolation 0. Plan 02 next: paired-t significance + --rebuild-baseline + multi-skill detection. |
 | 31 | Knowledge Evolution Pipeline | Not started | Covers EVOL-01, EVOL-03, EVOL-04, EVOL-05. Parallel-eligible with P30. Builds review queue + approve/apply mechanics. |
 | 32 | Curator Upgrade + Audit | Not started | Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. |
 | 33 | Observability + Integration Close-out | Not started | Covers OBS-01..03 + integration deliverables. MUST run last. Writes `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + README + glossary. Mirrors v5.0 Phase 27 pattern. |
@@ -142,6 +141,11 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | Older bucket weighted_count recomputed on correction | record_feedback only recomputes the newer verdict's bucket; without _recompute_single_bucket(older_bucket_key), the older verdict bucket retains stale weight>0 after its only record is superseded. Auto-fixed Rule 1. | Applied 2026-06-24 — P29 Plan 02 _handle_dedup (Rule 1 bug fix) |
 | Phase 28 test_rejects_when_hermes_home_unwritable SKIPPED on delegation path | Phase 29 delegation triggers hermes_cli.config.ensure_hermes_home which resets skills/ mode before the chmod-0500 trick can bite. Invariant tested directly on FeedbackStore in TestFeedbackStoreInit instead. | Applied 2026-06-24 — P29 Plan 02 tests/agent/test_feedback_ingest.py (Rule 3 fix) |
 | write_feedback_record return value semantics: bucket path (not per-record path) | Phase 29 delegation returns buckets/<skill_id>/<source>.jsonl, not Phase 28 per-record incoming/*.json. Safe change — callers use path for display only. | Applied 2026-06-24 — P29 Plan 02 agent/feedback_ingest.py |
+| parse_judge_scores silently drops out-of-range/non-numeric/missing dims (fail-safe empty dict) | Caller decides how to treat absence. Gate treats empty dict as a failed prompt (excluded from n_valid, counts toward min_prompts floor). No imputation — a judge that ignores the output format is unreliable. | Applied 2026-06-24 — P30 Plan 01 runner.py parse_judge_scores |
+| run_position_swap extended additively (raw_ab, raw_ba, scores_ab, scores_ba keys) | Backward-compat: existing prompt_id/ordering_ab/ordering_ba/final keys unchanged. All pre-existing test_runner.py tests still pass. | Applied 2026-06-24 — P30 Plan 01 runner.py run_position_swap |
+| decide_verdict per_prompt_threshold boundary is strict-less-than (exact -1.0 passes) | A drop of exactly -1.0 does NOT trigger fail_regression; only drops < -1.0 do. Boundary tested in test_regression_boundary_passes. | Applied 2026-06-24 — P30 Plan 01 gate.py decide_verdict |
+| Baseline cache lazy-populates on first run (candidate becomes baseline for next run) | When baseline_scores_cache is missing, candidate composites are cached as the baseline for the next gate run. First run mean_delta=0 -> pass. Avoids blocking the pipeline on first invocation. | Applied 2026-06-24 — P30 Plan 01 gate.py run_gate step 6 |
+| revert_patch handles patch-added files via git clean -f <path> (scoped) | git checkout -- fails on files not in HEAD. Detect via git cat-file -e HEAD:<path>; added files get git clean -f <path> (scoped to specific paths, NOT blanket clean — worktree safety). | Applied 2026-06-24 — P30 Plan 01 gate.py revert_patch |
 
 ### Decisions (carried forward — relevant to v6.0)
 
@@ -196,17 +200,17 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 5. `skills/movie-experts/_eval/runner.py` (existing MT-Bench position-swap harness) — Phase 30 reuses this as eval gate
 6. `.planning/research/v2-pipeline-design/skills-mapping.yaml` — canonical expert mapping baseline (v3.0 + v4.0 + v5.0 signoffs; v6 adds `v6_ref_signoffs:` in P33)
 
-**Next action:** `/gsd:plan-phase 30` OR `/gsd:plan-phase 31` to plan the parallel-eligible wave (P30 = Eval Gate Reuse, P31 = Knowledge Evolution Pipeline). Both are unblocked now that Phase 29 is complete.
+**Next action:** `/gsd:execute-phase 30` Plan 02 (paired-t significance via stdlib t-table + --rebuild-baseline + multi-skill detection + baseline cache staleness — covers GATE-03, completes GATE-01). OR plan Phase 31 (parallel-eligible — `/gsd:plan-phase 31`).
 
-**Resume from interrupted phase:** Read `.planning/phases/29-feedback-store/29-02-SUMMARY.md` for the latest state.
+**Resume from interrupted phase:** Read `.planning/phases/30-eval-gate-reuse/30-01-SUMMARY.md` for the latest state.
 
 ---
 
-*Last updated: 2026-06-24 — Phase 29 complete (FeedbackStore + STORE-04 dedup + Phase 28 delegation + rebuild-index CLI). 12/26 v6.0 requirements satisfied. Next: parallel-eligible wave P30+P31.*
+*Last updated: 2026-06-24 — Phase 30 Plan 01 shipped (parse_judge_scores + gate.py orchestrator — GATE-02/04 numeric enabler landed). 12/26 v6.0 requirements satisfied (GATE-02/04 partially satisfied pending Plan 02). Next: Phase 30 Plan 02 OR Phase 31 plan.*
 
 ## Operator Next Steps
 
-- Plan Phase 30: `/gsd:plan-phase 30` (Eval Gate Reuse — covers GATE-01..04; extends `_eval/runner.py`, parallel-eligible with P31)
+- Execute Phase 30 Plan 02: `/gsd:execute-phase 30` (paired-t significance + --rebuild-baseline + multi-skill detection — completes GATE-01/03)
 - Plan Phase 31: `/gsd:plan-phase 31` (Knowledge Evolution Pipeline — covers EVOL-01/03/04/05; parallel-eligible with P30)
 - Review ROADMAP.md critical path to confirm Phase 30/31 parallel wave is acceptable
 - Confirm EVOL-02 → Phase 32 mapping (Curator invokes diff generator) is acceptable before planning P31/P32
