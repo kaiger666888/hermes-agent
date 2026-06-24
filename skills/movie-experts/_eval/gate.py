@@ -419,15 +419,34 @@ def decide_verdict(
     Implements GATE-02 (mean delta) and GATE-04 (per-prompt regression)
     per 30-CONTEXT.md decisions.
 
+    CR-05 fix: if ``len(baseline_scores) != len(candidate_scores)`` the
+    inputs are considered corrupted (baseline and candidate must be
+    aligned 1:1 per prompt). Returns ``inconclusive`` with evidence
+    recording the mismatch — does NOT silently truncate via ``min()``.
+    Previous behavior silently computed the verdict on the first N
+    paired samples, hiding prompts past the truncation index from the
+    per-prompt regression check.
+
     Order of checks:
-      1. n_valid < min_prompts -> inconclusive
-      2. mean_delta < -delta_threshold -> fail_mean
-      3. any per-prompt delta < -per_prompt_threshold -> fail_regression
-      4. otherwise -> pass
+      1. baseline/candidate length mismatch -> inconclusive (corrupt)
+      2. n_valid < min_prompts -> inconclusive
+      3. mean_delta < -delta_threshold -> fail_mean
+      4. any per-prompt delta < -per_prompt_threshold -> fail_regression
+      5. otherwise -> pass
 
     Returns ``(verdict, evidence_dict)``.
     """
-    n = min(len(baseline_scores), len(candidate_scores))
+    # CR-05: refuse to score misaligned lists — silently truncating via
+    # min() hides regressing prompts past the truncation index from the
+    # per-prompt regression check.
+    if len(baseline_scores) != len(candidate_scores):
+        return "inconclusive", {
+            "reason": "mismatched_prompt_counts",
+            "n_baseline": len(baseline_scores),
+            "n_candidate": len(candidate_scores),
+            "min_prompts": min_prompts,
+        }
+    n = len(baseline_scores)
     if n < min_prompts:
         return "inconclusive", {"n_valid": n, "min_prompts": min_prompts}
 
