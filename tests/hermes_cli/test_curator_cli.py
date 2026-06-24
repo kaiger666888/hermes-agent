@@ -228,6 +228,51 @@ class TestRejectCmdCurator:
         assert rc == 1
         audit.assert_not_called()
 
+    def test_reject_resolves_skill_id_before_move(self, monkeypatch, tmp_path):
+        """WR-06 regression: skill_id is resolved from pending BEFORE
+        _cmd_reject moves the patch to rejected.jsonl. The prior order
+        scanned pending first (where the patch no longer was after the
+        move) then applied then rejected — 3 JSONL parses for one lookup
+        and a fragile coupling to where _cmd_reject files the patch.
+
+        After the fix, the audit entry records the correct skill_id
+        resolved from the pre-reject pending queue.
+        """
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        from hermes_cli import curator as curator_cli
+
+        # Sentinel for _cmd_reject — we don't care about its internals;
+        # we just want to verify _resolve_skill_from_patch was called
+        # BEFORE _cmd_reject (so it reads from pending, where the patch
+        # still lives at resolution time).
+        reject_call_order: list[str] = []
+        resolve_call_order: list[str] = []
+
+        def fake_reject(args):
+            reject_call_order.append("reject")
+            return 0
+
+        def fake_resolve(patch_id):
+            resolve_call_order.append("resolve")
+            return "skill_from_pending"
+
+        monkeypatch.setattr("hermes_cli.feedback._cmd_reject", fake_reject)
+        monkeypatch.setattr(
+            "hermes_cli.curator._resolve_skill_from_patch", fake_resolve,
+        )
+        audit = MagicMock()
+        monkeypatch.setattr("agent.curator_audit.append_audit", audit)
+
+        args = argparse.Namespace(patch_id="pid1", reason="bad")
+        rc = curator_cli._cmd_reject_curator(args)
+        assert rc == 0
+        # Resolve happened BEFORE reject (correct order).
+        assert resolve_call_order == ["resolve"]
+        assert reject_call_order == ["reject"]
+        # Audit entry got the resolved skill_id.
+        audit.assert_called_once()
+        assert audit.call_args.kwargs["skill_id"] == "skill_from_pending"
+
 
 # ---------------------------------------------------------------------------
 # audit-log — query and verify

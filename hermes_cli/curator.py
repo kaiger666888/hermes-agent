@@ -598,8 +598,19 @@ def _cmd_reject_curator(args) -> int:
 
     The audit append is best-effort (try/except WARNING) per RESEARCH A4 /
     T-32-12 — a failed audit write MUST NOT block the reject.
+
+    WR-06: resolve the skill_id BEFORE _cmd_reject moves the patch from
+    pending.jsonl to rejected.jsonl. The prior order called _resolve_skill
+    AFTER the move, which scanned pending first (where the patch no longer
+    was), then applied, then rejected — 3 JSONL parses for one lookup.
+    Resolving before the move reads pending directly (1 parse) and avoids
+    the cross-file scan. If _cmd_reject ever changes to move patches
+    elsewhere (e.g. retracted.jsonl), this resolver still works because
+    it reads the patch at its pre-reject location.
     """
     from hermes_cli.feedback import _cmd_reject
+    # Resolve skill_id while the patch is still in pending.jsonl.
+    skill_id = _resolve_skill_from_patch(args.patch_id)
     rc = _cmd_reject(args)
     if rc == 0:
         try:
@@ -607,7 +618,7 @@ def _cmd_reject_curator(args) -> int:
             append_audit(
                 action="reject",
                 patch_id=args.patch_id,
-                skill_id=_resolve_skill_from_patch(args.patch_id),
+                skill_id=skill_id,
                 operator=_get_operator(),
             )
         except Exception as exc:  # noqa: BLE001 — audit is best-effort (T-32-12)
