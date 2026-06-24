@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: ready_to_plan
-last_updated: 2026-06-24T15:11:22.228Z
-last_activity: 2026-06-24 -- Phase 31 COMPLETE (engine + CLI layers shipped; 87 tests green; EVOL-04 non-bypassable human-in-loop structurally enforced)
+status: executing
+last_updated: "2026-06-25T00:07:24.000Z"
+last_activity: 2026-06-25 -- Phase 32 Plan 01 COMPLETE (engine layer shipped)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 67
-stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
+  total_plans: 10
+  completed_plans: 9
+  percent: 75
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +29,9 @@ stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
 ## Current Position
 
 Phase: 32
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-24
+Plan: 01 COMPLETE (engine layer shipped — audit + EVOL-02 + feedback-scan)
+Status: Ready to execute Plan 02 (CLI layer)
+Last activity: 2026-06-25 -- Phase 32 Plan 01 COMPLETE
 
 ### Progress
 
@@ -49,7 +48,7 @@ v6.0 Self-Evolution & Feedback Loop:
   Phase 29 (Feedback Store)                [██████████] 100% Complete (Plan 01 FeedbackStore foundation 49 tests; Plan 02 STORE-04 dedup + delegation + rebuild-index CLI — 26 new tests, 150/151 feedback-subsystem green, Phase 29 closed)
   Phase 30 (Eval Gate Reuse)               [██████████] 100% Complete (Plan 01 parse_judge_scores + gate.py orchestrator GATE-02/04 — 43 tests; Plan 02 paired-t significance + rebuild_baseline + multi-skill guard GATE-01/03 — 30 tests; 100/101 eval tests green, FOUND-08 + runtime isolation + scipy-free verified; Phase 30 CLOSED)
   Phase 31 (Knowledge Evolution Pipeline)  [██████████] 100% Complete (Plan 01 engine layer — 60 tests; Plan 02 CLI layer — 27 tests; 87/87 green, EVOL-04 non-bypassable human-in-loop structurally enforced via TestNonBypassableHumanInLoop ast-walk, runtime isolation 0 matches, FOUND-08 byte-intact, RESEARCH 3/3 RESOLVED; Phase 31 CLOSED)
-  Phase 32 (Curator Upgrade + Audit)       [          ] 0% Not started — UNBLOCKED (P29 + P31 both complete)
+  Phase 32 (Curator Upgrade + Audit)       [█████░░░░░] 50% Plan 01 COMPLETE (engine: audit + EVOL-02 + feedback-scan — 55 tests, 4 commits, P31 invariant preserved, runtime isolation 0)
   Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
 ```
 
@@ -61,7 +60,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | 29 | Feedback Store | **Complete** | Shipped 2026-06-24. STORE-01..04 satisfied. Plan 01 FeedbackStore foundation (49 tests, 2 Rule 1 bugs auto-fixed). Plan 02 STORE-04 sha256 dedup/correction branch + Phase 28 write_feedback_record delegation + rebuild_index method + hermes feedback rebuild-index CLI (26 new tests across TestDedup/TestCorrection/TestRebuildIndex/TestDelegation/TestRebuildIndexCLI; 150/151 feedback-subsystem green, 1 documented skip; 2 deviations auto-fixed). Phase 29 closed. |
 | 30 | Eval Gate Reuse | **Complete** | Shipped 2026-06-24. GATE-01..04 all covered. Plan 01: parse_judge_scores() + composite_score() in runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config + CLI) — 43 new tests. Plan 02: paired_t_stats() + is_significant() via stdlib statistics + hardcoded _CRITICAL_T_05_TWO_TAILED t-table (GATE-03, no scipy) + rebuild_baseline() with scores.json provenance cache + load_cached_baseline() with non-blocking staleness warning + detect_multi_skill_patch() with exit-3 early-exit guard + --rebuild-baseline/--multi-skill CLI flags — 30 new tests. 100/101 eval tests green (1 pre-existing openai-missing skip), FOUND-08 byte-intact, runtime isolation 0, scipy-free. Phase 30 CLOSED. |
 | 31 | Knowledge Evolution Pipeline | **Complete** | Shipped 2026-06-24. EVOL-01/03/04/05 fully covered. Plan 01: agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — 60 new tests, 7 commits. Plan 02: hermes_cli/feedback.py extended with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + TestNonBypassableHumanInLoop ast-walk structural invariant (only _cmd_approve calls apply_patch_transaction) — 27 new tests, 3 commits. 87/87 combined green, runtime isolation 0 matches, FOUND-08 byte-intact (0 SKILL.md changes), RESEARCH 3/3 Open Questions RESOLVED, VALIDATION nyquist_compliant=true. Phase 31 CLOSED. |
-| 32 | Curator Upgrade + Audit | Not started | UNBLOCKED — P29 + P31 dependencies both satisfied. Covers CURATE-01..05 + EVOL-02. Directly modifies `agent/curator.py` (unavoidable scope expansion from v5). Implements EVOL-02 diff generator invoked by Curator proposal path. Must still route commits through _cmd_approve (TestNonBypassableHumanInLoop enforces). |
+| 32 | Curator Upgrade + Audit | **Plan 01 done** | Plan 01 shipped 2026-06-25. Engine layer: agent/curator_audit.py (sha256-chained JSONL, append/verify/read + 2 fixtures), agent/evolution/evol02_generator.py (multi-instruction bilingual diff generator extending P31 placeholder), agent/curator.py additive _feedback_scan_phase (lazy imports, try/except isolation, bundled-never-auto), PatchRecord additive extension (auto_apply_eligible + confidence_score). 55 new tests, 4 commits. 246 curator+evolution green, P31 TestNonBypassableHumanInLoop green, runtime isolation 0 module-level agent.evolution imports, FOUND-08 byte-intact. Open Q #1 RESOLVED (distinct UTC days as session proxy). Plan 02 (CLI layer: queue/approve/reject/audit-log + CURATE-05 auto-apply routing) next. |
 | 33 | Observability + Integration Close-out | Not started | Covers OBS-01..03 + integration deliverables. MUST run last. Writes `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + README + glossary. Mirrors v5.0 Phase 27 pattern. |
 
 ### Critical Path
@@ -99,8 +98,8 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 - v6.0 requirements total: 26
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
-- v6.0 requirements completed: 20 (INGEST-01..05 from Phase 28 + STORE-01..04 from Phase 29 + GATE-01..04 from Phase 30 + EVOL-01/03/04/05 from Phase 31 + ROADMAP-LEVEL annotations to follow)
-- v6.0 plans completed: 8 / 8 so far for Phases 28-31 (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 + Phase 31 Plan 01 + Plan 02; Phases 32-33 not yet planned)
+- v6.0 requirements completed: 24 (INGEST-01..05 from Phase 28 + STORE-01..04 from Phase 29 + GATE-01..04 from Phase 30 + EVOL-01/03/04/05 from Phase 31 + CURATE-01/02/03 + EVOL-02 from Phase 32 Plan 01; CURATE-04/05 await Plan 02)
+- v6.0 plans completed: 9 / 10 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 + Phase 31 Plan 01 + Plan 02 + Phase 32 Plan 01; Phase 32 Plan 02 + Phase 33 remain)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -158,6 +157,11 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | Additive-only check is UNIVERSAL (all evolution patches) not just protected_refs | Plan action step 5d specified protected-only, but behavior bullet + EVOL-02 scope discipline require ALL evolution patches to be additive. Protected refs get explicit SC-6 error message; other files get generic additive-only message. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/apply.py (Rule 2 auto-fix) |
 | Deferred openai import in make_aggregation_client | RuntimeError on missing OPENROUTER_API_KEY must surface before SDK import. In envs without openai installed, top-of-function import masked the key-check error. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/insights.py (Rule 1 auto-fix) |
 | Local _extract_patched_files copy (gate.py under hyphenated path not importable) | skills/movie-experts/_eval/gate.py cannot be imported via normal Python import (hyphen in path). Reimplemented the T-30-01 path-traversal + WR-07 deletion-patch hardening locally with a code comment pointing to the canonical source. | Applied 2026-06-24 — P31 Plan 01 agent/evolution/apply.py |
+| Audit log at agent/curator_audit.py (NOT agent/evolution/audit.py) | agent/curator.py IS Hermes runtime and imports the audit module. P31 invariant forbids agent/evolution/ imports by runtime. Placing the audit module under agent/evolution/ would force curator to import from the forbidden subpackage. | Applied 2026-06-25 — P32 Plan 01 agent/curator_audit.py |
+| EVOL-02 build-final-state-then-diff-once | Multi-instruction same-file patches require applying all instructions to a working copy sequentially, then emitting ONE difflib.unified_diff. Otherwise the second instruction's anchor offset is wrong (it's in the pre-mutation content). | Applied 2026-06-25 — P32 Plan 01 agent/evolution/evol02_generator.py |
+| EVOL-02 idempotent guard strengthened (block-already-present check) | P31's full-line-set equality guard (`working == original_lines`) never fires when re-running the same instruction because the generator always adds lines. New check compares block lines to existing lines immediately after the anchor. | Applied 2026-06-25 — P32 Plan 01 agent/evolution/evol02_generator.py (Rule 1 auto-fix) |
+| Distinct UTC calendar days as session proxy (Open Q #1 RESOLVED) | FeedbackRecord has no session_id field (verified in agent/feedback_schema.py). Using distinct UTC days from record.ts.date() as the session-diversity proxy is the closest available approximation. Documented in _scan_for_hot_skills docstring for reviewability. | Applied 2026-06-25 — P32 Plan 01 agent/curator.py |
+| FeedbackStore constructed via hermes_home kwarg (not root) | Plan referenced FeedbackStore(root=...) but P29 actual signature is FeedbackStore(hermes_home=...). Auto-fixed Rule 1. | Applied 2026-06-25 — P32 Plan 01 agent/curator.py (Rule 1 auto-fix) |
 
 ### Decisions (carried forward — relevant to v6.0)
 
@@ -212,16 +216,15 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 5. `skills/movie-experts/_eval/runner.py` (existing MT-Bench position-swap harness) — Phase 30 reuses this as eval gate
 6. `.planning/research/v2-pipeline-design/skills-mapping.yaml` — canonical expert mapping baseline (v3.0 + v4.0 + v5.0 signoffs; v6 adds `v6_ref_signoffs:` in P33)
 
-**Next action:** Execute Phase 31 Plan 02 (`/gsd:execute-phase 31` — CLI layer: hermes_cli/feedback.py extension with 6 new subcommands wiring the agent/evolution/ engine) OR plan Phase 32 (`/gsd:plan-phase 32` — Curator Upgrade, depends on P29 + P31).
+**Next action:** Execute Phase 32 Plan 02 (`/gsd:execute-phase 32` — CLI layer: hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve + audit-log --verify).
 
-**Resume from interrupted phase:** Read `.planning/phases/31-knowledge-evolution-pipeline/31-01-SUMMARY.md` for the latest state.
+**Resume from interrupted phase:** Read `.planning/phases/32-curator-upgrade-audit/32-01-SUMMARY.md` for the latest state.
 
 ---
 
-*Last updated: 2026-06-24 — Phase 31 Plan 01 COMPLETE (knowledge evolution engine layer shipped — agent/evolution/ subpackage with EVOL-01/03/04/05 + FOUND-08 byte-intact + additive-only). 20/26 v6.0 requirements satisfied. Next: Phase 31 Plan 02 (CLI layer) OR Phase 32 plan.*
+*Last updated: 2026-06-25 — Phase 32 Plan 01 COMPLETE (curator upgrade engine layer shipped — agent/curator_audit.py sha256 chain + agent/evolution/evol02_generator.py bilingual multi-instruction diff + agent/curator.py additive _feedback_scan_phase + PatchRecord additive extension). 55 new tests, 4 commits. P31 TestNonBypassableHumanInLoop preserved, runtime isolation 0, FOUND-08 byte-intact. 21/26 v6.0 requirements satisfied. Next: Phase 32 Plan 02 (CLI layer).*
 
 ## Operator Next Steps
 
-- Execute Phase 31 Plan 02: `/gsd:execute-phase 31` (CLI layer — hermes_cli/feedback.py extension with evolve / review-queue / show-patch / approve / reject / rollback subcommands; wires the agent/evolution/ engine into operator-invokable commands)
-- Plan Phase 32: `/gsd:plan-phase 32` (Curator Upgrade + Audit — covers CURATE-01..05 + EVOL-02; depends on P29 + P31)
-- Review ROADMAP.md critical path — Phase 31 Plan 01 done; Plan 02 (CLI) completes P31, then P32 (Curator) + P33 (Observability)
+- Execute Phase 32 Plan 02: `/gsd:execute-phase 32` (CLI layer — hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve + audit-log --verify)
+- Review ROADMAP.md critical path — Phase 32 Plan 01 (engine) done; Plan 02 (CLI) completes P32, then P33 (Observability + Close-out) MUST run last

@@ -28,7 +28,7 @@
 ### Knowledge Evolution (EVOL)
 
 - [x] **EVOL-01**: 反馈→可执行知识点抽取 —— LLM-based aggregation,跨多条反馈识别共性"应该改进什么",输出 candidate insights(结构化 JSON,带证据链指向具体反馈 IDs)
-- [ ] **EVOL-02**: 知识点→候选 patch 生成 —— 针对 SKILL.md 或 `references/*.md`,生成 unified diff(非整文件改写),保留原文风格与双语结构
+- [x] **EVOL-02**: 知识点→候选 patch 生成 —— 针对 SKILL.md 或 `references/*.md`,生成 unified diff(非整文件改写),保留原文风格与双语结构
 - [x] **EVOL-03**: Patch review queue —— operator 可视化查看 pending patches,每条带 source 反馈链 + LLM 抽取理由 + 影响 skill 列表
 - [x] **EVOL-04**: Human-in-loop approve workflow —— **所有 bundled movie-expert skill 的 patch 必须经 operator 审批才能 apply**(agent-created skill 可走半自动,见 CURATE-05)
 - [x] **EVOL-05**: Patch apply + rollback —— apply 前自动 git-commit(带 feedback IDs + eval score 在 commit message);rollback 子命令可回滚到任意历史版本
@@ -42,9 +42,9 @@
 
 ### Curator Upgrade (CURATE)
 
-- [ ] **CURATE-01**: 扩展 `agent/curator.py` 作用域 —— 从「只 archive agent-created skill」扩展为「能对 bundled movie-expert skill propose patch」(沿用 human-in-loop gate)
-- [ ] **CURATE-02**: Curator 周期扫描累积反馈,当某 skill 负反馈达阈值(可配置,默认 ≥3 条 `needs_work`/`bad` 且跨 ≥2 个 session)自动触发 EVOL 流程
-- [ ] **CURATE-03**: Patch audit log —— `~/.hermes/skills/.audit/` 记录每次 patch 的 operator / 时间 / 关联反馈 IDs / eval score / commit sha,可追溯
+- [x] **CURATE-01**: 扩展 `agent/curator.py` 作用域 —— 从「只 archive agent-created skill」扩展为「能对 bundled movie-expert skill propose patch」(沿用 human-in-loop gate)
+- [x] **CURATE-02**: Curator 周期扫描累积反馈,当某 skill 负反馈达阈值(可配置,默认 ≥3 条 `needs_work`/`bad` 且跨 ≥2 个 session)自动触发 EVOL 流程
+- [x] **CURATE-03**: Patch audit log —— `~/.hermes/skills/.audit/` 记录每次 patch 的 operator / 时间 / 关联反馈 IDs / eval score / commit sha,可追溯
 - [ ] **CURATE-04**: Operator 命令 `hermes curator queue` —— 列出待审批 patches;`hermes curator approve <id>` / `hermes curator reject <id> <reason>` 完成审批
 - [ ] **CURATE-05**: Agent-created skill 半自动路径 —— eval gate 通过 + confidence score ≥ 阈值(默认 0.8)时可自动 apply(仍写 audit log),operator 可全局关闭此行为
 
