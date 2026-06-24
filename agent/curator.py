@@ -1507,6 +1507,36 @@ def _render_candidate_list() -> str:
 # returns 0 (P31 invariant preserved).
 
 
+def _resolve_repo_root_or_none() -> Optional[Path]:
+    """Resolve the git repo root via ``git rev-parse --show-toplevel``.
+
+    Returns None when not inside a git work tree (e.g. running from a
+    wheel install without a checkout, or HERMES_HOME is on a different
+    volume than the source tree). Mirrors the helper in
+    ``hermes_cli/feedback.py:373`` but returns None instead of raising
+    SystemExit — the feedback-scan phase is best-effort and should not
+    abort the curator run when the repo tree is unavailable. Callers
+    fall back to the HERMES_HOME copy in that case (CR-03).
+
+    Used by _feedback_scan_phase to resolve bundled skill paths against
+    the canonical git repo reference frame so generated unified diffs
+    apply cleanly via apply_patch_transaction (which expects
+    repo-relative paths).
+    """
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("git rev-parse failed: %s", exc)
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return Path(result.stdout.strip())
+
+
 def _scan_for_hot_skills(
     store: Any,
     *,
@@ -1740,23 +1770,60 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
 
             # Load current file contents for this skill (for diff generation).
             # We read SKILL.md + references/*.md under the skill directory.
-            skill_dir = get_hermes_home() / "skills" / "movie-experts" / skill_id
-            if not skill_dir.exists():
+            #
+            # CR-03: paths passed to the LLM MUST be repo-relative
+            # (``skills/movie-experts/<skill>/...``) so that the generated
+            # unified diff (with ``a/skills/movie-experts/...`` / ``b/...``
+            # fromfile/tofile) applies cleanly via ``apply_patch_transaction``,
+            # which resolves patch paths against the git repo root. The
+            # prior code computed ``f.relative_to(get_hermes_home().parent)``
+            # which yielded HERMES_HOME-relative paths like
+            # ``.hermes/skills/movie-experts/screenplay/SKILL.md`` —
+            # semantically wrong (the prompt says "repo-relative paths"),
+            # producing diffs that would not apply. Bundled skills live
+            # under ``<repo>/skills/movie-experts/<skill>/``; resolve via
+            # the git repo root (matching ``hermes_cli/feedback.py:557-563``
+            # which does the same for the ``evolve`` CLI).
+            repo_root = _resolve_repo_root_or_none()
+            skill_dir_repo = (
+                repo_root / "skills" / "movie-experts" / skill_id
+                if repo_root is not None else None
+            )
+            skill_dir_home = get_hermes_home() / "skills" / "movie-experts" / skill_id
+            if not skill_dir_home.exists():
                 # Agent-created skills live elsewhere; bundled under movie-experts.
                 # Try the flat layout.
-                skill_dir = get_hermes_home() / "skills" / skill_id
+                skill_dir_home = get_hermes_home() / "skills" / skill_id
+            # Prefer the repo copy when available (canonical reference frame
+            # for unified diffs). Fall back to the HERMES_HOME copy if the
+            # repo tree is not accessible (e.g. running from a wheel install
+            # without a git checkout) — in that case the patch will still
+            # be produced but the operator must apply it manually.
+            if skill_dir_repo is not None and skill_dir_repo.exists():
+                scan_dir = skill_dir_repo
+                scan_root = repo_root
+            elif skill_dir_home.exists():
+                scan_dir = skill_dir_home
+                scan_root = get_hermes_home().parent
+            else:
+                scan_dir = None
+                scan_root = None
             current_files: Dict[str, str] = {}
-            if skill_dir.exists():
-                for f in [skill_dir / "SKILL.md"] + list(
-                    (skill_dir / "references").glob("*.md")
-                    if (skill_dir / "references").exists() else []
+            if scan_dir is not None and scan_root is not None:
+                for f in [scan_dir / "SKILL.md"] + list(
+                    (scan_dir / "references").glob("*.md")
+                    if (scan_dir / "references").exists() else []
                 ):
                     if f.is_file():
                         try:
-                            rel = str(f.relative_to(get_hermes_home().parent))
+                            rel = str(f.relative_to(scan_root))
                             current_files[rel] = f.read_text(encoding="utf-8")
-                        except (OSError, ValueError):
-                            pass
+                        except (OSError, ValueError) as exc:
+                            # IN-03: log at DEBUG so silent skips are at
+                            # least traceable in verbose mode.
+                            logger.debug(
+                                "feedback-scan: skipping %s (%s)", f, exc,
+                            )
 
             bundled = is_bundled(skill_id)
 

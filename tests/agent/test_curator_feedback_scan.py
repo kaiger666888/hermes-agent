@@ -252,6 +252,101 @@ class TestProposeHotBundledSkill:
 
 
 # --------------------------------------------------------------------------- #
+# CR-03: current_files keys must be repo-relative, not HERMES_HOME-relative
+# --------------------------------------------------------------------------- #
+
+
+class TestCurrentFilesRepoRelativePaths:
+    """CR-03 regression: the LLM is told the paths are 'repo-relative',
+    so the keys MUST be repo-relative (``skills/movie-experts/...``), not
+    HERMES_HOME-relative (``.hermes/skills/movie-experts/...``).
+
+    The generated diff's fromfile/tofile (``a/<key>`` / ``b/<key>``) is
+    what apply_patch_transaction resolves against the git repo root.
+    HERMES_HOME-relative keys produce diffs that don't apply.
+    """
+
+    def test_current_files_keys_are_repo_relative(
+        self, scan_env, monkeypatch, tmp_path,
+    ):
+        """When the repo tree contains the skill, paths passed to the
+        LLM (via emit_evol02_instructions) MUST start with
+        ``skills/movie-experts/``, not ``.hermes/``.
+        """
+        c = scan_env["curator"]
+        store = _seed_feedback(scan_env, "screenplay", [
+            {"verdict": "needs_work", "ts": "2026-06-01T10:00:00+00:00"},
+            {"verdict": "bad", "ts": "2026-06-02T11:00:00+00:00"},
+            {"verdict": "needs_work", "ts": "2026-06-03T09:00:00+00:00"},
+        ])
+        monkeypatch.setattr(
+            c, "_scan_for_hot_skills",
+            lambda store_, **kw: ["screenplay"],
+        )
+
+        # Set up a fake repo root with the skill layout.
+        fake_repo = tmp_path / "fake-repo"
+        skill_repo_dir = fake_repo / "skills" / "movie-experts" / "screenplay"
+        skill_repo_dir.mkdir(parents=True)
+        (skill_repo_dir / "SKILL.md").write_text(
+            "---\nname: screenplay\n---\n## Section\nbody\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            c, "_resolve_repo_root_or_none", lambda: fake_repo,
+        )
+
+        # Capture the current_files passed to emit_evol02_instructions.
+        captured: dict[str, str] = {}
+
+        def capture_emit(*, insight, current_files, client, model):
+            captured.update(current_files)
+            return []
+
+        import agent.evolution as evol_pkg
+        from agent.evolution.insights import InsightRecord
+        fake_insight = InsightRecord(
+            insight_id="ins1", skill_id="screenplay", theme="t",
+            evidence_chain=["fb1", "fb2", "fb3"], rationale="r",
+            proposed_addition="p", insert_after_marker="## X",
+            ts="2026-06-24T00:00:00+00:00",
+        )
+        monkeypatch.setattr(
+            evol_pkg, "aggregate_feedback",
+            lambda *, skill_id, store, client, model: [fake_insight],
+        )
+        monkeypatch.setattr(
+            evol_pkg, "make_aggregation_client",
+            lambda: (object(), "test-model"),
+        )
+        monkeypatch.setattr(
+            evol_pkg, "emit_evol02_instructions", capture_emit,
+        )
+        monkeypatch.setattr(
+            "tools.skill_usage.is_bundled", lambda name: True,
+        )
+
+        fs = scan_env["feedback_store"]
+        monkeypatch.setattr(fs.FeedbackStore, "__init__", lambda self, **kw: None)
+        monkeypatch.setattr(fs.FeedbackStore, "query", lambda self, **kw: [])
+
+        c._feedback_scan_phase(datetime.now(timezone.utc))
+
+        # Path MUST be repo-relative, NOT HERMES_HOME-relative.
+        assert captured, "emit_evol02_instructions was not called"
+        for key in captured:
+            assert key.startswith("skills/movie-experts/"), (
+                f"current_files key {key!r} is not repo-relative — "
+                f"should start with 'skills/movie-experts/'"
+            )
+            assert not key.startswith(".hermes"), (
+                f"current_files key {key!r} is HERMES_HOME-relative — "
+                f"diffs generated against this path would not apply via "
+                f"apply_patch_transaction"
+            )
+
+
+# --------------------------------------------------------------------------- #
 # Scan failure isolation
 # --------------------------------------------------------------------------- #
 
