@@ -2291,3 +2291,147 @@ class CLICommandsMixin:
         else:
             _cprint(f"Unknown voice subcommand: {subcommand}")
             _cprint("Usage: /voice [on|off|tts|status]")
+
+    def _handle_feedback_command(self, cmd_original: str) -> None:
+        """Handle ``/feedback <good|needs_work|bad> [correction] [--revised "<text>"]``.
+
+        Captures an :class:`OutputSnapshot` from the most recent assistant
+        turn in ``self.conversation_history``, resolves the target
+        ``skill_id`` by scanning backward for the most recent
+        skill-invocation marker (per
+        ``agent.skill_commands._SKILL_INVOCATION_PREFIX``), constructs a
+        :class:`FeedbackRecord` with ``source="cli"``, and writes it via
+        :func:`agent.feedback_ingest.write_feedback_record`.
+
+        Per RESEARCH.md Pitfall #4: when no prior skill output is found,
+        prints a clear error and writes NOTHING. Never silently defaults
+        to a random skill.
+        """
+        from cli import _DIM, _RST, _cprint
+
+        # ── Parse the command tail ──
+        # Format: /feedback <verdict> [correction text] [--revised "<text>"]
+        parts = cmd_original.split(None, 1)
+        if len(parts) < 2 or not parts[1].strip():
+            _cprint(
+                f"  {_DIM}Usage: /feedback <good|needs_work|bad> "
+                f"[correction] [--revised \"text\"]{_RST}"
+            )
+            return
+        tail = parts[1].strip()
+
+        revised_output: str | None = None
+        if "--revised" in tail:
+            pre, _, post = tail.partition("--revised")
+            tail = pre.strip()
+            revised_output = post.strip().strip('"').strip("'")
+
+        tokens = tail.split(None, 1)
+        verdict = tokens[0].lower() if tokens else ""
+        correction = tokens[1].strip() if len(tokens) > 1 else ""
+
+        if verdict not in ("good", "needs_work", "bad"):
+            _cprint(
+                f"  {_DIM}Unknown verdict '{verdict}'. Valid: "
+                f"good | needs_work | bad{_RST}"
+            )
+            _cprint(
+                f"  {_DIM}Usage: /feedback <good|needs_work|bad> "
+                f"[correction]{_RST}"
+            )
+            return
+
+        # ── Validate REPL state ──
+        if not getattr(self, "agent", None) or not getattr(
+            self, "conversation_history", None
+        ):
+            _cprint(
+                f"  {_DIM}No active conversation to attach feedback to.{_RST}"
+            )
+            return
+
+        conversation_history: list[dict] = self.conversation_history
+
+        # ── Find most recent assistant message ──
+        last_assistant_idx: int | None = None
+        for i in range(len(conversation_history) - 1, -1, -1):
+            if conversation_history[i].get("role") == "assistant":
+                last_assistant_idx = i
+                break
+        if last_assistant_idx is None:
+            _cprint(
+                f"  {_DIM}No assistant output found to attach feedback to.{_RST}"
+            )
+            return
+
+        # ── Resolve skill_id by scanning backward for the skill-invocation marker ──
+        # Per RESEARCH Open Question #1 + the verified activation_note format in
+        # agent/skill_commands.py:550-553: the marker is
+        #   [IMPORTANT: The user has invoked the "{skill_name}" skill, ...
+        skill_id: str | None = None
+        try:
+            from agent.skill_commands import _SKILL_INVOCATION_PREFIX
+        except Exception:  # noqa: BLE001 — degrade gracefully if import changes
+            _SKILL_INVOCATION_PREFIX = "[IMPORTANT: The user has invoked the "
+
+        import re as _re
+
+        _SKILL_NAME_RE = _re.compile(
+            _re.escape(_SKILL_INVOCATION_PREFIX) + r'"([^"]+)"'
+        )
+        for i in range(last_assistant_idx, -1, -1):
+            msg = conversation_history[i]
+            if msg.get("role") != "user":
+                continue
+            content = msg.get("content")
+            if not isinstance(content, str):
+                continue
+            if not content.startswith(_SKILL_INVOCATION_PREFIX):
+                continue
+            m = _SKILL_NAME_RE.search(content)
+            if m:
+                skill_id = m.group(1)
+                break
+
+        if not skill_id:
+            _cprint(
+                f"  {_DIM}No movie-expert skill output found in this conversation. "
+                f"/feedback attaches to the most recent skill output — "
+                f"invoke a /skill first.{_RST}"
+            )
+            return
+
+        # ── Build the snapshot + record + write ──
+        try:
+            from agent.feedback_snapshot import build_output_snapshot
+            from agent.feedback_schema import FeedbackRecord
+            from agent.feedback_ingest import write_feedback_record
+            from datetime import datetime, timezone
+            from pydantic import ValidationError
+
+            snapshot = build_output_snapshot(
+                agent=self.agent,
+                conversation_history=conversation_history,
+                assistant_idx=last_assistant_idx,
+            )
+            record = FeedbackRecord(
+                skill_id=skill_id,
+                expert_id=skill_id,
+                source="cli",
+                verdict=verdict,
+                correction=correction,
+                revised_output=revised_output,
+                output_snapshot=snapshot,
+                ts=datetime.now(timezone.utc),
+            )
+            target = write_feedback_record(record)
+            _cprint(
+                f"  {_DIM}Feedback saved ({verdict} on {skill_id}): {target}{_RST}"
+            )
+        except ValidationError as exc:
+            _cprint(f"  {_DIM}Validation failed:{_RST}")
+            for err in exc.errors():
+                loc = ".".join(str(x) for x in err.get("loc", ()))
+                _cprint(f"  {_DIM}  {loc}: {err.get('msg', '?')}{_RST}")
+        except Exception as exc:  # noqa: BLE001 — REPL must never crash from /feedback
+            _cprint(f"  {_DIM}Feedback failed: {exc}{_RST}")

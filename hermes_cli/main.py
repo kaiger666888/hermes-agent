@@ -11976,6 +11976,27 @@ def main():
         logging.getLogger(__name__).debug("curator CLI wiring failed: %s", _exc)
 
     # =========================================================================
+    # feedback command — multi-source feedback ingestion subcommands
+    # =========================================================================
+    feedback_parser = subparsers.add_parser(
+        "feedback",
+        help="Feedback ingestion subcommands (import, watch, submit)",
+        description=(
+            "Submit, batch-import, or watch for structured feedback against "
+            "movie-expert outputs. All three paths emit the same "
+            "FeedbackRecord JSON schema to "
+            "~/.hermes/skills/.feedback/incoming/. See `/feedback` for the "
+            "REPL slash-command form."
+        ),
+    )
+    try:
+        from hermes_cli.feedback import register_cli as _register_feedback_cli
+
+        _register_feedback_cli(feedback_parser)
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("feedback CLI wiring failed: %s", _exc)
+
+    # =========================================================================
     # memory command  (parser built in hermes_cli/subcommands/memory.py)
     # =========================================================================
     build_memory_parser(subparsers, cmd_memory=cmd_memory)
