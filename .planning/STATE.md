@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: ready_to_plan
-last_updated: 2026-06-24T16:58:24.846Z
-last_activity: 2026-06-25 -- Phase 32 COMPLETE (Plan 02 CLI + CURATE-05 auto-apply shipped; Option A preserves P31 invariant)
+status: executing
+last_updated: "2026-06-25T00:00:00.000Z"
+last_activity: 2026-06-25 -- Phase 33 Plan 01 complete (stats CLI shipped)
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 83
-stopped_at: Phase 32 complete (2/2) — ready to discuss Phase 33
+  total_plans: 13
+  completed_plans: 11
+  percent: 85
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -30,9 +29,9 @@ stopped_at: Phase 32 complete (2/2) — ready to discuss Phase 33
 ## Current Position
 
 Phase: 33
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-24
+Plan: 02 (next — architecture doc + skills-mapping sign-off)
+Status: Plan 01 complete; Plan 02 + Plan 03 remain
+Last activity: 2026-06-25 -- Phase 33 Plan 01 complete (stats CLI shipped)
 
 ### Progress
 
@@ -50,7 +49,7 @@ v6.0 Self-Evolution & Feedback Loop:
   Phase 30 (Eval Gate Reuse)               [██████████] 100% Complete (Plan 01 parse_judge_scores + gate.py orchestrator GATE-02/04 — 43 tests; Plan 02 paired-t significance + rebuild_baseline + multi-skill guard GATE-01/03 — 30 tests; 100/101 eval tests green, FOUND-08 + runtime isolation + scipy-free verified; Phase 30 CLOSED)
   Phase 31 (Knowledge Evolution Pipeline)  [██████████] 100% Complete (Plan 01 engine layer — 60 tests; Plan 02 CLI layer — 27 tests; 87/87 green, EVOL-04 non-bypassable human-in-loop structurally enforced via TestNonBypassableHumanInLoop ast-walk, runtime isolation 0 matches, FOUND-08 byte-intact, RESEARCH 3/3 RESOLVED; Phase 31 CLOSED)
   Phase 32 (Curator Upgrade + Audit)       [██████████] 100% Complete (Plan 01 engine — 55 tests, 4 commits; Plan 02 CLI + CURATE-05 — 34 tests, 2 commits; 328 combined green, Option A preserves P31 TestNonBypassableHumanInLoop UNCHANGED, runtime isolation 0, FOUND-08 byte-intact; Phase 32 CLOSED)
-  Phase 33 (Observability + Close-out)     [          ] 0% Not started — MUST run last
+  Phase 33 (Observability + Close-out)     [██░░░░░░░░] 33% (Plan 01 stats CLI shipped — 18 tests, OBS-01/02/03 satisfied; Plan 02 + Plan 03 remain)
 ```
 
 ### Phase Statuses (v6.0)
@@ -62,7 +61,7 @@ v6.0 Self-Evolution & Feedback Loop:
 | 30 | Eval Gate Reuse | **Complete** | Shipped 2026-06-24. GATE-01..04 all covered. Plan 01: parse_judge_scores() + composite_score() in runner.py + gate.py orchestrator (patch mechanics + decide_verdict + config + CLI) — 43 new tests. Plan 02: paired_t_stats() + is_significant() via stdlib statistics + hardcoded _CRITICAL_T_05_TWO_TAILED t-table (GATE-03, no scipy) + rebuild_baseline() with scores.json provenance cache + load_cached_baseline() with non-blocking staleness warning + detect_multi_skill_patch() with exit-3 early-exit guard + --rebuild-baseline/--multi-skill CLI flags — 30 new tests. 100/101 eval tests green (1 pre-existing openai-missing skip), FOUND-08 byte-intact, runtime isolation 0, scipy-free. Phase 30 CLOSED. |
 | 31 | Knowledge Evolution Pipeline | **Complete** | Shipped 2026-06-24. EVOL-01/03/04/05 fully covered. Plan 01: agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — 60 new tests, 7 commits. Plan 02: hermes_cli/feedback.py extended with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + TestNonBypassableHumanInLoop ast-walk structural invariant (only _cmd_approve calls apply_patch_transaction) — 27 new tests, 3 commits. 87/87 combined green, runtime isolation 0 matches, FOUND-08 byte-intact (0 SKILL.md changes), RESEARCH 3/3 Open Questions RESOLVED, VALIDATION nyquist_compliant=true. Phase 31 CLOSED. |
 | 32 | Curator Upgrade + Audit | **Complete** | Shipped 2026-06-25. CURATE-01..05 + EVOL-02 fully covered. Plan 01: agent/curator_audit.py (sha256-chained JSONL append/verify/read + 2 fixtures), agent/evolution/evol02_generator.py (multi-instruction bilingual diff generator extending P31 placeholder), agent/curator.py additive _feedback_scan_phase (lazy imports, try/except isolation, bundled-never-auto), PatchRecord additive extension (auto_apply_eligible + confidence_score) — 55 new tests, 4 commits. Plan 02: hermes_cli/curator.py register_cli extended with 5 new subparsers (queue / approve / reject / audit-log / auto-apply-eligible), _cmd_approve in hermes_cli/feedback.py extended to call append_audit(action="apply") on success (single source of truth per RESEARCH A4), CURATE-05 Option A auto-apply (delegates to _cmd_approve — apply_patch_transaction still called only from _cmd_approve) — 34 new tests, 2 commits. 328 combined green (55+34 new + 27 P31 CLI + 267 engine regression - overlap), P31 TestNonBypassableHumanInLoop passes UNCHANGED (Option A — zero test amendment), apply_patch_transaction Call nodes in hermes_cli/curator.py = 0, runtime isolation 0 module-level agent.evolution imports, FOUND-08 byte-intact. Phase 32 CLOSED. |
-| 33 | Observability + Integration Close-out | Not started | Covers OBS-01..03 + integration deliverables. MUST run last. Writes `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` + README + glossary. Mirrors v5.0 Phase 27 pattern. |
+| 33 | Observability + Integration Close-out | In progress | Plan 01 (stats CLI — OBS-01/02/03) shipped 2026-06-25. `hermes curator stats` subcommand family + 18 tests green + Ruff clean + runtime isolation 0 + FOUND-08 preserved. Plans 02 + 03 remain (architecture doc + skills-mapping + README/glossary + byte-intact verification). |
 
 ### Critical Path
 
@@ -100,7 +99,8 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 - v6.0 requirements mapped: 26 / 26 ✓
 - v6.0 requirements orphaned: 0
 - v6.0 requirements completed: 24 (INGEST-01..05 from Phase 28 + STORE-01..04 from Phase 29 + GATE-01..04 from Phase 30 + EVOL-01/03/04/05 from Phase 31 + CURATE-01/02/03 + EVOL-02 from Phase 32 Plan 01; CURATE-04/05 await Plan 02)
-- v6.0 plans completed: 9 / 10 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 + Phase 31 Plan 01 + Plan 02 + Phase 32 Plan 01; Phase 32 Plan 02 + Phase 33 remain)
+- v6.0 plans completed: 11 / 13 so far (Phase 28 Plan 01 + Plan 02 + Phase 29 Plan 01 + Plan 02 + Phase 30 Plan 01 + Plan 02 + Phase 31 Plan 01 + Plan 02 + Phase 32 Plan 01 + Plan 02 + Phase 33 Plan 01; Phase 33 Plan 02 + Plan 03 remain)
+- v6.0 requirements completed: 27 (prior 24 + OBS-01/02/03 from Phase 33 Plan 01; SC-4..8 await Phase 33 Plans 02+03 which are integration deliverables, not separate REQ-IDs)
 - Deliverable form: MIXED — Hermes core touch (agent/curator.py extension + feedback ingestion infra in P28/P29/P32) + pure skill layer (additive SKILL.md / refs patches via P31 + canonical doc in P33). This is the v5→v6 scope expansion explicitly accepted in PROJECT.md.
 
 ## Accumulated Context
@@ -163,6 +163,9 @@ Phase 28 must run first (ships the core functional guarantee). Phase 29 depends 
 | EVOL-02 idempotent guard strengthened (block-already-present check) | P31's full-line-set equality guard (`working == original_lines`) never fires when re-running the same instruction because the generator always adds lines. New check compares block lines to existing lines immediately after the anchor. | Applied 2026-06-25 — P32 Plan 01 agent/evolution/evol02_generator.py (Rule 1 auto-fix) |
 | Distinct UTC calendar days as session proxy (Open Q #1 RESOLVED) | FeedbackRecord has no session_id field (verified in agent/feedback_schema.py). Using distinct UTC days from record.ts.date() as the session-diversity proxy is the closest available approximation. Documented in _scan_for_hot_skills docstring for reviewability. | Applied 2026-06-25 — P32 Plan 01 agent/curator.py |
 | FeedbackStore constructed via hermes_home kwarg (not root) | Plan referenced FeedbackStore(root=...) but P29 actual signature is FeedbackStore(hermes_home=...). Auto-fixed Rule 1. | Applied 2026-06-25 — P32 Plan 01 agent/curator.py (Rule 1 auto-fix) |
+| Phase 33 stats CLI mirrors P32 register_cli extension pattern exactly | Plan 01 adds `stats` subparser to the same register_cli P32 extended; all agent.evolution imports live INSIDE _cmd_stats body (lazy). P31 runtime-isolation invariant TestLazyImportIsolation ast-walk passes UNCHANGED. Zero new deps (rich 14.3.3 already pinned). | Applied 2026-06-25 — P33 Plan 01 hermes_cli/curator.py (_cmd_stats + _render_* helpers) |
+| Phase 33 stats --json emits COUNTS ONLY (no correction/output_snapshot/feedback_ids) | T-33-01 information-disclosure mitigation: operator-authored correction text may contain PII. --json payload contains only verdict_buckets + patch_count + eval_trend_count + recent_commit_shas. TestJsonOutput asserts no "correction" key anywhere in the JSON tree. | Applied 2026-06-25 — P33 Plan 01 _render_per_skill_dashboard as_json branch |
+| Phase 33 empty-store returns exit 0 + friendly message (mirrors P32 _cmd_audit_log) | Read-only observability commands should never error on empty data. Operator sees "no feedback yet — run /feedback in a Hermes conversation or hermes feedback import <jsonl> to seed data" instead of a stack trace or silent pass. | Applied 2026-06-25 — P33 Plan 01 _empty_store_message() |
 
 ### Decisions (carried forward — relevant to v6.0)
 
@@ -217,15 +220,16 @@ These are documented in `.planning/v3.0-MILESTONE-AUDIT.md` and explicitly exclu
 5. `skills/movie-experts/_eval/runner.py` (existing MT-Bench position-swap harness) — Phase 30 reuses this as eval gate
 6. `.planning/research/v2-pipeline-design/skills-mapping.yaml` — canonical expert mapping baseline (v3.0 + v4.0 + v5.0 signoffs; v6 adds `v6_ref_signoffs:` in P33)
 
-**Next action:** Execute Phase 32 Plan 02 (`/gsd:execute-phase 32` — CLI layer: hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve + audit-log --verify).
+**Next action:** Execute Phase 33 Plan 02 (`/gsd:execute-phase 33` — canonical architecture doc `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` section; SC-4 + SC-5).
 
-**Resume from interrupted phase:** Read `.planning/phases/32-curator-upgrade-audit/32-01-SUMMARY.md` for the latest state.
+**Resume from interrupted phase:** Read `.planning/phases/33-observability-integration-close-out/33-01-SUMMARY.md` for the latest state.
 
 ---
 
-*Last updated: 2026-06-25 — Phase 32 Plan 01 COMPLETE (curator upgrade engine layer shipped — agent/curator_audit.py sha256 chain + agent/evolution/evol02_generator.py bilingual multi-instruction diff + agent/curator.py additive _feedback_scan_phase + PatchRecord additive extension). 55 new tests, 4 commits. P31 TestNonBypassableHumanInLoop preserved, runtime isolation 0, FOUND-08 byte-intact. 21/26 v6.0 requirements satisfied. Next: Phase 32 Plan 02 (CLI layer).*
+*Last updated: 2026-06-25 — Phase 33 Plan 01 COMPLETE (stats CLI shipped — `hermes curator stats` subcommand family with per-skill / cross-skill / source-breakdown modes; 18 new tests across 8 classes; OBS-01/02/03 satisfied; T-33-01 counts-only JSON + T-33-02 read-only + T-33-05 empty-store + T-33-06 lazy-import invariants all tested green; Ruff PLW1514 clean; 209 Phase 28-32 regression tests pass; FOUND-08 byte-intact; runtime isolation 0 module-level agent.evolution imports). 27/26+ v6.0 requirements satisfied (24 prior + OBS-01/02/03). Next: Phase 33 Plan 02 (architecture doc + skills-mapping sign-off).*
 
 ## Operator Next Steps
 
-- Execute Phase 32 Plan 02: `/gsd:execute-phase 32` (CLI layer — hermes_cli/curator.py queue/approve/reject/audit-log subcommands + CURATE-05 auto-apply routing through _cmd_approve + audit-log --verify)
-- Review ROADMAP.md critical path — Phase 32 Plan 01 (engine) done; Plan 02 (CLI) completes P32, then P33 (Observability + Close-out) MUST run last
+- Execute Phase 33 Plan 02: `/gsd:execute-phase 33` (architecture doc `_shared/v6-feedback-loop-architecture.md` + skills-mapping.yaml `v6_ref_signoffs:` section; SC-4 + SC-5)
+- Execute Phase 33 Plan 03 (final): README corpus tree + glossary 4 bilingual entries + milestone-wide SC-7/SC-8 byte-intact verification
+- After Plan 03: v6.0 milestone complete — archive + tag v6.0

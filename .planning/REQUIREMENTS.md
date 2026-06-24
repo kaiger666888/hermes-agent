@@ -50,9 +50,9 @@
 
 ### Observability (OBS)
 
-- [ ] **OBS-01**: 每 skill dashboard(`hermes curator stats [skill_id]`)—— 反馈计数按 verdict 分桶 + patch 历史 + eval score 趋势(最近 N 次)
-- [ ] **OBS-02**: Cross-skill 视图(`hermes curator stats --all`)—— 哪些 skill 收到最多负反馈 / 哪些 patch 提升最大 / 哪些 skill 长期无反馈(可能 prompt 覆盖不足)
-- [ ] **OBS-03**: 反馈源 breakdown —— 按 source(CLI / kais-aigc-platform / 手工)统计反馈量与 verdict 分布,辅助判断 kais-aigc 接入是否实际工作
+- [x] **OBS-01**: 每 skill dashboard(`hermes curator stats [skill_id]`)—— 反馈计数按 verdict 分桶 + patch 历史 + eval score 趋势(最近 N 次) — *Satisfied 2026-06-25 by Phase 33 Plan 01 (_render_per_skill_dashboard)*
+- [x] **OBS-02**: Cross-skill 视图(`hermes curator stats --all`)—— 哪些 skill 收到最多负反馈 / 哪些 patch 提升最大 / 哪些 skill 长期无反馈(可能 prompt 覆盖不足) — *Satisfied 2026-06-25 by Phase 33 Plan 01 (_render_cross_skill_view)*
+- [x] **OBS-03**: 反馈源 breakdown —— 按 source(CLI / kais-aigc-platform / 手工)统计反馈量与 verdict 分布,辅助判断 kais-aigc 接入是否实际工作 — *Satisfied 2026-06-25 by Phase 33 Plan 01 (_render_source_breakdown)*
 
 ---
 
@@ -110,9 +110,9 @@ Filled by roadmapper — every REQ-ID maps to exactly one phase (see `.planning/
 | CURATE-03 | Phase 32 | `~/.hermes/skills/.audit/` tamper-evident log |
 | CURATE-04 | Phase 32 | `hermes curator queue/approve/reject` CLI |
 | CURATE-05 | Phase 32 | Agent-created skill semi-automatic path (confidence ≥ 0.8) |
-| OBS-01 | Phase 33 | Per-skill dashboard (`hermes curator stats [skill_id]`) |
-| OBS-02 | Phase 33 | Cross-skill view (`hermes curator stats --all`) |
-| OBS-03 | Phase 33 | Source breakdown (CLI/kais-aigc/manual) |
+| OBS-01 | Phase 33 | Per-skill dashboard (`hermes curator stats [skill_id]`) — ✅ complete 2026-06-25 (P33 Plan 01) |
+| OBS-02 | Phase 33 | Cross-skill view (`hermes curator stats --all`) — ✅ complete 2026-06-25 (P33 Plan 01) |
+| OBS-03 | Phase 33 | Source breakdown (CLI/kais-aigc/manual) — ✅ complete 2026-06-25 (P33 Plan 01) |
 
 **Totals:** 26 requirements across 6 categories · 26 / 26 mapped to phases (100%, no orphans, no duplicates)
 
