@@ -732,13 +732,13 @@ def get_decay_window_days() -> int:
 | A5 | `archive/phase-28-migration/` is an acceptable audit location | Runtime State Inventory | If operators consider the archive "clutter," they may delete it. Migration is idempotent so deletion is safe — but audit trail is lost. Document in operator README (out of scope for P29). |
 | A6 | `feedback:` is the right top-level config section name | Code Example 4 | If `skills.feedback` or `feedback_store` was intended, config won't load. CONTEXT.md specifics line 112 explicitly says "top-level `feedback:` section" — this is verified, not assumed. (Listed for traceability.) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Migration trigger for tests** — Should the lazy migration run on `FeedbackStore.__init__`, or on first `record_feedback()` / `query()` call? Init is simpler but slower for tests that don't care about migration. Recommend: init, gated by a `_migrated: bool` instance flag. Tests that don't want migration can use the existing `feedback_env` fixture pattern (isolated HERMES_HOME with empty `incoming/`).
+1. **Migration trigger for tests** — RESOLVED: init, gated by `_migrated: bool` instance flag. Tests that don't want migration can use the existing `feedback_env` fixture pattern (isolated HERMES_HOME with empty `incoming/`). Implemented in Plan 01 Task 2 `_maybe_migrate_phase28_incoming`.
 
-2. **Bucket file rotation** — When (if ever) should a bucket file be rotated? v6 doesn't need this (no auto-prune per Deferred Ideas). Flag for P33+ if a bucket file exceeds 100MB.
+2. **Bucket file rotation** — RESOLVED: deferred (no auto-prune per CONTEXT.md Deferred Ideas); flag for P33+ if a bucket file exceeds 100MB. Not in P29 scope.
 
-3. **Index rebuild CLI** — CONTEXT.md specifics line 111 mentions `hermes feedback rebuild-index` as the decay-tuning trigger. Is this in P29 scope or P30+? Recommend: P29 ships `FeedbackStore.rebuild_index()` as a public method; the CLI wrapper (`hermes feedback rebuild-index`) is a thin 5-line addition that fits naturally. Planner's call.
+3. **Index rebuild CLI** — RESOLVED: P29 ships both `FeedbackStore.rebuild_index()` (Plan 02 Task 1) and `hermes feedback rebuild-index` CLI (Plan 02 Task 2). 5-line CLI addition fits naturally in the existing `hermes_cli/feedback.py` dispatcher.
 
 ## Environment Availability
 
