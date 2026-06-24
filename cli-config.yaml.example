@@ -514,6 +514,25 @@ memory:
   flush_min_turns: 6        # Min user turns to trigger flush on exit/reset (0 = disabled)
 
 # =============================================================================
+# Feedback Store (v6.0 Self-Evolution)
+# =============================================================================
+# Controls the durable feedback persistence layer. Feedback records land
+# under ~/.hermes/skills/.feedback/ in skill_id/source/ buckets after
+# Phase 29 (STORE-01). A single index.json is the source of truth for
+# per-bucket counts + weighted_counts (STORE-02), consumed by the Curator
+# (Phase 32) and dashboard (Phase 33). The decay window controls how fast
+# old feedback loses weight in the index — the math is linear and floors
+# at 0.1 so old signal never fully zeroes. Operators tune + restart
+# Hermes; no live retune needed for v6.
+#
+feedback:
+  # Time-decay window in days. Feedback older than this decays linearly
+  # toward a 0.1 floor (never fully zero — old signal still counts weakly).
+  # weight = max(0.1, 1.0 - (age_days / decay_window_days))
+  # Default 180 days (6 months). Operators can tune + restart Hermes.
+  decay_window_days: 180
+
+# =============================================================================
 # Session Reset Policy (Messaging Platforms)
 # =============================================================================
 # Controls when messaging sessions (Telegram, Discord, WhatsApp, Slack) are
