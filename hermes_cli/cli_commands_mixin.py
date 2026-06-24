@@ -2320,15 +2320,29 @@ class CLICommandsMixin:
             return
         tail = parts[1].strip()
 
-        revised_output: str | None = None
-        if "--revised" in tail:
-            pre, _, post = tail.partition("--revised")
-            tail = pre.strip()
-            revised_output = post.strip().strip('"').strip("'")
+        # WR-02: parse ``--revised`` as a standalone token via shlex so the
+        # flag only matches when it appears as its own token, not when the
+        # literal string ``--revised`` is part of the correction text. The
+        # previous ``tail.partition("--revised")`` matched anywhere in the
+        # tail, so e.g. ``/feedback bad The --revised flag is wrong``
+        # silently mis-parsed (correction="The", revised="flag is wrong").
+        # shlex also respects quoting: ``--revised "some text"`` works.
+        import shlex
 
-        tokens = tail.split(None, 1)
-        verdict = tokens[0].lower() if tokens else ""
-        correction = tokens[1].strip() if len(tokens) > 1 else ""
+        revised_output: str | None = None
+        try:
+            shell_tokens = shlex.split(tail)
+        except ValueError:
+            # Mismatched quote — fall back to whitespace split so the user
+            # still gets a sensible error from the verdict check below.
+            shell_tokens = tail.split()
+        if "--revised" in shell_tokens:
+            idx = shell_tokens.index("--revised")
+            revised_output = " ".join(shell_tokens[idx + 1:]).strip()
+            shell_tokens = shell_tokens[:idx]
+
+        verdict = shell_tokens[0].lower() if shell_tokens else ""
+        correction = " ".join(shell_tokens[1:]).strip()
 
         if verdict not in ("good", "needs_work", "bad"):
             _cprint(
