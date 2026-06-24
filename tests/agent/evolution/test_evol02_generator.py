@@ -395,6 +395,38 @@ class TestEmitInstructions:
         # System prompt was used.
         assert client.calls[0]["messages"][0]["content"] == EVOL02_SYSTEM_PROMPT
 
+    def test_embedded_backticks_in_content_preserved(self):
+        """WR-04 regression: the prior fence regex used re.MULTILINE and
+        stripped ANY line starting/ending with backticks. When the LLM
+        embedded a legitimate code sample (fenced with backticks) inside
+        the content_en string, the regex over-stripped those backticks
+        from the raw LLM response, corrupting the JSON payload and
+        raising AggregationError. After the fix, only the OUTER wrapping
+        fences are stripped; backticks inside JSON string values are
+        preserved.
+        """
+        # Payload whose content_en embeds a fenced code sample. The mock
+        # returns this wrapped in ```json fences (the typical LLM shape).
+        payload = {"instructions": [{
+            "file": SAMPLE_FILE,
+            "anchor_section": "## Three-Act Structure",
+            "add_after": True,
+            "content_en": "# EN\n\nExample:\n```python\nprint('hi')\n```\n",
+            "content_zh": "### 中文\n正文",
+        }]}
+        client = _MockClient(payload)
+        insight = _make_insight()
+        result = emit_evol02_instructions(
+            insight=insight, current_files={SAMPLE_FILE: "..."},
+            client=client, model="m",
+        )
+        assert len(result) == 1
+        # The embedded ```python ... ``` block must be preserved verbatim
+        # in content_en (not stripped by the outer-fence-only regex).
+        assert "```python" in result[0]["content_en"]
+        assert "print('hi')" in result[0]["content_en"]
+        assert result[0]["content_en"].rstrip().endswith("```")
+
     def test_retry_without_response_format_on_failure(self):
         payload = {"instructions": []}
         client = _MockClient(payload, fail_response_format=True)

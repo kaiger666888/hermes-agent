@@ -27,6 +27,7 @@ from __future__ import annotations
 import difflib
 import json
 import logging
+import re
 from typing import Any
 
 from agent.evolution.diff_generator import _frontmatter_end_offset
@@ -38,6 +39,20 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------------- #
 # Constants
 # --------------------------------------------------------------------------- #
+
+# WR-04: only strip the OUTER wrapping fences (first line + last line of
+# the whole content). The prior ``r"^```(?:json)?\s*\n?|\n?```\s*$"`` with
+# re.MULTILINE matched ANY line that started OR ended with backticks —
+# including legitimate backticks inside JSON string values for content_en
+# / content_zh (e.g. an LLM embedding a code sample in the proposed
+# addition). This regex anchors on the whole content: opening fence at
+# start-of-string, closing fence at end-of-string, with the JSON payload
+# captured in between (non-greedy, DOTALL so newlines are included).
+_FENCE_WRAP_RE = re.compile(
+    r"\A\s*```(?:json)?\s*\n(.*?)\n```\s*\Z",
+    re.DOTALL,
+)
+
 
 EVOL02_SYSTEM_PROMPT = """\
 You are generating structured patch instructions for a movie-expert skill in
@@ -361,10 +376,14 @@ def emit_evol02_instructions(
     if content is None:
         raise AggregationError("evol02 LLM returned None content")
 
-    # Strip markdown fences (reuse insights pattern).
-    import re
-    fence_re = re.compile(r"^```(?:json)?\s*\n?|\n?```\s*$", re.MULTILINE)
-    stripped = fence_re.sub("", content)
+    # WR-04: strip ONLY the outer wrapping fences. The prior regex used
+    # re.MULTILINE and matched any line starting/ending with backticks —
+    # over-stripping legitimate backticks inside JSON string values
+    # (content_en/content_zh frequently embed code samples). The new
+    # _FENCE_WRAP_RE anchors on the whole content (start/end of string)
+    # and captures the payload between the outer fences.
+    m = _FENCE_WRAP_RE.match(content.strip())
+    stripped = m.group(1) if m else content
 
     try:
         payload = json.loads(stripped)
