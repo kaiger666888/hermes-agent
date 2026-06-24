@@ -63,6 +63,10 @@ VERDICT_TO_EXIT: dict[str, int] = {
     "fail_mean": 1,
     "fail_regression": 2,
     "inconclusive": 3,
+    # WR-03: internal_error is the escalated verdict when revert_patch
+    # fails — the working tree is left dirty, so the operator MUST see
+    # a distinct exit code rather than a misleading pass/fail.
+    "internal_error": 4,
 }
 
 # Committed defaults — mirror gate_config.yaml.example. Keep in sync.
@@ -1067,10 +1071,35 @@ def run_gate(
     finally:
         # T-30-04: revert ALWAYS runs, even on exception.
         if applied:
+            revert_exc: Exception | None = None
             try:
                 revert_patch(files, repo_root)
             except Exception as exc:  # noqa: BLE001 — best-effort cleanup
-                logger.warning("revert_patch failed: %s", exc)
+                revert_exc = exc
+                # WR-03: surface the dirty working tree at CRITICAL level
+                # and capture the failure so we can escalate the verdict
+                # to internal_error AFTER the try block. The previous
+                # behavior only logged a warning, then proceeded to
+                # write a normal pass/fail report — but the working tree
+                # was corrupt (patch still applied), silently poisoning
+                # the next gate run on the same repo.
+                logger.error(
+                    "revert_patch FAILED: %s — WORKING TREE LEFT DIRTY "
+                    "(files=%s). Escalating verdict to internal_error "
+                    "(exit code 4).",
+                    exc, files,
+                )
+            if revert_exc is not None:
+                # Escalate: the gate's pass/fail verdict is no longer
+                # trustworthy because the working tree is dirty.
+                verdict = "internal_error"
+                prior_evidence = evidence if isinstance(evidence, dict) else {}
+                evidence = {
+                    "reason": "revert_failed",
+                    "error": str(revert_exc),
+                    "files": files,
+                    **prior_evidence,
+                }
 
     # Step 8: write report (always) + reject log on failure.
     report_path = reports_dir / f"{patch_id}.json"

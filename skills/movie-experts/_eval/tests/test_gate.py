@@ -1152,6 +1152,100 @@ class TestMultiSkillGuard:
 
 
 # --------------------------------------------------------------------------- #
+# TestRevertFailureEscalation — WR-03: dirty working tree -> exit 4
+# --------------------------------------------------------------------------- #
+
+
+class TestRevertFailureEscalation:
+    def test_revert_failure_escalates_to_exit_4(
+        self, tmp_git_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # WR-03: if revert_patch raises, the gate MUST surface this as
+        # internal_error (exit 4), not silently swallow the error and
+        # return the prior verdict. Operators need to know the working
+        # tree is dirty.
+        # Build a real patch.
+        skill_file = (
+            tmp_git_repo
+            / "skills" / "movie-experts" / "screenplay" / "SKILL.md"
+        )
+        original_bytes = skill_file.read_bytes()
+        skill_file.write_text(
+            original_bytes.decode("utf-8") + "\n# c\n", encoding="utf-8"
+        )
+        diff_result = subprocess.run(
+            ["git", "diff"], cwd=str(tmp_git_repo),
+            capture_output=True, text=True, encoding="utf-8", check=True,
+        )
+        patch_path = tmp_path / "c.patch"
+        patch_path.write_text(diff_result.stdout, encoding="utf-8")
+        subprocess.run(
+            ["git", "checkout", "--", "skills/movie-experts/screenplay/SKILL.md"],
+            cwd=str(tmp_git_repo), capture_output=True, check=True,
+        )
+
+        prompts_path = tmp_path / "p.yaml"
+        prompts_path.write_text(
+            "expert_id: screenplay\n"
+            "prompts:\n"
+            + "\n".join(f"  - id: p{i}\n    text: p{i}" for i in range(5))
+            + "\n",
+            encoding="utf-8",
+        )
+        baseline_ans = tmp_path / "b.json"
+        candidate_ans = tmp_path / "c.json"
+        baseline_ans.write_text(
+            json.dumps([f"b{i}" for i in range(5)]), encoding="utf-8"
+        )
+        candidate_ans.write_text(
+            json.dumps([f"c{i}" for i in range(5)]), encoding="utf-8"
+        )
+
+        # Pre-populate a baseline cache so the gate reaches decide_verdict.
+        reports_dir = tmp_path / "reports"
+        baseline_cache = reports_dir / "baseline_scores.json"
+        baseline_cache.parent.mkdir(parents=True, exist_ok=True)
+        baseline_cache.write_text(
+            json.dumps([4.0, 4.0, 4.0, 4.0, 4.0]), encoding="utf-8"
+        )
+
+        def boom_revert(files, repo_root):
+            raise RuntimeError("simulated revert failure")
+
+        monkeypatch.setattr(gate, "revert_patch", boom_revert)
+
+        config = gate.load_gate_config(None, {})
+        result = gate.run_gate(
+            patch_path=patch_path,
+            skill_id="screenplay",
+            baseline_answers_path=baseline_ans,
+            candidate_answers_path=candidate_ans,
+            config=config,
+            repo_root=tmp_git_repo,
+            prompts_path=prompts_path,
+            judge_client=MockJudgeClient(
+                _judge_response(
+                    {"industry_accuracy": 4.0, "professional_depth": 4.0,
+                     "actionability": 4.0, "language_quality": 4.0},
+                    "A",
+                ),
+                _judge_response(
+                    {"industry_accuracy": 4.0, "professional_depth": 4.0,
+                     "actionability": 4.0, "language_quality": 4.0},
+                    "B",
+                ),
+            ),
+            reports_dir=reports_dir,
+            baseline_scores_cache=baseline_cache,
+        )
+        assert result.verdict == "internal_error", (
+            f"expected internal_error, got {result.verdict}"
+        )
+        assert result.exit_code == 4
+        assert result.evidence.get("reason") == "revert_failed"
+
+
+# --------------------------------------------------------------------------- #
 # TestRebuildBaseline — rebuild_baseline() writes scores.json
 # --------------------------------------------------------------------------- #
 
