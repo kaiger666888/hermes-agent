@@ -25,6 +25,7 @@ Per RESEARCH.md pitfalls this module defends against:
 from __future__ import annotations
 
 import hashlib
+import json as _json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -38,6 +39,24 @@ logger = logging.getLogger(__name__)
 # callables / custom objects don't crash the snapshot. Kept narrow on
 # purpose: anything outside these types is dropped with a debug log.
 _JSON_SCALAR_TYPES = (str, int, float, bool, type(None))
+
+
+def _safe_param(val: Any) -> Any:
+    """Coerce a single param value to a JSON-safe shape; drop if not serializable.
+
+    Used for the non-dict agent params (max_tokens, reasoning_config,
+    service_tier) where a deep recursive filter is overkill — we just
+    probe ``json.dumps`` and drop the value on TypeError/ValueError so
+    ``write_feedback_record`` -> ``atomic_json_write`` -> ``json.dump``
+    never raises mid-write (defends RESEARCH Pitfall #8 for ALL four
+    agent params, not just request_overrides).
+    """
+    try:
+        _json.dumps(val)
+        return val
+    except (TypeError, ValueError):
+        logger.debug("dropped non-serializable agent param value: %r", val)
+        return None
 
 
 def _is_json_serializable(value: Any) -> bool:
@@ -158,13 +177,23 @@ def build_output_snapshot(
         if val is None:
             continue
         if attr == "request_overrides":
-            # Dict[str, Any] — filter non-serializable values (Pitfall #8).
+            # Dict[str, Any] — deep filter non-serializable values (Pitfall #8).
             if isinstance(val, dict):
                 params[attr] = _filter_serializable(val)
             else:
-                params[attr] = val
+                # Non-dict shape — shallow probe so a stray dataclass /
+                # callable doesn't sneak through this branch either.
+                safe = _safe_param(val)
+                if safe is not None:
+                    params[attr] = safe
         else:
-            params[attr] = val
+            # Non-dict params — apply the same JSON-safety probe as
+            # request_overrides so a custom enum / dataclass / callable
+            # set on agent.<attr> doesn't crash write_feedback_record
+            # mid-write (RESEARCH Pitfall #8 extended to all four params).
+            safe = _safe_param(val)
+            if safe is not None:
+                params[attr] = safe
 
     return OutputSnapshot(
         sha256=sha,
