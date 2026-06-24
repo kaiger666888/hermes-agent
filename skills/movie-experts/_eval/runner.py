@@ -568,6 +568,20 @@ class _StubJudgeClient:
     want to demonstrate the position-swap output shape without burning
     real API quota.
 
+    CR-04 fix: the stub now ALSO emits synthetic per-dimension scores
+    so the gate's composite-score pipeline is exercised end-to-end.
+    Previously the stub omitted ``<dimension>: <score>`` lines, so
+    ``parse_judge_scores`` returned ``{}`` for every comparison,
+    ``composite_score({})`` returned ``None``, and ``--dry-run`` always
+    produced an inconclusive verdict (defeating the documented purpose
+    of smoke-testing the gate end-to-end without API quota).
+
+    The synthetic scores are deterministic per-prompt: each dimension
+    is hashed from the prompt text (sha256[:1] / 255 * 4 + 1 → ~1-5)
+    so a given prompt yields the same scores across runs and across
+    the AB/BA orderings. Document: SYNTHETIC FOR DRY-RUN ONLY — not
+    for production verdicts.
+
     Contract: ``chat.completions.create`` is a ``@staticmethod`` that
     matches the OpenAI SDK's call signature (``client.chat.completions.
     create(model=..., messages=..., ...)``). Each instance owns its own
@@ -591,17 +605,31 @@ class _StubJudgeClient:
         def create(**kwargs: Any) -> dict:
             swap = bool(kwargs.get("extra_body", {}).get("swap", False))
             decision = "B" if swap else "A"
+            # CR-04: synthesize per-dimension scores from the prompt text
+            # so dry-run exercises the composite-score pipeline. Pull
+            # the user message (the prompt is in there).
+            import hashlib
+            messages = kwargs.get("messages") or []
+            prompt_seed = ""
+            for msg in messages:
+                if isinstance(msg, dict) and msg.get("role") == "user":
+                    prompt_seed = str(msg.get("content", ""))
+                    break
+            # Hash the prompt to a stable byte, then scale to [1.0, 5.0].
+            digest = hashlib.sha256(prompt_seed.encode("utf-8")).digest()
+            lines = ["<reasoning>stub decision for swap=%s</reasoning>" % swap]
+            for i, dim in enumerate(_SCORE_DIMENSIONS):
+                # Each dimension uses a different byte offset so they
+                # vary independently across prompts.
+                byte_val = digest[i % len(digest)]
+                # Map [0, 255] to [1.0, 5.0]: round to 1 decimal.
+                score = round(1.0 + (byte_val / 255.0) * 4.0, 1)
+                lines.append(f"{dim}: {score} — synthetic stub score")
+            lines.append(f"<decision>{decision}</decision>")
+            content = "\n".join(lines)
             return {
                 "choices": [
-                    {
-                        "message": {
-                            "content": (
-                                f"<reasoning>stub decision for "
-                                f"swap={swap}</reasoning>\n"
-                                f"<decision>{decision}</decision>"
-                            )
-                        }
-                    }
+                    {"message": {"content": content}}
                 ]
             }
 

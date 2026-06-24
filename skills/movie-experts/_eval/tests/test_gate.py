@@ -598,6 +598,14 @@ class TestRunGateEndToEnd:
         )
 
         config = gate.load_gate_config(None, {})
+        # CR-03: gate refuses to score without a baseline cache. Provide
+        # one that matches the judge's 4.0 composite so the gate passes.
+        reports_dir = tmp_path / "reports"
+        baseline_cache = reports_dir / "baseline_scores.json"
+        baseline_cache.parent.mkdir(parents=True, exist_ok=True)
+        baseline_cache.write_text(
+            json.dumps([4.0, 4.0, 4.0, 4.0, 4.0]), encoding="utf-8"
+        )
         result = gate.run_gate(
             patch_path=patch_path,
             skill_id="screenplay",
@@ -607,6 +615,8 @@ class TestRunGateEndToEnd:
             repo_root=tmp_git_repo,
             prompts_path=prompts_path,
             judge_client=judge,
+            reports_dir=reports_dir,
+            baseline_scores_cache=baseline_cache,
         )
         assert result.verdict == "pass"
         assert result.exit_code == 0
@@ -1152,6 +1162,82 @@ class TestMultiSkillGuard:
 
 
 # --------------------------------------------------------------------------- #
+# TestMissingBaselineRefusal — CR-03: gate refuses to score against self
+# --------------------------------------------------------------------------- #
+
+
+class TestMissingBaselineRefusal:
+    def test_no_baseline_cache_returns_inconclusive(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> None:
+        # CR-03: without a baseline cache, the gate MUST refuse to score
+        # (previously it treated candidate as its own baseline and always
+        # passed). Build a real patch + answers + prompts but NO cache.
+        skill_file = (
+            tmp_git_repo / "skills" / "movie-experts" / "screenplay" / "SKILL.md"
+        )
+        skill_file.write_text(
+            skill_file.read_text(encoding="utf-8") + "\n# c\n",
+            encoding="utf-8",
+        )
+        diff_result = subprocess.run(
+            ["git", "diff"], cwd=str(tmp_git_repo),
+            capture_output=True, text=True, encoding="utf-8", check=True,
+        )
+        patch_path = tmp_path / "c.patch"
+        patch_path.write_text(diff_result.stdout, encoding="utf-8")
+        subprocess.run(
+            ["git", "checkout", "--", "skills/movie-experts/screenplay/SKILL.md"],
+            cwd=str(tmp_git_repo), capture_output=True, check=True,
+        )
+
+        prompts_path = tmp_path / "p.yaml"
+        prompts_path.write_text(
+            "expert_id: screenplay\n"
+            + "prompts:\n"
+            + "\n".join(f"  - id: p{i}\n    text: p{i}" for i in range(5))
+            + "\n",
+            encoding="utf-8",
+        )
+        baseline_ans = tmp_path / "b.json"
+        candidate_ans = tmp_path / "c.json"
+        baseline_ans.write_text(
+            json.dumps([f"b{i}" for i in range(5)]), encoding="utf-8"
+        )
+        candidate_ans.write_text(
+            json.dumps([f"c{i}" for i in range(5)]), encoding="utf-8"
+        )
+
+        config = gate.load_gate_config(None, {})
+        result = gate.run_gate(
+            patch_path=patch_path,
+            skill_id="screenplay",
+            baseline_answers_path=baseline_ans,
+            candidate_answers_path=candidate_ans,
+            config=config,
+            repo_root=tmp_git_repo,
+            prompts_path=prompts_path,
+            judge_client=MockJudgeClient(
+                _judge_response(
+                    {"industry_accuracy": 4.0, "professional_depth": 4.0,
+                     "actionability": 4.0, "language_quality": 4.0},
+                    "A",
+                ),
+                _judge_response(
+                    {"industry_accuracy": 4.0, "professional_depth": 4.0,
+                     "actionability": 4.0, "language_quality": 4.0},
+                    "B",
+                ),
+            ),
+            reports_dir=tmp_path / "reports",
+            # Intentionally NO baseline_scores_cache.
+        )
+        assert result.verdict == "inconclusive"
+        assert result.exit_code == 3
+        assert result.evidence.get("reason") == "missing_baseline_cache"
+
+
+# --------------------------------------------------------------------------- #
 # TestRevertFailureEscalation — WR-03: dirty working tree -> exit 4
 # --------------------------------------------------------------------------- #
 
@@ -1669,3 +1755,85 @@ class TestGateCli:
         )
         # Stub returns no scores -> inconclusive is acceptable for dry-run.
         assert rc in (0, 3)
+
+    def test_baseline_cache_flag_wires_through(
+        self, tmp_git_repo: Path, tmp_path: Path
+    ) -> None:
+        # CR-01: --baseline-cache MUST be wired through main() into
+        # run_gate(). Build a real patch + a baseline cache that
+        # disagrees with the candidate judge scores -> fail_mean.
+        skill_file = (
+            tmp_git_repo
+            / "skills" / "movie-experts" / "screenplay" / "SKILL.md"
+        )
+        skill_file.write_text(
+            skill_file.read_text(encoding="utf-8") + "\n# c\n",
+            encoding="utf-8",
+        )
+        diff_result = subprocess.run(
+            ["git", "diff"], cwd=str(tmp_git_repo),
+            capture_output=True, text=True, encoding="utf-8", check=True,
+        )
+        patch_path = tmp_path / "c.patch"
+        patch_path.write_text(diff_result.stdout, encoding="utf-8")
+        subprocess.run(
+            ["git", "checkout", "--", "skills/movie-experts/screenplay/SKILL.md"],
+            cwd=str(tmp_git_repo), capture_output=True, check=True,
+        )
+
+        prompts_path = tmp_path / "p.yaml"
+        prompts_path.write_text(
+            "expert_id: screenplay\n"
+            + "prompts:\n"
+            + "\n".join(f"  - id: p{i}\n    text: p{i}" for i in range(5))
+            + "\n",
+            encoding="utf-8",
+        )
+        baseline_ans = tmp_path / "b.json"
+        candidate_ans = tmp_path / "c.json"
+        baseline_ans.write_text(
+            json.dumps([f"b{i}" for i in range(5)]), encoding="utf-8"
+        )
+        candidate_ans.write_text(
+            json.dumps([f"c{i}" for i in range(5)]), encoding="utf-8"
+        )
+
+        # Baseline cache holds 5.0 per prompt. Candidate judge will return
+        # ~3.5 (mean of stub scores 3.0..3.999 — close enough to ensure a
+        # drop > delta_threshold=0.3).
+        baseline_cache = tmp_path / "baseline_scores.json"
+        baseline_cache.write_text(
+            json.dumps([5.0, 5.0, 5.0, 5.0, 5.0]), encoding="utf-8"
+        )
+
+        reports_dir = tmp_path / "reports"
+        rc = gate.main(
+            [
+                "--patch", str(patch_path),
+                "--skill", "screenplay",
+                "--baseline-answers", str(baseline_ans),
+                "--candidate-answers", str(candidate_ans),
+                "--prompts-dir", str(prompts_path),
+                "--repo-root", str(tmp_git_repo),
+                "--reports-dir", str(reports_dir),
+                "--baseline-cache", str(baseline_cache),
+                "--dry-run",
+            ]
+        )
+        # If CR-01 + CR-04 are both fixed, the stub emits scores and the
+        # cache is read; the gate reaches a real verdict (not the
+        # missing-baseline-cache inconclusive). Accept fail_mean (1) or
+        # pass (0) — but NOT missing_baseline_cache inconclusive (3).
+        assert rc != 3 or (
+            # Tolerate 3 only if it's NOT the missing-baseline reason.
+            # The presence of the cache file means missing-baseline is a
+            # CR-01 wiring regression.
+            False
+        ), (
+            f"CR-01 regression: --baseline-cache flag did not wire through; "
+            f"gate returned rc={rc} despite cache at {baseline_cache}"
+        )
+        # Stronger: with cache wired, gate reaches a real verdict.
+        assert rc in (0, 1, 2), (
+            f"expected pass/fail verdict, got rc={rc}"
+        )

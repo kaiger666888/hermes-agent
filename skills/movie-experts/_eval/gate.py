@@ -1049,25 +1049,38 @@ def run_gate(
                 if c is not None:
                     rec["delta"] = c - baseline_composites[i]
 
-        # If no baseline cache, treat candidate as its own baseline (first
-        # run) — mean_delta=0 -> pass. Cache for next time.
+        # CR-03 + WR-02 fix: if no baseline cache is available, REFUSE to
+        # score against self. The previous "lazy population" path set
+        # ``baseline_composites = list(candidate_composites)`` then wrote
+        # the cache BEFORE the verdict was decided — making the gate
+        # ALWAYS pass first-run (mean_delta=0) AND polluting the cache
+        # with the candidate's own scores on failure. The correct workflow
+        # is: operator runs ``--rebuild-baseline`` (which writes the cache
+        # via rebuild_baseline) BEFORE running the gate. If no cache is
+        # available, return inconclusive so operators know to rebuild.
         if not baseline_composites:
-            baseline_composites = list(candidate_composites)
-            if baseline_scores_cache is not None:
-                baseline_scores_cache.parent.mkdir(parents=True, exist_ok=True)
-                baseline_scores_cache.write_text(
-                    json.dumps(baseline_composites),
-                    encoding="utf-8",
-                )
-
-        # Step 7: decide verdict (GATE-02 + GATE-04).
-        verdict, evidence = decide_verdict(
-            baseline_composites,
-            candidate_composites,
-            delta_threshold=config["delta_threshold"],
-            per_prompt_threshold=config["per_prompt_threshold"],
-            min_prompts=config["min_prompts"],
-        )
+            logger.error(
+                "no baseline cache found for skill %s; refusing to score "
+                "candidate against self (would always pass mean_delta=0). "
+                "Run with --rebuild-baseline first to populate the cache.",
+                skill_id,
+            )
+            verdict = "inconclusive"
+            evidence = {
+                "reason": "missing_baseline_cache",
+                "skill_id": skill_id,
+                "n_candidate": len(candidate_composites),
+                "min_prompts": config["min_prompts"],
+            }
+        else:
+            # Step 7: decide verdict (GATE-02 + GATE-04).
+            verdict, evidence = decide_verdict(
+                baseline_composites,
+                candidate_composites,
+                delta_threshold=config["delta_threshold"],
+                per_prompt_threshold=config["per_prompt_threshold"],
+                min_prompts=config["min_prompts"],
+            )
     finally:
         # T-30-04: revert ALWAYS runs, even on exception.
         if applied:
@@ -1330,6 +1343,26 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory for report JSON output (default: _eval/reports/).",
     )
     parser.add_argument(
+        "--baseline-cache",
+        type=Path,
+        default=None,
+        help=(
+            "Path to baseline scores.json cache (default: "
+            "_eval/baseline/<skill>/scores.json). CR-01: previously the "
+            "CLI never wired this through, making the entire cache + "
+            "--rebuild-baseline infrastructure dead code."
+        ),
+    )
+    parser.add_argument(
+        "--no-baseline-cache",
+        action="store_true",
+        help=(
+            "Explicitly skip the baseline cache. The gate will refuse to "
+            "score (inconclusive) per CR-03 unless a baseline is supplied "
+            "another way. Use only for smoke tests."
+        ),
+    )
+    parser.add_argument(
         "--rebuild-baseline",
         action="store_true",
         help=(
@@ -1470,6 +1503,22 @@ def main(argv: list[str] | None = None) -> int:
             logger.error("%s (use --dry-run for offline testing)", exc)
             return VERDICT_TO_EXIT["inconclusive"]
 
+    # CR-01: resolve the baseline cache path. Default is the conventional
+    # _eval/baseline/<skill>/scores.json. Operators can override with
+    # --baseline-cache or skip with --no-baseline-cache (smoke-test only —
+    # CR-03 will refuse to score without a baseline).
+    if args.no_baseline_cache:
+        baseline_scores_cache: Path | None = None
+    elif args.baseline_cache is not None:
+        baseline_scores_cache = args.baseline_cache
+    else:
+        baseline_scores_cache = (
+            Path(__file__).resolve().parent
+            / "baseline"
+            / args.skill
+            / "scores.json"
+        )
+
     result = run_gate(
         patch_path=args.patch,
         skill_id=args.skill,
@@ -1480,6 +1529,7 @@ def main(argv: list[str] | None = None) -> int:
         prompts_path=prompts_path,
         judge_client=judge_client,
         reports_dir=args.reports_dir,
+        baseline_scores_cache=baseline_scores_cache,
     )
     return result.exit_code
 
