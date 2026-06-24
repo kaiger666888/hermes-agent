@@ -32,7 +32,6 @@ import argparse
 import hashlib
 import os
 import sys
-import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -150,19 +149,27 @@ def _cmd_import(args) -> int:
 
 
 def _cmd_watch(args) -> int:
-    """``hermes feedback watch [--interval N]``."""
+    """``hermes feedback watch [--interval N]``.
+
+    Ctrl+C is caught by Python's default SIGINT handler (raised as
+    KeyboardInterrupt from ``time.sleep`` inside the watcher) and
+    propagated here; we swallow it and return 0. We deliberately do NOT
+    pass a ``stop_event`` so the watcher installs its own SIGINT/SIGTERM
+    handlers (matching the docstring's "fresh threading.Event is created
+    and SIGINT/SIGTERM are wired to set it" promise) when invoked from
+    the CLI foreground context. Tests that need to drive the watcher
+    externally still pass ``stop_event=`` directly to
+    :func:`watch_inbox_kais`.
+    """
     from agent.feedback_ingest import watch_inbox_kais
 
-    stop_event = threading.Event()
-    # The watcher installs its own SIGINT/SIGTERM handlers when given a
-    # fresh stop_event. We pass ours so test mocks can set it.
     try:
-        watch_inbox_kais(
-            interval=args.interval,
-            stop_event=stop_event,
-        )
+        # No stop_event kwarg -> watcher creates its own Event and installs
+        # signal handlers. KeyboardInterrupt from time.sleep propagates
+        # here on Ctrl+C (Python's default SIGINT handler).
+        watch_inbox_kais(interval=args.interval)
     except KeyboardInterrupt:
-        stop_event.set()
+        return 0
     return 0
 
 
