@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Self-Evolution & Feedback Loop
-status: executing
-last_updated: "2026-06-24T23:00:00.000Z"
+status: ready_to_plan
+last_updated: 2026-06-24T15:11:22.228Z
 last_activity: 2026-06-24 -- Phase 31 COMPLETE (engine + CLI layers shipped; 87 tests green; EVOL-04 non-bypassable human-in-loop structurally enforced)
 progress:
   total_phases: 6
@@ -11,6 +11,7 @@ progress:
   total_plans: 8
   completed_plans: 8
   percent: 67
+stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -24,14 +25,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 32 — Curator Upgrade + Audit (next; depends on P29 + P31 which are both now complete)
+**Current focus:** Phase 32 — curator upgrade + audit
 
 ## Current Position
 
-Phase: 31 COMPLETE → 32 next
-Plan: 31-02 shipped (Phase 31 closed)
-Status: Executing — Phase 31 complete (both plans shipped); Phase 32 unblocked
-Last activity: 2026-06-24 -- Phase 31 Plan 02 complete (CLI layer; 87 tests green; EVOL-04 structural isolation enforced via ast-walk)
+Phase: 32
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-24
 
 ### Progress
 

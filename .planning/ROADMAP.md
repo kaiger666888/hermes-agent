@@ -99,7 +99,7 @@
   5. **FOUND-08 preservation check:** Every applied patch preserves the expert_id and related_skills frontmatter of the target SKILL.md byte-for-byte (no new expert_id created, no DAG node rewired) — verified per-patch before commit
   6. **v5/v4 refs byte-intact check (additive-only):** Patches to v4.0 methodology refs (snowflake-method.md / e-konte-format.md / scamper-variations.md) and v5.0 refs (dreamina-cli-baseline.md / v86-pipeline-mapping.md) are ADDITIVE only — existing bytes preserved, new knowledge appended alongside (mirrors v4.0 + v5.0 scope discipline)
 **Hermes-core touch:** Mixed — pipeline orchestration code is new (under `~/.hermes/skills/.feedback/` tooling or a new module), but the patches it produces target bundled SKILL.md / refs (additive only). The git-commit + rollback machinery touches repo state.
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 - [x] 31-01-PLAN.md — agent/evolution/ subpackage (insights LLM aggregation + difflib diff generator + JSONL queue + atomic apply transaction + FOUND-08 byte-intact + additive-only verifier) — covers EVOL-01/03/04/05 engine layer — **shipped 2026-06-24 (7 commits, 60 new tests green, FOUND-08 byte-intact + additive-only + runtime isolation verified)**
 - [x] 31-02-PLAN.md — hermes_cli/feedback.py extension with 6 new subcommands (evolve / review-queue / show-patch / approve / reject / rollback) + isolation grep verification + non-bypassable human-in-loop structural test — covers EVOL-01/03/04/05 CLI layer — **shipped 2026-06-24 (3 commits, 27 new tests green, TestNonBypassableHumanInLoop ast-walk verifies only _cmd_approve calls apply_patch_transaction, runtime isolation 0 matches, RESEARCH 3/3 Open Questions RESOLVED, VALIDATION nyquist_compliant=true) — Phase 31 CLOSED**
 
@@ -222,7 +222,7 @@ Phase 33 (Observability + Close-out) ← MUST run last; references P28-32 + writ
 | 28. Feedback Ingestion MVP | 2/2 | Complete    | 2026-06-24 |
 | 29. Feedback Store | 2/2 | Complete    | 2026-06-24 |
 | 30. Eval Gate Reuse | 2/2 | Complete    | 2026-06-24 |
-| 31. Knowledge Evolution Pipeline | 0/2 | Not started | - |
+| 31. Knowledge Evolution Pipeline | 2/2 | Complete    | 2026-06-24 |
 | 32. Curator Upgrade + Audit | 0/? | Not started | - |
 | 33. Observability + Integration Close-out | 0/? | Not started | - |
 
