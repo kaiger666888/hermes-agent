@@ -1,0 +1,10 @@
+name: review_gates
+version: "0.1.0"
+description: "review gate framework plugin — HIL gate lifecycle (submit/wait/resolve) + 8 V8.6 gate config (Phase 34 implements gate state machine + delegate_task approval callback)"
+author: kais-movie-agent
+kind: standalone
+provides_tools:
+  - gate_submit
+  - gate_wait
+  - gate_resolve
+  - gates_list
