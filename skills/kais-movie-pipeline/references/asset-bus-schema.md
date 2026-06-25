@@ -1,8 +1,8 @@
 # Asset Bus Schema — Slot Types + Lifecycle
 
-**Source:** `plugins/pipeline_state/asset_bus.py` (`ASSET_SCHEMA` constant, Phase 33); Phase 35 slot additions per CONTEXT D-35-05.
+**Source:** `plugins/pipeline_state/asset_bus.py` (`ASSET_SCHEMA` constant, Phase 33); Phase 35 slot additions per CONTEXT D-35-05; Phase 36 Wave 1 additions per CONTEXT D-36-04.
 **Copyright:** Fair Use — slot schema is factual integration architecture.
-**Last-verified:** 2026-06-25
+**Last-verified:** 2026-06-26 (Phase 36-05 Wave 2 refinement — full slot table replacing placeholder)
 
 ---
 
@@ -10,7 +10,7 @@
 
 This document is the **AssetBus V3 slot schema reference** for the `kais-movie-pipeline` orchestration skill. It answers "what slots exist, what format, what reads/writes each" for port engineers wiring phase modules to the asset bus.
 
-This is **skeleton form** (per ROADMAP SC#5). Phase 36 refines with actual port experience (per-slot JSON schemas for p04-p13 outputs, observed envelope derivation chains, CreativeHistoryTracker DAG edges).
+**Phase 36-05 Wave 2 refinement:** The "Phase 36 Future Slots TBD" placeholder has been replaced with the actual slot table written by Wave 1 (36-01..36-04). All slot names + writer/reader phases below are sourced from the `ASSET_SCHEMA` dict in `plugins/pipeline_state/asset_bus.py`.
 
 ---
 
@@ -60,23 +60,41 @@ Phase 35-02 extends `ASSET_SCHEMA` with 6 phase-output slots for the p01-p03 ver
 
 ---
 
-## Phase 36 Future Slots
+## Phase 36 Slots (Complete — 36-01..36-04 Wave 1)
 
-Phase 36 will add ~20 more slots as p04-p13 phase modules are ported. **Exact names + schemas are TBD** (defined when each phase module is implemented; Phase 36 SC#4 refines this doc with actual port experience). Expected slot names (placeholder):
+> Refined in Phase 36-05 from actual Wave 1 ASSET_SCHEMA additions. All 17 slots below are JSON format, envelope-wrapped, atomic write (per Phase 33 / Phase 35 convention). Slot names are kebab-case semantic (no phase prefix).
 
-- `character-bible` (p04 — character_designer output, L1-L4 asset library)
-- `scene-design` (p05 — cinematographer + style_genome scene design)
-- `spatio-script` (p06 — screenplay + cinematographer spatio-temporal script)
-- `shot-list` (p06 / p08 — cinematographer shot decomposition)
-- `visual-seeds` (p07 — visual_executor + prompt_injector seed images)
-- `styled-frames` (p07 — colorist styled keyframes)
-- `audio-skeleton` (p07b — audio_pipeline voicer + composer + foley skeleton)
-- `video-clips` (p10 — dreamina CLI generated raw clips, possibly JSONL for parallel shots)
-- `voice-timeline` (p11 — audio_pipeline lip_sync alignment)
-- `audio-stems` (p11 — BGM + SFX + lip-sync stems)
-- `master-mp4` (p12-p13 — final composed master)
-- `continuity-report` (p09 — continuity_auditor 4-dim report)
-- `gate-N-outcome` variants (if per-gate slotting chosen — TBD)
+| Slot | Format | Writer Phase | Reader Phase(s) | Purpose / V8.6 Equivalent |
+|------|--------|--------------|------------------|----------------------------|
+| `character-bible` | json | p04 `p04_character_design` | p05, p06, p09 | Character Bible 2.0 (4D-Anchor identity + style_prefix per character) — V8.6 Step 4 character_designer output |
+| `character-assets` | json | p04 `p04_character_design` | p07, p11 | L1-L4 asset manifest (identity anchors + expression sheets + costume cards + prop cards) — V8.6 Step 4 visual_executor (drawer) output |
+| `pain-points` | json | p05 `p05_pain_discovery` | (Gate 4 review) | L1-L6 pain strata mined from 6 social strata — V8.6 Step 5 creative_source output |
+| `escalation-ladder` | json | p05 `p05_pain_discovery` | (Gate 4 review) | Escalation ladder (theory_critic stress-tested) — V8.6 Step 5 theory_critic output |
+| `spatio-temporal-script` | json | p06 `p06_spatio_temporal_script` | p07, p08, p09 | Spatio-temporal script (screenplay + cinematographer axis lock) — V8.6 §5 atomic |
+| `final-audit` | json | p06 `p06_spatio_temporal_script` | (Gate 6 review) | 5-dim final audit (script_auditor) — V8.6 §5 atomic |
+| `scene-images` | json | p07 `p07_scene_generation` | p08, p11 | 5-view per-scene keyframes (visual_executor + prompt_injector) — V8.6 §4 atomic |
+| `style-vector` | json | p07 `p07_scene_generation` | p08, p12 | 5D style genome (genre/mood/aesthetic/pace/color) — V8.6 §4 atomic |
+| `color-intent` | json | p07 `p07_scene_generation` | p13 | CxSxZ 28-combination color intent + LUT plan — V8.6 §4 atomic |
+| `scene-selection` | json | p08 `p08_scene_selection` | p09 | Operator-approved scene subset — V8.6 Step 8 |
+| `geometry-bed` | json | p08 `p08_scene_selection` | p09, p11 | Cross-shot 3D anchor frame (composition_lock) — V8.6 Step 8 |
+| `shot-list` | json | p09 `p09_shot_breakdown` | p10, p11 | Per-shot intent + duration decomposition — V8.6 Step 9 |
+| `e-konte-sheets` | json | p09 `p09_shot_breakdown` | (analytics) | 5-layer E-Konte (composition/camera/lighting/action/dialogue) — V8.6 Step 9 |
+| `voice-clips` | json | p10 `p10_voice` | p12 | Per-shot narration/dialogue audio paths — V8.6 Step 7B voicer sub-step |
+| `voice-timeline` | json | p10 `p10_voice` | p11, p12 | Per-shot voice start_ms/end_ms alignment — V8.6 Step 7B |
+| `video-clips` | json | p11 `p11_video_render` | p12 | Per-shot raw video clips (aggregated single write, NOT per-shot appends) — V8.6 Step 10 |
+| `lip-sync-reports` | json | p11 `p11_video_render` | p12 | Per-shot lip-sync alignment reports (audio_pipeline lip_sync sub-step) — V8.6 Step 10 |
+| `master-timeline` | json | p12 `p12_composition` | p13 | FxRxT timeline (editor) + audio master (audio_pipeline §6 6 sub-steps) — V8.6 §6 atomic |
+| `audio-stems` | json | p12 `p12_composition` | p13 | BGM + SFX + lip-sync stems (audio_pipeline §6) — V8.6 §6 atomic |
+| `master-mp4` | json | p13 `p13_delivery` | (operator — release artifact) | Final composed master.mp4 (preserves v4.0 PIPE-COMPOSE-01 contract) — V8.6 Step 12-13 |
+| `delivery-package` | json | p13 `p13_delivery` | (operator — release artifact) | Distribution manifest (per-platform variants + AIGC labels) — V8.6 Step 12-13 |
+
+**Total Phase 36 slots added: 21** (6 from 36-01, 7 from 36-02, 4 from 36-03, 4 from 36-04). Plus Phase 33's 4 + Phase 35's 6 = **31 slots total** in `ASSET_SCHEMA`.
+
+**Naming clarifications (resolved during Wave 1):**
+- `character-bible` (not `character-bible-2.0`) — kebab-case, semantic, no version suffix.
+- `spatio-temporal-script` (not `spatio-script` or `spatio_script`) — full semantic name, hyphen-separated.
+- `master-mp4` (not `master.mp4`) — slot name is the semantic identifier; the on-disk file is `master-mp4.json` (envelope-wrapped). The actual mp4 bytes live at the path stored inside the slot's `value.path` field.
+- `video-clips` is JSON (single aggregated write), NOT JSONL — even though p11 fans out per-shot delegate calls, the slot write happens once after all shots complete (D-36-08 aggregation contract).
 
 ---
 

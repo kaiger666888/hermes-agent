@@ -2,7 +2,7 @@
 
 **Source:** `_shared/v86-pipeline-mapping.md` (canonical V8.6 mapping ref, Phase 27) — which itself cites `kais-movie-agent/SKILL.md` @ commit `e41fa68`.
 **Copyright:** Fair Use — Step dependency structure is factual integration architecture; brief verbatim quotations attributed.
-**Last-verified:** 2026-06-25
+**Last-verified:** 2026-06-26 (Phase 36-05 Wave 2 refinement — full slot-flow table added)
 
 ---
 
@@ -10,7 +10,7 @@
 
 This document is the **dependency graph** for the V8.6 13-step short-drama pipeline. It answers "what runs after what, and what depends on what" for the `kais-movie-pipeline` orchestration skill. All Step numbering, atomic-merge annotations, and expert assignments are sourced verbatim from `_shared/v86-pipeline-mapping.md` — the single source of truth for V8.6.
 
-This is **skeleton form** (per ROADMAP SC#5): structure + section headers + 1-2 sentences per section. Phase 36 refines with actual port experience (slot read/write contracts per edge, observed parallelism, gate timing).
+**Phase 36-05 Wave 2 refinement:** Slot flow per edge + cross-cutting reads + side outputs are now documented from actual Wave 1 implementation data (see §"Slot Flow Per Edge" below).
 
 ---
 
@@ -95,10 +95,44 @@ The 13-Step DAG is the FULL V8.6 pipeline. Phase 35 ships only the **vertical sl
 
 | Phase Scope | Steps Covered | Phase Modules | Status |
 |-------------|---------------|---------------|--------|
-| **Phase 35 (vertical slice)** | Step 1, Step 2, Step 3 | `p01_hook_topic`, `p02_outline`, `p03_script_audit` | Skeleton (this milestone) |
-| **Phase 36 (full port)** | Step 4 — Step 13 | `p04_character_design` … `p13_delivery` | Future |
+| **Phase 35 (vertical slice)** | Step 1, Step 2, Step 3 | `p01_hook_topic`, `p02_outline`, `p03_script_audit` | **Complete** (53 Phase 35 tests) |
+| **Phase 36 (full port)** | Step 4 — Step 13 | `p04_character_design` … `p13_delivery` | **Complete** (36-01..36-04 Wave 1 + 36-05 Wave 2) |
 
 Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → gather inputs → delegate → write slot → trigger gate) end-to-end. Phase 36 ports p04-p13 using the established template.
+
+---
+
+## Slot Flow Per Edge
+
+> Refined in Phase 36-05 from Wave 1 implementation data. Slot names are the actual ASSET_SCHEMA keys written to / read from the asset bus per phase transition. All slots are JSON format (atomic write / read).
+
+| Edge | Slot(s) Flowing | Producer Phase → Module | Consumer Phase → Module |
+|------|-----------------|--------------------------|--------------------------|
+| p01 → p02 | `topic-kernel`, `hook-design` | p01 → `p01_hook_topic` | p02 → `p02_outline` |
+| p02 → p03 | `story-framework` | p02 → `p02_outline` | p03 → `p03_script_audit` |
+| p03 → p04 | `script-draft` (+ `audit-report` for review) | p03 → `p03_script_audit` | p04 → `p04_character_design` |
+| p04 → p05 | `character-bible`, `character-assets` | p04 → `p04_character_design` | p05 → `p05_pain_discovery` |
+| p05 → p06 | `pain-points`, `escalation-ladder` | p05 → `p05_pain_discovery` | p06 → `p06_spatio_temporal_script` (Gate 4 `shot-prep` review boundary) |
+| p06 → p07 | `spatio-temporal-script`, `final-audit` | p06 → `p06_spatio_temporal_script` (Gate 6 `spatio-temporal` review boundary) | p07 → `p07_scene_generation` |
+| p07 → p08 | `scene-images`, `style-vector`, `color-intent` | p07 → `p07_scene_generation` (Gate 5 `scene-design` review boundary) | p08 → `p08_scene_selection` |
+| p08 → p09 | `scene-selection`, `geometry-bed` | p08 → `p08_scene_selection` | p09 → `p09_shot_breakdown` |
+| p09 → p10 | `shot-list`, `e-konte-sheets` | p09 → `p09_shot_breakdown` | p10 → `p10_voice` |
+| p10 → p11 | `voice-clips`, `voice-timeline` | p10 → `p10_voice` | p11 → `p11_video_render` |
+| p11 → p12 | `video-clips`, `lip-sync-reports` | p11 → `p11_video_render` (Gate 7 `render-preview` review boundary) | p12 → `p12_composition` |
+| p12 → p13 | `master-timeline`, `audio-stems` | p12 → `p12_composition` | p13 → `p13_delivery` |
+| p13 → delivery | `master-mp4`, `delivery-package` | p13 → `p13_delivery` (Gate 8 `final-delivery` review boundary) | (operator — release artifact) |
+
+**Cross-cutting slot flows (not direct neighbors):**
+- `script-draft` (p03) is re-read by p05, p10 (voicer needs original script for narration/dialogue) — long-range read.
+- `character-bible` (p04) is re-read by p09 (continuity_auditor cross-references character anchors).
+- `character-assets` (p04) is re-read by p07 (drawer needs L1-L4 assets) and p11 (animator needs L1-L4 anchors).
+- `scene-images` (p07) is re-read by p11 (animator seeds shot video from scene keyframes).
+- `spatio-temporal-script` (p06) is re-read by p08, p09 (cinematographer decomposes spatio-temporal beats into shots/E-Konte).
+- `color-intent` (p07) is re-read by p13 (colorist applies CxSxZ LUT in final grade).
+- `style-vector` (p07) is re-read by p12 (audio_pipeline tunes BGM/SFX to 5D mood vector).
+
+**Slots not on the DAG spine (side outputs):**
+- `topic-kernel`, `hook-design`, `story-framework`, `audit-report`, `pain-points`, `escalation-ladder`, `final-audit`, `e-konte-sheets`, `geometry-bed`, `voice-clips`, `lip-sync-reports` — written once, consumed by review gates or downstream analytics, not re-read by later phase modules.
 
 ---
 

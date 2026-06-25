@@ -2,7 +2,7 @@
 
 **Source:** `_shared/v86-pipeline-mapping.md` §"V8.6 8-Gate Review Structure" (Phase 27 canonical ref); gate lifecycle semantics from `plugins/review_gates/gate.py` (Phase 34).
 **Copyright:** Fair Use — gate trigger phase + reviewer role is factual integration architecture.
-**Last-verified:** 2026-06-25
+**Last-verified:** 2026-06-26 (Phase 36-05 Wave 2 refinement — all 8 gates mapped to actual module GATE_ID constants)
 
 ---
 
@@ -10,7 +10,7 @@
 
 This document specifies the **8 V8.6 review gates** and their per-phase mapping. It answers "which gates fire when, and what reviewer role / mode each uses" for the `kais-movie-pipeline` orchestration skill. Gate numbering, trigger phases, and reviewer composition sourced from `_shared/v86-pipeline-mapping.md`.
 
-This is **skeleton form** (per ROADMAP SC#5). Phase 36 refines with actual port experience (gate timeout / retry policy / callback URL per gate).
+**Phase 36-05 Wave 2 refinement:** All 8 gates are now mapped to the actual module `GATE_ID` constants (Phase 35 + Phase 36 Wave 1 modules). The V8.6 gate→step table below is augmented with the actual module wiring (gates 4-8 no longer "Future").
 
 ---
 
@@ -58,16 +58,34 @@ Gate YAML config: `plugins/review_gates/gates.yaml` (Phase 34) defines per-gate 
 
 ---
 
-## Phase 35 Gates
+## All 8 Gates (Phase 35+36 Complete)
 
-Only **Gates 1, 2, 3** are reachable in the Phase 35 vertical slice (p01-p03 modules). Gates 4-8 require Phase 36 phase modules.
+> Refined in Phase 36-05 from Wave 1 module `GATE_ID` constants. The V8.6 gate→step table above is the conceptual mapping; this table is the implementation wiring — which phase module actually fires each gate, and under what mode.
 
-| Gate | Phase 35 Module | Status |
-|------|-----------------|--------|
-| Gate 1 | `p01_hook_topic.py` | Phase 35 (skeleton) |
-| Gate 2 | `p02_outline.py` | Phase 35 (skeleton) |
-| Gate 3 | `p03_script_audit.py` | Phase 35 (skeleton) |
-| Gates 4-8 | (p04-p13 Phase 36) | Future |
+| Gate | V8.6 Gate Name | Trigger Module | Module `GATE_ID` | Mode | Reviewer(s) | Status |
+|------|----------------|----------------|-------------------|------|-------------|--------|
+| **Gate 1** | 选题 + 主题 + hook 候选 | `p01_hook_topic.py` | `"selection-topic-hook"` | Hard (blocking) | `hook_retention` + `compliance_gate` (red-line) | **Complete** (Phase 35) |
+| **Gate 2** | 故事框架 + 大纲 | `p02_outline.py` | `"story-framework"` | Hard (blocking) | `creative_source` + `screenplay` + `style_genome` | **Complete** (Phase 35) |
+| **Gate 3** | 剧本 + 审计结果 | `p03_script_audit.py` | `"script-audit"` | Hard (blocking) | `screenplay` + `script_auditor` + `compliance_gate` | **Complete** (Phase 35) |
+| **Gate 4** | 角色资产库 + pain points | `p05_pain_discovery.py` | `"shot-prep"` | Hard (blocking) | `character_designer` + `visual_executor` + operator (confirms L1-L4 assets + L1-L6 pain strata before visual design) | **Complete** (Phase 36-01) |
+| **Gate 5** | 视觉种子 + 风格化 | `p07_scene_generation.py` | `"scene-design"` | Hard (blocking) | `visual_executor` + `prompt_injector` + `style_genome` + `colorist` + operator (confirms 4-dim consistency: scene-images + style-vector + color-intent) | **Complete** (Phase 36-02) |
+| **Gate 6** | 时空剧本 + 运镜 + 终审 | `p06_spatio_temporal_script.py` | `"spatio-temporal"` | Hard (blocking) | `screenplay` + `cinematographer` + `script_auditor` + `compliance_gate` | **Complete** (Phase 36-01) |
+| **Gate 7** | 视频预览 (parallel-shots) | `p11_video_render.py` | `"render-preview"` | Soft (operator can bypass in async mode) | `visual_executor` (animator) + operator (preview per-shot clips + lip-sync reports before composition) | **Complete** (Phase 36-03) |
+| **Gate 8** | 最终成片 + 分发合规 | `p13_delivery.py` | `"final-delivery"` | Hard (blocking — release gate) | `colorist` + `compliance_gate` (CN red-line + AIGC labeling) + operator | **Complete** (Phase 36-04) |
+
+**Phase modules with no gate (`GATE_ID = None`):**
+- `p04_character_design.py` — Gate 4 fires after **p05** (not p04) per V8.6 gates.yaml (character bible alone isn't reviewable — operator confirms together with pain points).
+- `p08_scene_selection.py` — selection is operator-curated inline (no formal gate).
+- `p09_shot_breakdown.py` — E-Konte sheets are deterministic decomposition, no creative review.
+- `p10_voice.py` — voicer output is reviewed indirectly via Gate 7 (render preview includes lip-sync).
+- `p12_composition.py` — composition feeds Gate 8 (final delivery); no mid-pipeline gate.
+
+**Gate triggering contract (CF-36-04):**
+Phase modules trigger gates ONLY when **both** conditions hold:
+1. `GATE_ID` module constant is set (not `None`)
+2. `trigger_gate` callable is provided (runner passes `None` when `RunnerConfig.enable_gates=False`)
+
+Verified by per-phase unit tests (`test_*_gate_none_even_when_trigger_gate_provided` for non-gating phases; `test_*_triggers_correct_gate_when_configured` for gating phases).
 
 ---
 

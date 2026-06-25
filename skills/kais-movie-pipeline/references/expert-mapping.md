@@ -2,7 +2,7 @@
 
 **Source:** `_shared/v86-pipeline-mapping.md` §"The 13-Step V8.6 Pipeline → expert_id Mapping" + `movie-experts/README.md` §"Active Expert Inventory" Bucket 1.
 **Copyright:** Fair Use — phase ↔ expert mapping is factual integration architecture.
-**Last-verified:** 2026-06-25
+**Last-verified:** 2026-06-26 (Phase 36-05 Wave 2 refinement — per-phase module paths + goal templates added)
 
 ---
 
@@ -10,27 +10,27 @@
 
 This document maps each of the 13 V8.6 pipeline phases to its primary + collaborating movie-experts. It answers "which movie-expert is invoked at each step, and what they produce" for the `kais-movie-pipeline` orchestration skill. Expert IDs sourced from `_shared/v86-pipeline-mapping.md`; expert roles from `movie-experts/README.md`.
 
-This is **skeleton form** (per ROADMAP SC#5). Phase 36 refines with actual port experience (delegate_task `goal` templates, asset-bus slot I/O per expert invocation).
+**Phase 36-05 Wave 2 refinement:** The Scope column now references actual phase module file paths (Phase 36 Complete) + a new §"Per-Phase delegate_task Goal Templates" section documents the verb + skill_view shape per phase.
 
 ---
 
 ## 13 Phase ↔ 15 Expert Mapping
 
-| Phase ID | V8.6 Step | Primary Expert(s) | Collaborating Experts | Phase 35/36 Scope | Reference |
-|----------|-----------|--------------------|-----------------------|--------------------|-----------|
-| `p01_hook_topic` | Step 1 (atomic §1) | `hook_retention` | — | **Phase 35** | v86-pipeline-mapping.md row 1 |
-| `p02_outline` | Step 2 (atomic §2) | `creative_source` + `screenplay` | — | **Phase 35** | row 2 |
-| `p03_script_audit` | Step 3 (atomic §3) | `screenplay` + `script_auditor` | — | **Phase 35** | row 3 |
-| `p04_character_design` | Step 4 | `character_designer` + `visual_executor` (drawer) | — | Phase 36 | row 4 |
-| `p05_scene_design` | Step 5 | `cinematographer` + `style_genome` + `visual_executor` (drawer) | — | Phase 36 | row 5 |
-| `p06_spatio_temporal_script` | Step 6 (atomic §5) | `screenplay` + `cinematographer` + `script_auditor` | — | Phase 36 | row 6 |
-| `p07_visual_seed` | Step 7 (atomic §4) | `visual_executor` + `prompt_injector` + `style_genome` + `colorist` | — | Phase 36 | row 7 |
-| `p07b_audio_skeleton` | Step 7B | `audio_pipeline` (voicer + composer + foley) | — | Phase 36 | row 8 |
-| `p08_shot_pacing` | Step 8 | `cinematographer` + `editor` | — | Phase 36 | row 9 |
-| `p09_continuity_check` | Step 9 | `continuity_auditor` | — | Phase 36 | row 10 |
-| `p10_video_gen` | Step 10 | (dreamina CLI — no expert_id call) | `visual_executor` (animator 监督) | Phase 36 | row 11 |
-| `p11_audio_master` | Step 11 (atomic §6) | `audio_pipeline` (6 sub-steps) | — | Phase 36 | row 12 |
-| `p12_p13_delivery` | Step 12-13 | TBD | — | Phase 36 | row 13 |
+| Phase ID | V8.6 Step | Primary Expert(s) | Collaborating Experts | Phase 35/36 Scope | Module File | Reference |
+|----------|-----------|--------------------|-----------------------|--------------------|-------------|-----------|
+| `p01_hook_topic` | Step 1 (atomic §1) | `hook_retention` | — | **Phase 35 Complete** | `pipeline/phases/p01_hook_topic.py` | row 1 |
+| `p02_outline` | Step 2 (atomic §2) | `creative_source` + `screenplay` | — | **Phase 35 Complete** | `pipeline/phases/p02_outline.py` | row 2 |
+| `p03_script_audit` | Step 3 (atomic §3) | `screenplay` + `script_auditor` | — | **Phase 35 Complete** | `pipeline/phases/p03_script_audit.py` | row 3 |
+| `p04_character_design` | Step 4 | `character_designer` | `visual_executor` (drawer) | **Phase 36 Complete (36-01)** | `pipeline/phases/p04_character_design.py` | row 4 |
+| `p05_pain_discovery` | Step 5 | `creative_source` | `theory_critic` | **Phase 36 Complete (36-01)** | `pipeline/phases/p05_pain_discovery.py` | row 5 (repurposed — V8.6 Step 5 "scene design" is split: pain discovery stays here, scene design moves to p07) |
+| `p06_spatio_temporal_script` | Step 6 (atomic §5) | `screenplay` | `cinematographer` + `script_auditor` | **Phase 36 Complete (36-01)** | `pipeline/phases/p06_spatio_temporal_script.py` | row 6 |
+| `p07_scene_generation` | Step 7 (atomic §4) | `visual_executor` | `prompt_injector` + `style_genome` + `colorist` | **Phase 36 Complete (36-02)** | `pipeline/phases/p07_scene_generation.py` | row 7 |
+| `p08_scene_selection` | Step 8 | `cinematographer` | `editor` | **Phase 36 Complete (36-02)** | `pipeline/phases/p08_scene_selection.py` | row 9 (V8.6 Step 7B audio skeleton is collapsed into p10; we keep 13-module shape per CONTEXT D-36-02) |
+| `p09_shot_breakdown` | Step 9 | `cinematographer` | `continuity_auditor` | **Phase 36 Complete (36-02)** | `pipeline/phases/p09_shot_breakdown.py` | row 10 |
+| `p10_voice` | Step 7B + Step 10 partial | `audio_pipeline` (voicer sub-step) | — | **Phase 36 Complete (36-03)** | `pipeline/phases/p10_voice.py` | row 8 (V8.6 Step 7B audio skeleton lives here) |
+| `p11_video_render` | Step 10 + Step 11 video half | `visual_executor` (animator) | `audio_pipeline` (lip_sync) | **Phase 36 Complete (36-03)** | `pipeline/phases/p11_video_render.py` | row 11 (D-36-08 parallel_shots exercised here) |
+| `p12_composition` | Step 11 audio half + Step 12 (atomic §6) | `audio_pipeline` (6 sub-steps) | `editor` | **Phase 36 Complete (36-04)** | `pipeline/phases/p12_composition.py` | row 12 |
+| `p13_delivery` | Step 13 | `colorist` | `compliance_gate` + `editor` | **Phase 36 Complete (36-04)** | `pipeline/phases/p13_delivery.py` | row 13 (Gate 8 final-delivery) |
 
 **Cross-cutting / on-demand experts** (not fixed to a phase — invoked per project need):
 - `theory_critic` — consultative, creator-pulled from any Step (typical after Step 2 / 6 / 9)
@@ -75,6 +75,32 @@ Each phase module (`p01_hook_topic.py` etc.) invokes the assigned expert via `de
 - **Return shape** — delegate_task returns a summary string; phase module instructs expert to emit JSON in a fenced block at end of summary, then parses it
 
 Schema reference: `tools/delegate_tool.py`. Per Phase 35 PATTERNS.md, phase modules expose internal functions accepting injected dispatch callables for test mocking.
+
+---
+
+## Per-Phase delegate_task Goal Templates
+
+> Added in Phase 36-05 Wave 2 (refinement spec). Each entry summarizes the `goal` string shape constructed by the phase module — the verb + skill_view mentions + output JSON shape. Sourced from Wave 1 SUMMARYs (36-01..36-04) + Phase 35 reference modules.
+
+Every goal follows Pattern 2 (PATTERNS.md): **verb** ("Apply the X expert skill in a V8.6 §Y operation") → **skill_view mention** for every assigned expert → **upstream slot inputs** named + JSON-serialized → **output shape** specified ("Emit the final output as a single fenced JSON block...").
+
+| Phase | Goal Template Summary (verb + skill_views + output shape) |
+|-------|-------------------------------------------------------------|
+| `p01_hook_topic` | "Apply the `hook_retention` expert skill in a V8.6 §1 atomic operation" → `skill_view(name='hook_retention')` → output `{topic_kernel, hook_design}` |
+| `p02_outline` | "Apply the `creative_source` AND `screenplay` expert skills in a V8.6 §2 atomic operation" → `skill_view(name='creative_source')` + `skill_view(name='screenplay')` → output `{story_framework}` |
+| `p03_script_audit` | "Apply the `screenplay` AND `script_auditor` expert skills in a V8.6 §3 atomic operation" → `skill_view(name='screenplay')` + `skill_view(name='script_auditor')` → output `{script_draft, audit_report}` |
+| `p04_character_design` | "Apply the `character_designer` AND `visual_executor` expert skills in a V8.6 Step 4 atomic operation" → `skill_view(name='character_designer')` + `skill_view(name='visual_executor')` → output `{character_bible, character_assets}` (Character Bible 2.0 + L1-L4 manifest) |
+| `p05_pain_discovery` | "Apply the `creative_source` AND `theory_critic` expert skills in a V8.6 Step 5 operation" → `skill_view(name='creative_source')` + `skill_view(name='theory_critic')` → output `{pain_points, escalation_ladder}` (L1-L6 strata + escalation) |
+| `p06_spatio_temporal_script` | "Apply the `screenplay`, `cinematographer`, AND `script_auditor` expert skills in a V8.6 §5 atomic operation" → 3 skill_views → output `{spatio_temporal_script, final_audit}` (atomic §5 invariant — 3 experts, 1 delegate_task call) |
+| `p07_scene_generation` | "Apply the `visual_executor`, `prompt_injector`, `style_genome`, AND `colorist` expert skills in a V8.6 §4 atomic operation" → 4 skill_views → output `{scene_images, style_vector, color_intent}` (atomic §4 invariant — 4 experts, 1 delegate_task call) |
+| `p08_scene_selection` | "Apply the `cinematographer` AND `editor` expert skills in a V8.6 Step 8 operation" → 2 skill_views → output `{scene_selection, geometry_bed}` |
+| `p09_shot_breakdown` | "Apply the `cinematographer` AND `continuity_auditor` expert skills in a V8.6 Step 9 operation" → 2 skill_views → output `{shot_list, e_konte_sheets}` (5-layer decomposition) |
+| `p10_voice` | "Apply the `audio_pipeline` expert skill (voicer sub-step) in a V8.6 Step 7B operation" → `skill_view(name='audio_pipeline')` → output `{voice_clips, voice_timeline}` |
+| `p11_video_render` | Per-shot goal: "Apply the `visual_executor` (animator) AND `audio_pipeline` (lip_sync) expert skills in a V8.6 Step 10 operation" → 2 skill_views per shot → aggregated output `{video_clips, lip_sync_reports}` (D-36-08 parallel fan-out, `parallel_shots` kwarg) |
+| `p12_composition` | "Apply the `audio_pipeline` expert skill (6 sub-steps: composer + foley + mixer + spatial + lip_sync final + dialog cleanup) AND `editor` expert skill in a V8.6 §6 atomic operation" → `skill_view(name='audio_pipeline')` + `skill_view(name='editor')` → output `{master_timeline, audio_stems}` (atomic §6 invariant — 6 internal sub-steps, 1 delegate_task call) |
+| `p13_delivery` | "Apply the `colorist`, `compliance_gate`, AND `editor` expert skills in a V8.6 Step 13 operation" → 3 skill_views → output `{master_mp4, delivery_package}` (Gate 8 final-delivery) |
+
+**Anti-pattern reminder (D-35-07):** phase modules do NOT call `skill_view` in parent (orchestration) context. Each `skill_view(name='...')` mention lives INSIDE the goal string — the subagent executes it after `delegate_task` spawns. Calling skill_view in the parent would burn parent context (15 experts × 5-15KB = exhaustion across 13 phases).
 
 ---
 
