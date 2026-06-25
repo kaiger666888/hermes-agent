@@ -206,6 +206,79 @@ ASSET_SCHEMA: dict[str, dict] = {
         "writer_phase": "p09_shot_breakdown",
         "reader_phases": ["p11_video_render"],
     },
+
+    # ── Phase 36-03 additions — p10/p11 voice + video render slots (D-36-04) ─
+    # Wave 1 plan 36-03 registers these 4 slots for p10_voice (voice-clips,
+    # voice-timeline) and p11_video_render (video-clips, lip-sync-reports).
+    # All JSON format (envelope-wrapped, atomic write). Per-plan asset-bus
+    # extension (D-36-05): PRESERVES existing slots byte-equivalent — only
+    # appends. p11 video-clips + lip-sync-reports are aggregated SINGLE
+    # writes (the phase fans out shot-level delegate_task calls internally
+    # via ThreadPoolExecutor per D-36-08, then writes one consolidated slot).
+    "voice-clips": {
+        "file": "voice-clips.json",
+        "format": "json",
+        "description": "TTS voice clips per shot (narration + dialogue)",
+        "writer_phase": "p10_voice",
+        "reader_phases": ["p11_video_render", "p12_composition"],
+    },
+    "voice-timeline": {
+        "file": "voice-timeline.json",
+        "format": "json",
+        "description": "Voice timeline alignment (per-shot start/end + lip-sync cues)",
+        "writer_phase": "p10_voice",
+        "reader_phases": ["p11_video_render", "p12_composition"],
+    },
+    "video-clips": {
+        "file": "video-clips.json",
+        "format": "json",  # NOT jsonl — aggregated single write per D-36-08
+        "description": "Rendered video clips (one entry per shot, parallel-generated)",
+        "writer_phase": "p11_video_render",
+        "reader_phases": ["p12_composition"],
+    },
+    "lip-sync-reports": {
+        "file": "lip-sync-reports.json",
+        "format": "json",
+        "description": "Lip-sync alignment reports per shot",
+        "writer_phase": "p11_video_render",
+        "reader_phases": ["p12_composition"],
+    },
+
+    # ── Phase 36-04 additions — p12/p13 final ship slots (D-36-04) ──────
+    # Wave 1 plan 36-04 registers these 4 slots so p12_composition and
+    # p13_delivery can write their outputs via AssetBus.write(). All JSON
+    # format (envelope-wrapped, atomic write). Per-plan asset-bus extension
+    # (D-36-05): PRESERVES existing slots byte-equivalent — only appends.
+    # master-mp4 slot preserves the v4.0 PIPE-COMPOSE-01 contract (master.mp4
+    # as the canonical pipeline output artifact).
+    "master-timeline": {
+        "file": "master-timeline.json",
+        "format": "json",
+        "description": "FxRxT master timeline (assembled edit decision list)",
+        "writer_phase": "p12_composition",
+        "reader_phases": ["p13_delivery"],
+    },
+    "audio-stems": {
+        "file": "audio-stems.json",
+        "format": "json",
+        "description": "Audio stems (BGM + SFX + voice + mixdown)",
+        "writer_phase": "p12_composition",
+        "reader_phases": ["p13_delivery"],
+    },
+    "master-mp4": {
+        "file": "master-mp4.json",
+        "format": "json",
+        "description": "Final master.mp4 metadata (path, duration, resolution, codec)",
+        "writer_phase": "p13_delivery",
+        "reader_phases": [],
+    },
+    "delivery-package": {
+        "file": "delivery-package.json",
+        "format": "json",
+        "description": "Delivery package manifest (master + captions + compliance report + metadata)",
+        "writer_phase": "p13_delivery",
+        "reader_phases": [],
+    },
 }
 
 
