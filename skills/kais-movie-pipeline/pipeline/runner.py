@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RunnerConfig:
-    """Runner configuration (D-35-06 + D-35-08).
+    """Runner configuration (D-35-06 + D-35-08 + D-37-01 Phase 37 hooks).
 
     ``parallel_shots`` defaults to 4 to preserve v2.0 behavior. Phase 35
     plumbs the config; Phase 36 implements actual parallel shot dispatch
@@ -67,11 +67,35 @@ class RunnerConfig:
     forwarded to phase modules. When ``False``, phase modules receive
     ``None`` and skip gate logic entirely (used in dry-run / re-run scenarios
     where gates have already been approved).
+
+    Phase 37 event hooks (D-37-01 callback injection; D-37-06 default None
+    preserves Phase 35/36 regression):
+
+    ``on_phase_complete`` — Optional callback invoked AFTER
+    ``store.save_checkpoint`` for each phase, with signature
+    ``(episode_id, phase_id, result) -> None``. The subscriber (Phase 37-02
+    ``canvas_sync.CanvasSyncSubscriber``) listens here to push the phase's
+    canvas node. Invoked only when non-None; the runner wraps the call in
+    ``try/except`` (D-37-04) so a buggy/missing subscriber never crashes the
+    episode — progress is already checkpointed, so resume still works.
+
+    ``on_gate_resolved`` — Optional callback mirror kept on the config for
+    symmetry / audit. The gate-resolution trigger path is module-level in
+    ``runner_hooks`` (D-37-07, set via ``set_gate_resolved_hook``), because
+    ``pause_for_review`` is invoked from phase modules via ``trigger_gate``
+    and threading the callback through would touch all 13 phase modules. This
+    field is reserved for future direct invocation paths and is currently
+    unused by the runner loop; documenting it here keeps the config the
+    single source of truth for subscriber wiring.
     """
 
     parallel_shots: int = 4
     workdir: str = "."
     enable_gates: bool = True
+    # Phase 37 — canvas sync event hooks. Defaults None = no-op, preserves
+    # Phase 35/36 test behavior when subscriber not registered (D-37-06).
+    on_phase_complete: Callable[[str, str, dict], None] | None = None
+    on_gate_resolved: Callable[[str, str, str, dict], None] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -318,6 +342,24 @@ def run_episode(
             phase_id,
             {"phase": phase_id, "result": result},
         )
+
+        # Phase 37 — phase completion event hook. Guarded so a buggy/missing
+        # subscriber never crashes the episode (D-37-04). The callback is
+        # invoked AFTER the checkpoint is persisted — if the subscriber
+        # crashes, the episode's progress is already saved and resume works
+        # on the next run. Default None short-circuits the guard (D-37-06),
+        # so Phase 35/36 tests that construct RunnerConfig() without hooks
+        # observe zero behavior change.
+        if cfg.on_phase_complete is not None:
+            try:
+                cfg.on_phase_complete(episode_id, phase_id, result)
+            except Exception:
+                logger.warning(
+                    "run_episode: on_phase_complete callback raised "
+                    "(episode=%s phase=%s) — swallowed, episode continues",
+                    episode_id, phase_id,
+                    exc_info=True,
+                )
 
     return {
         "episode_id": episode_id,
