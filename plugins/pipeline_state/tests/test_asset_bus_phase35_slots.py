@@ -154,11 +154,17 @@ class TestNewSlotsSchemaMetadata:
             f"slot {slot} file must end in .json; got {fname!r}"
         )
 
-    def test_total_slot_count_is_10(self):
-        """4 Phase 33 slots + 6 Phase 35 additions = 10 total."""
-        assert len(ASSET_SCHEMA) == 10, (
-            f"expected 10 slots (4+6), got {len(ASSET_SCHEMA)}; "
-            f"keys={sorted(ASSET_SCHEMA.keys())}"
+    def test_total_slot_count_at_least_10(self):
+        """4 Phase 33 slots + 6 Phase 35 additions = 10 minimum.
+
+        Phase 36 (D-36-04) extends ASSET_SCHEMA per Wave 1 plan, so the
+        count grows beyond 10 — this assertion verifies the Phase 35
+        baseline is intact (>= 10) without coupling to Phase 36's
+        in-flight additions.
+        """
+        assert len(ASSET_SCHEMA) >= 10, (
+            f"expected >= 10 slots (4 Phase 33 + 6 Phase 35), "
+            f"got {len(ASSET_SCHEMA)}; keys={sorted(ASSET_SCHEMA.keys())}"
         )
 
     def test_jsonl_slots_unchanged(self):
