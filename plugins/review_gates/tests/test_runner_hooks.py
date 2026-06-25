@@ -227,11 +227,9 @@ class TestPauseForReviewMaxRetries:
     ):
         """mark_episode_failed writes PipelineState with status=failed + error
         starting with the literal 'CONSISTENCY_BLOCKED:' marker."""
-        # Trigger the exception naturally.
-        with pytest.raises(GateMaxRetriesExceeded):
-            runner_hooks.pause_for_review("topic-gate", "EP01", {})
-
-        # Now exercise mark_episode_failed (caller would do this).
+        # Simulate the exception a caller would catch after retry exhaustion.
+        # (Triggering it naturally is covered by
+        # ``test_max_retries_raises_and_propagates`` above.)
         exc = GateMaxRetriesExceeded("topic-gate", attempts=3, max_retries=2)
         runner_hooks.mark_episode_failed("EP01", "topic-gate", exc)
 
