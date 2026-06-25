@@ -1,15 +1,16 @@
-"""Smoke test for the kais_aigc plugin (Phase 31 skeleton).
+"""Smoke test for the kais_aigc plugin (Phase 31 skeleton + Phase 32 wiring).
 
-Verifies the five contracts the skeleton must satisfy so Phase 32 can swap in
-real HTTP clients without renegotiating the tool surface:
+Verifies the five contracts the plugin must satisfy:
 
 1. ``plugin.yaml`` manifest parses and declares the expected 4-tool surface.
 2. ``__init__.py`` and ``tools.py`` import without errors (no missing deps,
    no circular imports).
 3. ``register(ctx)`` registers exactly 4 tools with ``toolset="kais_aigc"``
    and well-formed schemas.
-4. Every stub handler returns valid ``tool_result()`` JSON with
-   ``status="not_implemented"`` and the correct plugin/tool identity.
+4. Every handler returns valid JSON via ``tool_result()`` / ``tool_error()``.
+   (Phase 31 asserted the stub envelope; Phase 32 replaced stubs with real
+   dispatch — Test 4 now asserts only that handlers emit valid JSON without
+   raising on empty args. Real routing is verified in test_tools_dispatch.py.)
 5. ``python -c "from plugins.kais_aigc import register"`` succeeds — the
    literal ROADMAP SC#3 check ("entry module smoke-imports").
 """
@@ -141,9 +142,16 @@ def test_register_registers_4_tools_with_correct_toolset():
         )
 
 
-def test_handlers_return_not_implemented_json():
-    """Test 4: every stub handler returns valid tool_result() JSON with
-    status=not_implemented and the correct plugin/tool identity."""
+def test_handlers_return_valid_json():
+    """Test 4: every handler returns valid tool_result/tool_error JSON.
+
+    Phase 31 asserted the stub envelope (status=not_implemented). Phase 32
+    replaced stubs with real dispatch — handlers now either return tool_result
+    (success) or tool_error (missing required args / client failure). The
+    sample args below are intentionally missing required fields, so handlers
+    must return a JSON error envelope; we only verify the response is valid
+    JSON and that the dispatch path was reached (no exception escaped).
+    """
     saved_path = list(sys.path)
     sys.path.insert(0, str(HERMES_ROOT))
     try:
@@ -157,27 +165,20 @@ def test_handlers_return_not_implemented_json():
         f"_TOOLS names mismatch: {set(name_to_handler)} != {set(EXPECTED_TOOLS)}"
     )
 
-    sample_args = {"sample": "args", "task_type": "image_draw"}
+    # Empty args -> every handler has at least one required field, so all four
+    # return a tool_error JSON envelope. (We do not exercise real dispatch —
+    # that's test_tools_dispatch.py's job. This test only confirms handlers
+    # still produce a JSON string without raising.)
     for tool_name, handler in name_to_handler.items():
-        result = handler(sample_args)
+        result = handler({})
         assert isinstance(result, str), (
             f"{tool_name}: handler must return a string, got {type(result).__name__}"
         )
         parsed = json.loads(result)  # raises if not valid JSON
-        assert parsed["status"] == "not_implemented", (
-            f"{tool_name}: status={parsed.get('status')!r}, expected 'not_implemented'"
-        )
-        assert parsed["plugin"] == PLUGIN_NAME, (
-            f"{tool_name}: plugin={parsed.get('plugin')!r}, expected {PLUGIN_NAME!r}"
-        )
-        assert parsed["tool"] == tool_name, (
-            f"{tool_name}: tool field={parsed.get('tool')!r}"
-        )
-        assert parsed.get("implementing_phase"), (
-            f"{tool_name}: implementing_phase must be non-empty"
-        )
-        assert parsed.get("args_received") == sample_args, (
-            f"{tool_name}: args_received must echo the input args dict"
+        assert isinstance(parsed, dict), f"{tool_name}: handler must return a JSON object"
+        # tool_error envelope has an "error" key (string); tool_result has other keys.
+        assert "error" in parsed, (
+            f"{tool_name}: empty-args call should yield tool_error, got {list(parsed)}"
         )
 
 
