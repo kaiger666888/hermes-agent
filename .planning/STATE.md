@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Self-Evolution & Feedback Loop
-status: Awaiting next milestone
-last_updated: "2026-06-24T23:37:14.309Z"
-last_activity: 2026-06-24 — Milestone v6.0 completed and archived
+milestone: v7.0
+milestone_name: openclaw → hermes-agent Primary Agent Migration
+status: planning
+last_updated: "2026-06-25T13:25:28.370Z"
+last_activity: 2026-06-25
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Movie-Experts Suite v2 (MESV2)
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: Milestone v6.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-24 — Milestone v6.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-25 — Milestone v7.0 started
 
 ### Progress
 

@@ -1,8 +1,12 @@
-# Movie-Experts Suite v2 — 短剧/微电影创作专家增强
+# Hermes Agent — Kai's Personal Agent Platform
 
 ## What This Is
 
-Hermes Agent 的 `skills/movie-experts/` 专家体系的增强项目:在现有 14 个电影制作专家(编剧、绘图、动画、剪辑、调色、配乐、表演、场景、拟音、空间音频、混音、配音、连续性、风格基因组)基础上,通过 RAG 增强其行业经验,并补全 AI 短剧(短剧/竖屏短剧)与微电影创作全链路的关键缺口 —— 新增运镜指导、Hook & Retention、制作管理、合规与宣发 4 个专家。目标是让每个专家不再是「懂语法的模板」,而是「懂行业的专家」。
+Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/微电影创作专家体系(14 重构 + 4 新增 + RAG 增强 + 反馈闭环自学习);**v7.0 起** 项目范畴拓宽为「openclaw → hermes-agent 主 agent 迁移」,把 coding-agent / tmux-agents / feishu / agent 定义 / 身份记忆等通用 agent 能力从 openclaw 接管到 hermes-agent,让 hermes-agent 成为 Kai 的主 agent。movie-experts 后续深化在另一 repo(kais-movie-agent)处理。
+
+## Core Value
+
+让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
 ## Core Value
 
@@ -202,6 +206,28 @@ See full archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 **Last shipped:** v6.0 Self-Evolution & Feedback Loop (2026-06-24) — [Audit](./milestones/v6.0-MILESTONE-AUDIT.md)
 
+## Current Milestone: v7.0 — openclaw → hermes-agent Primary Agent Migration
+
+**Goal:** 把 openclaw 作为主 agent 时的关键能力(skills / agent 定义 / 身份记忆)迁移到 hermes-agent,让 hermes-agent 接管主 agent 角色时保持能力对等。聚焦 personal hermes agent(movie-experts 后续深化在另一 repo kais-movie-agent 处理)。
+
+**Target features:**
+
+1. **Skills 迁移** —— 把 openclaw 独有的 skill 搬到 hermes-agent:
+   - `coding-agent`(统一 tmux 委派 Codex/Claude Code/Pi/OpenCode)
+   - `tmux-agents`(后台 tmux agent 管理)
+   - `feishu-{doc,drive,perm,wiki}`(飞书文档/网盘/权限/知识库)
+   - `acp-router`(TBD — 看 ACP 是否还需要保留)
+2. **Agent 定义转换** —— 7 份 `openclaw/agents/{main, claude, codex, hermes, hermes-agent, pi, default}.json` 从 openclaw schema 转为 hermes schema,放到 hermes-agent 对应位置
+3. **身份与记忆迁移** —— `SOUL.md` + `USER.md` + `workspace/memory/*.md`(25+ 研究笔记)落到 `~/.hermes/`,保留下一步 agent 个性化所需的身份/历史/偏好
+
+**Key context:**
+
+- **范畴拓宽**:v1-v6 都聚焦 movie-experts;v7.0 是项目第一次触及非 movie-experts 范畴。PROJECT.md `## What This Is` 已对应演进
+- **Config 显式 out of scope**:provider keys、acp config、feishu channel config 由 Kai 手动处理(不走 milestone 流程)
+- **Workspace 项目文件不迁**:`workspace/` 下 GB 级 AIGC 产出与 agent 能力无关,留原处
+- **前序 milestone 完整保留**:v1-v6 历史在 PROJECT.md 下文 + MILESTONES.md + milestones/ 完整保留,作为 movie-experts 子系统的归档
+- **ACP 路由待定**:acp-router 是否迁移取决于 ACP 协议在 hermes-agent 下是否还需要(openclaw 是 ACP 调度器,hermes-agent 自己是 agent 不是调度器)
+
 **Paradigm:** movie-experts is now a **feedback-driven self-learning system** (transition completed in v6). Skills can evolve based on operator feedback without manual curation. The Hermes runtime gained a feedback/evolution/audit sublayer alongside the existing curator module.
 
 **v6.0 capabilities shipped:**
@@ -338,4 +364,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-24 — v6.0 Self-Evolution & Feedback Loop milestone started (paradigm shift: static knowledge → feedback-driven self-learning). Scope expansion from v5: touches Hermes core (curator extension + feedback ingestion). Research skipped per operator; requirements next.*
+*Last updated: 2026-06-25 — v7.0 openclaw → hermes-agent Primary Agent Migration milestone started (paradigm shift: project scope broadens from movie-experts-only to personal hermes agent platform). v6.0 shipped 2026-06-24.*
