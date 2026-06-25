@@ -14,8 +14,8 @@ Three orthogonal states are asserted:
    ``kind: standalone`` plugins require explicit ``plugins.enabled`` opt-in.
 2. **Enabled + loaded** — when ``plugins.enabled`` includes the plugin name,
    the loader imports ``__init__.py`` and calls ``register(ctx)``; the plugin
-   reports ``enabled == True`` and ``tools == 4`` (the four tools declared
-   in ``tools.py``).
+   reports ``enabled == True`` and ``tools == 5`` (the five tools declared
+   in ``tools.py`` — Phase 37-03 added ``kais_canvas_sync_register``).
 3. **Disabled-list wins** — when the plugin appears in BOTH
    ``plugins.enabled`` AND ``plugins.disabled``, the deny-list takes
    precedence; ``enabled == False`` and ``error`` mentions "disabled".
@@ -77,7 +77,8 @@ def test_enable_and_load(monkeypatch: pytest.MonkeyPatch) -> None:
     With ``plugins.enabled`` containing our plugin name (and no deny-list
     entry), the loader imports ``__init__.py``, calls ``register(ctx)``,
     and the plugin reports ``enabled=True``, ``error=None``, and
-    ``tools == 4`` (one per ``ctx.register_tool`` call).
+    ``tools == 5`` (one per ``ctx.register_tool`` call — Phase 37-03 added
+    ``kais_canvas_sync_register`` as the 5th tool).
     """
     monkeypatch.setattr(
         plugin_module, "_get_enabled_plugins", lambda: {PLUGIN_NAME}
@@ -96,10 +97,11 @@ def test_enable_and_load(monkeypatch: pytest.MonkeyPatch) -> None:
         f"{PLUGIN_NAME} loaded successfully should have error=None, "
         f"got error={entry['error']!r}"
     )
-    assert entry["tools"] == 4, (
-        f"{PLUGIN_NAME} register(ctx) should register exactly 4 tools "
+    assert entry["tools"] == 5, (
+        f"{PLUGIN_NAME} register(ctx) should register exactly 5 tools "
         f"(kais_gold_team_submit / kais_review_submit / kais_canvas_sync / "
-        f"kais_jimeng_call), got tools={entry['tools']!r}"
+        f"kais_canvas_sync_register / kais_jimeng_call), "
+        f"got tools={entry['tools']!r}"
     )
 
 

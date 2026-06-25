@@ -34,6 +34,7 @@ EXPECTED_TOOLS = [
     "kais_gold_team_submit",
     "kais_review_submit",
     "kais_canvas_sync",
+    "kais_canvas_sync_register",
     "kais_jimeng_call",
 ]
 EXPECTED_TOOLSET = PLUGIN_NAME
@@ -76,7 +77,7 @@ def test_manifest_valid():
         "skeleton plugins must be opt-in (kind: standalone)"
     )
     assert manifest["provides_tools"] == EXPECTED_TOOLS, (
-        "provides_tools must equal the expected 4-tool list in declared order"
+        "provides_tools must equal the expected tool list in declared order"
     )
 
 
@@ -99,10 +100,12 @@ def test_module_imports_cleanly():
             "KAIS_GOLD_TEAM_SUBMIT_SCHEMA",
             "KAIS_REVIEW_SUBMIT_SCHEMA",
             "KAIS_CANVAS_SYNC_SCHEMA",
+            "KAIS_CANVAS_SYNC_REGISTER_SCHEMA",
             "KAIS_JIMENG_CALL_SCHEMA",
             "_handle_kais_gold_team_submit",
             "_handle_kais_review_submit",
             "_handle_kais_canvas_sync",
+            "_handle_kais_canvas_sync_register",
             "_handle_kais_jimeng_call",
         ):
             assert hasattr(tools_mod, symbol), f"tools.py missing symbol: {symbol}"
@@ -111,7 +114,7 @@ def test_module_imports_cleanly():
 
 
 def test_register_registers_4_tools_with_correct_toolset():
-    """Test 3: register(ctx) registers exactly 4 tools with toolset=kais_aigc."""
+    """Test 3: register(ctx) registers every declared tool with toolset=kais_aigc."""
     saved_path = list(sys.path)
     sys.path.insert(0, str(HERMES_ROOT))
     try:
@@ -121,7 +124,9 @@ def test_register_registers_4_tools_with_correct_toolset():
     finally:
         sys.path[:] = saved_path
 
-    assert len(ctx.calls) == 4, f"expected 4 tools, got {len(ctx.calls)}"
+    assert len(ctx.calls) == len(EXPECTED_TOOLS), (
+        f"expected {len(EXPECTED_TOOLS)} tools, got {len(ctx.calls)}"
+    )
     registered_names = {c["name"] for c in ctx.calls}
     assert registered_names == set(EXPECTED_TOOLS), (
         f"tool names mismatch: {registered_names} != {set(EXPECTED_TOOLS)}"

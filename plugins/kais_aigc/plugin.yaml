@@ -7,4 +7,5 @@ provides_tools:
   - kais_gold_team_submit
   - kais_review_submit
   - kais_canvas_sync
+  - kais_canvas_sync_register
   - kais_jimeng_call

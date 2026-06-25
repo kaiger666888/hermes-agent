@@ -18,21 +18,25 @@ Mirrors the standalone multi-tool pattern established by ``plugins/spotify/``:
 from __future__ import annotations
 
 from plugins.kais_aigc.tools import (
+    KAIS_CANVAS_SYNC_REGISTER_SCHEMA,
     KAIS_CANVAS_SYNC_SCHEMA,
     KAIS_GOLD_TEAM_SUBMIT_SCHEMA,
     KAIS_JIMENG_CALL_SCHEMA,
     KAIS_REVIEW_SUBMIT_SCHEMA,
     _handle_kais_canvas_sync,
+    _handle_kais_canvas_sync_register,
     _handle_kais_gold_team_submit,
     _handle_kais_jimeng_call,
     _handle_kais_review_submit,
 )
 
 # (name, schema, handler, emoji) — Phase 32 swaps handler bodies, not this list.
+# Phase 37-03 adds kais_canvas_sync_register for subscriber wiring.
 _TOOLS = (
     ("kais_gold_team_submit", KAIS_GOLD_TEAM_SUBMIT_SCHEMA, _handle_kais_gold_team_submit, "GP"),
     ("kais_review_submit",   KAIS_REVIEW_SUBMIT_SCHEMA,   _handle_kais_review_submit,   "RV"),
     ("kais_canvas_sync",     KAIS_CANVAS_SYNC_SCHEMA,     _handle_kais_canvas_sync,     "CN"),
+    ("kais_canvas_sync_register", KAIS_CANVAS_SYNC_REGISTER_SCHEMA, _handle_kais_canvas_sync_register, "CS"),
     ("kais_jimeng_call",     KAIS_JIMENG_CALL_SCHEMA,     _handle_kais_jimeng_call,     "JM"),
 )
 

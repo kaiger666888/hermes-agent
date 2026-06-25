@@ -10,6 +10,7 @@ network/5xx), while 4xx errors raise typed client errors which the
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from plugins.kais_aigc.canvas import CanvasClient, CanvasClientError
@@ -17,6 +18,8 @@ from plugins.kais_aigc.gold_team import GoldTeamClient, GoldTeamError
 from plugins.kais_aigc.jimeng import JimengClient, JimengError
 from plugins.kais_aigc.review_platform import ReviewClientError, ReviewPlatformClient
 from tools.registry import tool_error, tool_result
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +147,56 @@ KAIS_CANVAS_SYNC_SCHEMA = {
     },
 }
 
+# Phase 37-03 — subscriber registration tool. Distinct from
+# KAIS_CANVAS_SYNC_SCHEMA above: this dispatch does not push a single node;
+# it constructs a CanvasSyncSubscriber and wires its two trigger callbacks
+# (phase completion + gate resolution) onto the supplied RunnerConfig, so
+# the canvas mirrors pipeline progress automatically going forward.
+# (Name is suffixed _register to avoid colliding with the Phase 32
+# kais_canvas_sync node-sync tool — both coexist on the tool surface.)
+KAIS_CANVAS_SYNC_REGISTER_SCHEMA = {
+    "name": "kais_canvas_sync_register",
+    "description": (
+        "Register the Phase 37 canvas sync subscriber on a RunnerConfig. "
+        "Wires both trigger paths (phase completion → on_phase_complete, "
+        "gate resolution → runner_hooks._on_gate_resolved) in a single "
+        "call. After registration, every phase completion + every gate "
+        "resolution approve fires a :10588 save-v2 HTTP call automatically. "
+        "Degrade-tolerant — subscriber exceptions are swallowed (pipeline "
+        "continues even if canvas is unreachable)."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "project_id": {
+                "type": "integer",
+                "description": "Canvas project id to sync into.",
+            },
+            "episodes_id": {
+                "type": "integer",
+                "description": "Canvas episodes id to sync into.",
+            },
+            "base_url": {
+                "type": "string",
+                "description": (
+                    "Canvas platform base URL. Defaults to KAIS_CANVAS_URL "
+                    "env var then CanvasClient.DEFAULT_BASE_URL."
+                ),
+            },
+            "runner_config": {
+                "description": (
+                    "The RunnerConfig instance to wire callbacks onto. "
+                    "Passed as a runtime object (not a JSON primitive) — "
+                    "skill-internal callers pass the live config; tests "
+                    "inject a mock with settable on_phase_complete / "
+                    "on_gate_resolved attributes."
+                ),
+            },
+        },
+        "required": ["project_id", "episodes_id", "runner_config"],
+    },
+}
+
 KAIS_JIMENG_CALL_SCHEMA = {
     "name": "kais_jimeng_call",
     "description": (
@@ -246,3 +299,56 @@ def _handle_kais_jimeng_call(args: dict, **kw) -> str:
         return tool_result(result)
     except Exception as exc:
         return _kais_tool_error("jimeng", exc)
+
+
+def _handle_kais_canvas_sync_register(args: dict, **kw) -> str:
+    """Phase 37-03 — register the canvas sync subscriber on a RunnerConfig.
+
+    Dispatches to ``canvas_sync.register_canvas_sync`` which constructs a
+    ``CanvasSyncSubscriber``, wires its ``on_phase_complete`` handler onto
+    the supplied ``runner_config`` (D-37-01 callback injection), and
+    registers its ``on_gate_resolved`` handler via
+    ``runner_hooks.set_gate_resolved_hook`` (D-37-07 module-level gate
+    hook). Both trigger paths fire ``:10588`` save-v2 in a single
+    registration call.
+
+    The ``runner_config`` argument is a runtime object, so this handler is
+    invoked by skill-internal code (not by external JSON-only callers).
+    Returns a JSON envelope with the subscriber reference redacted (the
+    caller already holds it via the side-effect on ``runner_config``).
+    """
+    project_id = args.get("project_id")
+    episodes_id = args.get("episodes_id")
+    runner_config = args.get("runner_config")
+    if project_id is None or episodes_id is None:
+        return tool_error("project_id and episodes_id are required")
+    if runner_config is None:
+        return tool_error("runner_config is required (runtime RunnerConfig instance)")
+
+    from plugins.kais_aigc.canvas_sync import register_canvas_sync
+
+    base_url = args.get("base_url")
+    try:
+        sub = register_canvas_sync(
+            base_url=base_url,
+            project_id=int(project_id),
+            episodes_id=int(episodes_id),
+            runner_config=runner_config,
+        )
+    except Exception as exc:
+        logger.warning(
+            "kais_canvas_sync_register registration failed: %s",
+            exc, exc_info=True,
+        )
+        return tool_error(f"canvas sync registration failed: {exc}")
+
+    # Both callback slots on runner_config must now be non-None (PATTERN 7
+    # contract — single registration call wires both trigger paths).
+    wired_phase = getattr(runner_config, "on_phase_complete", None) is not None
+    wired_gate = getattr(runner_config, "on_gate_resolved", None) is not None
+    return tool_result({
+        "registered": True,
+        "wired_phase_complete": wired_phase,
+        "wired_gate_resolved": wired_gate,
+        "subscriber_id": id(sub),
+    })

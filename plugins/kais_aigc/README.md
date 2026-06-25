@@ -11,7 +11,10 @@ tool schemas declared in `tools.py`.
 
 - `kais_gold_team_submit` — submit a task to gold-team GPU cluster
 - `kais_review_submit` — submit a review to review-platform
-- `kais_canvas_sync` — sync asset to canvas via HTTP API v2
+- `kais_canvas_sync` — sync an asset node to canvas via HTTP API v2
+- `kais_canvas_sync_register` — register the Phase 37 canvas sync subscriber
+  on a RunnerConfig (auto-syncs pipeline progress → canvas on every phase
+  completion + gate resolution approve)
 - `kais_jimeng_call` — invoke a jimeng-free-api subcommand
 
 ## Status
