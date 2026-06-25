@@ -64,6 +64,42 @@ ASSET_SCHEMA: dict[str, dict] = {
         "file": "review-outcomes.json",
         "format": "json",
     },
+
+    # ── Phase 35 additions — phase-output slots (D-35-05) ──────────────
+    # Phase 35-02 task 1 registers these 6 slots so phase modules
+    # (p01_hook_topic, p02_outline, p03_script_audit — implemented in 35-03)
+    # can write their outputs via AssetBus.write(). All are JSON format
+    # (envelope-wrapped, atomic write). None are append-only history slots.
+    #
+    # Slot names mirror the V8.6 Node.js asset-bus slot names where they
+    # exist, in kebab-case, so cross-port tracing is easier in Phase 36.
+    # Phase 36 will extend this list with the remaining slots
+    # (character-bible, scene-design, shot-list, voice-timeline, video-clips,
+    # audio-stems, master-mp4, etc.).
+    "requirement": {
+        "file": "requirement.json",
+        "format": "json",
+    },
+    "topic-kernel": {
+        "file": "topic-kernel.json",
+        "format": "json",
+    },
+    "hook-design": {
+        "file": "hook-design.json",
+        "format": "json",
+    },
+    "story-framework": {
+        "file": "story-framework.json",
+        "format": "json",
+    },
+    "script-draft": {
+        "file": "script-draft.json",
+        "format": "json",
+    },
+    "audit-report": {
+        "file": "audit-report.json",
+        "format": "json",
+    },
 }
 
 
