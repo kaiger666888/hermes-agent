@@ -1,0 +1,123 @@
+# Pipeline DAG — V8.6 13-Step Dependency Graph
+
+**Source:** `_shared/v86-pipeline-mapping.md` (canonical V8.6 mapping ref, Phase 27) — which itself cites `kais-movie-agent/SKILL.md` @ commit `e41fa68`.
+**Copyright:** Fair Use — Step dependency structure is factual integration architecture; brief verbatim quotations attributed.
+**Last-verified:** 2026-06-25
+
+---
+
+## Summary
+
+This document is the **dependency graph** for the V8.6 13-step short-drama pipeline. It answers "what runs after what, and what depends on what" for the `kais-movie-pipeline` orchestration skill. All Step numbering, atomic-merge annotations, and expert assignments are sourced verbatim from `_shared/v86-pipeline-mapping.md` — the single source of truth for V8.6.
+
+This is **skeleton form** (per ROADMAP SC#5): structure + section headers + 1-2 sentences per section. Phase 36 refines with actual port experience (slot read/write contracts per edge, observed parallelism, gate timing).
+
+---
+
+## The 13 Steps
+
+> Reproduced from `_shared/v86-pipeline-mapping.md` §"The 13-Step V8.6 Pipeline → expert_id Mapping".
+
+```mermaid
+graph TD
+    S1[Step 1<br/>hook_retention<br/>选题+主题]
+    S2[Step 2<br/>creative_source+screenplay<br/>框架+大纲]
+    S3[Step 3<br/>screenplay+script_auditor<br/>剧本+审计]
+    S4[Step 4<br/>character_designer+visual_executor<br/>主角+资产库]
+    S5[Step 5<br/>cinematographer+style_genome<br/>场景设计]
+    S6[Step 6<br/>screenplay+cinematographer+script_auditor<br/>运镜+终审]
+    S7[Step 7<br/>visual_executor+prompt_injector+style_genome+colorist<br/>视觉种子+风格化]
+    S7B[Step 7B<br/>audio_pipeline<br/>声音骨架]
+    S8[Step 8<br/>cinematographer+editor<br/>运镜+节奏]
+    S9[Step 9<br/>continuity_auditor<br/>一致性检查]
+    S10[Step 10<br/>dreamina CLI<br/>视频生成]
+    S11[Step 11<br/>audio_pipeline 6 sub-steps<br/>BGM+音效+口型]
+    S1213[Step 12-13<br/>TBD<br/>Delivery]
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 --> S5
+    S5 --> S6
+    S6 --> S7
+    S7 --> S7B
+    S7B --> S8
+    S8 --> S9
+    S9 --> S10
+    S10 --> S11
+    S11 --> S1213
+```
+
+**ASCII fallback table:**
+
+| V8.6 Step | Purpose | Primary expert_id | Collaborating expert_id | Atomic § |
+|-----------|---------|-------------------|-------------------------|----------|
+| **Step 1** | 爆款选题雷达 + 主题生成 (atomic) | `hook_retention` | — | §1 |
+| **Step 2** | 故事框架 + 大纲 (atomic) | `creative_source` + `screenplay` | — | §2 |
+| **Step 3** | 剧本 + 审计 (atomic) | `screenplay` + `script_auditor` | — | §3 |
+| **Step 4** | 主角设计 + 资产库 | `character_designer` + `visual_executor` (drawer) | — | — |
+| **Step 5** | 场景设计 | `cinematographer` + `style_genome` + `visual_executor` (drawer) | — | — |
+| **Step 6** | 运镜 + 终审 (atomic) | `screenplay` + `cinematographer` + `script_auditor` | — | §5 (V8.4 前置) |
+| **Step 7** | 视觉种子 + 风格化 (atomic) | `visual_executor` + `prompt_injector` + `style_genome` + `colorist` | — | §4 |
+| **Step 7B** | 声音骨架 | `audio_pipeline` (voicer + composer + foley sub-steps) | — | — |
+| **Step 8** | 运镜 + 节奏 | `cinematographer` + `editor` | — | — |
+| **Step 9** | 一致性检查 | `continuity_auditor` | — | — |
+| **Step 10** | 视频生成 | (dreamina CLI 执行, no expert_id call) | `visual_executor` (animator 监督) | — |
+| **Step 11** | BGM + 音效 + 口型统一 (atomic) | `audio_pipeline` (全 6 sub-steps) | — | §6 |
+| **Step 12-13** | (预留扩展 — delivery, Phase 36 defines) | TBD | — | — |
+
+**Step 2.5 style_genome 前置:** style_genome fires after Step 2 story framework confirmed (positioned at Step 2.5), output 5D vector 贯穿下游. Not an independent Step — insertion slot between Step 2 and Step 4.
+
+**Conditional branches:**
+- **Shot-level parallelism** (Step 10): `parallel_shots: 4` preserved per V8.6 / v2.0 behavior — episode-level shot generation dispatches concurrently (runner.py config plumbing lands in Phase 35-02; actual parallel dispatch exercised in p11/Phase 36).
+- **theory_critic consultative** (any Step): creator-pulled advisory node, no linear position.
+
+---
+
+## Atomic Operations
+
+V8.6 collapses the original 25 steps to 13 via **6 atomic operations** — each completes multi-expert collaboration in a single ACP call. Reproduced verbatim from `_shared/v86-pipeline-mapping.md` §"Atomic Operations".
+
+| V8.6 § | Atomic Step | Original Steps Merged | Collaborating Experts | Why Atomic |
+|--------|-------------|-----------------------|----------------------|------------|
+| §1 | Step 1 共鸣+主题 | Step 1 + Step 2 | `hook_retention` | 选题与主题一步到位,避免 hook 与主题脱节 |
+| §2 | Step 2 框架+大纲 | Step 2.5 + Step 3 | `creative_source` + `screenplay` | 故事框架与大纲并行,避免 Snowflake 与 Snyder 不匹配 |
+| §3 | Step 3 剧本+审计 | Step 5 + 5B + 6 | `screenplay` + `script_auditor` | 剧本与审计原子循环,审计驱动剧本选择 |
+| §4 | Step 7 视觉+风格化 | Step 13A + 15 | `visual_executor` + `prompt_injector` + `style_genome` + `colorist` | 4 专家一次协同,避免 style 与 visual 脱节 |
+| §5 | Step 6 运镜+终审 | Step 11 + 12 | `screenplay` + `cinematographer` + `script_auditor` | 运镜 + 终审双门一次确认 (V8.4 §5 前置的延伸) |
+| §6 | Step 11 声音+口型 | Step 17B + 18 | `audio_pipeline` (6 sub-steps) | audio master 6 sub-steps 一次原子操作,lip_sync 与 mix 完全对齐 |
+
+---
+
+## Phase 35 vs Phase 36 Scope
+
+The 13-Step DAG is the FULL V8.6 pipeline. Phase 35 ships only the **vertical slice** needed to prove the orchestration template; Phase 36 fills the rest.
+
+| Phase Scope | Steps Covered | Phase Modules | Status |
+|-------------|---------------|---------------|--------|
+| **Phase 35 (vertical slice)** | Step 1, Step 2, Step 3 | `p01_hook_topic`, `p02_outline`, `p03_script_audit` | Skeleton (this milestone) |
+| **Phase 36 (full port)** | Step 4 — Step 13 | `p04_character_design` … `p13_delivery` | Future |
+
+Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → gather inputs → delegate → write slot → trigger gate) end-to-end. Phase 36 ports p04-p13 using the established template.
+
+---
+
+## Refresh Cadence
+
+This ref is **re-verified quarterly** per `_shared/` convention. Drift triggers (from `_shared/v86-pipeline-mapping.md` §"Refresh Cadence"):
+
+1. **kais-movie-agent V-number upgrade** (V8.6 → V8.7+) — Step numbering / atomic merges may shift
+2. **Review-gate count change** (V8.6 8-gate → future simplification or expansion)
+3. **dreamina CLI new sub-command** (may add Step 10 variant)
+4. **New expert_id joining V8.6 mainline** (e.g. `production` graduating from FUTURE-09 deferred)
+
+Re-verification action: re-read latest `kais-movie-agent/SKILL.md`, diff against this table, update `Last-verified:` stamp, trigger per-expert `V8.6 Pipeline Sync` section refresh.
+
+---
+
+## See Also
+
+- [`review-gates.md`](./review-gates.md) — which gates fire when, reviewer role, mode
+- [`asset-bus-schema.md`](./asset-bus-schema.md) — slot types + read/write contracts per edge
+- [`expert-mapping.md`](./expert-mapping.md) — 13 phase ↔ 15 expert mapping detail
+- `_shared/v86-pipeline-mapping.md` (in `movie-experts/_shared/`) — canonical source ref
