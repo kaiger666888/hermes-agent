@@ -74,20 +74,34 @@
 
 ## Traceability
 
-phase 映射在 Step 10 roadmap 创建后填充。
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SKILL-01..04 | TBD | Pending |
-| SOUL-01..03 | TBD | Pending |
-| MEM-01..04 | TBD | Pending |
-| VALIDATE-01..03 | TBD | Pending |
+| SKILL-01 | Phase 34 | Pending |
+| SKILL-02 | Phase 34 | Pending |
+| SKILL-03 | Phase 34 | Pending |
+| SKILL-04 | Phase 34 | Pending |
+| SOUL-01 | Phase 35 | Pending |
+| SOUL-02 | Phase 35 | Pending |
+| SOUL-03 | Phase 35 | Pending |
+| MEM-01 | Phase 36 | Pending |
+| MEM-02 | Phase 36 | Pending |
+| MEM-03 | Phase 36 | Pending |
+| MEM-04 | Phase 36 | Pending |
+| VALIDATE-01 | Phase 37 | Pending |
+| VALIDATE-02 | Phase 37 | Pending |
+| VALIDATE-03 | Phase 37 | Pending |
 
 **Coverage:**
 - v7.0 requirements: 14 total
-- Mapped to phases: 0 (TBD — roadmap 阶段填充)
-- Unmapped: 14 ⚠️ (will be resolved by Step 10)
+- Mapped to phases: 14 / 14 ✓
+- Unmapped: 0
+
+**Phase assignments:**
+- Phase 34 — Skills Migration (coding-agent + tmux-agents): SKILL-01, SKILL-02, SKILL-03, SKILL-04
+- Phase 35 — SOUL.md Identity Enhancement: SOUL-01, SOUL-02, SOUL-03
+- Phase 36 — Memory Ingestion (USER.md + 133 .md → mem0): MEM-01, MEM-02, MEM-03, MEM-04
+- Phase 37 — Validation & Migration Report: VALIDATE-01, VALIDATE-02, VALIDATE-03
 
 ---
 *Requirements defined: 2026-06-25*
-*Last updated: 2026-06-25 — initial v7.0 definition after Step 9 user confirmation (skills=2, SOUL=single enhance, MEM=mem0 ingestion)*
+*Last updated: 2026-06-25 — Traceability table filled after Step 10 roadmap creation (Phase 34-37 assigned, coverage 14/14 ✓).*
