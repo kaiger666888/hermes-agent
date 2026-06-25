@@ -1,0 +1,10 @@
+name: kais_aigc
+version: "0.1.0"
+description: "kais-aigc-platform client plugin — gold-team / review-platform / canvas / jimeng dispatch (Phase 32 implements real clients)"
+author: kais-movie-agent
+kind: standalone
+provides_tools:
+  - kais_gold_team_submit
+  - kais_review_submit
+  - kais_canvas_sync
+  - kais_jimeng_call
