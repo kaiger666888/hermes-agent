@@ -35,7 +35,7 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from plugins.kais_aigc.review_platform import ReviewPlatformClient
 from plugins.pipeline_state.asset_bus import AssetBus
@@ -90,6 +90,32 @@ def _state_store(workdir: str | None = None) -> PipelineStateStore:
 # means one in-flight gate per gate_id per process, which matches the V8.6
 # serial-gate-per-phase model.
 _PENDING_GATES: dict[str, Gate] = {}
+
+
+# Phase 37 — optional gate resolution hook. None by default (Phase 34
+# tests unchanged). Set via ``set_gate_resolved_hook()`` by the canvas sync
+# subscriber (or any other gate-resolution observer). Invoked AFTER the
+# ``review-outcomes`` slot is written in ``resume_from_callback`` /
+# ``resolve_direct`` (D-37-07) so subscribers observe the formal outcome
+# already persisted on the asset bus.
+_on_gate_resolved: Callable[[str, str, str, dict], None] | None = None
+
+
+def set_gate_resolved_hook(fn: Callable[[str, str, str, dict], None] | None) -> None:
+    """Register (or clear with ``None``) a callback invoked after each gate
+    resolution. Signature: ``(episode_id, gate_id, decision, outcome_payload)``.
+
+    The ``outcome_payload`` is the dict written to the ``review-outcomes``
+    slot — includes ``decision``, ``gate_id``, ``suggested_action``,
+    ``reviewer``, etc. (plus ``rollback_to`` on reject).
+
+    The callback is invoked from a ``try/except`` guard in
+    ``resume_from_callback`` / ``resolve_direct`` (D-37-04) — subscriber
+    exceptions are logged at WARNING and swallowed; the resume flow always
+    returns its normal payload.
+    """
+    global _on_gate_resolved
+    _on_gate_resolved = fn
 
 
 # ────────────────── Helpers ──────────────────
@@ -289,6 +315,22 @@ def resume_from_callback(body: str, signature: str, timestamp: int) -> dict:
     _write_review_outcome(gate, outcome)
     _advance_state_after_resolution(gate.config.phase, decision, gate)
 
+    # Phase 37 — gate resolution event hook. Fire AFTER review-outcomes is
+    # persisted (D-37-07) so subscribers see the formal outcome on the asset
+    # bus before reacting. Guarded against subscriber exceptions (D-37-04):
+    # the outcome + state advancement are already committed, so a buggy
+    # subscriber never crashes the resume flow.
+    if _on_gate_resolved is not None:
+        try:
+            _on_gate_resolved(gate.episode_id, gate_id, decision, outcome)
+        except Exception:
+            logger.warning(
+                "resume_from_callback: on_gate_resolved hook raised "
+                "(gate=%s decision=%s) — swallowed, resume continues",
+                gate_id, decision,
+                exc_info=True,
+            )
+
     # Surface rollback target for the Phase 35 runner (CF-04 reject path).
     if decision == "reject" and suggested_action:
         outcome = {**outcome, "rollback_to": suggested_action}
@@ -326,6 +368,21 @@ def resolve_direct(
 
     _write_review_outcome(gate, outcome)
     _advance_state_after_resolution(gate.config.phase, decision, gate)
+
+    # Phase 37 — gate resolution event hook (mirrors resume_from_callback;
+    # D-37-07). Operator-side resolution must notify subscribers too, so the
+    # canvas reflects manual approvals/rejects the same as webhook-driven
+    # ones.
+    if _on_gate_resolved is not None:
+        try:
+            _on_gate_resolved(gate.episode_id, gate_id, decision, outcome)
+        except Exception:
+            logger.warning(
+                "resolve_direct: on_gate_resolved hook raised "
+                "(gate=%s decision=%s) — swallowed, resolve continues",
+                gate_id, decision,
+                exc_info=True,
+            )
 
     if decision == "reject" and suggested_action:
         outcome = {**outcome, "rollback_to": suggested_action}
