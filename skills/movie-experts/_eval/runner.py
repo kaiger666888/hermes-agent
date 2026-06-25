@@ -533,9 +533,11 @@ def make_judge_client(config: dict[str, Any]) -> Any:
     would fail with an opaque 401 deep in the OpenAI SDK after the
     harness has already enumerated conditions and started the ablation
     loop. Better to surface the error at construction time.
-    """
-    from openai import OpenAI
 
+    The api_key check runs BEFORE the openai import so configurations
+    without the SDK installed still get the actionable RuntimeError
+    (instead of an opaque ModuleNotFoundError masking the real issue).
+    """
     judge_cfg = config.get("judge", {})
     base_url = judge_cfg.get(
         "base_url",
@@ -550,6 +552,8 @@ def make_judge_client(config: dict[str, Any]) -> Any:
             "OPENROUTER_API_KEY is not set. Set it in ~/.hermes/.env "
             "or your shell, or use --dry-run."
         )
+    from openai import OpenAI
+
     return OpenAI(base_url=base_url, api_key=api_key)
 
 
