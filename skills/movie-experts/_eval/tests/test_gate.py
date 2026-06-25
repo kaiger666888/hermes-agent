@@ -1751,6 +1751,7 @@ class TestGateCli:
                 "--prompts-dir", str(prompts_path),
                 "--dry-run",
                 "--repo-root", str(tmp_git_repo),
+                "--reports-dir", str(tmp_path / "reports"),
             ]
         )
         # Stub returns no scores -> inconclusive is acceptable for dry-run.
