@@ -134,15 +134,22 @@ def test_p03_triggers_gate_when_provided():
 
 
 def test_registry_has_three_entries():
-    """Test 5: PHASE_REGISTRY contains p01/p02/p03 with correct depends_on graph."""
+    """Test 5: PHASE_REGISTRY contains at least p01/p02/p03 with correct depends_on.
+
+    Phase 36-05 extends PHASE_REGISTRY from 3 → 13 entries (full V8.6 DAG).
+    The Phase 35 vertical-slice floor (first 3 entries = p01/p02/p03 in
+    order with correct depends_on chain) is still asserted here. The full
+    13-entry DAG is verified by test_phase_registry_full.py.
+    """
     # Force reimport in case the stub was loaded earlier.
     importlib.reload(phases_mod)
-    assert len(phases_mod.PHASE_REGISTRY) == 3, (
-        f"expected 3 phases, got {len(phases_mod.PHASE_REGISTRY)}"
+    assert len(phases_mod.PHASE_REGISTRY) >= 3, (
+        f"expected >= 3 phases (Phase 35 floor), got {len(phases_mod.PHASE_REGISTRY)}"
     )
     ids = [e["id"] for e in phases_mod.PHASE_REGISTRY]
-    assert ids == ["p01_hook_topic", "p02_outline", "p03_script_audit"], (
-        f"wrong ids: {ids}"
+    # First 3 must be the Phase 35 vertical slice, in order.
+    assert ids[:3] == ["p01_hook_topic", "p02_outline", "p03_script_audit"], (
+        f"first 3 ids wrong: {ids[:3]}"
     )
     assert phases_mod.PHASE_REGISTRY[1]["depends_on"] == ["p01_hook_topic"]
     assert phases_mod.PHASE_REGISTRY[2]["depends_on"] == ["p02_outline"]

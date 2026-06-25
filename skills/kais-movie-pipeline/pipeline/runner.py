@@ -174,6 +174,29 @@ def _compute_start_index(checkpoint: dict | None) -> int:
     return 0
 
 
+def _parallel_shots_kwargs(module, parallel_shots: int) -> dict:
+    """Return ``{"parallel_shots": parallel_shots}`` if ``module.run`` accepts
+    a ``parallel_shots`` parameter, else ``{}``.
+
+    Only p11_video_render declares ``parallel_shots`` (D-36-08 — keyword-only
+    after ``*``). The other 12 phases use the standard 5-arg Phase 35
+    signature without ``**kwargs``; blindly forwarding ``parallel_shots``
+    would raise ``TypeError`` for them. We introspect the signature once per
+    phase invocation to decide.
+
+    Cheap (microseconds): ``inspect.signature`` is cached on the callable.
+    """
+    import inspect
+
+    try:
+        sig = inspect.signature(module.run)
+    except (TypeError, ValueError):
+        return {}
+    if "parallel_shots" in sig.parameters:
+        return {"parallel_shots": parallel_shots}
+    return {}
+
+
 # ---------------------------------------------------------------------------
 # run_episode — the orchestration loop
 # ---------------------------------------------------------------------------
@@ -275,6 +298,13 @@ def run_episode(
             asset_bus_write=_asset_bus_write,
             delegate_task=delegate,
             trigger_gate=trigger_gate,
+            # Forward parallel_shots via keyword-only injection. Only p11
+            # declares this kwarg (D-36-08); other phases ignore it via
+            # **kwargs or the standard 5-arg signature. Phases with the
+            # Phase 35 base signature (no **kwargs) would TypeError on this
+            # extra kwarg, so we inspect the signature first and only pass
+            # parallel_shots when the phase module accepts it.
+            **_parallel_shots_kwargs(module, cfg.parallel_shots),
         )
         results[phase_id] = result
 
