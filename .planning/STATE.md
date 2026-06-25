@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: openclaw → hermes-agent Primary Agent Migration
 status: verifying
-last_updated: "2026-06-25T15:02:26.318Z"
+last_updated: "2026-06-25T15:18:23.136Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 50
 ---
 
@@ -46,7 +46,7 @@ v6.0 Self-Evolution Feedback:   [██████████] 100% (Phases 28
 v7.0 openclaw → hermes Migration:
   Phase 34 (Skills Migration)              [██████████] 100% COMPLETE — 3/3 plans done (coding-agent + tmux-agents skills migrated; bidirectional related_skills wired; COEXISTENCE.md authored)
   Phase 35 (SOUL.md Enhancement)           [░░░░░░░░░░] 0% Not started — AIGC routing rules non-destructive integrate
-  Phase 36 (Memory Ingestion)              [░░░░░░░░░░] 0% Not started — USER.md + 133 .md → mem0 backend
+  Phase 36 (Memory Ingestion)              [██░░░░░░░░] 20% In progress — 36-01 DONE (batch_ingest.py + spot_check.py); 36-02 pending
   Phase 37 (Validation & Report)           [░░░░░░░░░░] 0% Not started — benchmark + v7.0-MIGRATION-REPORT.md
 ```
 
@@ -56,7 +56,7 @@ v7.0 openclaw → hermes Migration:
 |-------|------|--------|-------|
 | 34 | Skills Migration (coding-agent + tmux-agents) | **Complete** | SKILL-01..04. All 3 plans done: Plan 34-01 (coding-agent, 87e046b0d) + Plan 34-02 (tmux-agents, 4c64890c6) + Plan 34-03 (coexistence wiring + COEXISTENCE.md, a62c1178d + 5cbe555cc). Phase ready for verification. |
 | 35 | SOUL.md Identity Enhancement | **Not started** | SOUL-01..03. Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively. Operator-state paths (NOT repo). Backup + transformation note required. |
-| 36 | Memory Ingestion (USER.md + 133 .md → mem0) | **Not started** | MEM-01..04. USER.md → `~/.hermes/memories/`; 133 .md (1.3MB) → mem0 backend. Idempotent dedup. Spot-check 5 queries. Volume may require plan split — flag for plan-phase. |
+| 36 | Memory Ingestion (USER.md + 133 .md → mem0) | **In progress — Plan 01 complete** | MEM-01..04. USER.md → `~/.hermes/memories/`; 124 .md (~817KB) → mem0 backend. Idempotent dedup. Spot-check 5 queries. **36-01 DONE** (d7aa2eb7c + 50ee1b8b2): batch_ingest.py + spot_check.py CLI tooling. Plan 02 pending (INGESTION-NOTE + USER.md migration). |
 | 37 | Validation & Migration Report | **Not started** | VALIDATE-01..03. Benchmark migrated skills + SOUL routing. Canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md`. MUST run last. |
 
 ### Critical Path
@@ -112,6 +112,7 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 | Phase 34 P01 | 8m | 1 tasks | 1 files |
 | Phase 34 P03 | ~2m | 2 tasks | 5 files |
 | Phase 35 P01 | 3min | 3 tasks | 1 files |
+| Phase 36 P01 | ~15min | 2 tasks | 3 files |
 
 ### Decisions (carried forward — relevant to v7.0)
 

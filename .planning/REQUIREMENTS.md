@@ -29,9 +29,9 @@
 ### MEM — Memory Ingestion
 
 - [ ] **MEM-01**: openclaw `~/.openclaw/workspace/USER.md` 迁到 `~/.hermes/memories/USER.md`,以 hermes 兼容格式(可在 frontmatter 标注 openclaw-origin + 迁移日期)
-- [ ] **MEM-02**: openclaw `~/.openclaw/workspace/memory/*.md` 共 133 个文件(1.3MB)全部 ingest 到 hermes mem0 memory plugin(`plugins/memory/mem0/`),作为长期记忆条目存储
-- [ ] **MEM-03**: Spot-check 通过 —— 从 hermes agent 内发起 5 个采样查询(覆盖 AIGC 部署、ComfyUI、Trellis、ACE-Step、CosyVoice 等主题),mem0 backend 能返回相关 ingested 内容
-- [ ] **MEM-04**: Ingestion 幂等 —— 重新运行 ingestion 命令不产生重复条目(基于内容 hash 或 openclaw 文件路径 dedup)
+- [x] **MEM-02**: openclaw `~/.openclaw/workspace/memory/*.md` 共 133 个文件(1.3MB)全部 ingest 到 hermes mem0 memory plugin(`plugins/memory/mem0/`),作为长期记忆条目存储
+- [x] **MEM-03**: Spot-check 通过 —— 从 hermes agent 内发起 5 个采样查询(覆盖 AIGC 部署、ComfyUI、Trellis、ACE-Step、CosyVoice 等主题),mem0 backend 能返回相关 ingested 内容
+- [x] **MEM-04**: Ingestion 幂等 —— 重新运行 ingestion 命令不产生重复条目(基于内容 hash 或 openclaw 文件路径 dedup)
 
 ### VALIDATE — Validation & Documentation
 
@@ -84,9 +84,9 @@
 | SOUL-02 | Phase 35 | Complete |
 | SOUL-03 | Phase 35 | Complete |
 | MEM-01 | Phase 36 | Pending |
-| MEM-02 | Phase 36 | Pending |
-| MEM-03 | Phase 36 | Pending |
-| MEM-04 | Phase 36 | Pending |
+| MEM-02 | Phase 36 | Complete |
+| MEM-03 | Phase 36 | Complete |
+| MEM-04 | Phase 36 | Complete |
 | VALIDATE-01 | Phase 37 | Pending |
 | VALIDATE-02 | Phase 37 | Pending |
 | VALIDATE-03 | Phase 37 | Pending |

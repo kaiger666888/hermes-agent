@@ -111,7 +111,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 36-01-PLAN.md — Build idempotent batch_ingest.py + 5-query spot_check.py under plugins/memory/mem0/scripts/ (Wave 1)
+- [x] 36-01-PLAN.md — Build idempotent batch_ingest.py + 5-query spot_check.py under plugins/memory/mem0/scripts/ (Wave 1)
 - [ ] 36-02-PLAN.md — Migrate USER.md to ~/.hermes/memories/ + dry-run validation + INGESTION-NOTE.md operator-action audit trail (Wave 2, depends on 36-01)
 
 **Repo-commit paths:** Possibly `plugins/memory/mem0/` config/script additions if batch-ingest tooling is needed (TBD at plan time)
@@ -147,7 +147,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 |-------|-----------|----------------|--------|-----------|
 | 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
 | 35. SOUL.md Identity Enhancement | v7.0 | 1/1 | Complete   | 2026-06-25 |
-| 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 0/TBD | Not started | - |
+| 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 1/2 | In Progress|  |
 | 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |
 
 ---
