@@ -52,7 +52,7 @@ For completed milestone phase details, see:
 
 - [x] **Phase 34: Skills Migration (coding-agent + tmux-agents)** - Migrate 2 openclaw skills into `skills/autonomous-ai-agents/` with hermes schema adaptation (frontmatter + prerequisites), resolving coexistence with existing claude-code/codex/opencode skills. (completed 2026-06-25)
 - [x] **Phase 35: SOUL.md Identity Enhancement** - Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively (preserve hermes defaults, mark openclaw origin, adapt trigger modes), with backup + transformation note. (completed 2026-06-25)
-- [ ] **Phase 36: Memory Ingestion (USER.md + 133 .md → mem0)** - Migrate USER.md to `~/.hermes/memories/` and batch-ingest 133 openclaw memory .md files (1.3MB) into mem0 backend with idempotent dedup, then spot-check via 5 sample queries.
+- [x] **Phase 36: Memory Ingestion (USER.md + 133 .md → mem0)** - Migrate USER.md to `~/.hermes/memories/` and batch-ingest 133 openclaw memory .md files (1.3MB) into mem0 backend with idempotent dedup, then spot-check via 5 sample queries. (completed 2026-06-25)
 - [ ] **Phase 37: Validation & Migration Report** - Benchmark-test migrated skills + SOUL.md routing behavior, then produce canonical migration report documenting all transform decisions and explicitly skipped items.
 
 ## Phase Details
@@ -112,7 +112,7 @@ Plans:
 
 Plans:
 - [x] 36-01-PLAN.md — Build idempotent batch_ingest.py + 5-query spot_check.py under plugins/memory/mem0/scripts/ (Wave 1)
-- [ ] 36-02-PLAN.md — Migrate USER.md to ~/.hermes/memories/ + dry-run validation + INGESTION-NOTE.md operator-action audit trail (Wave 2, depends on 36-01)
+- [x] 36-02-PLAN.md — Migrate USER.md to ~/.hermes/memories/ + dry-run validation + INGESTION-NOTE.md operator-action audit trail (Wave 2, depends on 36-01)
 
 **Repo-commit paths:** Possibly `plugins/memory/mem0/` config/script additions if batch-ingest tooling is needed (TBD at plan time)
 **Operator-state paths:** `~/.hermes/memories/USER.md` (new), mem0 backend storage (operator state)
@@ -147,7 +147,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 |-------|-----------|----------------|--------|-----------|
 | 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
 | 35. SOUL.md Identity Enhancement | v7.0 | 1/1 | Complete   | 2026-06-25 |
-| 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 1/2 | In Progress|  |
+| 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 2/2 | Complete   | 2026-06-25 |
 | 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |
 
 ---
