@@ -70,8 +70,8 @@ For completed milestone phase details, see:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 34-01-PLAN.md — Migrate coding-agent SKILL.md (Wave 1)
-- [ ] 34-02-PLAN.md — Migrate tmux-agents SKILL.md (Wave 1, parallel with 34-01)
+- [x] 34-01-PLAN.md — Migrate coding-agent SKILL.md (Wave 1)
+- [x] 34-02-PLAN.md — Migrate tmux-agents SKILL.md (Wave 1, parallel with 34-01)
 - [ ] 34-03-PLAN.md — Wire bidirectional related_skills graph + write COEXISTENCE.md (Wave 2, depends on 34-01 + 34-02)
 
 **Repo-commit paths:** `skills/autonomous-ai-agents/coding-agent/SKILL.md`, `skills/autonomous-ai-agents/tmux-agents/SKILL.md`, `skills/autonomous-ai-agents/COEXISTENCE.md`, 4 existing skill `related_skills` edits
@@ -144,7 +144,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 0/TBD | Not started | - |
+| 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 2/3 | In Progress|  |
 | 35. SOUL.md Identity Enhancement | v7.0 | 0/TBD | Not started | - |
 | 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 0/TBD | Not started | - |
 | 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |

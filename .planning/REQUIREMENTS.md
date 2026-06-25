@@ -15,10 +15,10 @@
 
 ### SKILL — Skill Migration
 
-- [ ] **SKILL-01**: `coding-agent` skill 从 `openclaw/skills/coding-agent/SKILL.md` 迁到 `skills/autonomous-ai-agents/coding-agent/SKILL.md`,在 hermes-agent 中可被发现、可被触发,4 个委派目标(Codex / Claude Code / Pi / OpenCode)全部正常
-- [ ] **SKILL-02**: `tmux-agents` skill 从 `openclaw/skills/openclaw-skills-tmux-agents/SKILL.md` 迁到 `skills/autonomous-ai-agents/tmux-agents/SKILL.md`,spawn / list / attach / get-results 功能文档完整且适配 hermes 调用模式
-- [ ] **SKILL-03**: 两个迁后 skill 的 frontmatter 完整适配 hermes `metadata.hermes.*` schema,包括 `tags[]`、`related_skills[]`、`expert_id`(如适用)、`metrics[]`(如适用)
-- [ ] **SKILL-04**: 两个 skill 的 prerequisites 从 openclaw `metadata.openclaw.requires.{anyBins,config}` 格式映射到 hermes `prerequisites: {tools, commands, credentials}` 格式,无开放依赖
+- [x] **SKILL-01**: `coding-agent` skill 从 `openclaw/skills/coding-agent/SKILL.md` 迁到 `skills/autonomous-ai-agents/coding-agent/SKILL.md`,在 hermes-agent 中可被发现、可被触发,4 个委派目标(Codex / Claude Code / Pi / OpenCode)全部正常
+- [x] **SKILL-02**: `tmux-agents` skill 从 `openclaw/skills/openclaw-skills-tmux-agents/SKILL.md` 迁到 `skills/autonomous-ai-agents/tmux-agents/SKILL.md`,spawn / list / attach / get-results 功能文档完整且适配 hermes 调用模式
+- [x] **SKILL-03**: 两个迁后 skill 的 frontmatter 完整适配 hermes `metadata.hermes.*` schema,包括 `tags[]`、`related_skills[]`、`expert_id`(如适用)、`metrics[]`(如适用)
+- [x] **SKILL-04**: 两个 skill 的 prerequisites 从 openclaw `metadata.openclaw.requires.{anyBins,config}` 格式映射到 hermes `prerequisites: {tools, commands, credentials}` 格式,无开放依赖
 
 ### SOUL — Identity Enhancement
 
@@ -76,10 +76,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SKILL-01 | Phase 34 | Pending |
-| SKILL-02 | Phase 34 | Pending |
-| SKILL-03 | Phase 34 | Pending |
-| SKILL-04 | Phase 34 | Pending |
+| SKILL-01 | Phase 34 | Complete |
+| SKILL-02 | Phase 34 | Complete |
+| SKILL-03 | Phase 34 | Complete |
+| SKILL-04 | Phase 34 | Complete |
 | SOUL-01 | Phase 35 | Pending |
 | SOUL-02 | Phase 35 | Pending |
 | SOUL-03 | Phase 35 | Pending |
