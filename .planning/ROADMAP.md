@@ -88,10 +88,10 @@ Plans:
   2. User issuing a cognitive-class command sees it route to MCP per the integrated rules; default-class prompts still go to LLM — routing behavior is observable on test prompts
   3. `~/.hermes/SOUL.md` preserves the original hermes-default content (additive integration only — no overwrite); openclaw-origin rules are explicitly tagged with source ("openclaw 迁移") + adaptation date
   4. Original openclaw SOUL.md is preserved verbatim at `~/.hermes/SOUL.md.openclaw-backup-2026-06-25` and a transformation note under `.planning/` records where each openclaw rule landed (integrated / adapted / dropped)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 35-01: TBD
+- [ ] 35-01-PLAN.md — Backup openclaw SOUL.md, integrate routing rules into ~/.hermes/SOUL.md (non-destructive + source-tagged), author transformation note (Wave 1, single plan covers SOUL-01..03)
 
 **Repo-commit paths:** `.planning/phases/35-soul-enhancement/35-*-TRANSFORMATION-NOTE.md` (transformation note only)
 **Operator-state paths:** `~/.hermes/SOUL.md` (modified additively), `~/.hermes/SOUL.md.openclaw-backup-2026-06-25` (new backup) — these are operator-home-dir changes, NOT repo commits
