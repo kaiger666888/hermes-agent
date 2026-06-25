@@ -100,6 +100,112 @@ ASSET_SCHEMA: dict[str, dict] = {
         "file": "audit-report.json",
         "format": "json",
     },
+
+    # ── Phase 36-01 additions — p04/p05/p06 output slots (D-36-04) ──────
+    # Wave 1 plan 36-01 registers these 6 slots so p04_character_design,
+    # p05_pain_discovery, p06_spatio_temporal_script can write their outputs
+    # via AssetBus.write(). All JSON format (envelope-wrapped, atomic write).
+    # Per-plan asset-bus extension (D-36-05): PRESERVES existing slots
+    # byte-equivalent — only appends.
+    "character-bible": {
+        "file": "character-bible.json",
+        "format": "json",
+        "description": "Character Bible 2.0 (4D-Anchor + style_prefix)",
+        "writer_phase": "p04_character_design",
+        "reader_phases": ["p05_pain_discovery", "p06_spatio_temporal_script",
+                          "p07_scene_generation", "p09_shot_breakdown"],
+    },
+    "character-assets": {
+        "file": "character-assets.json",
+        "format": "json",
+        "description": "L1-L4 character asset manifest (identity anchors + costume cards)",
+        "writer_phase": "p04_character_design",
+        "reader_phases": ["p07_scene_generation", "p11_video_render"],
+    },
+    "pain-points": {
+        "file": "pain-points.json",
+        "format": "json",
+        "description": "L1-L6 pain point strata",
+        "writer_phase": "p05_pain_discovery",
+        "reader_phases": ["p06_spatio_temporal_script"],
+    },
+    "escalation-ladder": {
+        "file": "escalation-ladder.json",
+        "format": "json",
+        "description": "Pain escalation ladder (step-by-step intensity)",
+        "writer_phase": "p05_pain_discovery",
+        "reader_phases": ["p06_spatio_temporal_script"],
+    },
+    "spatio-temporal-script": {
+        "file": "spatio-temporal-script.json",
+        "format": "json",
+        "description": "Spatio-temporal script (shot intent + axis + composition_lock)",
+        "writer_phase": "p06_spatio_temporal_script",
+        "reader_phases": ["p07_scene_generation", "p08_scene_selection",
+                          "p09_shot_breakdown"],
+    },
+    "final-audit": {
+        "file": "final-audit.json",
+        "format": "json",
+        "description": "Final script audit report (5-dim post spatio-temporal)",
+        "writer_phase": "p06_spatio_temporal_script",
+        "reader_phases": [],
+    },
+
+    # ── Phase 36-02 additions — p07/p08/p09 visual design slots (D-36-04) ─
+    # Wave 1 plan 36-02 registers these 7 slots for p07_scene_generation,
+    # p08_scene_selection, p09_shot_breakdown. All JSON format (envelope-
+    # wrapped, atomic write). Per-plan asset-bus extension (D-36-05):
+    # PRESERVES existing slots byte-equivalent — only appends.
+    "scene-images": {
+        "file": "scene-images.json",
+        "format": "json",
+        "description": "Scene image set (5-view per scene) produced by p07",
+        "writer_phase": "p07_scene_generation",
+        "reader_phases": ["p08_scene_selection", "p11_video_render"],
+    },
+    "style-vector": {
+        "file": "style-vector.json",
+        "format": "json",
+        "description": "5D style genome vector (genre/mood/aesthetic/pace/color)",
+        "writer_phase": "p07_scene_generation",
+        "reader_phases": ["p11_video_render", "p12_composition"],
+    },
+    "color-intent": {
+        "file": "color-intent.json",
+        "format": "json",
+        "description": "CxSxZ 28-combination color intent + LUT design",
+        "writer_phase": "p07_scene_generation",
+        "reader_phases": ["p13_delivery"],
+    },
+    "scene-selection": {
+        "file": "scene-selection.json",
+        "format": "json",
+        "description": "Selected scenes (operator-approved subset)",
+        "writer_phase": "p08_scene_selection",
+        "reader_phases": ["p09_shot_breakdown"],
+    },
+    "geometry-bed": {
+        "file": "geometry-bed.json",
+        "format": "json",
+        "description": "Cross-shot geometry consistency bed",
+        "writer_phase": "p08_scene_selection",
+        "reader_phases": ["p09_shot_breakdown", "p11_video_render"],
+    },
+    "shot-list": {
+        "file": "shot-list.json",
+        "format": "json",
+        "description": "Shot list (one entry per shot with intent + duration)",
+        "writer_phase": "p09_shot_breakdown",
+        "reader_phases": ["p10_voice", "p11_video_render"],
+    },
+    "e-konte-sheets": {
+        "file": "e-konte-sheets.json",
+        "format": "json",
+        "description": "E-Konte 5-layer shot decomposition sheets",
+        "writer_phase": "p09_shot_breakdown",
+        "reader_phases": ["p11_video_render"],
+    },
 }
 
 
