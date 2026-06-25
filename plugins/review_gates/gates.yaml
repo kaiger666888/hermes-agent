@@ -1,0 +1,149 @@
+# gates.yaml — 8 V8.6 review gates (Phase 34-02, SC#2 / GATE-NATIVE-02).
+#
+# Loaded once at plugins.review_gates import time (D-34-02). Hot-reload is NOT
+# supported — restart the hermes-agent process to pick up changes. pyyaml is
+# the ONE third-party dep added in Phase 34 (already transitive via plugin
+# loader; no pyproject.toml change per D-34-03).
+#
+# Schema (per ROADMAP SC#2 + CONTEXT CF-02):
+#   gate_id                  : str  — unique, kebab-case
+#   phase                    : str  — V8.6 phase after which this gate fires
+#   asset_bus_slots_to_lock  : list[str] — non-empty; runner freezes these
+#                                          slots for the episode under review
+#   reviewer_role            : str | list[str]
+#       - Single reviewer → str
+#       - Multiple reviewers → list[str]; gate_config.to_gate_config()
+#         normalizes to a comma-joined string on the frozen GateConfig
+#         dataclass (Plan 34-01 field is typed as str)
+#   timeout_sec              : int  — > 0; total wall-clock budget per attempt
+#   callback_url             : str | null
+#       - webhook-mode gates typically carry an absolute URL
+#       - blocking / polling gates leave null
+#   default_mode             : blocking | webhook | polling
+#   retry_policy:
+#     max_retries            : int  — > 0; attempts beyond this raise
+#       GateMaxRetriesExceeded (PIPE-GUARD-01: episode marked failed, NOT
+#       silently swallowed — v4.0 bug that PIPE-GUARD-01 fixed)
+#     backoff_sec            : int  — > 0; sleep between retry attempts
+#
+# Source of truth: .planning/phases/34-review-gate-framework/CONTEXT.md (CF-02)
+# Cross-ref: kais-movie-agent/SKILL.md V8.6 gate column (steps 1/2/3/6/11 etc).
+version: 1
+gates:
+  # --- Gate 1: topic (after p01_hook_topic) -------------------------------
+  - gate_id: topic-gate
+    phase: p01_hook_topic
+    asset_bus_slots_to_lock:
+      - hook-topic
+      - outline             # forward lock — outline cannot mutate under review
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 2: outline (after p02_outline) --------------------------------
+  - gate_id: outline-gate
+    phase: p02_outline
+    asset_bus_slots_to_lock:
+      - outline
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 3: script (after p03_script_audit) ----------------------------
+  # Two reviewers — list form, normalized to comma-joined string on GateConfig.
+  - gate_id: script-gate
+    phase: p03_script_audit
+    asset_bus_slots_to_lock:
+      - spatio-temporal-script
+      - temp-dialogue
+    reviewer_role:
+      - script_auditor
+      - compliance_gate
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
+
+  # --- Gate 4: character (after p04_character_design) ---------------------
+  - gate_id: character-gate
+    phase: p04_character_design
+    asset_bus_slots_to_lock:
+      - character-assets
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 5: scene-select (after p08_scene_selection) -------------------
+  # Two reviewers — list form.
+  - gate_id: scene-select-gate
+    phase: p08_scene_selection
+    asset_bus_slots_to_lock:
+      - geometry-bed
+    reviewer_role:
+      - creative_source
+      - theory_critic
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 6: shot-breakdown (after p09_shot_breakdown) ------------------
+  - gate_id: shot-breakdown-gate
+    phase: p09_shot_breakdown
+    asset_bus_slots_to_lock:
+      - shot-list
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 7: render (after p11_video_render) ----------------------------
+  # webhook mode — non-blocking submit, resumed via HMAC-signed callback
+  # (review_platform.verify_callback, Phase 32). Single retry (long render).
+  - gate_id: render-gate
+    phase: p11_video_render
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: editor
+    timeout_sec: 14400
+    callback_url: null              # wired at runtime by runner_hooks (Phase 34-03)
+    default_mode: webhook
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 1800
+
+  # --- Gate 8: delivery (after p13_delivery) ------------------------------
+  # Two reviewers — list form. Terminal gate before episode release.
+  - gate_id: delivery-gate
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+      - master-mp4
+    reviewer_role:
+      - compliance_marketing
+      - editor
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
