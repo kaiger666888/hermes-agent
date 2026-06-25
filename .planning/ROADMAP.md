@@ -128,10 +128,10 @@ Plans:
   1. Each migrated skill (coding-agent + tmux-agents) passes at least 1 benchmark prompt end-to-end (trigger fires + delegation chain executes with no regression vs openclaw baseline)
   2. Enhanced SOUL.md produces expected routing behavior on 3+ test prompts (immediate command → local; cognitive → MCP; default → LLM) — verifiable by observation
   3. `.planning/milestones/v7.0-MIGRATION-REPORT.md` exists documenting: all transform decisions (skill frontmatter / prerequisite mapping / SOUL rule adaptation / memory ingestion strategy) + explicitly skipped items (feishu-* / acp-router / models.json / sessions / multi-profile) each with one-line rationale
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 37-01: TBD
+- [ ] 37-01-PLAN.md — Structural benchmark validation (VALIDATE-01/02) + canonical v7.0-MIGRATION-REPORT.md (VALIDATE-03) + Phase 37 verification report (Wave 1, single plan covers VALIDATE-01..03)
 
 **Repo-commit paths:** `.planning/milestones/v7.0-MIGRATION-REPORT.md` (canonical close-out artifact)
 **Operator-state paths:** None (read-only validation against existing state)
@@ -148,7 +148,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 | 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
 | 35. SOUL.md Identity Enhancement | v7.0 | 1/1 | Complete   | 2026-06-25 |
 | 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 2/2 | Complete   | 2026-06-25 |
-| 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |
+| 37. Validation & Migration Report | v7.0 | 0/1 | Ready to execute | - |
 
 ---
 
