@@ -1,16 +1,17 @@
-"""Smoke test for the pipeline_state plugin (Phase 31 skeleton).
+"""Smoke test for the pipeline_state plugin (Phase 31 skeleton + Phase 33 wiring).
 
-Verifies the five contracts the skeleton must satisfy so Phase 33 can swap in
-the real PipelineStateStore + AssetBus V3 + CreativeHistoryTracker without
-renegotiating the tool surface:
+Verifies the five contracts the plugin must satisfy so the orchestration skill
+(Phase 35) and gate framework (Phase 34) can dispatch real
+PipelineStateStore + AssetBus V3 + CreativeHistoryTracker behavior:
 
 1. ``plugin.yaml`` manifest parses and declares the expected 4-tool surface.
 2. ``__init__.py`` and ``tools.py`` import without errors (no missing deps,
    no circular imports).
 3. ``register(ctx)`` registers exactly 4 tools with
    ``toolset="pipeline_state"`` and well-formed schemas.
-4. Every stub handler returns valid ``tool_result()`` JSON with
-   ``status="not_implemented"`` and the correct plugin/tool identity.
+4. Every handler returns valid JSON. On empty args (no required field), the
+   handler returns a ``tool_error`` envelope (``{"error": "..."}``); real
+   routing behavior is verified by ``test_tools_dispatch.py``.
 5. ``python -c "from plugins.pipeline_state import register"`` succeeds — the
    literal ROADMAP SC#3 check ("entry module smoke-imports").
 """
@@ -138,9 +139,15 @@ def test_register_registers_4_tools_with_correct_toolset():
         )
 
 
-def test_handlers_return_not_implemented_json():
-    """Test 4: every stub handler returns valid tool_result() JSON with
-    status=not_implemented and the correct plugin/tool identity."""
+def test_handlers_return_valid_json():
+    """Test 4: every handler returns valid JSON, and a tool_error envelope on
+    empty args (missing required field).
+
+    Phase 31 asserted the stub envelope (``status="not_implemented"``); Phase
+    33 wiring removed the stubs, so the weaker-but-stable contract is now
+    "valid JSON + tool_error on empty args". Real dispatch behavior is
+    verified by ``test_tools_dispatch.py`` (8+ tests).
+    """
     saved_path = list(sys.path)
     sys.path.insert(0, str(HERMES_ROOT))
     try:
@@ -153,27 +160,19 @@ def test_handlers_return_not_implemented_json():
         f"_TOOLS names mismatch: {set(name_to_handler)} != {set(EXPECTED_TOOLS)}"
     )
 
-    sample_args = {"sample": "args", "episode_id": "ep-001", "phase": "scene-gen"}
+    # Empty args → missing required field → tool_error JSON envelope.
     for tool_name, handler in name_to_handler.items():
-        result = handler(sample_args)
+        result = handler({})
         assert isinstance(result, str), (
             f"{tool_name}: handler must return a string, got {type(result).__name__}"
         )
         parsed = json.loads(result)  # raises if not valid JSON
-        assert parsed["status"] == "not_implemented", (
-            f"{tool_name}: status={parsed.get('status')!r}, expected 'not_implemented'"
+        assert "error" in parsed, (
+            f"{tool_name}: empty-args response must contain 'error' key, "
+            f"got {parsed!r}"
         )
-        assert parsed["plugin"] == PLUGIN_NAME, (
-            f"{tool_name}: plugin={parsed.get('plugin')!r}, expected {PLUGIN_NAME!r}"
-        )
-        assert parsed["tool"] == tool_name, (
-            f"{tool_name}: tool field={parsed.get('tool')!r}"
-        )
-        assert parsed.get("implementing_phase"), (
-            f"{tool_name}: implementing_phase must be non-empty"
-        )
-        assert parsed.get("args_received") == sample_args, (
-            f"{tool_name}: args_received must echo the input args dict"
+        assert isinstance(parsed["error"], str) and parsed["error"], (
+            f"{tool_name}: 'error' must be a non-empty string, got {parsed.get('error')!r}"
         )
 
 
