@@ -1,18 +1,21 @@
-"""test_p01_p02_p03.py — vertical slice tests for phase modules (Phase 35-05).
+"""test_p01_p02_p03.py — vertical slice lifecycle tests for phase modules (Phase 35-05).
 
 Per the Phase 35-05 plan, these tests verify each phase module (p01, p02, p03)
-exercised with mocked delegate_task / mocked gates / tmp_path asset bus.
+exercised end-to-end with mocked delegate_task / mocked gates / tmp_path asset
+bus (per CONTEXT D-35-08 — no real subagents, no real network, no real GPU).
 
-**Status:** Phase 35-03 (running in parallel Wave 2) had NOT shipped the phase
-module files (``pipeline/phases/p01_hook_topic.py`` etc.) at the time this test
-was written. Per the plan's ``<critical_reminders>`` note #2 we use the
-skip-pattern: the deep lifecycle tests are marked
-``pytest.mark.skip(reason="waiting for 35-03 modules")`` so the suite stays
-green, and a lightweight import-succeed test runs unconditionally to fail-fast
-the moment the modules appear (acting as a tripwire for the verifier).
+**Status update (Phase 35-05 execution):** 35-03 has shipped the phase modules,
+so the ``@pytest.mark.skip`` markers from the earlier pre-35-03 stub are
+REMOVED. All 13 tests now execute against the real modules. The lifecycle
+under test is exactly the contract p01/p02/p03 expose to ``runner.py``:
 
-When 35-03 lands, remove the skip markers and the tests will execute against
-the real modules.
+    read asset-bus slot  ->  delegate_task(goal, context, toolsets)
+                           ->  parse fenced JSON from summary
+                           ->  write asset-bus slot(s)
+                           ->  trigger gate (if configured & callable)
+
+Each test asserts ONE specific aspect of that contract (single-responsibility
+test design). Shared fixtures come from conftest.py.
 """
 
 from __future__ import annotations
@@ -29,51 +32,26 @@ if str(_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(_SKILL_DIR))
 
 
-# Expected module paths (per PATTERNS.md anatomy).
-_P01_PATH = _SKILL_DIR / "pipeline" / "phases" / "p01_hook_topic.py"
-_P02_PATH = _SKILL_DIR / "pipeline" / "phases" / "p02_outline.py"
-_P03_PATH = _SKILL_DIR / "pipeline" / "phases" / "p03_script_audit.py"
-
-_PHASES_PRESENT = _P01_PATH.exists() and _P02_PATH.exists() and _P03_PATH.exists()
-
-_SKIP_REASON = "waiting for 35-03 modules (pipeline/phases/p0{1,2,3}_*.py)"
-
-
 # ---------------------------------------------------------------------------
-# Tripwire — runs unconditionally. The moment 35-03 ships the modules, this
-# test fails (forcing the verifier to drop the skip markers below).
+# p01_hook_topic lifecycle tests (V8.6 §1: hook + topic atomic)
 # ---------------------------------------------------------------------------
 
 
-def test_phase_modules_presence_flag():
-    """Documents whether 35-03 phase modules are on disk yet.
-
-    If this asserts TRUE (modules present), remove the skip markers on the
-    lifecycle tests below and let them run. If FALSE, the skips below keep
-    the suite green until 35-03 lands.
-    """
-    if _PHASES_PRESENT:
-        # When this branch fires, the verifier should remove the skip markers.
-        pytest.skip(
-            "35-03 modules now present — remove @pytest.mark.skip on the "
-            "lifecycle tests below so they execute."
-        )
-    # Modules not yet present — expected state when 35-05 runs before 35-03.
-    assert not _PHASES_PRESENT
-
-
-# ---------------------------------------------------------------------------
-# p01 lifecycle tests (SKIPPED until 35-03 lands)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skip(reason=_SKIP_REASON)
 class TestP01HookTopic:
-    """p01_hook_topic lifecycle tests — execute once 35-03 ships the module."""
+    """p01_hook_topic lifecycle tests.
+
+    Contract (per pipeline/phases/p01_hook_topic.py):
+      - READ ``requirement`` slot
+      - DELEGATE to hook_retention expert (single delegate_task call)
+      - WRITE ``topic-kernel`` + ``hook-design`` slots
+      - GATE 1 ``selection-topic-hook`` when trigger_gate provided
+    """
 
     def test_p01_invokes_hook_retention_expert(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Goal embeds skill_view(name='hook_retention') so the subagent
+        loads the expert before applying it."""
         from pipeline.phases.p01_hook_topic import run as p01_run
 
         bus, workdir = tmp_asset_bus
@@ -94,6 +72,7 @@ class TestP01HookTopic:
     def test_p01_reads_requirement_slot(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """The requirement slot's content reaches the delegate context."""
         from pipeline.phases.p01_hook_topic import run as p01_run
 
         bus, workdir = tmp_asset_bus
@@ -115,6 +94,7 @@ class TestP01HookTopic:
     def test_p01_writes_topic_kernel_and_hook_design(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Expert payload is split into the two output slots."""
         from pipeline.phases.p01_hook_topic import run as p01_run
 
         bus, workdir = tmp_asset_bus
@@ -139,6 +119,7 @@ class TestP01HookTopic:
     def test_p01_triggers_gate_1_when_enabled(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """When trigger_gate is callable, Gate 1 fires with the right id."""
         from pipeline.phases.p01_hook_topic import run as p01_run
 
         bus, workdir = tmp_asset_bus
@@ -165,6 +146,7 @@ class TestP01HookTopic:
     def test_p01_skips_gate_when_none(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """trigger_gate=None → no gate fires and result['gate'] is None."""
         from pipeline.phases.p01_hook_topic import run as p01_run
 
         bus, workdir = tmp_asset_bus
@@ -184,15 +166,25 @@ class TestP01HookTopic:
 
 
 # ---------------------------------------------------------------------------
-# p02 lifecycle tests (SKIPPED until 35-03 lands)
+# p02_outline lifecycle tests (V8.6 §2: story framework + outline atomic)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason=_SKIP_REASON)
 class TestP02Outline:
+    """p02_outline lifecycle tests.
+
+    Contract (per pipeline/phases/p02_outline.py):
+      - READ ``topic-kernel`` slot (p01's output)
+      - DELEGATE to creative_source + screenplay in a SINGLE delegate_task
+        (V8.6 §2 atomic — subagent orchestrates the collaboration)
+      - WRITE ``story-framework`` slot (StoryKernel + snowflake + snyder beats)
+      - GATE 2 ``story-framework-outline`` when trigger_gate provided
+    """
+
     def test_p02_invokes_creative_source_and_screenplay(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Goal mentions BOTH experts' skill_view calls (single delegate_task)."""
         from pipeline.phases.p02_outline import run as p02_run
 
         bus, workdir = tmp_asset_bus
@@ -219,6 +211,7 @@ class TestP02Outline:
     def test_p02_reads_topic_kernel_slot(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """The topic-kernel slot's content reaches the delegate context."""
         from pipeline.phases.p02_outline import run as p02_run
 
         bus, workdir = tmp_asset_bus
@@ -240,6 +233,8 @@ class TestP02Outline:
     def test_p02_writes_story_framework(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """The full expert payload (story_kernel + snowflake + snyder) is
+        written as ONE cohesive story-framework slot."""
         from pipeline.phases.p02_outline import run as p02_run
 
         bus, workdir = tmp_asset_bus
@@ -261,10 +256,13 @@ class TestP02Outline:
 
         sf = bus.read("story-framework")
         assert sf["story_kernel"]["premise"] == "p"
+        assert sf["snowflake_artifacts"] == {"snapshots": []}
+        assert sf["snyder_beats"] == [{"beat": "opening"}]
 
     def test_p02_triggers_gate_2_when_enabled(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Gate 2 fires with the canonical id 'story-framework-outline'."""
         from pipeline.phases.p02_outline import run as p02_run
 
         bus, workdir = tmp_asset_bus
@@ -285,19 +283,31 @@ class TestP02Outline:
             trigger_gate=trigger_gate,
         )
 
-        assert gate_calls == [("framework-outline", "ep-001")]
+        # Gate id matches p02_outline.GATE_ID — 'story-framework-outline'
+        # (NOT the shorter 'framework-outline'; canonical id is in the module).
+        assert gate_calls == [("story-framework-outline", "ep-001")]
 
 
 # ---------------------------------------------------------------------------
-# p03 lifecycle tests (SKIPPED until 35-03 lands)
+# p03_script_audit lifecycle tests (V8.6 §3: script + audit atomic loop)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason=_SKIP_REASON)
 class TestP03ScriptAudit:
+    """p03_script_audit lifecycle tests.
+
+    Contract (per pipeline/phases/p03_script_audit.py):
+      - READ ``story-framework`` slot (p02's output)
+      - DELEGATE to screenplay + script_auditor in a SINGLE delegate_task
+        (V8.6 §3 atomic revise loop — subagent runs write-audit-revise)
+      - WRITE ``script-draft`` + ``audit-report`` slots
+      - GATE 3 ``script-audit`` when trigger_gate provided
+    """
+
     def test_p03_invokes_screenplay_and_script_auditor(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Goal mentions BOTH experts' skill_view calls."""
         from pipeline.phases.p03_script_audit import run as p03_run
 
         bus, workdir = tmp_asset_bus
@@ -318,6 +328,7 @@ class TestP03ScriptAudit:
     def test_p03_reads_story_framework_slot(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """The story-framework slot's content reaches the delegate context."""
         from pipeline.phases.p03_script_audit import run as p03_run
 
         bus, workdir = tmp_asset_bus
@@ -337,6 +348,7 @@ class TestP03ScriptAudit:
     def test_p03_writes_script_draft_and_audit_report(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Expert payload splits into separate script-draft + audit-report slots."""
         from pipeline.phases.p03_script_audit import run as p03_run
 
         bus, workdir = tmp_asset_bus
@@ -358,6 +370,7 @@ class TestP03ScriptAudit:
     def test_p03_triggers_gate_3_when_enabled(
         self, tmp_asset_bus, mock_delegate_factory,
     ):
+        """Gate 3 fires with the canonical id 'script-audit'."""
         from pipeline.phases.p03_script_audit import run as p03_run
 
         bus, workdir = tmp_asset_bus

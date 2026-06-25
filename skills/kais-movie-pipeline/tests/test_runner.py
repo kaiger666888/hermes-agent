@@ -33,12 +33,29 @@ from pipeline import phases as phases_mod  # noqa: E402
 
 @pytest.fixture
 def clean_registry():
-    """Save/restore PHASE_REGISTRY around each test (it's a module-level list)."""
-    saved = list(phases_mod.PHASE_REGISTRY)
-    phases_mod.PHASE_REGISTRY.clear()
-    yield phases_mod.PHASE_REGISTRY
-    phases_mod.PHASE_REGISTRY.clear()
-    phases_mod.PHASE_REGISTRY.extend(saved)
+    """Save/restore PHASE_REGISTRY around each test (it's a module-level list).
+
+    Phase 35-05 (Rule 3 fix): sibling test_p03_unit.py calls
+    ``importlib.reload(phases_mod)``, which RE-BINDS ``phases_mod.PHASE_REGISTRY``
+    to a NEW list object. After such a reload, ``runner.PHASE_REGISTRY`` (bound
+    via ``from pipeline.phases import PHASE_REGISTRY`` at runner-import time)
+    still points at the OLD list — so in-place ``.clear()`` / ``.extend()`` on
+    the new list never reach the runner. We therefore rebind BOTH modules to
+    a shared fresh list for the duration of the test and restore both on exit.
+    """
+    from pipeline import runner as runner_mod
+
+    saved_runner_list = list(runner_mod.PHASE_REGISTRY)
+    saved_phases_list = list(phases_mod.PHASE_REGISTRY)
+
+    shared: list = []
+    phases_mod.PHASE_REGISTRY = shared
+    runner_mod.PHASE_REGISTRY = shared
+
+    yield shared
+
+    phases_mod.PHASE_REGISTRY = list(saved_phases_list)
+    runner_mod.PHASE_REGISTRY = list(saved_runner_list)
 
 
 def _make_stub_phase(phase_id: str, gate_id: str | None = None):

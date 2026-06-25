@@ -121,17 +121,36 @@ def fake_registry():
     """Yield ``PHASE_REGISTRY`` after clearing it; restore on teardown.
 
     Tests append entries (``{"id": ..., "module": ..., "depends_on": [...]}``)
-    to drive ``run_episode``. The registry is a module-level mutable list, so
-    we MUST restore the original contents to avoid cross-test bleed-through
-    (the production registry is empty in Phase 35 until 35-03 populates it).
+    to drive ``run_episode``. The registry is a module-level mutable list.
+
+    **Cross-module binding care:** ``runner.py`` does
+    ``from pipeline.phases import PHASE_REGISTRY`` at import time, which binds
+    ``runner.PHASE_REGISTRY`` to the SAME list object. As long as we mutate
+    the list IN PLACE (``.clear()`` / ``.extend()``), both modules see the
+    change. However, sibling test ``test_p03_unit.py`` (Phase 35-03) calls
+    ``importlib.reload(phases_mod)``, which RE-BINDS ``phases_mod.PHASE_REGISTRY``
+    to a NEW list. After that the runner still holds the OLD list reference
+    and our in-place mutations on the new list never reach it.
+
+    We therefore also rebind ``runner.PHASE_REGISTRY`` to point at the same
+    shared list object the test mutates. On teardown we restore both module
+    attributes to their pre-test snapshots.
     """
     from pipeline import phases as phases_mod
+    from pipeline import runner as runner_mod
 
-    saved = list(phases_mod.PHASE_REGISTRY)
-    phases_mod.PHASE_REGISTRY.clear()
-    yield phases_mod.PHASE_REGISTRY
-    phases_mod.PHASE_REGISTRY.clear()
-    phases_mod.PHASE_REGISTRY.extend(saved)
+    saved_runner_list = list(runner_mod.PHASE_REGISTRY)
+    saved_phases_list = list(phases_mod.PHASE_REGISTRY)
+
+    shared: list = []  # fresh shared object both modules will look at
+    phases_mod.PHASE_REGISTRY = shared
+    runner_mod.PHASE_REGISTRY = shared
+
+    yield shared
+
+    # Restore both modules to their pre-test views.
+    phases_mod.PHASE_REGISTRY = list(saved_phases_list)
+    runner_mod.PHASE_REGISTRY = list(saved_runner_list)
 
 
 # ---------------------------------------------------------------------------
