@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: openclaw → hermes-agent Primary Agent Migration
-status: executing
-last_updated: "2026-06-25T14:35:39.786Z"
-last_activity: "2026-06-25 — Plan 34-02 complete: tmux-agents skill migrated to skills/autonomous-ai-agents/tmux-agents/SKILL.md"
+status: verifying
+last_updated: "2026-06-25T14:42:19.875Z"
+last_activity: "2026-06-25 — Plan 34-03 complete: Phase 34 fully complete (3/3 plans). Coexistence wired + COEXISTENCE.md authored."
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 25
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 34 of 37 (Skills Migration — coding-agent + tmux-agents)
-Plan: 03 of 03 in phase (02 complete — tmux-agents skill migrated; next: bidirectional related_skills wiring)
-Status: Executing
-Last activity: 2026-06-25 — Plan 34-02 complete: tmux-agents skill migrated to skills/autonomous-ai-agents/tmux-agents/SKILL.md
+Phase: 34 of 37 (Skills Migration — coding-agent + tmux-agents) — COMPLETE
+Plan: 03 of 03 in phase (03 complete — Phase 34 fully done; ready for verification gate)
+Status: Phase complete — ready for verification
+Last activity: 2026-06-25 — Plan 34-03 complete
 
 ### Progress
 
@@ -44,7 +44,7 @@ v5.0 V8.6 Adaptation:           [██████████] 100% (Phases 22
 v6.0 Self-Evolution Feedback:   [██████████] 100% (Phases 28-33, shipped 2026-06-24)
 
 v7.0 openclaw → hermes Migration:
-  Phase 34 (Skills Migration)              [██████░░░░] 67% In progress — 2/3 plans complete (coding-agent + tmux-agents skills migrated); Plan 34-03 wires bidirectional related_skills
+  Phase 34 (Skills Migration)              [██████████] 100% COMPLETE — 3/3 plans done (coding-agent + tmux-agents skills migrated; bidirectional related_skills wired; COEXISTENCE.md authored)
   Phase 35 (SOUL.md Enhancement)           [░░░░░░░░░░] 0% Not started — AIGC routing rules non-destructive integrate
   Phase 36 (Memory Ingestion)              [░░░░░░░░░░] 0% Not started — USER.md + 133 .md → mem0 backend
   Phase 37 (Validation & Report)           [░░░░░░░░░░] 0% Not started — benchmark + v7.0-MIGRATION-REPORT.md
@@ -54,7 +54,7 @@ v7.0 openclaw → hermes Migration:
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 34 | Skills Migration (coding-agent + tmux-agents) | **In progress** | SKILL-01..04. Wave 1 complete: Plan 34-01 (coding-agent, commit 87e046b0d) + Plan 34-02 (tmux-agents, commit 4c64890c6). Plan 34-03 (coexistence wiring + COEXISTENCE.md) pending. |
+| 34 | Skills Migration (coding-agent + tmux-agents) | **Complete** | SKILL-01..04. All 3 plans done: Plan 34-01 (coding-agent, 87e046b0d) + Plan 34-02 (tmux-agents, 4c64890c6) + Plan 34-03 (coexistence wiring + COEXISTENCE.md, a62c1178d + 5cbe555cc). Phase ready for verification. |
 | 35 | SOUL.md Identity Enhancement | **Not started** | SOUL-01..03. Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively. Operator-state paths (NOT repo). Backup + transformation note required. |
 | 36 | Memory Ingestion (USER.md + 133 .md → mem0) | **Not started** | MEM-01..04. USER.md → `~/.hermes/memories/`; 133 .md (1.3MB) → mem0 backend. Idempotent dedup. Spot-check 5 queries. Volume may require plan split — flag for plan-phase. |
 | 37 | Validation & Migration Report | **Not started** | VALIDATE-01..03. Benchmark migrated skills + SOUL routing. Canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md`. MUST run last. |
@@ -107,8 +107,10 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 | SOUL-02 routing rules adaptation is non-destructive | SOUL-01 explicit constraint: must NOT overwrite hermes original SOUL content. openclaw rules added additively, tagged with source + date. | Applied 2026-06-25 — Phase 35 SC #3 + non-destructive contract annotated |
 | MEM-02 ingestion may need Phase 36.1 split if volume > 2 plans | 133 files / 1.3MB ingestion is the largest single-req workload in v7.0. If plan-phase reveals setup + ingest + verify needs >2 plans, insert decimal phase. Flagged for plan-phase attention. | Watch-item — not yet triggered |
 | Coexistence decision for autonomous-ai-agents overlap deferred to plan-phase | Existing `skills/autonomous-ai-agents/{claude-code, codex, opencode, hermes-agent}` partially overlap with incoming coding-agent. Plan-phase must decide: merge / supplement / replace. ROADMAP SC #5 requires the decision be documented either way. | Watch-item — plan-phase must resolve |
+| **Phase 34 P03: SUPPLEMENT coexistence decision documented** | `skills/autonomous-ai-agents/COEXISTENCE.md` is the canonical artifact. 2 new skills add capabilities the 4 existing do not provide; no replacement. Bidirectional `related_skills` graph wired across all 6 skills; latent codex↔opencode asymmetry also resolved. | Applied 2026-06-25 — Phase 34 SC #5 satisfied; phase complete |
 | mem0 plugin exists at `plugins/memory/mem0/` — config-only changes acceptable | Plugin already deployed; batch-ingest CLI/config additions are NOT Hermes-core code changes. Stays within "config-only at most" scope. | Applied 2026-06-25 — Phase 36 Hermes-core touch annotated "Configuration-only at most" |
 | Phase 34 P01 | 8m | 1 tasks | 1 files |
+| Phase 34 P03 | ~2m | 2 tasks | 5 files |
 
 ### Decisions (carried forward — relevant to v7.0)
 

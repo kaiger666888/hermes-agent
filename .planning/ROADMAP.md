@@ -50,7 +50,7 @@ For completed milestone phase details, see:
 - Integer phases (34, 35, 36, 37): Planned v7.0 milestone work
 - Decimal phases (e.g., 36.1): Reserved for urgent insertions only
 
-- [ ] **Phase 34: Skills Migration (coding-agent + tmux-agents)** - Migrate 2 openclaw skills into `skills/autonomous-ai-agents/` with hermes schema adaptation (frontmatter + prerequisites), resolving coexistence with existing claude-code/codex/opencode skills.
+- [x] **Phase 34: Skills Migration (coding-agent + tmux-agents)** - Migrate 2 openclaw skills into `skills/autonomous-ai-agents/` with hermes schema adaptation (frontmatter + prerequisites), resolving coexistence with existing claude-code/codex/opencode skills. (completed 2026-06-25)
 - [ ] **Phase 35: SOUL.md Identity Enhancement** - Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively (preserve hermes defaults, mark openclaw origin, adapt trigger modes), with backup + transformation note.
 - [ ] **Phase 36: Memory Ingestion (USER.md + 133 .md → mem0)** - Migrate USER.md to `~/.hermes/memories/` and batch-ingest 133 openclaw memory .md files (1.3MB) into mem0 backend with idempotent dedup, then spot-check via 5 sample queries.
 - [ ] **Phase 37: Validation & Migration Report** - Benchmark-test migrated skills + SOUL.md routing behavior, then produce canonical migration report documenting all transform decisions and explicitly skipped items.
@@ -72,7 +72,7 @@ For completed milestone phase details, see:
 Plans:
 - [x] 34-01-PLAN.md — Migrate coding-agent SKILL.md (Wave 1)
 - [x] 34-02-PLAN.md — Migrate tmux-agents SKILL.md (Wave 1, parallel with 34-01)
-- [ ] 34-03-PLAN.md — Wire bidirectional related_skills graph + write COEXISTENCE.md (Wave 2, depends on 34-01 + 34-02)
+- [x] 34-03-PLAN.md — Wire bidirectional related_skills graph + write COEXISTENCE.md (Wave 2, depends on 34-01 + 34-02)
 
 **Repo-commit paths:** `skills/autonomous-ai-agents/coding-agent/SKILL.md`, `skills/autonomous-ai-agents/tmux-agents/SKILL.md`, `skills/autonomous-ai-agents/COEXISTENCE.md`, 4 existing skill `related_skills` edits
 **Operator-state paths:** None (skills are repo-tracked)
@@ -144,7 +144,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 2/3 | In Progress|  |
+| 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
 | 35. SOUL.md Identity Enhancement | v7.0 | 0/TBD | Not started | - |
 | 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 0/TBD | Not started | - |
 | 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |
