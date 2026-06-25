@@ -388,3 +388,83 @@ class TestGateConfigKnob:
         # Phase module should have called the gate (gate_id set + trigger_gate wired)
         gate_result = p1.calls["args"]["trigger_gate"]("selection-topic-hook", "ep-gate")
         assert gate_result == {"approved": True}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Phase 35-05 extensions — exercises the shared conftest.py fixtures.
+# These complement the original 14 tests by driving run_episode through
+# the production-shaped ``inject`` path with the shared mock factories.
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TestRunnerWithConftestFixtures:
+    """Smoke-test the shared fixtures (mock_delegate_factory, tmp_asset_bus,
+    fake_registry, make_fake_phase) to prove they wire into run_episode."""
+
+    def test_fake_registry_drives_run_episode(
+        self, tmp_path, fake_registry, make_fake_phase, mock_delegate_factory,
+    ):
+        """Two fake phases appended to fake_registry both execute."""
+        p1 = make_fake_phase("p01_alpha", {"k": "v1"})
+        p2 = make_fake_phase("p02_beta", {"k": "v2"})
+        fake_registry.extend([
+            {"id": "p01_alpha", "module": p1, "depends_on": []},
+            {"id": "p02_beta", "module": p2, "depends_on": ["p01_alpha"]},
+        ])
+
+        class _StubStore:
+            def __init__(self):
+                self.saved = []
+
+            def load_latest_checkpoint(self, ep):
+                return None
+
+            def save_checkpoint(self, ep, phase, payload):
+                self.saved.append(phase)
+
+        class _StubBus:
+            def read(self, slot):
+                return None
+
+            def write(self, *a, **kw):
+                pass
+
+        store = _StubStore()
+        cfg = RunnerConfig(workdir=str(tmp_path))
+        result = run_episode(
+            "ep-fake-registry", cfg,
+            inject={
+                "store": store,
+                "bus": _StubBus(),
+                "delegate_task": mock_delegate_factory({"x": 1}),
+                "trigger_gate": lambda g, e: {"ok": True},
+            },
+        )
+
+        assert p1.calls["count"] == 1
+        assert p2.calls["count"] == 1
+        assert store.saved == ["p01_alpha", "p02_beta"]
+        assert set(result["phases"].keys()) == {"p01_alpha", "p02_beta"}
+        assert result["resumed_from"] == 0
+
+    def test_tmp_asset_bus_round_trips(
+        self, tmp_asset_bus, mock_delegate_factory,
+    ):
+        """tmp_asset_bus fixture gives a real AssetBus that round-trips slots."""
+        bus, workdir = tmp_asset_bus
+        bus.write("topic-kernel", {"title": "test-kernel"}, envelope=True)
+        data = bus.read("topic-kernel")
+        # AssetBus.read returns the payload directly (envelope unwrapped on read)
+        assert data["title"] == "test-kernel"
+
+    def test_mock_delegate_factory_emits_fenced_json(
+        self, mock_delegate_factory,
+    ):
+        """mock_delegate_factory's return value embeds output as fenced JSON."""
+        delegate = mock_delegate_factory({"topic_kernel": {"x": 1}})
+        result = delegate("goal", "ctx", ["skills"])
+        assert "```json" in result["summary"]
+        assert "\"topic_kernel\"" in result["summary"]
+        # Captures the invocation
+        assert delegate.last_call["goal"] == "goal"
+        assert delegate.last_call["toolsets"] == ["skills"]
