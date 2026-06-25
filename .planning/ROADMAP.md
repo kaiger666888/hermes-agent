@@ -108,10 +108,11 @@ Plans:
   2. All 133 openclaw `workspace/memory/*.md` files are stored as entries in the mem0 backend (configurable via `plugins/memory/mem0/`); a count query returns 133 ingested entries (or operator-configured subset if partial-ingest decision is made and documented)
   3. From a hermes-agent conversation, 5 sample queries covering AIGC deployment / ComfyUI / Trellis / ACE-Step / CosyVoice topics return relevant ingested memory content (spot-check passes)
   4. Re-running the ingestion command produces zero duplicate entries (idempotent — dedup keyed on content hash or openclaw file path)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 36-01: TBD
+- [ ] 36-01-PLAN.md — Build idempotent batch_ingest.py + 5-query spot_check.py under plugins/memory/mem0/scripts/ (Wave 1)
+- [ ] 36-02-PLAN.md — Migrate USER.md to ~/.hermes/memories/ + dry-run validation + INGESTION-NOTE.md operator-action audit trail (Wave 2, depends on 36-01)
 
 **Repo-commit paths:** Possibly `plugins/memory/mem0/` config/script additions if batch-ingest tooling is needed (TBD at plan time)
 **Operator-state paths:** `~/.hermes/memories/USER.md` (new), mem0 backend storage (operator state)
