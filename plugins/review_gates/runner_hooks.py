@@ -296,6 +296,43 @@ def resume_from_callback(body: str, signature: str, timestamp: int) -> dict:
     return outcome
 
 
+def resolve_direct(
+    gate_id: str,
+    decision: str,
+    suggested_action: Optional[str] = None,
+) -> dict:
+    """Direct operator-side gate resolution (Plan 34-04, Option (b)).
+
+    Bypasses HMAC verification (which is reserved for external callbacks via
+    ``resume_from_callback``). The operator invoking this path is already
+    authenticated to hermes-agent, so the HMAC check is unnecessary and
+    would reject empty signatures. Behavior is otherwise identical to
+    ``resume_from_callback`` post-verification: look up the pending gate,
+    resolve it, write the outcome to the asset bus, advance PipelineState,
+    and surface ``rollback_to`` on reject.
+
+    Used by the ``gate_resolve`` tool handler (Phase 34-04). The external
+    webhook path (Phase 35 runner) continues to use ``resume_from_callback``
+    which enforces HMAC on inbound POSTs.
+
+    Raises:
+        KeyError: ``gate_id`` has no pending gate in this process. Phase 35
+            will rebuild from PipelineState; for the direct-operator flow the
+            gate must have been submitted earlier in the same process.
+        GateError: the gate rejected the decision (invalid state transition).
+    """
+    gate = _PENDING_GATES[gate_id]
+    outcome = gate.resolve(decision, suggested_action)
+
+    _write_review_outcome(gate, outcome)
+    _advance_state_after_resolution(gate.config.phase, decision, gate)
+
+    if decision == "reject" and suggested_action:
+        outcome = {**outcome, "rollback_to": suggested_action}
+
+    return outcome
+
+
 def poll_until_terminal(
     gate_id: str,
     timeout_sec: int,
