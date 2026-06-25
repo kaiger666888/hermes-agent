@@ -53,7 +53,7 @@ For completed milestone phase details, see:
 - [x] **Phase 34: Skills Migration (coding-agent + tmux-agents)** - Migrate 2 openclaw skills into `skills/autonomous-ai-agents/` with hermes schema adaptation (frontmatter + prerequisites), resolving coexistence with existing claude-code/codex/opencode skills. (completed 2026-06-25)
 - [x] **Phase 35: SOUL.md Identity Enhancement** - Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively (preserve hermes defaults, mark openclaw origin, adapt trigger modes), with backup + transformation note. (completed 2026-06-25)
 - [x] **Phase 36: Memory Ingestion (USER.md + 133 .md → mem0)** - Migrate USER.md to `~/.hermes/memories/` and batch-ingest 133 openclaw memory .md files (1.3MB) into mem0 backend with idempotent dedup, then spot-check via 5 sample queries. (completed 2026-06-25)
-- [ ] **Phase 37: Validation & Migration Report** - Benchmark-test migrated skills + SOUL.md routing behavior, then produce canonical migration report documenting all transform decisions and explicitly skipped items.
+- [x] **Phase 37: Validation & Migration Report** - Benchmark-test migrated skills + SOUL.md routing behavior, then produce canonical migration report documenting all transform decisions and explicitly skipped items. (completed 2026-06-25)
 
 ## Phase Details
 
@@ -131,7 +131,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 37-01-PLAN.md — Structural benchmark validation (VALIDATE-01/02) + canonical v7.0-MIGRATION-REPORT.md (VALIDATE-03) + Phase 37 verification report (Wave 1, single plan covers VALIDATE-01..03)
+- [x] 37-01-PLAN.md — Structural benchmark validation (VALIDATE-01/02) + canonical v7.0-MIGRATION-REPORT.md (VALIDATE-03) + Phase 37 verification report (Wave 1, single plan covers VALIDATE-01..03)
 
 **Repo-commit paths:** `.planning/milestones/v7.0-MIGRATION-REPORT.md` (canonical close-out artifact)
 **Operator-state paths:** None (read-only validation against existing state)
@@ -148,7 +148,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 | 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
 | 35. SOUL.md Identity Enhancement | v7.0 | 1/1 | Complete   | 2026-06-25 |
 | 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 2/2 | Complete   | 2026-06-25 |
-| 37. Validation & Migration Report | v7.0 | 0/1 | Ready to execute | - |
+| 37. Validation & Migration Report | v7.0 | 1/1 | Complete   | 2026-06-25 |
 
 ---
 

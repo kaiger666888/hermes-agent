@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: openclaw → hermes-agent Primary Agent Migration
-status: verifying
-last_updated: "2026-06-25T15:24:20.626Z"
+status: milestone_complete
+last_updated: "2026-06-25T15:45:00Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 75
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,9 +28,9 @@ progress:
 
 ## Current Position
 
-Phase: 34 of 37 (Skills Migration — coding-agent + tmux-agents) — COMPLETE
-Plan: 03 of 03 in phase (03 complete — Phase 34 fully done; ready for verification gate)
-Status: Phase complete — ready for verification
+Phase: 37 of 37 (Validation & Migration Report) — COMPLETE (v7.0 milestone ready for `/gsd:complete-milestone v7.0`)
+Plan: 01 of 01 in phase (01 complete — Phase 37 fully done; v7.0 milestone closed)
+Status: Milestone complete — ready for v7.0 archive + v8.0 planning
 Last activity: 2026-06-25
 
 ### Progress
@@ -45,19 +45,21 @@ v6.0 Self-Evolution Feedback:   [██████████] 100% (Phases 28
 
 v7.0 openclaw → hermes Migration:
   Phase 34 (Skills Migration)              [██████████] 100% COMPLETE — 3/3 plans done (coding-agent + tmux-agents skills migrated; bidirectional related_skills wired; COEXISTENCE.md authored)
-  Phase 35 (SOUL.md Enhancement)           [░░░░░░░░░░] 0% Not started — AIGC routing rules non-destructive integrate
-  Phase 36 (Memory Ingestion)              [██░░░░░░░░] 20% In progress — 36-01 DONE (batch_ingest.py + spot_check.py); 36-02 pending
-  Phase 37 (Validation & Report)           [░░░░░░░░░░] 0% Not started — benchmark + v7.0-MIGRATION-REPORT.md
+  Phase 35 (SOUL.md Enhancement)           [██████████] 100% COMPLETE — 1/1 plan done (SOUL.md non-destructive integration + transformation note)
+  Phase 36 (Memory Ingestion)              [██████████] 100% COMPLETE — 2/2 plans done (batch_ingest.py + spot_check.py + USER.md migrated + INGESTION-NOTE)
+  Phase 37 (Validation & Report)           [██████████] 100% COMPLETE — 1/1 plan done (BENCHMARK-RESULTS + v7.0-MIGRATION-REPORT.md + 37-VERIFICATION)
 ```
+
+**v7.0 milestone status:** All 4 phases complete (34 + 35 + 36 + 37). 14/14 requirements structurally satisfied (SKILL×4 + SOUL×3 + MEM×4 + VALIDATE×3). Ready for `/gsd:complete-milestone v7.0` archive + tag. Operator next: run 4 Operator Action Items in v7.0-MIGRATION-REPORT.md to confirm runtime behavior, then begin v8.0 milestone planning.
 
 ### Phase Statuses (v7.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 34 | Skills Migration (coding-agent + tmux-agents) | **Complete** | SKILL-01..04. All 3 plans done: Plan 34-01 (coding-agent, 87e046b0d) + Plan 34-02 (tmux-agents, 4c64890c6) + Plan 34-03 (coexistence wiring + COEXISTENCE.md, a62c1178d + 5cbe555cc). Phase ready for verification. |
-| 35 | SOUL.md Identity Enhancement | **Not started** | SOUL-01..03. Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively. Operator-state paths (NOT repo). Backup + transformation note required. |
-| 36 | Memory Ingestion (USER.md + 133 .md → mem0) | **In progress — Plan 01 complete** | MEM-01..04. USER.md → `~/.hermes/memories/`; 124 .md (~817KB) → mem0 backend. Idempotent dedup. Spot-check 5 queries. **36-01 DONE** (d7aa2eb7c + 50ee1b8b2): batch_ingest.py + spot_check.py CLI tooling. Plan 02 pending (INGESTION-NOTE + USER.md migration). |
-| 37 | Validation & Migration Report | **Not started** | VALIDATE-01..03. Benchmark migrated skills + SOUL routing. Canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md`. MUST run last. |
+| 34 | Skills Migration (coding-agent + tmux-agents) | **Complete** | SKILL-01..04. All 3 plans done: Plan 34-01 (coding-agent, 87e046b0d) + Plan 34-02 (tmux-agents, 4c64890c6) + Plan 34-03 (coexistence wiring + COEXISTENCE.md, a62c1178d + 5cbe555cc). Verification: passed 5/5. |
+| 35 | SOUL.md Identity Enhancement | **Complete** | SOUL-01..03. 1/1 plan done (35-01: SOUL.md non-destructive integration + 35-01-TRANSFORMATION-NOTE.md, 0191f5589). Verification: human_needed (structural all-pass; 2 SC require runtime observation — deferred to operator). |
+| 36 | Memory Ingestion (USER.md + 124 .md → mem0) | **Complete** | MEM-01..04. 2/2 plans done: 36-01 (batch_ingest.py + spot_check.py, d7aa2eb7c + 50ee1b8b2) + 36-02 (USER.md migrated + INGESTION-NOTE). Verification: human_needed (tooling-only; live ingest deferred pending MEM0_API_KEY). File count corrected: 124 files / 817KB (NOT 133 / 1.3MB). |
+| 37 | Validation & Migration Report | **Complete** | VALIDATE-01..03. 1/1 plan done (37-01: BENCHMARK-RESULTS 9bcfcdecc + v7.0-MIGRATION-REPORT d1f6b9b33 + 37-VERIFICATION 2cb836c5c). Verification: human_needed (3/3 structural; runtime smoke-tests deferred per scoped boundary). **v7.0 milestone ready for `/gsd:complete-milestone v7.0`.** |
 
 ### Critical Path
 
@@ -113,6 +115,7 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 | Phase 34 P03 | ~2m | 2 tasks | 5 files |
 | Phase 35 P01 | 3min | 3 tasks | 1 files |
 | Phase 36 P01 | ~15min | 2 tasks | 3 files |
+| Phase 37 P01 | ~7m | 3 tasks | 3 files |
 
 ### Decisions (carried forward — relevant to v7.0)
 

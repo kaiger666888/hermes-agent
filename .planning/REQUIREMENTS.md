@@ -35,9 +35,9 @@
 
 ### VALIDATE — Validation & Documentation
 
-- [ ] **VALIDATE-01**: 每个迁后 skill 用至少 1 个 benchmark prompt 测试触发 + 委派链路,确认无回归
-- [ ] **VALIDATE-02**: 增强 SOUL.md 在 3+ 个测试 prompt 上产生预期路由行为(即时命令走本地、认知命令走 MCP、默认走 LLM)
-- [ ] **VALIDATE-03**: Migration report `.planning/milestones/v7.0-MIGRATION-REPORT.md` 文档化所有 transform 决策 + 显式 skipped items(feishu-* / acp-router / models.json / sessions)及理由
+- [x] **VALIDATE-01**: 每个迁后 skill 用至少 1 个 benchmark prompt 测试触发 + 委派链路,确认无回归
+- [x] **VALIDATE-02**: 增强 SOUL.md 在 3+ 个测试 prompt 上产生预期路由行为(即时命令走本地、认知命令走 MCP、默认走 LLM)
+- [x] **VALIDATE-03**: Migration report `.planning/milestones/v7.0-MIGRATION-REPORT.md` 文档化所有 transform 决策 + 显式 skipped items(feishu-* / acp-router / models.json / sessions)及理由
 
 ## Future Requirements
 
@@ -87,9 +87,9 @@
 | MEM-02 | Phase 36 | Complete |
 | MEM-03 | Phase 36 | Complete |
 | MEM-04 | Phase 36 | Complete |
-| VALIDATE-01 | Phase 37 | Pending |
-| VALIDATE-02 | Phase 37 | Pending |
-| VALIDATE-03 | Phase 37 | Pending |
+| VALIDATE-01 | Phase 37 | Complete |
+| VALIDATE-02 | Phase 37 | Complete |
+| VALIDATE-03 | Phase 37 | Complete |
 
 **Coverage:**
 - v7.0 requirements: 14 total
