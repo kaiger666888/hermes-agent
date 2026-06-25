@@ -67,12 +67,14 @@ For completed milestone phase details, see:
   3. Both migrated skills carry complete `metadata.hermes.*` frontmatter (tags[], related_skills[], expert_id/metrics where applicable) indistinguishable in schema compliance from native hermes skills
   4. Both migrated skills declare prerequisites in hermes format (`prerequisites: {tools, commands, credentials}`) with zero unresolved openclaw-format (`metadata.openclaw.requires.{anyBins,config}`) dependencies remaining
   5. Coexistence decision (merge with / supplement / replace existing `skills/autonomous-ai-agents/{claude-code,codex,opencode,hermes-agent}`) is documented and either way the migrated skills do not break discovery of the existing 4
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 34-01: TBD
+- [ ] 34-01-PLAN.md — Migrate coding-agent SKILL.md (Wave 1)
+- [ ] 34-02-PLAN.md — Migrate tmux-agents SKILL.md (Wave 1, parallel with 34-01)
+- [ ] 34-03-PLAN.md — Wire bidirectional related_skills graph + write COEXISTENCE.md (Wave 2, depends on 34-01 + 34-02)
 
-**Repo-commit paths:** `skills/autonomous-ai-agents/coding-agent/SKILL.md`, `skills/autonomous-ai-agents/tmux-agents/SKILL.md`
+**Repo-commit paths:** `skills/autonomous-ai-agents/coding-agent/SKILL.md`, `skills/autonomous-ai-agents/tmux-agents/SKILL.md`, `skills/autonomous-ai-agents/COEXISTENCE.md`, 4 existing skill `related_skills` edits
 **Operator-state paths:** None (skills are repo-tracked)
 **Hermes-core touch:** No (pure skill content; no Python/JS code changes)
 **UI hint**: yes
