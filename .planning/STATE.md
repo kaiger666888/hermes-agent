@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: openclaw → hermes-agent Primary Agent Migration
 status: verifying
-last_updated: "2026-06-25T14:42:19.875Z"
-last_activity: "2026-06-25 — Plan 34-03 complete: Phase 34 fully complete (3/3 plans). Coexistence wired + COEXISTENCE.md authored."
+last_updated: "2026-06-25T15:02:26.318Z"
+last_activity: 2026-06-25
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 25
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 50
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -31,7 +31,7 @@ progress:
 Phase: 34 of 37 (Skills Migration — coding-agent + tmux-agents) — COMPLETE
 Plan: 03 of 03 in phase (03 complete — Phase 34 fully done; ready for verification gate)
 Status: Phase complete — ready for verification
-Last activity: 2026-06-25 — Plan 34-03 complete
+Last activity: 2026-06-25
 
 ### Progress
 
@@ -111,6 +111,7 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 | mem0 plugin exists at `plugins/memory/mem0/` — config-only changes acceptable | Plugin already deployed; batch-ingest CLI/config additions are NOT Hermes-core code changes. Stays within "config-only at most" scope. | Applied 2026-06-25 — Phase 36 Hermes-core touch annotated "Configuration-only at most" |
 | Phase 34 P01 | 8m | 1 tasks | 1 files |
 | Phase 34 P03 | ~2m | 2 tasks | 5 files |
+| Phase 35 P01 | 3min | 3 tasks | 1 files |
 
 ### Decisions (carried forward — relevant to v7.0)
 

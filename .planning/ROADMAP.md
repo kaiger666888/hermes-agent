@@ -51,7 +51,7 @@ For completed milestone phase details, see:
 - Decimal phases (e.g., 36.1): Reserved for urgent insertions only
 
 - [x] **Phase 34: Skills Migration (coding-agent + tmux-agents)** - Migrate 2 openclaw skills into `skills/autonomous-ai-agents/` with hermes schema adaptation (frontmatter + prerequisites), resolving coexistence with existing claude-code/codex/opencode skills. (completed 2026-06-25)
-- [ ] **Phase 35: SOUL.md Identity Enhancement** - Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively (preserve hermes defaults, mark openclaw origin, adapt trigger modes), with backup + transformation note.
+- [x] **Phase 35: SOUL.md Identity Enhancement** - Integrate openclaw AIGC routing rules into `~/.hermes/SOUL.md` non-destructively (preserve hermes defaults, mark openclaw origin, adapt trigger modes), with backup + transformation note. (completed 2026-06-25)
 - [ ] **Phase 36: Memory Ingestion (USER.md + 133 .md → mem0)** - Migrate USER.md to `~/.hermes/memories/` and batch-ingest 133 openclaw memory .md files (1.3MB) into mem0 backend with idempotent dedup, then spot-check via 5 sample queries.
 - [ ] **Phase 37: Validation & Migration Report** - Benchmark-test migrated skills + SOUL.md routing behavior, then produce canonical migration report documenting all transform decisions and explicitly skipped items.
 
@@ -91,7 +91,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 35-01-PLAN.md — Backup openclaw SOUL.md, integrate routing rules into ~/.hermes/SOUL.md (non-destructive + source-tagged), author transformation note (Wave 1, single plan covers SOUL-01..03)
+- [x] 35-01-PLAN.md — Backup openclaw SOUL.md, integrate routing rules into ~/.hermes/SOUL.md (non-destructive + source-tagged), author transformation note (Wave 1, single plan covers SOUL-01..03)
 
 **Repo-commit paths:** `.planning/phases/35-soul-enhancement/35-*-TRANSFORMATION-NOTE.md` (transformation note only)
 **Operator-state paths:** `~/.hermes/SOUL.md` (modified additively), `~/.hermes/SOUL.md.openclaw-backup-2026-06-25` (new backup) — these are operator-home-dir changes, NOT repo commits
@@ -145,7 +145,7 @@ Phases 34 → 35 → 36 → 37. Phases 34, 35, 36 have no strict inter-dependenc
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 34. Skills Migration (coding-agent + tmux-agents) | v7.0 | 3/3 | Complete   | 2026-06-25 |
-| 35. SOUL.md Identity Enhancement | v7.0 | 0/TBD | Not started | - |
+| 35. SOUL.md Identity Enhancement | v7.0 | 1/1 | Complete   | 2026-06-25 |
 | 36. Memory Ingestion (USER.md + 133 .md → mem0) | v7.0 | 0/TBD | Not started | - |
 | 37. Validation & Migration Report | v7.0 | 0/TBD | Not started | - |
 

@@ -22,9 +22,9 @@
 
 ### SOUL — Identity Enhancement
 
-- [ ] **SOUL-01**: openclaw `~/.openclaw/SOUL.md` 中的 AIGC 路由规则(即时执行命令 / 认知类命令 / 专家管理命令 / 默认)提取并整合进 `~/.hermes/SOUL.md`,**不覆盖** hermes 原有默认 SOUL 内容
-- [ ] **SOUL-02**: 路由规则从 openclaw 触发模式(本地 skill / MCP 调用)适配为 hermes 触发模式(slash commands / skill invocation / MCP / 直接对话),并在 SOUL.md 中显式标注来源(openclaw 迁移)与适配日期
-- [ ] **SOUL-03**: 原 openclaw SOUL.md 完整保留为 backup(`~/.hermes/SOUL.md.openclaw-backup-2026-06-25`),并在 `.planning/` 下产出 transformation note 记录每条规则的迁移去向
+- [x] **SOUL-01**: openclaw `~/.openclaw/SOUL.md` 中的 AIGC 路由规则(即时执行命令 / 认知类命令 / 专家管理命令 / 默认)提取并整合进 `~/.hermes/SOUL.md`,**不覆盖** hermes 原有默认 SOUL 内容
+- [x] **SOUL-02**: 路由规则从 openclaw 触发模式(本地 skill / MCP 调用)适配为 hermes 触发模式(slash commands / skill invocation / MCP / 直接对话),并在 SOUL.md 中显式标注来源(openclaw 迁移)与适配日期
+- [x] **SOUL-03**: 原 openclaw SOUL.md 完整保留为 backup(`~/.hermes/SOUL.md.openclaw-backup-2026-06-25`),并在 `.planning/` 下产出 transformation note 记录每条规则的迁移去向
 
 ### MEM — Memory Ingestion
 
@@ -80,9 +80,9 @@
 | SKILL-02 | Phase 34 | Complete |
 | SKILL-03 | Phase 34 | Complete |
 | SKILL-04 | Phase 34 | Complete |
-| SOUL-01 | Phase 35 | Pending |
-| SOUL-02 | Phase 35 | Pending |
-| SOUL-03 | Phase 35 | Pending |
+| SOUL-01 | Phase 35 | Complete |
+| SOUL-02 | Phase 35 | Complete |
+| SOUL-03 | Phase 35 | Complete |
 | MEM-01 | Phase 36 | Pending |
 | MEM-02 | Phase 36 | Pending |
 | MEM-03 | Phase 36 | Pending |
