@@ -8,6 +8,28 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
+## Current State (v7.0 shipped 2026-06-25)
+
+v7.0 SHIPPED — 4 phases (34-37), 14/14 requirements structurally satisfied, 8/8 integration points verified. Migration milestone delivered:
+
+- **Skills:** coding-agent + tmux-agents migrated to `skills/autonomous-ai-agents/` with SUPPLEMENT coexistence vs existing 4 skills; bidirectional `related_skills` graph wired
+- **Identity:** `~/.hermes/SOUL.md` integrated non-destructively (513B Hermes identity preserved byte-for-byte + 4 openclaw routing categories added with source tagging); backup at `~/.hermes/SOUL.md.openclaw-backup-2026-06-25`
+- **Memory:** USER.md migrated to `~/.hermes/memories/`; batch_ingest.py + spot_check.py tooling built under `plugins/memory/mem0/scripts/` (live ingestion deferred pending MEM0_API_KEY)
+- **Validation:** Canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md` (207 lines, 6 sections, all transform decisions + 5 explicitly-skipped categories documented)
+
+**Operator-action-handoffs (NOT gaps):** 4 runtime smoke-tests deferred per migration-milestone scoped-boundary design — see v7.0-MIGRATION-REPORT.md §Operator Action Items.
+
+## Next Milestone Goals
+
+Awaiting operator decision. Run `/gsd:new-milestone` to start v8.0 planning.
+
+Candidate priorities (from v7.0-MIGRATION-REPORT.md §Forward-Looking Notes):
+- Complete 4 deferred runtime smoke-tests (immediate)
+- feishu-* skills migration (largest deferred item)
+- Multi-profile mechanism (v7.0 used single SOUL.md)
+- Doc-consistency patch (124 vs 133 file count)
+- Integration of concurrent `34-review-gate-framework/` workstream
+
 ## Core Value
 
 每个 movie-expert skill 都能用检索增强的方式调用行业知识库(静态 refs 为主,可选向量 RAG),让 AI 生成的短剧/微电影在专业度上接近人类创作者水平 —— 这是决定短剧生死的核心。

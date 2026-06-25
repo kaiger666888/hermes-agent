@@ -1,5 +1,31 @@
 # Milestones
 
+## v7.0 openclaw → hermes-agent Primary Agent Migration (Shipped: 2026-06-25)
+
+**Phases completed:** 4 phases (34-37) · **Plans:** 7 · **Requirements:** 14 / 14 ✓
+**Tag:** `v7.0`
+**Audit:** [`v7.0-MILESTONE-AUDIT.md`](./v7.0-MILESTONE-AUDIT.md) — status: passed (14/14 reqs structurally satisfied, 8/8 integration points verified)
+**Migration report:** [`milestones/v7.0-MIGRATION-REPORT.md`](./milestones/v7.0-MIGRATION-REPORT.md) — canonical close-out (207 lines, 6 sections)
+
+**Paradigm shift:** v7.0 transitions hermes-agent from "movie-experts subsystem owner" to "Kai's primary agent". First milestone touching non-movie-experts scope — project category broadens from "movie-experts subsystem" to "personal hermes agent platform".
+
+**Key accomplishments:**
+
+- **Skills Migration (P34):** `coding-agent` (4 delegation targets: Codex/Claude Code/Pi/OpenCode) + `tmux-agents` (4 operations: spawn/list/attach/get-results) migrated to `skills/autonomous-ai-agents/`. SUPPLEMENT coexistence decision — bidirectional `related_skills` graph wired across all 6 autonomous-ai-agents skills. COEXISTENCE.md documents the partition.
+- **SOUL.md Identity Enhancement (P35):** Non-destructive integration of openclaw AIGC routing rules into `~/.hermes/SOUL.md`. Original 513B Hermes Nous-Research identity preserved byte-for-byte at file head; openclaw rules added under tagged H2 header. 4 routing categories (immediate/cognitive/expert-management/default) adapted from regex+MCP notation to natural-language skill-discovery + mem0 + curator references. 9× source tags + 10× date tags.
+- **Memory Ingestion (P36):** USER.md migrated to `~/.hermes/memories/` with openclaw-origin frontmatter. Idempotent batch_ingest.py (SHA-256 content-hash keyed) + spot_check.py (5 topic queries) built under `plugins/memory/mem0/scripts/`. Live ingestion deferred to operator (MEM0_API_KEY not configured at ship time) — commands documented in INGESTION-NOTE.md.
+- **Validation & Report (P37):** Structural benchmark validates both skills + SOUL routing + canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md` (207 lines, 6 H2 sections, 5 Explicitly Skipped categories with rationale, 14 reqs in traceability).
+
+**Project scope broadening:** v1-v6 focused on `skills/movie-experts/`; v7.0 is the project's first milestone outside that scope. PROJECT.md `## What This Is` evolved to "Kai's personal Hermes Agent platform" (first non-movie-experts milestone).
+
+**Operator-action-handoffs (NOT gaps):** 4 runtime smoke-tests deferred to operator per migration-milestone scoped-boundary design — MEM0_API_KEY config + live mem0 ingestion + SOUL routing observation + skill invocation smoke-test. All documented in v7.0-MIGRATION-REPORT.md §Operator Action Items with exact commands.
+
+**File count correction:** ROADMAP/REQUIREMENTS stated 133 memory files / 1.3MB; verified reality is **124 files / 817KB**. Corrected in `36-01-INGESTION-NOTE.md` and v7.0-MIGRATION-REPORT.md.
+
+**Known deferred items at close:** 4 operator-action smoke-tests + 1 pre-existing quick_task (unrelated to v7.0, carried from prior milestone). See STATE.md §Deferred Items.
+
+---
+
 ## v6.0 Self-Evolution & Feedback Loop (Shipped: 2026-06-24)
 
 **Phases completed:** 6 phases (28-33) · **Plans:** 13 · **Requirements:** 26 / 26 ✓

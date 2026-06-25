@@ -163,6 +163,16 @@ Items acknowledged and carried forward (NOT in v7.0 scope, explicitly deferred t
 | Storage | workspace/ GB-scale AIGC outputs | Stay in place (not agent capability) | v7.0 planning (2026-06-25) |
 | Runtime state | agents/<name>/sessions/ + auth-profiles.json | No migration value | v7.0 planning (2026-06-25) |
 
+Items acknowledged at v7.0 close (2026-06-25) — documented operator-action-handoffs (NOT gaps, per migration-milestone scoped boundary design):
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Operator smoke-test | MEM0_API_KEY config + live mem0 ingestion (124 .md files) | Documented in v7.0-MIGRATION-REPORT.md §Operator Action Items | v7.0 close (2026-06-25) |
+| Operator smoke-test | mem0 spot_check.py 5-query live run + idempotency re-test | Documented in v7.0-MIGRATION-REPORT.md §Operator Action Items | v7.0 close (2026-06-25) |
+| Operator smoke-test | SOUL.md routing live observation (3 prompt classes from hermes conversation) | Documented in v7.0-MIGRATION-REPORT.md §Operator Action Items | v7.0 close (2026-06-25) |
+| Operator smoke-test | coding-agent + tmux-agents skill invocation live test | Documented in v7.0-MIGRATION-REPORT.md §Operator Action Items | v7.0 close (2026-06-25) |
+| Quick task (pre-existing) | 260617-wgz-write-gap-analysis-doc-comparing-creativ | Unrelated to v7.0 (carried from prior milestone) | Pre-v7.0 |
+
 ## Session Continuity
 
 **If session is lost, restore context by reading:**
