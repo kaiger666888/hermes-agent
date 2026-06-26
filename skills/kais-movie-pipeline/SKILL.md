@@ -55,6 +55,59 @@ This skill ships with 7 reference docs under `references/` (created by sub-plan 
 
 External canonical source: [`skills/movie-experts/_shared/v86-pipeline-mapping.md`](../movie-experts/_shared/v86-pipeline-mapping.md) (Phase 27 v5.0 — frozen).
 
+## Step 0 — Formula Lookup (Phase 39 v9.0)
+
+> 来源:v9.0 FORM phase 新 plugin `plugins/formula_library/`(`formula_lookup` 工具)。Step 0 是 additive 前置 step,**不替换** V8.6 13-step 主线;Step 1 (p01 hook_topic) 仍为主线起点。Step 0 在 Step 1 之前执行,产出 formula_reference 作为 Step 1 的可选输入。
+
+### When to invoke Step 0
+
+每个 episode 启动前默认调用 Step 0 —— 从 `plugins/formula_library/` 检索 top-3 爆款公式,作为创意起点。Operator 可显式跳过(例如:operator 已有自定义题材 / 已手工选定公式)。Step 0 是 **advisory(建议性)** —— 即使返回空 library,管线仍从 Step 1 正常启动。
+
+### Step 0 I/O contract
+
+| Field | Direction | Type | Required | Notes |
+|-------|-----------|------|----------|-------|
+| `genre` | input | enum (5) | yes | 都市奇幻 / 悬疑反转 / 家庭情感 / 校园青春 / 职场商战 |
+| `mood` | input | enum (2) | yes | 轻喜剧 / 虐心 |
+| `platform` | input | enum (6) | yes | 抖音 / 快手 / B站 / 小红书 / 视频号 / 红果 |
+| `top_k` | input | int | optional | 默认 3 |
+| `formulas` | output | list[Formula] | yes | 按 platform_fit 降序排列的 top-k 公式(完整 schema:formula_id / genre / mood / pacing / hook_pattern / characters / runtime_sec / platform_fit / citation / verified_date / eval_score) |
+
+### Invocation
+
+```bash
+# In hermes-agent runtime (before starting p01):
+formula_lookup(genre="都市奇幻", mood="轻喜剧", platform="抖音", top_k=3)
+```
+
+返回示例(截断):
+```json
+[
+  {"formula_id": "urban-fantasy-light-01", "genre": "都市奇幻", "mood": "轻喜剧", "platform_fit": [{"platform": "抖音", "fit_score": 0.92}], ...},
+  ...
+]
+```
+
+### Downstream consumption
+
+Step 0 的输出 `formulas[0]`(top-1)作为:
+- **Step 1 (p01 hook_topic) 的可选输入** —— `hook_retention` 专家可参考公式的 `hook_pattern` + `characters` 设计本 episode 的 3 秒钩子
+- **theory_critic 的可选 `formula_reference` 输入**(参见 theory_critic SKILL.md §Formula Reference Integration)—— 理论批评时可对照公式评分
+
+### V8.6 编号关系
+
+Step 0 是 **additive** —— 不重排 V8.6 13-step 主线编号。Step 0 在所有 13 步之前执行,但其输出是 advisory(建议性),不通过任何 gate。即使 Step 0 返回空 library(library 加载失败 / 无匹配公式),管线仍可从 Step 1 正常启动。
+
+### Plugin location
+
+Plugin 源码:`plugins/formula_library/`(plugin.yaml + schema.py + lookup.py + tools.py + library/*.json)。Plugin 通过现有 `hermes_cli/plugins.py` registry 自动发现,无需 Hermes 核心代码修改。
+
+### Cross-References
+
+- [`plugins/formula_library/README.md`](../../plugins/formula_library/README.md) — Plugin 文档(双语)+ 用法 + 添加公式指南
+- [`references/genre-anchor-urban-fantasy.md`](./references/genre-anchor-urban-fantasy.md) — V1 题材锚定(都市奇幻·轻喜剧)— 多条 seed 公式的 citation 源
+- [`../../movie-experts/hook_retention/references/three-second-hooks.md`](../../movie-experts/hook_retention/references/three-second-hooks.md) — 3 秒钩子分类法(formula `hook_pattern` 字段的 5 类型源)
+
 ## Pipeline DAG
 
 The pipeline runs 13 Steps. Steps 1–3 are the **Phase 35 vertical slice** (implemented by sub-plan 35-03); Steps 4–13 are **Phase 36 scope** (registered as stubs but not implemented in Phase 35).
