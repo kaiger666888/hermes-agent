@@ -44,6 +44,8 @@ metadata:
 | `references/platform-specs-kuaishou.md` | Before 快手 distribution advice | 快手 同样 5 H2 结构(草根共鸣 / 家庭伦理 公式 强) |
 | `references/platform-specs-miniprogram.md` | Before 微信小程序剧 advice | 小程序剧 同样 5 H2 + 双重 备案(广电 + 微信小程序) |
 | `_shared/platform-comparison.md` | When choosing target platform or comparing 分发 cuts | 3×4 matrix (付费门槛 / 红线差异 / 备案触发 / 推荐时长) + 选台决策树 |
+| [`../../kais-movie-pipeline/references/creative-redlines.md`](../../kais-movie-pipeline/references/creative-redlines.md) | Before any creative-structure review (engagement / pacing / ending) | 7 cross-platform creative red lines (情绪脱敏 / 信息分层 / 零背景铺垫 / 结尾未完成 / 差异化识别 + 2 process red lines) — SEPARATE from this expert's §1..§8 legal 红线; both layers must pass |
+| [`../../kais-movie-pipeline/references/platform-specs.md`](../../kais-movie-pipeline/references/platform-specs.md) | Before per-platform 分发 cut advice | V1 hard-spec matrix: 竖屏滑动 vs 横屏主动 (10-row 硬性规格) + 12-row 刚性约束 by 生理/行为/平台/市场 layer |
 
 ## Role & Philosophy
 

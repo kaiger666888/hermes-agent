@@ -41,7 +41,7 @@ Invoke `/kais-movie-pipeline` when the operator wants one of the following:
 
 ## References
 
-This skill ships with 4 reference docs under `references/` (created by sub-plan 35-04). All numeric thresholds / canonical mappings live in refs; this SKILL.md body only links to them.
+This skill ships with 7 reference docs under `references/` (created by sub-plan 35-04 + quick task 260626-vzl). All numeric thresholds / canonical mappings live in refs; this SKILL.md body only links to them.
 
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
@@ -49,6 +49,9 @@ This skill ships with 4 reference docs under `references/` (created by sub-plan 
 | `references/review-gates.md` | Before configuring gates or debugging a blocked run | 8-gate V8.6 review structure: gate_id / trigger phase / reviewer role / mode (sync vs async) |
 | `references/asset-bus-schema.md` | Before adding a phase-output slot | Slot lifecycle (write → read → append), slot format (JSON vs JSONL), envelope wrapping rules |
 | `references/expert-mapping.md` | Before wiring a phase to its expert | 13-row Step ↔ expert_id mapping table (canonical source: `_shared/v86-pipeline-mapping.md`) |
+| `references/platform-specs.md` | Before per-platform 分发 / duration / hook placement decisions | V1 hard-spec matrix (竖屏滑动 vs 横屏主动, 10-row 硬性规格) + 12-row 刚性约束 by layer + per-expert consultation guide |
+| `references/creative-redlines.md` | Before any single-episode compliance review or A/B convergence loop | 7 cross-platform creative invariants (5 per-episode: 情绪脱敏/信息分层/零背景铺垫/结尾未完成/差异化识别 + 2 process: 控制变量/统计显著) |
+| `references/genre-anchor-urban-fantasy.md` | Before any v1 production (default genre unless operator overrides) | V1 题材锚定 都市奇幻·轻喜剧:核心 DNA + per-platform content form + 3-month 启动方案 + 变现逻辑 + 题材禁忌 |
 
 External canonical source: [`skills/movie-experts/_shared/v86-pipeline-mapping.md`](../movie-experts/_shared/v86-pipeline-mapping.md) (Phase 27 v5.0 — frozen).
 

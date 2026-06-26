@@ -52,6 +52,8 @@ Invoke this expert when the user needs:
 | [`_shared/project-corpus/film-history-methods.md`](../_shared/project-corpus/film-history-methods.md) | 做电影史研究 / 跨时代对比时 | Allen《电影史理论与实践》4 大史学路径(美学/经济/技术/社会) + 实在论方法论 + 短剧史研究 |
 | [`_shared/project-corpus/narrative-revolution-and-modernism.md`](../_shared/project-corpus/narrative-revolution-and-modernism.md) | 研究反传统叙事 / 现代主义时 | 郭小橹《电影理论笔记》叙事革命词汇表 + 本雅明(机械复制/灵光)+ 阿多诺(文化工业) |
 | [`_shared/project-corpus/README.md`](../_shared/project-corpus/README.md) | 查找具体原书时 | 102 本书索引,按 7 大类(剧本/分镜/拍摄/后期/制片/理论/史类)分类 |
+| [`../../kais-movie-pipeline/references/genre-anchor-urban-fantasy.md`](../../kais-movie-pipeline/references/genre-anchor-urban-fantasy.md) | When evaluating v1 productions against the canonical 都市奇幻·轻喜剧 DNA | V1 题材锚定:核心 DNA (超能力 + 轻喜剧 + 主线悬念) + 8-row per-platform content form + 3-month 启动方案 + 题材禁忌 |
+| [`../../kais-movie-pipeline/references/creative-redlines.md`](../../kais-movie-pipeline/references/creative-redlines.md) | When flagging creative-strategy violations in critique | 7 cross-platform invariants (5 per-episode + 2 process) — theory_critic flags these in advisory output, distinct from compliance_gate's legal hard-gate |
 
 ## Role & Philosophy
 
