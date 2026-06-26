@@ -147,6 +147,29 @@ Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → g
 
 ---
 
+## Step 14 — Additive Extension (Phase 38 v9.0)
+
+> Added in Phase 38 (v9.0). Step 14 is ADDITIVE — the V8.6 13-step numbering is preserved (Step 1–13 unchanged, `step_count: 13` in frontmatter unchanged). Step 14 fires AFTER Step 13 delivery completes.
+
+**Purpose:** Platform master slicing — turn 1 master.mp4 into 7 platform-specific variants (抖音竖屏 / 抖音横屏 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果或快手极短). Algorithm + 4 decision points: [`platform-master-slicing.md`](./platform-master-slicing.md).
+
+**DAG position (ASCII):**
+
+```
+[Step 13 delivery] ──(writes master-mp4)──▶ [Step 14 platform slicing] ──(writes variants[])──▶ (Phase 42 DATA consumes)
+                                                  │
+                                                  └── READS: master-mp4, hook-design, spatio-temporal-script, scene-images
+```
+
+**Step 14 does NOT:**
+- Modify any of the 13 V8.6 Steps or their slot writes
+- Add a new gate (the existing 8-gate V8.6 review structure is unchanged; per-variant compliance sign-off happens via the existing `final-delivery` Gate 8 + per-variant AIGC labeling)
+- Appear in the frontmatter `pipeline.step_count` (stays 13) or `pipeline.gate_count` (stays 8)
+
+**Phase 42 contract:** variants[] is the data contract Phase 42 DATA consumes to attach per-platform metrics. See [`asset-bus-schema.md`](./asset-bus-schema.md) §Phase 38 Slots for schema.
+
+---
+
 ## Refresh Cadence
 
 This ref is **re-verified quarterly** per `_shared/` convention. Drift triggers (from `_shared/v86-pipeline-mapping.md` §"Refresh Cadence"):

@@ -98,6 +98,44 @@ Phase 35-02 extends `ASSET_SCHEMA` with 6 phase-output slots for the p01-p03 ver
 
 ---
 
+## Phase 38 Slots (Additive — variants[])
+
+> Added in Phase 38 (v9.0). Per CONTEXT D-38-01: variants[] is an ADDITIVE field on the `pipeline_state.episode_id` struct, NOT a new top-level AssetBus slot. It is written by Step 14 (Platform Master Slicing) after the existing `master-mp4` slot (p13 output) is populated.
+
+**Lifecycle:** write-once per episode (after Step 14 slicing completes). Read by Phase 42 DATA adapters for per-platform metric bucketing.
+
+| Field | Format | Writer | Reader | Purpose |
+|-------|--------|--------|--------|---------|
+| `variants[]` | JSON (array on episode_id) | Step 14 (Platform Master Slicing, v9.0 Phase 38) | Phase 42 DATA adapter (per-platform metric attachment) | 7-element array, one per platform variant. Schema: `{platform, aspect_ratio, length, hook_timestamps, cut_points, source_master_hash}`. Canonical algorithm + field semantics: [`platform-master-slicing.md`](./platform-master-slicing.md) §variants[] Schema |
+
+**Schema (reproduced from `platform-master-slicing.md`):**
+
+```json
+{
+  "variants": [
+    {
+      "platform": "<one of 7 enum values per platform-master-slicing.md>",
+      "aspect_ratio": "<W:H per platform-specs.md 7-row matrix>",
+      "length": <int, seconds>,
+      "hook_timestamps": {
+        "opening_hook_start_sec": <float>,
+        "opening_hook_end_sec": <float>,
+        "closing_hook_start_sec": <float>,
+        "closing_hook_end_sec": <float>
+      },
+      "cut_points": [
+        {"timestamp_sec": <float>, "reason": "<opening_hook_boundary|first_emotional_turn|memory_closure|emotion_unit_gap_fill|closing_hook_boundary>"}
+      ],
+      "source_master_hash": "sha256:<master-mp4 slot content_hash>"
+    }
+  ]
+}
+```
+
+**Naming note:** `variants[]` is a field on the existing `episode_id` struct in `pipeline_state`, NOT a new slot in `ASSET_SCHEMA`. It is documented here alongside slot schemas because it follows the same envelope + atomic-write + creative-history-DAG conventions. Phase 42 DATA will add consumer-side Pydantic validation; Phase 38 ships the schema doc only (no Python code).
+
+---
+
 ## Envelope Schema
 
 Every JSON slot write wraps the payload in a v3.0 envelope via `bus.write(slot, value, envelope=True)` (default). Read auto-unwraps — callers receive the raw payload. Reference: `wrap_envelope` / `unwrap_envelope` in `plugins/pipeline_state/asset_bus.py`.
