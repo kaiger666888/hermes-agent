@@ -73,8 +73,9 @@ class TestFormulaValidation:
 
     def test_fit_score_out_of_range_raises(self) -> None:
         kw = _valid_formula_kwargs()
-        kw["platform_fit"] = [PlatformFit(platform="抖音", fit_score=1.5)]
-        # PlatformFit __init__ should raise (validator on fit_score)
+        # Pass as raw dict so validation runs at Formula.model_validate time;
+        # constructing PlatformFit directly raises at the PlatformFit level.
+        kw["platform_fit"] = [{"platform": "抖音", "fit_score": 1.5}]
         with pytest.raises(ValidationError):
             Formula.model_validate(kw)
 
@@ -180,10 +181,12 @@ class TestFormulaLibrary:
         """load_from_dir degrades gracefully — invalid JSON files are skipped."""
         import json
 
-        valid = _valid_formula_kwargs()
+        # Build a JSON-serializable valid formula via model_dump(mode="json")
+        # so nested PlatformFit / Citation become dicts (not repr strings).
+        valid_formula = Formula.model_validate(_valid_formula_kwargs())
         valid_path = tmp_path / "formula_valid_01.json"
         valid_path.write_text(
-            json.dumps(valid, default=str, ensure_ascii=False),
+            json.dumps(valid_formula.model_dump(mode="json"), ensure_ascii=False),
             encoding="utf-8",
         )
         # Invalid JSON — missing required field "genre"
