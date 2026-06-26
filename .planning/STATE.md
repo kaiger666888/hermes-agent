@@ -31,7 +31,7 @@ progress:
 Phase: 37 of 37 (Validation & Migration Report) — COMPLETE (v7.0 milestone ready for `/gsd:complete-milestone v7.0`)
 Plan: 01 of 01 in phase (01 complete — Phase 37 fully done; v7.0 milestone closed)
 Status: Milestone complete — ready for v7.0 archive + v8.0 planning
-Last activity: 2026-06-26 - Completed quick task 260626-t0q: CJK error classification (openclaw pattern port + Zhipu codes)
+Last activity: 2026-06-26 - Completed quick task 260626-vzl: Encode Notion "创作方向" into kais-movie-pipeline refs (3 new refs + 3 SKILL.md patches)
 
 ### Progress
 
@@ -154,6 +154,7 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 |---|-------------|------|--------|-----------|
 | 260626-rq4 | flood-aware `_send_with_retry` (parse retry_after, clamp [3,60]s, default 5s) | 2026-06-26 | dda0e6c1a | [260626-rq4-flood-aware-send-retry](./quick/260626-rq4-flood-aware-send-retry/) |
 | 260626-t0q | CJK error classification (port openclaw failover-matches + Zhipu 1305/1311/1113 codes) | 2026-06-26 | c9e1ca8d4 | [260626-t0q-cjk-error-classification](./quick/260626-t0q-cjk-error-classification/) |
+| 260626-vzl | Encode Notion "创作方向" into kais-movie-pipeline refs (3 new refs: platform-specs / creative-redlines / genre-anchor-urban-fantasy + 3 SKILL.md References table patches: compliance_gate / theory_critic / kais-movie-pipeline) | 2026-06-26 | bd53bc387 | [260626-vzl-kmp-creative-direction-refs](./quick/260626-vzl-kmp-creative-direction-refs/) |
 
 ## Deferred Items
 
