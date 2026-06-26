@@ -1,0 +1,170 @@
+{
+  "total_comparisons": 15,
+  "verdicts": [
+    {
+      "prompt_id": "compli-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-004",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-005",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "new_with_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-004",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-005",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_no_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-001",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-002",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-003",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-004",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    },
+    {
+      "prompt_id": "compli-005",
+      "ordering_ab": "A",
+      "ordering_ba": "B",
+      "final": "tie",
+      "pair": [
+        "new_with_refs",
+        "old_no_refs"
+      ],
+      "judge": "qwen/qwen3-235b-a22b:free"
+    }
+  ]
+}
