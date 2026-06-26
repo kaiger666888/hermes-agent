@@ -264,6 +264,28 @@ Step 6.5 is a Phase 41 additive insertion between Step 6 (storyboard) and Step 7
 
 **v9.0 scope boundary (operator-action-handoff — SC#4):** Live GPU generation testing is operator-side (V9-FUTURE-02 deferred). This wiring + `references/ltx2-preview-loop.md` baseline is the v9.0 deliverable only — actual LTX2.3 model generation validation requires operator-side GPU runtime + KAIS_* env keys not in scope for Phase 41.
 
+## Step 14 — Platform Master Slicing (Additive)
+
+*Step 14 is an ADDITIVE extension introduced in v9.0 Phase 38. The V8.6 13-step numbering is preserved (Step 1–13 unchanged). Step 14 fires AFTER Step 13 delivery completes.*
+
+**Purpose:** Turn 1 master.mp4 (Step 13 output) into 7 platform-specific variants — 抖音竖屏 9:16 / 抖音横屏 16:9 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果或快手极短 1-2min. Each variant auto-adapts aspect ratio + opening hook position + mid-segment 卡点 density + closing hook, all per `references/platform-specs.md` rigid constraints (not manual).
+
+**Algorithm source:** [`references/platform-master-slicing.md`](references/platform-master-slicing.md) — canonical 7-variant algorithm + 4 key decision points (D1 aspect-ratio / D2 opening hook / D3 卡点 density / D4 closing hook).
+
+**Inputs (READ from existing slots — Step 14 does NOT write to these):**
+- `master-mp4` (p13 output) — source master render
+- `hook-design` (p01 output) — opening hook timestamp for D2 repositioning
+- `spatio-temporal-script` (p06 output) — emotion-tagged beat sheet for D3 卡点 density
+- `scene-images` (p07 output) — B-roll candidates for D2/D4 re-cut injection
+
+**Outputs (WRITE — additive):**
+- `pipeline_state.episode_id.variants[]` — 7-element array, schema documented in `references/platform-master-slicing.md` §variants[] Schema and `references/asset-bus-schema.md` §Phase 38 Slots. Fields: `platform` / `aspect_ratio` / `length` / `hook_timestamps` / `cut_points`.
+- `delivery-package` slot extension — 7 per-platform mp4 paths (additive to existing p13 delivery-package manifest)
+
+**Expert involvement:** editor (executes cuts), hook_retention (consults on D2/D4 hook repositioning), cinematographer (consults on D1 aspect-ratio reframe), compliance_gate (final per-variant AIGC 标识 sign-off per `references/platform-specs.md` 刚性约束 平台层).
+
+**Phase 42 contract:** variants[] is the data contract Phase 42 DATA consumes to attach per-platform metrics (完播率 / 卡点跳出率 / 互动率 / 收藏率 / 评论率). Schema enforcement happens consumer-side in Phase 42; Phase 38 only produces the schema doc + the algorithm spec.
+
 ## Asset Bus Schema
 
 Phase outputs flow through the AssetBus (Phase 33 plugin, extended in 35-02 per D-35-05). Each slot is JSON format (envelope-wrapped, atomic write) unless explicitly marked JSONL (append-only history).
