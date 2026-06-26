@@ -2,7 +2,7 @@
 
 **Source:** `_shared/v86-pipeline-mapping.md` (canonical V8.6 mapping ref, Phase 27) — which itself cites `kais-movie-agent/SKILL.md` @ commit `e41fa68`.
 **Copyright:** Fair Use — Step dependency structure is factual integration architecture; brief verbatim quotations attributed.
-**Last-verified:** 2026-06-26 (Phase 36-05 Wave 2 refinement — full slot-flow table added)
+**Last-verified:** 2026-06-27 (Phase 41 Step 6.5 additive annotation — preview slot inserted mid-edge p06→p07)
 
 ---
 
@@ -26,6 +26,7 @@ graph TD
     S4[Step 4<br/>character_designer+visual_executor<br/>主角+资产库]
     S5[Step 5<br/>cinematographer+style_genome<br/>场景设计]
     S6[Step 6<br/>screenplay+cinematographer+script_auditor<br/>运镜+终审]
+    S65[Step 6.5<br/>LTX2.3 fast-preview<br/>composition+framing+pacing]
     S7[Step 7<br/>visual_executor+prompt_injector+style_genome+colorist<br/>视觉种子+风格化]
     S7B[Step 7B<br/>audio_pipeline<br/>声音骨架]
     S8[Step 8<br/>cinematographer+editor<br/>运镜+节奏]
@@ -39,13 +40,17 @@ graph TD
     S3 --> S4
     S4 --> S5
     S5 --> S6
-    S6 --> S7
+    S6 --> S65
+    S65 --> S7
     S7 --> S7B
     S7B --> S8
     S8 --> S9
     S9 --> S10
     S10 --> S11
     S11 --> S1213
+
+    classDef p41 fill:#fef,stroke:#939,stroke-width:2px,stroke-dasharray: 2 2
+    class S65 p41
 ```
 
 **ASCII fallback table:**
@@ -58,6 +63,7 @@ graph TD
 | **Step 4** | 主角设计 + 资产库 | `character_designer` + `visual_executor` (drawer) | — | — |
 | **Step 5** | 场景设计 | `cinematographer` + `style_genome` + `visual_executor` (drawer) | — | — |
 | **Step 6** | 运镜 + 终审 (atomic) | `screenplay` + `cinematographer` + `script_auditor` | — | §5 (V8.4 前置) |
+| **Step 6.5** | LTX2.3 fast-preview (composition+framing+pacing check) | `visual_executor` (animator) + `cinematographer` (audit) | — | (Phase 41 additive) |
 | **Step 7** | 视觉种子 + 风格化 (atomic) | `visual_executor` + `prompt_injector` + `style_genome` + `colorist` | — | §4 |
 | **Step 7B** | 声音骨架 | `audio_pipeline` (voicer + composer + foley sub-steps) | — | — |
 | **Step 8** | 运镜 + 节奏 | `cinematographer` + `editor` | — | — |
@@ -67,6 +73,8 @@ graph TD
 | **Step 12-13** | (预留扩展 — delivery, Phase 36 defines) | TBD | — | — |
 
 **Step 2.5 style_genome 前置:** style_genome fires after Step 2 story framework confirmed (positioned at Step 2.5), output 5D vector 贯穿下游. Not an independent Step — insertion slot between Step 2 and Step 4.
+
+**Step 6.5 (Phase 41 additive):** Inserted between Step 6 (storyboard) and Step 7 (visual production). Not part of the original V8.6 13-Step numbering — additive extension per Phase 41 PREVIEW. Runs LTX2.3 ~5s fast-preview to catch composition / framing / pacing problems before committing GPU budget to Step 7+. See [`ltx2-preview-loop.md`](./ltx2-preview-loop.md) for baseline + 3-dim thresholds + fallback policy (max 2 retries → BLOCKING gate).
 
 **Conditional branches:**
 - **Shot-level parallelism** (Step 10): `parallel_shots: 4` preserved per V8.6 / v2.0 behavior — episode-level shot generation dispatches concurrently (runner.py config plumbing lands in Phase 35-02; actual parallel dispatch exercised in p11/Phase 36).
@@ -114,6 +122,8 @@ Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → g
 | p04 → p05 | `character-bible`, `character-assets` | p04 → `p04_character_design` | p05 → `p05_pain_discovery` |
 | p05 → p06 | `pain-points`, `escalation-ladder` | p05 → `p05_pain_discovery` | p06 → `p06_spatio_temporal_script` (Gate 4 `shot-prep` review boundary) |
 | p06 → p07 | `spatio-temporal-script`, `final-audit` | p06 → `p06_spatio_temporal_script` (Gate 6 `spatio-temporal` review boundary) | p07 → `p07_scene_generation` |
+| p06 → p06.5 | `spatio-temporal-script`, `final-audit` | p06 → `p06_spatio_temporal_script` (Gate 6 boundary) | p06.5 → `p06_5_ltx2_preview` (Phase 41) |
+| p06.5 → p07 | `preview-clips`, `preview-audit` (+ pass-through `spatio-temporal-script`) | p06.5 → `p06_5_ltx2_preview` (Phase 41) | p07 → `p07_scene_generation` (Gate 5 boundary) |
 | p07 → p08 | `scene-images`, `style-vector`, `color-intent` | p07 → `p07_scene_generation` (Gate 5 `scene-design` review boundary) | p08 → `p08_scene_selection` |
 | p08 → p09 | `scene-selection`, `geometry-bed` | p08 → `p08_scene_selection` | p09 → `p09_shot_breakdown` |
 | p09 → p10 | `shot-list`, `e-konte-sheets` | p09 → `p09_shot_breakdown` | p10 → `p10_voice` |
@@ -133,6 +143,7 @@ Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → g
 
 **Slots not on the DAG spine (side outputs):**
 - `topic-kernel`, `hook-design`, `story-framework`, `audit-report`, `pain-points`, `escalation-ladder`, `final-audit`, `e-konte-sheets`, `geometry-bed`, `voice-clips`, `lip-sync-reports` — written once, consumed by review gates or downstream analytics, not re-read by later phase modules.
+- `preview-clips`, `preview-audit` (Phase 41) — written by p06.5, consumed by review_gates escalation path (only on retry exhaustion, max_retries=2) and operator audit. Envelope-wrapped with `derived_from: spatio-temporal-script` per Phase 33 AssetBus V3 pattern.
 
 ---
 
@@ -154,4 +165,5 @@ Re-verification action: re-read latest `kais-movie-agent/SKILL.md`, diff against
 - [`review-gates.md`](./review-gates.md) — which gates fire when, reviewer role, mode
 - [`asset-bus-schema.md`](./asset-bus-schema.md) — slot types + read/write contracts per edge
 - [`expert-mapping.md`](./expert-mapping.md) — 13 phase ↔ 15 expert mapping detail
+- [`ltx2-preview-loop.md`](./ltx2-preview-loop.md) — Step 6.5 baseline + 3-dim thresholds + fallback policy (Phase 41)
 - `_shared/v86-pipeline-mapping.md` (in `movie-experts/_shared/`) — canonical source ref
