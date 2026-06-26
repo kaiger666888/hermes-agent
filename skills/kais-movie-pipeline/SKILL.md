@@ -53,6 +53,7 @@ This skill ships with 8 reference docs under `references/` (created by sub-plan 
 | `references/creative-redlines.md` | Before any single-episode compliance review or A/B convergence loop | 7 cross-platform creative invariants (5 per-episode: 情绪脱敏/信息分层/零背景铺垫/结尾未完成/差异化识别 + 2 process: 控制变量/统计显著) |
 | `references/genre-anchor-urban-fantasy.md` | Before any v1 production (default genre unless operator overrides) | V1 题材锚定 都市奇幻·轻喜剧:核心 DNA + per-platform content form + 3-month 启动方案 + 变现逻辑 + 题材禁忌 |
 | `references/ltx2-preview-loop.md` | Before running Step 6.5 preview or debugging a preview-fail loop | LTX2.3 baseline (model selection / ~5s budget / 3-dim thresholds composition+framing+pacing / prompt template / fallback policy max 2 retries → BLOCKING gate) |
+| `references/data-convergence.md` | Before running Step 15 or inspecting platform metrics / tuning suggestions | Platform API → adapter → FeedbackRecordExtension → tuning_loop → JSONL queue → formula_library eval_score write-back (Phase 42 DATA) |
 
 External canonical source: [`skills/movie-experts/_shared/v86-pipeline-mapping.md`](../movie-experts/_shared/v86-pipeline-mapping.md) (Phase 27 v5.0 — frozen).
 
@@ -285,6 +286,29 @@ Step 6.5 is a Phase 41 additive insertion between Step 6 (storyboard) and Step 7
 **Expert involvement:** editor (executes cuts), hook_retention (consults on D2/D4 hook repositioning), cinematographer (consults on D1 aspect-ratio reframe), compliance_gate (final per-variant AIGC 标识 sign-off per `references/platform-specs.md` 刚性约束 平台层).
 
 **Phase 42 contract:** variants[] is the data contract Phase 42 DATA consumes to attach per-platform metrics (完播率 / 卡点跳出率 / 互动率 / 收藏率 / 评论率). Schema enforcement happens consumer-side in Phase 42; Phase 38 only produces the schema doc + the algorithm spec.
+
+## Step 15 — Data Convergence & Formula Tuning (Additive)
+
+*Step 15 is an ADDITIVE extension introduced in v9.0 Phase 42. The V8.6 13-step numbering is preserved (Step 1–13 unchanged, `step_count: 13` in frontmatter unchanged, `gate_count: 8` unchanged). Step 15 fires AFTER Step 14 platform slicing completes — it is the feedback loop that closes 创意→生产→分发→反馈.*
+
+**Purpose:** Capture platform performance metrics (完播率 / 卡点跳出率 / 互动率 / 收藏率 / 评论率) from the 5 supported platforms, persist them via the `plugins/platform_metrics/` plugin, run a formula tuning loop that suggests `plugins/formula_library/` improvements, and expose a `hermes formula stats` dashboard for operator inspection.
+
+**Algorithm + architecture source:** [`references/data-convergence.md`](references/data-convergence.md) — canonical data-flow diagram + 5 platform adapter details + JSONL queue lifecycle + MetricTrigger rules + operator setup.
+
+**Scope discipline (Option A — load-bearing):** Phase 42 ships a NEW plugin `plugins/platform_metrics/` rather than modifying `agent/feedback_schema.py` (Hermes core). `FeedbackRecordExtension` composes WITH v6.0 `FeedbackRecord` via a `feedback_id` string FK — v6.0 records remain untouched. See `data-convergence.md` §Scope Discipline.
+
+**Inputs (READ from existing slots + external platform APIs):**
+- `pipeline_state.episode_id.variants[]` (p14 output) — per-platform variant identity (the `variant_id` FK target)
+- Platform APIs (operator-side activation via `~/.hermes/.env` keys: `DOUYIN_API_KEY` / `KUAISHOU_API_KEY` / `WEIXIN_VIDEO_API_KEY` / `XIAOHONGSHU_API_KEY` / `BILIBILI_API_KEY`)
+
+**Outputs (WRITE — additive, all under `plugins/platform_metrics/` + `<HERMES_HOME>/skills/.feedback/tuning/`):**
+- `FeedbackRecordExtension` records (compose with v6.0 FeedbackStore via feedback_id FK)
+- `TuningSuggestion` records in JSONL review queue (pending / applied / rejected)
+- `formula_library/library/*.json:eval_score` field updates (post operator approval)
+
+**Expert involvement:** theory_critic (formula tuning suggestions may inform its `formula_reference` input on the next episode), hook_retention (HIGH_HOOK_DROPOFF trigger maps to its domain), editor (LOW_COMPLETION may indicate pacing issue). Step 15 does NOT add new expert calls — it produces suggestions that the operator may apply to future Step 0 lookups.
+
+**Operator-action-handoff (V9-FUTURE-01):** Live platform API data ingestion is operator-side. v9.0 ships: schema (PlatformMetrics / FeedbackRecordExtension / TuningSuggestion) + 5 adapter stubs (env-key activation + NotImplementedError on live path) + tuning_loop engine + JSONL queue + `hermes formula stats` CLI + this ref doc. Operator configures the 5 API keys → adapters activate; live HTTP ingestion itself is V9-FUTURE-01.
 
 ## Asset Bus Schema
 

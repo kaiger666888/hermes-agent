@@ -170,6 +170,35 @@ Phase 35's 3 phases exercise the full orchestration lifecycle (load expert → g
 
 ---
 
+## Step 15 — Additive Extension (Phase 42 v9.0)
+
+> Added in Phase 42 (v9.0). Step 15 is ADDITIVE — the V8.6 13-step numbering is preserved (Step 1–13 unchanged, `step_count: 13` in frontmatter unchanged, gate count unchanged). Step 15 fires AFTER Step 14 platform slicing completes. It is the feedback loop closing 创意→生产→分发→反馈.
+
+**Purpose:** Data convergence — capture platform performance metrics, persist via `plugins/platform_metrics/`, run formula tuning loop, expose `hermes formula stats` CLI. Algorithm + architecture: [`data-convergence.md`](./data-convergence.md).
+
+**DAG position (ASCII):**
+
+```
+[Step 14 variants[]] ──(operator uploads)──▶ [Platform API] ──(adapter)──▶ [PlatformMetrics]
+                                                                                        ↓
+                                                              [tuning_loop] ◀── [FeedbackRecordExtension]
+                                                                      ↓
+                                            [JSONL queue (pending)] ──(operator approve)──▶ [formula_library eval_score]
+                                                                                                      ↓
+                                                                                            [Step 0 next episode]
+```
+
+**Step 15 does NOT:**
+- Modify any of the 13 V8.6 Steps or their slot writes
+- Modify Step 14's variants[] schema (consumes it read-only)
+- Add a new gate (the existing 8-gate + Phase-40's 3 redline gates = 11 total is unchanged)
+- Appear in the frontmatter `pipeline.step_count` (stays 13) or `pipeline.gate_count` (stays 8)
+- Touch `agent/feedback_schema.py` or any Hermes core file (Option A scope discipline)
+
+**Phase 43 contract:** Step 15 is the LAST additive step in v9.0. Phase 43 VALIDATE verifies Step 14 → Step 15 wiring (variants[] is the data contract) + FOUND-08 byte-diff audit + publishes v9.0-MILESTONE-AUDIT.md.
+
+---
+
 ## Refresh Cadence
 
 This ref is **re-verified quarterly** per `_shared/` convention. Drift triggers (from `_shared/v86-pipeline-mapping.md` §"Refresh Cadence"):
@@ -189,4 +218,5 @@ Re-verification action: re-read latest `kais-movie-agent/SKILL.md`, diff against
 - [`asset-bus-schema.md`](./asset-bus-schema.md) — slot types + read/write contracts per edge
 - [`expert-mapping.md`](./expert-mapping.md) — 13 phase ↔ 15 expert mapping detail
 - [`ltx2-preview-loop.md`](./ltx2-preview-loop.md) — Step 6.5 baseline + 3-dim thresholds + fallback policy (Phase 41)
+- [`data-convergence.md`](./data-convergence.md) — Step 15 data flow + 5 platform adapters + JSONL tuning queue (Phase 42 DATA)
 - `_shared/v86-pipeline-mapping.md` (in `movie-experts/_shared/`) — canonical source ref
