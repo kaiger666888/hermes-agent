@@ -1654,3 +1654,203 @@ class TestMultimodalToolContentUnsupported:
         e = MockAPIError("bad request: missing field 'model'", status_code=400)
         result = classify_api_error(e, provider="openrouter", model="anthropic/claude-sonnet-4")
         assert result.reason != FailoverReason.multimodal_tool_content_unsupported
+
+
+# ── openclaw CJK + English pattern coverage (ported from failover-matches.ts) ──
+
+class TestOpenclawCjkPatterns:
+    """CJK + English error patterns ported from openclaw's failover-matches.ts.
+
+    Source: /home/kai/.nvm/versions/node/v24.13.0/lib/node_modules/openclaw/
+            dist/failover-matches-C-tab7FS.js
+    The simplified-Chinese codepoints must be preserved verbatim.
+    """
+
+    @pytest.mark.parametrize("msg,expected", [
+        # rateLimit (CJK)
+        ("请求过于频繁", FailoverReason.rate_limit),
+        ("调用频率超限", FailoverReason.rate_limit),
+        ("频率限制", FailoverReason.rate_limit),
+        ("配额不足", FailoverReason.rate_limit),
+        ("配额已用尽", FailoverReason.rate_limit),
+        ("额度不足", FailoverReason.rate_limit),
+        ("额度已用尽", FailoverReason.rate_limit),
+        # overloaded (CJK + English)
+        ("服务过载", FailoverReason.overloaded),
+        ("当前负载过高", FailoverReason.overloaded),
+        ("overloaded", FailoverReason.overloaded),
+        ("overloaded_error", FailoverReason.overloaded),
+        ("The selected model is at capacity", FailoverReason.overloaded),
+        ("high demand", FailoverReason.overloaded),
+        ("high load", FailoverReason.overloaded),
+        # serverError (CJK + English)
+        ("内部错误", FailoverReason.server_error),
+        ("服务器错误", FailoverReason.server_error),
+        ("服务器内部错误", FailoverReason.server_error),
+        ("系统错误", FailoverReason.server_error),
+        ("系统繁忙", FailoverReason.server_error),
+        ("系统异常", FailoverReason.server_error),
+        ("internal server error", FailoverReason.server_error),
+        ("internal_error", FailoverReason.server_error),
+        ("server_error", FailoverReason.server_error),
+        ("service_unavailable", FailoverReason.server_error),
+        ("bad gateway", FailoverReason.server_error),
+        ("gateway timeout", FailoverReason.server_error),
+        ("upstream error", FailoverReason.server_error),
+        ("upstream connect error", FailoverReason.server_error),
+        # timeout (CJK + English)
+        ("请求超时", FailoverReason.timeout),
+        ("连接超时", FailoverReason.timeout),
+        ("连接错误", FailoverReason.timeout),
+        ("网络错误", FailoverReason.timeout),
+        ("网络异常", FailoverReason.timeout),
+        ("服务暂时不可用", FailoverReason.timeout),
+        ("服务繁忙", FailoverReason.timeout),
+        ("socket hang up", FailoverReason.timeout),
+        ("fetch failed", FailoverReason.timeout),
+        ("network request failed", FailoverReason.timeout),
+    ])
+    def test_cjk_and_english_patterns_classify_correctly(self, msg, expected):
+        """Each openclaw pattern should route to its mapped FailoverReason
+        when it appears as the exception message with no status code."""
+        e = MockAPIError(msg)
+        result = classify_api_error(e, provider="custom", model="some-model")
+        assert result.reason == expected, (
+            f"pattern {msg!r} → expected {expected.value}, got {result.reason.value}"
+        )
+
+    @pytest.mark.parametrize("msg", [
+        "operation was aborted",
+        "stream was closed",
+        "stream aborted",
+        "und_err_socket",
+        "und_err_aborted",
+        "request failed after repeated internal retries",
+    ])
+    def test_timeout_miscellaneous_patterns(self, msg):
+        """Edge-case timeout patterns from openclaw."""
+        e = MockAPIError(msg)
+        result = classify_api_error(e, provider="custom", model="x")
+        # These all map to a retryable reason (timeout or server_error —
+        # the exact mapping is less important than not falling to unknown).
+        assert result.reason in {
+            FailoverReason.timeout,
+            FailoverReason.server_error,
+        }, f"{msg!r} → got {result.reason.value}"
+
+    @pytest.mark.parametrize("msg", [
+        "请求过于频繁",
+        "该模型当前访问量过大",
+    ])
+    def test_rate_limit_overloaded_cjk_with_status_429_or_503(self, msg):
+        """When the CJK pattern arrives WITH a status code, the
+        status-based classifier should still map it correctly."""
+        # 429 with rate-limit CJK → rate_limit
+        e429 = MockAPIError(msg, status_code=429)
+        assert classify_api_error(e429).reason == FailoverReason.rate_limit
+        # 503 with overloaded-shaped CJK → overloaded (status alone wins)
+        e503 = MockAPIError("服务过载", status_code=503)
+        assert classify_api_error(e503).reason == FailoverReason.overloaded
+
+    def test_该模型当前访问量过大_classifies_as_overloaded(self):
+        """THE BUG FROM TODAY'S INCIDENT: Zhipu's signature overloaded message
+        must classify as overloaded when it arrives as a bare exception."""
+        e = MockAPIError("该模型当前访问量过大")
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.overloaded
+
+
+class TestZhipuErrorCodes:
+    """Zhipu (ZAI) numeric error code handlers: 1305 / 1311 / 1113."""
+
+    def test_code_1305_in_body_classifies_as_overloaded(self):
+        """Code 1305 in the structured body.error.code → overloaded."""
+        e = MockAPIError(
+            "model overloaded",
+            status_code=None,
+            body={"error": {"code": "1305", "message": "该模型当前访问量过大"}},
+        )
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.overloaded
+        assert result.retryable is True
+
+    def test_code_1311_in_body_classifies_as_billing(self):
+        e = MockAPIError(
+            "billing exhausted",
+            body={"error": {"code": "1311", "message": "余额不足"}},
+        )
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.billing
+        # billing is non-retryable but rotates credential + falls back
+        assert result.retryable is False
+        assert result.should_rotate_credential is True
+        assert result.should_fallback is True
+
+    def test_code_1113_in_body_classifies_as_auth(self):
+        e = MockAPIError(
+            "auth failed",
+            body={"error": {"code": "1113", "message": "认证失败"}},
+        )
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.auth
+        assert result.should_rotate_credential is True
+        assert result.should_fallback is True
+
+    def test_code_1305_in_raw_json_string_also_matches(self):
+        """Belt-and-suspenders: even when the structured code is lost and
+        only the raw JSON body string survives, the body-JSON regex
+        fallback in _classify_by_message must catch 1305."""
+        raw_json = '{"error":{"code":1305,"message":"该模型当前访问量过大"}}'
+        # MockAPIError carries the raw JSON as its message string only.
+        e = MockAPIError(raw_json)
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.overloaded
+
+    def test_code_1311_in_raw_json_string_also_matches(self):
+        raw_json = 'something {"code":1311} something'
+        e = MockAPIError(raw_json)
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.billing
+
+    def test_code_1113_in_raw_json_string_also_matches(self):
+        raw_json = 'something {"code":1113} something'
+        e = MockAPIError(raw_json)
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.auth
+
+    def test_numeric_code_1305_int_form_in_body(self):
+        """_extract_error_code calls str(code).strip() on int values,
+        so body.error.code = 1305 (int) should also match."""
+        e = MockAPIError(
+            "model overloaded",
+            body={"error": {"code": 1305, "message": "该模型当前访问量过大"}},
+        )
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.overloaded
+
+
+class TestCjkBillingAndAuthPatterns:
+    """CJK billing + CJK auth patterns appended to existing lists."""
+
+    @pytest.mark.parametrize("msg", [
+        "余额不足",
+        "账户余额不足",
+        "欠费",
+        "账户已欠费",
+    ])
+    def test_cjk_billing_patterns(self, msg):
+        e = MockAPIError(msg)
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.billing
+
+    @pytest.mark.parametrize("msg", [
+        "无权访问",
+        "认证失败",
+        "鉴权失败",
+        "密钥无效",
+        "apikey 无效",
+    ])
+    def test_cjk_auth_patterns(self, msg):
+        e = MockAPIError(msg)
+        result = classify_api_error(e, provider="custom", model="glm-4.6")
+        assert result.reason == FailoverReason.auth
