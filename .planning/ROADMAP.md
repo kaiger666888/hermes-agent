@@ -54,7 +54,7 @@ For completed milestone phase details, see:
 - [ ] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length
 - [ ] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0
 - [x] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11 (completed 2026-06-26)
-- [ ] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard
+- [x] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard (shipped 2026-06-27)
 - [ ] **Phase 42: DATA — 数据收敛 (Step 15)** — 5 平台 API adapters → FeedbackStore schema extension → formula tuning loop
 - [ ] **Phase 43: VALIDATE — 集成验证 + close-out** — cross-phase integration + FOUND-08 audit + canonical v9.0-MILESTONE-AUDIT.md
 
@@ -102,7 +102,7 @@ wave  ──────┤                            │                      
 | 38. SLICE | 0/1 | Planned (1 plan, wave 1) | - |
 | 39. FORM | 0/3 | Planned (3 plans, wave 1+2) | - |
 | 40. GATE | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26) | 2026-06-26 |
-| 41. PREVIEW | 0/1 | Plan created | - |
+| 41. PREVIEW | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
 | 42. DATA | 0/? | Not started | - |
 | 43. VALIDATE | 0/? | Not started | - |
 
@@ -167,7 +167,7 @@ wave  ──────┤                            │                      
 3. Failure path is deterministic: pacing deviation > 15% OR framing deviation > 10% triggers automatic fallback to Step 6 (re-storyboard), max 2 retries; exhausting 2 retries routes to operator review via the existing `plugins/review_gates/` BLOCKING mode (no silent skip).
 4. **Operator-action-handoff:** live GPU generation testing is operator-side — v9.0 ships the baseline doc + adapter skeleton only. V9-FUTURE-02 (real LTX2.3 model generation validation) is explicitly deferred.
 Plans:
-- [ ] 41-01-PLAN.md — Step 6.5 LTX2.3 fast-preview wiring (4 tasks: new ref + SKILL.md body patch + DAG annotation + FOUND-08 verification)
+- [x] 41-01-PLAN.md — Step 6.5 LTX2.3 fast-preview wiring (4 tasks: new ref + SKILL.md body patch + DAG annotation + FOUND-08 verification) — SHIPPED 2026-06-27 (3 commits + SUMMARY; FOUND-08 byte-verified; V8.6 13-step + 8-gate preserved)
 **UI hint**: no
 
 ### Phase 42: DATA — 数据收敛 (Step 15)
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-26 — v9.0 ROADMAP created (6 phases 38-43, 22 reqs, granularity=standard, coverage 22/22). Phase 38 parallel-eligible wave ready to plan. v7.0 milestone shipped 2026-06-25 (Phases 34-37).*
+*Last updated: 2026-06-27 — Phase 41 PREVIEW Plan 01 shipped (ltx2-preview-loop.md + SKILL.md Step 6.5 wiring + pipeline-dag.md annotation; FOUND-08 byte-preserved; V8.6 13-step + 8-gate unchanged). v9.0 progress: Phase 40 + 41 done; 38 + 39 in parallel-eligible wave; 42 waits on 38+39; 43 strictly last.*

@@ -34,9 +34,9 @@
 
 ### PREVIEW — Phase 41 LTX2.3 预览闭环 (Step 6.5)
 
-- [ ] **PREVIEW-01**: 新 ref `skills/kais-movie-pipeline/references/ltx2-preview-loop.md` 文档化 LTX2.3 baseline —— 模型选型(LTX2.3 / CausVid / Kling 1.6 fast)、~5s 生成预算、composition / framing / pacing 3 维校验阈值、prompt 模板
-- [ ] **PREVIEW-02**: `kais-movie-pipeline/SKILL.md` 新增 Step 6.5 wiring —— storyboard (Step 6) 通过后,自动调用 LTX2.3 fast-preview,preview 通过才进 Step 7 (dreamina CLI 最终渲染)
-- [ ] **PREVIEW-03**: 失败回退策略 —— preview 不达标(pacing 偏差 > 15% / framing 偏差 > 10%)自动回退到 Step 6 重新分镜,max 2 retries;超过 2 次走 operator review gate(现有 `plugins/review_gates/` BLOCKING mode)
+- [x] **PREVIEW-01**: 新 ref `skills/kais-movie-pipeline/references/ltx2-preview-loop.md` 文档化 LTX2.3 baseline —— 模型选型(LTX2.3 / CausVid / Kling 1.6 fast)、~5s 生成预算、composition / framing / pacing 3 维校验阈值、prompt 模板
+- [x] **PREVIEW-02**: `kais-movie-pipeline/SKILL.md` 新增 Step 6.5 wiring —— storyboard (Step 6) 通过后,自动调用 LTX2.3 fast-preview,preview 通过才进 Step 7 (dreamina CLI 最终渲染)
+- [x] **PREVIEW-03**: 失败回退策略 —— preview 不达标(pacing 偏差 > 15% / framing 偏差 > 10%)自动回退到 Step 6 重新分镜,max 2 retries;超过 2 次走 operator review gate(现有 `plugins/review_gates/` BLOCKING mode)
 
 ### DATA — Phase 42 数据收敛 (Step 15)
 
@@ -113,9 +113,9 @@ Updated during roadmap creation. v9.0 phases 38-43.
 | GATE-02 | Phase 40 | Phase-assigned |
 | GATE-03 | Phase 40 | Phase-assigned |
 | GATE-04 | Phase 40 | Phase-assigned |
-| PREVIEW-01 | Phase 41 | Phase-assigned |
-| PREVIEW-02 | Phase 41 | Phase-assigned |
-| PREVIEW-03 | Phase 41 | Phase-assigned |
+| PREVIEW-01 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
+| PREVIEW-02 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
+| PREVIEW-03 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
 | DATA-01 | Phase 42 | Phase-assigned |
 | DATA-02 | Phase 42 | Phase-assigned |
 | DATA-03 | Phase 42 | Phase-assigned |
@@ -132,4 +132,4 @@ Updated during roadmap creation. v9.0 phases 38-43.
 ---
 
 *Requirements defined: 2026-06-26 — v9.0 milestone start (6 phases 38-43, 22 reqs).*
-*Last updated: 2026-06-26 — ROADMAP created; traceability status flipped Pending → Phase-assigned (22/22 mapped to Phases 38-43).*
+*Last updated: 2026-06-27 — Phase 41 PREVIEW-01/02/03 marked complete (Plan 41-01 shipped). Traceability: GATE-01..04 + PREVIEW-01..03 now Complete; SLICE / FORM / DATA / VALIDATE still Phase-assigned.*
