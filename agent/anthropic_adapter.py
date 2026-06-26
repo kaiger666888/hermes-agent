@@ -535,6 +535,10 @@ def _requires_bearer_auth(base_url: str | None) -> bool:
     require Authorization: Bearer instead of Anthropic's native x-api-key header.
     MiniMax's global and China Anthropic-compatible endpoints, and Azure AI
     Foundry's Anthropic-style endpoint follow this pattern.
+
+    Zhipu's open.bigmodel.cn/api/anthropic endpoint also accepts Bearer auth
+    (matches Claude Code's ANTHROPIC_AUTH_TOKEN behavior); using Bearer aligns
+    hermes-agent's rate-limit bucket with Claude Code's.
     """
     normalized = _normalize_base_url_text(base_url)
     if not normalized:
@@ -543,6 +547,7 @@ def _requires_bearer_auth(base_url: str | None) -> bool:
     return (
         normalized.startswith(("https://api.minimax.io/anthropic", "https://api.minimaxi.com/anthropic"))
         or "azure.com" in normalized
+        or "open.bigmodel.cn/api/anthropic" in normalized
     )
 
 
@@ -567,6 +572,23 @@ def _is_minimax_anthropic_endpoint(base_url: str | None) -> bool:
     return normalized.startswith(
         ("https://api.minimax.io/anthropic", "https://api.minimaxi.com/anthropic")
     )
+
+
+def _is_zhipu_anthropic_endpoint(base_url: str | None) -> bool:
+    """Return True for Zhipu's Anthropic-compatible endpoint.
+
+    Zhipu (open.bigmodel.cn/api/anthropic) returns HTTP 200 with
+    overloaded_error code 1305 when any anthropic-beta header is present
+    (interleaved-thinking, fine-grained-tool-streaming, context-1m).
+    Claude Code — which uses the same endpoint — does not send beta
+    headers, so its requests succeed. To match Claude Code's
+    rate-limit/compatibility bucket, strip ALL betas for this endpoint.
+    """
+    normalized = _normalize_base_url_text(base_url)
+    if not normalized:
+        return False
+    normalized = normalized.rstrip("/").lower()
+    return "open.bigmodel.cn/api/anthropic" in normalized
 
 
 def _is_azure_anthropic_endpoint(base_url: str | None) -> bool:
@@ -616,6 +638,10 @@ def _common_betas_for_base_url(
     betas = list(_COMMON_BETAS)
     if _base_url_needs_context_1m_beta(base_url) and not drop_context_1m_beta:
         betas.append(_CONTEXT_1M_BETA)
+    if _is_zhipu_anthropic_endpoint(base_url):
+        # Zhipu rejects ALL anthropic-beta headers with 1305 overloaded_error.
+        # Claude Code does not send betas to this endpoint; match that.
+        return []
     if _is_minimax_anthropic_endpoint(base_url):
         _stripped = {_TOOL_STREAMING_BETA, _CONTEXT_1M_BETA}
         return [b for b in betas if b not in _stripped]
