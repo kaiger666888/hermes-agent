@@ -103,7 +103,7 @@ wave  ──────┤                            │                      
 | 39. FORM | 0/3 | Planned (3 plans, wave 1+2) | - |
 | 40. GATE | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26) | 2026-06-26 |
 | 41. PREVIEW | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
-| 42. DATA | 0/? | Not started | - |
+| 42. DATA | 0/4 | Planned (4 plans, wave 1+2) | - |
 | 43. VALIDATE | 0/? | Not started | - |
 
 ---
@@ -181,7 +181,11 @@ Plans:
 3. The `formula_tuning_loop` converts convergent metrics into suggestions: high hook-dropoff → suggest stronger hook; high completion but low engagement → suggest CTA. Suggestions land in a JSONL review queue (reusing the v6.0 EVOL-02 queue pattern); after operator approval they write back to `plugins/formula_library/`.
 4. `hermes formula stats` prints rich per-formula / per-platform tables; `--json` flag emits counts-only for scripting.
 5. New ref `references/data-convergence.md` documents the data flow + dashboard usage. **Operator-action-handoff:** 5 平台 API keys 由 operator 配置后激活; v9.0 提供 schema + adapter 骨架 only.
-**Plans:** TBD
+**Plans:** 4 plans
+- [ ] 42-01-PLAN.md — Plugin scaffold + PlatformMetrics + FeedbackRecordExtension + adapter base class + tests (DATA-01 schema + DATA-02 composition)
+- [ ] 42-02-PLAN.md — 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili) + adapter registry + tests (DATA-01 adapter half)
+- [ ] 42-03-PLAN.md — tuning_loop + library_writer + JSONL review queue integration tests (DATA-03)
+- [ ] 42-04-PLAN.md — hermes formula stats CLI + data-convergence.md ref + SKILL.md Step 15 + pipeline-dag.md annotation + .env.example patch (DATA-04)
 **UI hint**: yes
 
 ### Phase 43: VALIDATE — 集成验证 + close-out
@@ -199,4 +203,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-27 — Phase 41 PREVIEW Plan 01 shipped (ltx2-preview-loop.md + SKILL.md Step 6.5 wiring + pipeline-dag.md annotation; FOUND-08 byte-preserved; V8.6 13-step + 8-gate unchanged). v9.0 progress: Phase 40 + 41 done; 38 + 39 in parallel-eligible wave; 42 waits on 38+39; 43 strictly last.*
+*Last updated: 2026-06-27 — Phase 42 DATA planned (4 plans in 2 waves: 42-01 scaffold+schema, 42-02 5 adapter stubs, 42-03 tuning_loop+library_writer, 42-04 CLI+data-convergence.md+SKILL.md Step 15). Option A scope discipline: new plugins/platform_metrics/ plugin, no Hermes core edits. v9.0 progress: Phase 40 + 41 done; 38 + 39 + 42 in planning/progress; 43 strictly last.*
