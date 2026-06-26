@@ -11,9 +11,9 @@ it does NOT import ``gate.py`` / ``gate_config.py`` / ``gates.yaml``
 ``payload: dict`` and emit ``(decision, suggested_action)`` — that is
 the entire contract.
 
-RED phase (Task 1): DETECTOR_REGISTRY is declared but EMPTY. The 3
-detector modules ship as NotImplementedError stubs. Plan 02 Task 2 +
-this plan's Task 3 populate the registry once detectors land.
+Task 3 (REFACTOR): DETECTOR_REGISTRY now populated with all 3 detectors
+keyed by their GATE_ID. Plan 02's runner_hooks will read this to dispatch
+the auto-detect path for redline_-prefixed gate_ids.
 """
 
 from __future__ import annotations
@@ -21,14 +21,30 @@ from __future__ import annotations
 from typing import Dict
 
 from plugins.review_gates.gates import types
+from plugins.review_gates.gates.redline_emotion_desensitize import (
+    GATE_ID as _GATE_ID_R1,
+    detect as _detect_r1,
+)
+from plugins.review_gates.gates.redline_no_cold_open import (
+    GATE_ID as _GATE_ID_R3,
+    detect as _detect_r3,
+)
+from plugins.review_gates.gates.redline_unfinished_ending import (
+    GATE_ID as _GATE_ID_R4,
+    detect as _detect_r4,
+)
 from plugins.review_gates.gates.types import DetectorFn, DetectorResult
 
-# RED phase: empty registry. Task 3 (REFACTOR) populates this with all 3
-# detectors keyed by their GATE_ID. Declaring the empty surface here keeps
-# the import path stable across phases — Plan 02 imports
-# `from plugins.review_gates.gates import DETECTOR_REGISTRY` and can rely on
-# the symbol existing today.
-DETECTOR_REGISTRY: Dict[str, DetectorFn] = {}
+# Populated registry — keyed by GATE_ID. Plan 02's runner_hooks reads
+# this dict to dispatch the auto-detect path for redline_-prefixed
+# gate_ids. The 8 V8.6 gates do NOT appear here (they use the manual
+# HIL resolution path in gate.py / tools.py); only the 3 redline gates
+# are auto-detected.
+DETECTOR_REGISTRY: Dict[str, DetectorFn] = {
+    _GATE_ID_R1: _detect_r1,  # "redline_emotion_desensitize"
+    _GATE_ID_R3: _detect_r3,  # "redline_no_cold_open"
+    _GATE_ID_R4: _detect_r4,  # "redline_unfinished_ending"
+}
 
 __all__ = [
     "DETECTOR_REGISTRY",
