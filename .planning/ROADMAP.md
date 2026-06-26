@@ -150,10 +150,10 @@ wave  ──────┤                            │                      
 2. Given a cut with ≥3 consecutive frames at the same emotional valence, `redline_emotion_desensitize` returns `reject` with a `suggested_action` describing how to break it up (per `creative-redlines.md` R1). Given a cut whose first 3s contains 背景铺垫, `redline_no_cold_open` rejects with suggested_action (per R3). Given a cut whose final 3s releases no new hook, `redline_unfinished_ending` rejects with suggested_action (per R4).
 3. Gate 9 / 10 / 11 fire in the correct sequence: after the existing 8 gates pass, gates 9-11 do one final scan before final delivery — documented in `references/review-gates.md` (additive; V8.6 8-gate numbering unchanged).
 4. The `suggested_action` field on each new gate is structured so it can reference a `formula_library` entry (read-side lookup) for the operator to apply a proven fix pattern.
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 - [x] 40-01-PLAN.md — 3 pure-stdlib redline detectors (R1/R3/R4) + test suite (TDD) — shipped 2026-06-27 (54 tests, DETECTOR_REGISTRY wired)
 - [ ] 40-02-PLAN.md — gates.yaml 8→11 additive + gate_config.py count bump + runner_hooks auto-detect + tools.py dispatch (TDD)
-- [ ] 40-03-PLAN.md — references/review-gates.md 8→11 doc + plugin README update
+- [x] 40-03-PLAN.md — references/review-gates.md 8→11 doc + plugin README update
 **UI hint**: no
 
 ### Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)
