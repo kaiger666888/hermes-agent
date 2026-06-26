@@ -1231,6 +1231,49 @@ def run_conversation(
                         else:
                             error_details.append("response.choices is empty")
 
+                # Pre-check: some providers return HTTP 200 with an embedded
+                # error body (notably ZhipuAI codes 1305/1311/1113). The
+                # OpenAI SDK treats 200 as success, so the response-shape
+                # validator above flags response_invalid. Before burning a
+                # retry as "InvalidAPIResponse", try classifying the embedded
+                # error — if it's retryable (rate_limit, overloaded,
+                # server_error, timeout), raise a synthetic exception so the
+                # existing error-handling path (which calls classify_api_error
+                # and routes to the correct retry/fallback) takes over.
+                # See: openclaw failover-matches.
+                if response_invalid:
+                    from agent.error_classifier import (
+                        classify_response_body_error,
+                        FailoverReason,
+                        _SyntheticBodyError,
+                    )
+                    _body_err = classify_response_body_error(response)
+                    if (
+                        _body_err is not None
+                        and _body_err.retryable
+                        and _body_err.reason in {
+                            FailoverReason.rate_limit,
+                            FailoverReason.overloaded,
+                            FailoverReason.server_error,
+                            FailoverReason.timeout,
+                        }
+                    ):
+                        # Build the body dict the same way the helper did so
+                        # the except handler's _extract_error_body sees the
+                        # structured error. Reuse the helper's classified
+                        # message for the synthetic exception text.
+                        _resp_error = getattr(response, "error", None)
+                        _synth_body = (
+                            {"error": _resp_error}
+                            if isinstance(_resp_error, dict)
+                            else {"error": {"message": _body_err.message}}
+                        )
+                        _synth = _SyntheticBodyError(
+                            _body_err.message or "embedded response error",
+                            body=_synth_body,
+                        )
+                        raise _synth
+
                 if response_invalid:
                     agent._invoke_api_request_error_hook(
                         task_id=effective_task_id,

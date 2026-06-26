@@ -937,6 +937,137 @@ def classify_api_error(
     return _result(FailoverReason.unknown, retryable=True)
 
 
+# ── HTTP-200-with-error-body classification ──────────────────────────────
+
+class _SyntheticBodyError(Exception):
+    """Synthetic exception carrying an embedded error body.
+
+    Used by classify_response_body_error to wrap an error extracted from
+    a successful-HTTP response (e.g. ZhipuAI's HTTP 200 + error body
+    pattern) so the existing classify_api_error pipeline — which expects
+    an Exception — can classify it. The optional ``body`` dict lets
+    _extract_error_body / _extract_error_code work unchanged.
+    """
+
+    def __init__(self, message: str = "", *, body: Optional[dict] = None) -> None:
+        super().__init__(message)
+        self.body = body or {}
+
+
+def classify_response_body_error(response: Any) -> Optional[ClassifiedError]:
+    """Classify an error embedded in a successful-HTTP response object.
+
+    Some providers (notably ZhipuAI) return HTTP 200 with an error body
+    like ``{"error":{"code":"1305","message":"该模型当前访问量过大"}}``.
+    The OpenAI SDK treats this as a successful response, leaving the
+    agent to discover the error by noticing ``response.choices`` is
+    empty. This helper extracts the embedded error and runs it through
+    the standard classifier so the retry loop can route it correctly
+    instead of burning all retries as "InvalidAPIResponse".
+
+    Extraction order (first non-empty wins):
+      1. ``response.error`` (attribute/object or dict)
+      2. ``response.choices[0].message.error`` (nested error object)
+      3. ``response.body`` (dict with ``error`` key)
+
+    Args:
+        response: The parsed response object from the SDK. May be None.
+
+    Returns:
+        ClassifiedError with the matching FailoverReason, or None if no
+        recognizable error structure is found on the response.
+    """
+    if response is None:
+        return None
+
+    # Walk the three known error-embedding shapes and collect the first
+    # one that yields a usable {code, message} dict. Treat all response
+    # attributes as untrusted (per threat model T-t0q-01): use
+    # isinstance() checks before dict/string access.
+    error_payload: Optional[dict] = None
+
+    # 1. response.error (object with attributes, or dict)
+    resp_error = getattr(response, "error", None)
+    if resp_error is not None:
+        if isinstance(resp_error, dict):
+            error_payload = resp_error
+        elif hasattr(resp_error, "__dict__"):
+            # Object form: convert stable fields to a dict.
+            code = getattr(resp_error, "code", None)
+            message = getattr(resp_error, "message", None)
+            if code is not None or message is not None:
+                error_payload = {}
+                if code is not None:
+                    error_payload["code"] = code
+                if message is not None:
+                    error_payload["message"] = message
+
+    # 2. response.choices[0].message.error
+    if error_payload is None:
+        choices = getattr(response, "choices", None)
+        if isinstance(choices, list) and choices:
+            first = choices[0]
+            if first is not None:
+                msg = getattr(first, "message", None)
+                if msg is not None:
+                    nested = getattr(msg, "error", None)
+                    if isinstance(nested, dict):
+                        error_payload = nested
+
+    # 3. response.body dict
+    if error_payload is None:
+        body_attr = getattr(response, "body", None)
+        if isinstance(body_attr, dict):
+            body_error = body_attr.get("error")
+            if isinstance(body_error, dict):
+                error_payload = body_error
+                # Preserve top-level body shape so _extract_error_code
+                # can walk it.
+                error_payload = body_attr
+
+    if error_payload is None:
+        return None
+
+    # Build a synthetic exception and route it through the standard
+    # classifier. _extract_error_body pulls .body; _extract_error_code
+    # walks body.error.code. The message string is used for pattern
+    # matching in _classify_by_message.
+    body_dict: dict
+    if isinstance(error_payload, dict) and "error" in error_payload:
+        # response.body shape: {"error": {...}} — pass as-is.
+        body_dict = error_payload
+    else:
+        # response.error shape: {"code": ..., "message": ...} — wrap.
+        body_dict = {"error": error_payload}
+
+    code_val = ""
+    if isinstance(body_dict.get("error"), dict):
+        code_val = str(body_dict["error"].get("code") or "").strip()
+    msg_val = ""
+    if isinstance(body_dict.get("error"), dict):
+        msg_val = str(body_dict["error"].get("message") or "").strip()
+    if not msg_val:
+        msg_val = str(error_payload)[:500]
+
+    synth = _SyntheticBodyError(msg_val or "embedded response error", body=body_dict)
+    # _extract_status_code walks .status_code; we deliberately do NOT
+    # set it so the classifier falls through to error-code and message
+    # paths (the HTTP status was 200 — not informative for routing).
+    synth.status_code = None  # type: ignore[attr-defined]
+    if code_val and code_val != "400":
+        synth.error_code = code_val  # type: ignore[attr-defined]
+
+    provider = getattr(response, "model", "") or ""
+    model = getattr(response, "model", "") or ""
+    # classify_api_error takes provider and model separately; response
+    # often carries the model in .model. Use it for both metadata fields.
+    return classify_api_error(
+        synth,
+        provider=provider,
+        model=model,
+    )
+
+
 # ── Status code classification ──────────────────────────────────────────
 
 def _classify_by_status(
