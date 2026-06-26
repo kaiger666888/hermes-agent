@@ -100,7 +100,7 @@ wave  ──────┤                            │                      
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 38. SLICE | 0/1 | Planned (1 plan, wave 1) | - |
-| 39. FORM | 0/? | Not started | - |
+| 39. FORM | 0/3 | Planned (3 plans, wave 1+2) | - |
 | 40. GATE | 0/3 | Planned (3 plans, wave 1+2) | - |
 | 41. PREVIEW | 0/1 | Plan created | - |
 | 42. DATA | 0/? | Not started | - |
@@ -134,7 +134,10 @@ wave  ──────┤                            │                      
 2. Each of the 10 seed formulas covers one cell of the 5-genre × 2-mood matrix (都市奇幻 / 悬疑反转 / 家庭情感 / 校园青春 / 职场商战 × 轻喜剧 / 虐心), with every required schema field populated: `formula_id` / `genre` / `mood` / `pacing` / `hook_pattern` / `characters` / `runtime_sec` / `platform_fit[]` / `citation` (fair-use source tag) / `verified_date`.
 3. Given a `formula_lookup(genre=都市奇幻, mood=轻喜剧, platform=抖音)` call, the plugin returns the top-3 matching formulas ranked by platform_fit; `kais-movie-pipeline/SKILL.md` exposes this as Step 0 (前置); `theory_critic/SKILL.md` accepts an optional `formula_reference` input. Both SKILL.md changes are body-only (FOUND-08 frontmatter preserved).
 4. All 10 formulas carry fair-use citations (Notion 创作方向 / 公开爆款公式书 / kais-movie-agent 历史 benchmark) — no formula lands without a verifiable source.
-**Plans:** TBD
+**Plans:** 3 plans
+- [ ] 39-01-PLAN.md — Plugin scaffold + Pydantic schema + lookup engine (FORM-01, FORM-02, FORM-04 lookup half)
+- [ ] 39-02-PLAN.md — 10 seed formulas (5×2 matrix) + LICENSE.md + bilingual README.md (FORM-03)
+- [ ] 39-03-PLAN.md — SKILL.md body patches (Step 0 + formula_reference) + tests + FOUND-08 byte-diff audit (FORM-04)
 **UI hint**: no
 
 ### Phase 40: GATE — 3 新审核门
