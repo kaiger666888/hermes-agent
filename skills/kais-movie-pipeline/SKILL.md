@@ -41,7 +41,7 @@ Invoke `/kais-movie-pipeline` when the operator wants one of the following:
 
 ## References
 
-This skill ships with 7 reference docs under `references/` (created by sub-plan 35-04 + quick task 260626-vzl). All numeric thresholds / canonical mappings live in refs; this SKILL.md body only links to them.
+This skill ships with 8 reference docs under `references/` (created by sub-plan 35-04 + quick task 260626-vzl + Phase 41 Step 6.5 preview). All numeric thresholds / canonical mappings live in refs; this SKILL.md body only links to them.
 
 | Ref | When to Read | Contents |
 |-----|--------------|----------|
@@ -52,6 +52,7 @@ This skill ships with 7 reference docs under `references/` (created by sub-plan 
 | `references/platform-specs.md` | Before per-platform 分发 / duration / hook placement decisions | V1 hard-spec matrix (竖屏滑动 vs 横屏主动, 10-row 硬性规格) + 12-row 刚性约束 by layer + per-expert consultation guide |
 | `references/creative-redlines.md` | Before any single-episode compliance review or A/B convergence loop | 7 cross-platform creative invariants (5 per-episode: 情绪脱敏/信息分层/零背景铺垫/结尾未完成/差异化识别 + 2 process: 控制变量/统计显著) |
 | `references/genre-anchor-urban-fantasy.md` | Before any v1 production (default genre unless operator overrides) | V1 题材锚定 都市奇幻·轻喜剧:核心 DNA + per-platform content form + 3-month 启动方案 + 变现逻辑 + 题材禁忌 |
+| `references/ltx2-preview-loop.md` | Before running Step 6.5 preview or debugging a preview-fail loop | LTX2.3 baseline (model selection / ~5s budget / 3-dim thresholds composition+framing+pacing / prompt template / fallback policy max 2 retries → BLOCKING gate) |
 
 External canonical source: [`skills/movie-experts/_shared/v86-pipeline-mapping.md`](../movie-experts/_shared/v86-pipeline-mapping.md) (Phase 27 v5.0 — frozen).
 
@@ -168,9 +169,18 @@ ASCII fallback (for renderers without Mermaid):
 [p03] → [p04 character] → [p05 pain] → [p06 spatio_temporal]  ← Phase 36
                                    ↓                  ↓
                                  Gate 4            Gate 6
-[p06] → [p07 scene_gen] → [p08 scene_select] → [p09 shot_break]
-              ↓                                    ↓
-           Gate 5                                Gate 4 (re-fire option)
+[p06] → [p06.5 preview] → [p07 scene_gen] → [p08 scene_select] → [p09 shot_break]
+              ↓                  ↓
+        (Phase 41)           Gate 5
+[p09] → [p10 voice] → [p11 video_render] → [p12 composition] → [p13 delivery]
+                            ↓                                          ↓
+                         Gate 7                                     Gate 8
+```
+
+**Step 6.5 (Phase 41 additive):** LTX2.3 ~5s fast-preview — auto-invoked after Step 6 passes; gates Step 7 on preview pass. See `references/ltx2-preview-loop.md`.
+
+```
+**Topology notes:**
 [p09] → [p10 voice] → [p11 video_render] → [p12 composition] → [p13 delivery]
                             ↓                                          ↓
                          Gate 7                                     Gate 8
@@ -193,6 +203,7 @@ The 13-phase ↔ expert mapping is sourced verbatim from [`_shared/v86-pipeline-
 | `p04_character_design` | Step 4 | Character Bible 2.0 (4D-Anchor) | character_designer + visual_executor (drawer sub-step) | character-bible, character-assets | — | Phase 36 |
 | `p05_pain_discovery` | Step 5 | Pain point mining (L1–L6 strata) | creative_source (re-invoked) + theory_critic | pain-points, escalation-ladder | Gate 4 shot-prep | Phase 36 |
 | `p06_spatio_temporal_script` | Step 6 | 运镜+终审 (spatio-temporal script + final audit) | screenplay + cinematographer + script_auditor | spatio-temporal-script, final-audit | Gate 6 spatio-temporal | Phase 36 |
+| `p06_5_ltx2_preview` | Step 6.5 | LTX2.3 fast-preview (composition+framing+pacing check, 5s budget) | visual_executor (animator sub-step, preview model selection) + cinematographer (composition/framing audit) | preview-clips, preview-audit | (escalation only) review_gates BLOCKING | **Phase 41** |
 | `p07_scene_generation` | Step 7 | 视觉+风格化 (scene image gen + style genome + color intent) | visual_executor + prompt_injector + style_genome + colorist | scene-images, style-vector, color-intent | Gate 5 scene-design | Phase 36 |
 | `p08_scene_selection` | Step 8 | 场景选择 (geometry-bed consistency check) | cinematographer + editor | scene-selection, geometry-bed | — | Phase 36 |
 | `p09_shot_breakdown` | Step 9 | 分镜拆解 (E-Konte 5-layer) | cinematographer + continuity_auditor | shot-list, e-konte-sheets | — | Phase 36 |
@@ -202,6 +213,8 @@ The 13-phase ↔ expert mapping is sourced verbatim from [`_shared/v86-pipeline-
 | `p13_delivery` | Step 13 | 交付 (color grade + compliance + delivery package) | colorist + compliance_gate + editor | master-mp4, delivery-package | Gate 8 final-delivery | Phase 36 |
 
 **15 active movie-experts** (per [`movie-experts/README.md`](../movie-experts/README.md) Bucket 1): `creative_source`, `style_genome`, `screenplay`, `script_auditor`, `character_designer`, `cinematographer`, `prompt_injector`, `visual_executor`, `continuity_auditor`, `audio_pipeline`, `editor`, `colorist`, `hook_retention`, `compliance_gate`, `theory_critic`.
+
+**Step 6.5 note (Phase 41 additive):** `preview-clips` + `preview-audit` are new AssetBus slots; the escalation gate is NOT a new gate_id — it routes through the existing `plugins/review_gates/` BLOCKING mode on retry exhaustion (`max_retries=2` per `GateConfig` default). See `references/ltx2-preview-loop.md` §Fallback Policy.
 
 ## Review Gates
 
@@ -223,6 +236,33 @@ The 8-gate V8.6 review structure reduces V8.4-era 12 gates to 8 (per `_shared/v8
 - Sync gates block the runner until resolved; async gates return immediately and the runner polls resolution status
 - `RunnerConfig.enable_gates=False` disables all gates (used in CI / batch mode)
 - Gate resolution outcomes are written to the AssetBus `review-outcomes` slot (JSONL append — preserves full history)
+
+## Step 6.5 Fast-Preview (LTX2.3)
+
+Step 6.5 is a Phase 41 additive insertion between Step 6 (storyboard) and Step 7 (visual production). It runs an LTX2.3 ~5s fast-preview to catch composition / framing / pacing problems before committing GPU budget to Step 7-13. See [`references/ltx2-preview-loop.md`](./references/ltx2-preview-loop.md) for the full baseline + 3-dim thresholds + prompt template + fallback policy.
+
+**Trigger:** Auto-invoked after Gate 6 (spatio-temporal) approves Step 6 output. Operator does NOT manually trigger Step 6.5 — it is a deterministic extension of the p06 → p07 edge.
+
+**Inputs:**
+- `spatio-temporal-script` (from p06) — primary input; E-Konte 5-layer storyboard JSON translated to LTX2.3 prompt
+- `final-audit` (from p06) — Gate 6 must be `approved` before Step 6.5 fires
+- `character-bible` (cross-cutting read from p04) — provides L1 anchor as `reference_image` for cross-clip consistency (optional)
+
+**Process:**
+1. Translate E-Konte 5-layer storyboard into LTX2.3 prompt per [`ltx2-preview-loop.md`](./references/ltx2-preview-loop.md) §Prompt Template (1:1 field mapping from Layer 1+2+3; no LLM "re-creation")
+2. Generate 1-3 preview clips per scene (~5s each, $0.10/clip; LTX2.3 default, CausVid / Kling 1.6 fast as documented alternatives)
+3. Run 3-dim audit against storyboard intent:
+   - **composition** ≥ 0.80 (CLIP-T + Object IoU + shot_scale classifier)
+   - **framing** ≤ 10% deviation (9:16 power points + headroom + subtitle safe area)
+   - **pacing** ≤ 15% deviation (cut count + intervals + transition type vs `next_shot_link` chain)
+
+**Outputs:**
+- `preview-clips` (JSON — paths to LTX2.3-generated ~5s preview mp4s, envelope-wrapped with `derived_from: spatio-temporal-script`)
+- `preview-audit` (JSON — 3-dim scores per clip + pass/fail/retry state + cumulative miss pattern)
+
+**Fallback (load-bearing — PREVIEW-03):** On any dim miss (composition < 0.80 OR framing > 10% OR pacing > 15%) → re-invoke Step 6 with audit feedback; max 2 retries (matches `GateConfig.max_retries` default of 2). On exhaustion (3rd failure, `attempt > max_retries`) → route to operator review via existing `plugins/review_gates/` BLOCKING mode — this is NOT a new gate_id (no addition to the V8.6 8-gate structure; the escalation rides the existing framework's `GateMaxRetriesExceeded` PIPE-GUARD-01 non-bypassable semantics). No silent skip path exists.
+
+**v9.0 scope boundary (operator-action-handoff — SC#4):** Live GPU generation testing is operator-side (V9-FUTURE-02 deferred). This wiring + `references/ltx2-preview-loop.md` baseline is the v9.0 deliverable only — actual LTX2.3 model generation validation requires operator-side GPU runtime + KAIS_* env keys not in scope for Phase 41.
 
 ## Asset Bus Schema
 
