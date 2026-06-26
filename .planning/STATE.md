@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: openclaw → hermes-agent Primary Agent Migration
-status: milestone_complete
-last_updated: "2026-06-25T15:45:00Z"
-last_activity: 2026-06-25
+milestone: v9.0
+milestone_name: kais-movie-pipeline 闭环深化
+status: planning
+last_updated: "2026-06-26T15:23:18.377Z"
+last_activity: 2026-06-26
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** v7.0 Phase 34 — Skills Migration (in progress: Plan 02 of 03 complete)
+**Current focus:** v9.0 — Defining requirements (6 phases 38-43: SLICE / FORM / GATE / PREVIEW / DATA / VALIDATE)
 
 ## Current Position
 
-Phase: 37 of 37 (Validation & Migration Report) — COMPLETE (v7.0 milestone ready for `/gsd:complete-milestone v7.0`)
-Plan: 01 of 01 in phase (01 complete — Phase 37 fully done; v7.0 milestone closed)
-Status: Milestone complete — ready for v7.0 archive + v8.0 planning
-Last activity: 2026-06-26 - Completed quick task 260626-vzl: Encode Notion "创作方向" into kais-movie-pipeline refs (3 new refs + 3 SKILL.md patches)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-26 — Milestone v9.0 started
 
 ### Progress
 

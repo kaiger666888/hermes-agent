@@ -8,27 +8,51 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current State (v7.0 shipped 2026-06-25)
+## Current State (v9.0 started 2026-06-26)
 
-v7.0 SHIPPED — 4 phases (34-37), 14/14 requirements structurally satisfied, 8/8 integration points verified. Migration milestone delivered:
+v7.0 SHIPPED (2026-06-25, openclaw → hermes migration). v8.0 was a quick-task batch (P0+P1 openclaw skills, 2026-06-26) — not a formal milestone, but the v8.0 label is consumed to avoid version collision. v9.0 now starts as the next formal milestone, returning to movie-experts deepening — specifically closing the kais-movie-pipeline loop (创意→生产→分发→反馈) Tier B+C from the Notion "创作方向" analysis.
 
-- **Skills:** coding-agent + tmux-agents migrated to `skills/autonomous-ai-agents/` with SUPPLEMENT coexistence vs existing 4 skills; bidirectional `related_skills` graph wired
-- **Identity:** `~/.hermes/SOUL.md` integrated non-destructively (513B Hermes identity preserved byte-for-byte + 4 openclaw routing categories added with source tagging); backup at `~/.hermes/SOUL.md.openclaw-backup-2026-06-25`
-- **Memory:** USER.md migrated to `~/.hermes/memories/`; batch_ingest.py + spot_check.py tooling built under `plugins/memory/mem0/scripts/` (live ingestion deferred pending MEM0_API_KEY)
-- **Validation:** Canonical `.planning/milestones/v7.0-MIGRATION-REPORT.md` (207 lines, 6 sections, all transform decisions + 5 explicitly-skipped categories documented)
+**Tier A shipped (2026-06-26, quick task 260626-vzl):** 3 refs (platform-specs.md / creative-redlines.md / genre-anchor-urban-fantasy.md) + 3 SKILL.md References table patches. Foundation laid for Tier B+C.
 
-**Operator-action-handoffs (NOT gaps):** 4 runtime smoke-tests deferred per migration-milestone scoped-boundary design — see v7.0-MIGRATION-REPORT.md §Operator Action Items.
+**v9.0 scope (6 phases 38-43):**
+- 平台母版切片 (Step 14)
+- 配方库 v0 (new plugin plugins/formula_library/)
+- 3 新审核门 (redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending)
+- LTX2.3 预览闭环 (Step 6.5 fast-preview)
+- 数据收敛 (Step 15 平台 API → FeedbackStore → formula tuning)
+- 集成验证 + close-out
+
+## Current Milestone: v9.0 — kais-movie-pipeline 闭环深化
+
+**Goal:** 把 Notion "创作方向" Tier B+C 落地为 kais-movie-pipeline 的 4 个新能力 —— 平台母版切片 / 配方库 v0 / LTX2.3 预览闭环 / 数据收敛回流 —— 加 3 个跨平台红线审核门,完成「创意→生产→分发→反馈」全闭环。
+
+**Target features:**
+
+1. **平台母版切片 (Step 14, SLICE)** —— 1 个 master.mp4 → 7 平台 variants (抖音竖屏/横屏、快手、B 站、小红书、视频号、红果);每个 variant 的 aspect ratio / hook position / length / intro-outro 差异化策略
+2. **配方库 v0 (FORM)** —— 新 plugin `plugins/formula_library/` 持久化爆款公式 schema (genre × mood × pacing × hook_pattern × characters × runtime × platform_fit × citation);10 条种子公式 + `formula_lookup` step 集成到 kais-movie-pipeline
+3. **3 新审核门 (GATE)** —— 在现有 `plugins/review_gates/gate.py` state machine 上注册 3 个新 gate,对应 `creative-redlines.md` R1/R3/R4:情绪脱敏 / 零背景铺垫 / 结尾必释放新钩子
+4. **LTX2.3 预览闭环 (PREVIEW, Step 6.5)** —— 在 Step 6 (storyboard) 与 Step 11 (final render) 之间插入 Step 6.5 fast-preview(LTX2.3 ~5s 生成)校验 composition / framing / pacing,失败回退到 Step 6 重新分镜
+5. **数据收敛 (DATA, Step 15)** —— 平台 API (完播率 / 卡点跳出率 / 互动率) → v6.0 FeedbackStore → formula_library tuning loop;per-platform dashboard
+6. **集成验证 + close-out (VALIDATE)** —— 全 milestone integration-checker + FOUND-08 preserved audit + canonical v9.0-MILESTONE-AUDIT.md
+
+**Key context:**
+
+- **范围严格收口:** 仅 `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 新 plugin `plugins/formula_library/`,**不碰 Hermes 核心 Python/JS**;新 gate 注册到现有 `plugins/review_gates/` 框架(Phase 34 已交付)
+- **延续 V8.6 编号:** 新增 Step 6.5 / Step 14 / Step 15,不动现有 13 step
+- **FOUND-08 frozen rule 继续生效:** zero expert_id / frontmatter changes across all movie-experts skills
+- **双语 SKILL.md (EN 结构 + 中文 body);refs 中文为主**
+- **物理位置:** 全部 deliverable 在 hermes-agent repo;kais-movie-agent repo 保持 read-only(per v5.0 cross-repo migration decision)
+- **数据接入 operator-action:** 平台 API key (抖音开放平台 / 快手开放平台 / 视频号 / 小红书薯条 / B 站创作者) 由 operator 配置;v9.0 提供 schema + adapter 骨架,operator 配 key 后激活
+
+**Source artifact:** Notion page "心流♥ → aigc开发 → 创作方向" (page_id 32811082-af8e-8009-b097-d19a5027b46f); Tier A 已落地为 quick task 260626-vzl refs。
 
 ## Next Milestone Goals
 
-Awaiting operator decision. Run `/gsd:new-milestone` to start v8.0 planning.
-
-Candidate priorities (from v7.0-MIGRATION-REPORT.md §Forward-Looking Notes):
-- Complete 4 deferred runtime smoke-tests (immediate)
-- feishu-* skills migration (largest deferred item)
+v9.0 shipped 后,候选方向:
+- feishu-* skills migration (largest v7.0 deferred item)
 - Multi-profile mechanism (v7.0 used single SOUL.md)
-- Doc-consistency patch (124 vs 133 file count)
-- Integration of concurrent `34-review-gate-framework/` workstream
+- v9.0 operator-actionhandoffs 实测 (平台 API key 配置 + live data ingestion)
+- 跨 milestone: 全 hermes-agent 周期 v10+ — 待 Kai 决定
 
 ## Core Value
 
@@ -386,4 +410,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-25 — v7.0 openclaw → hermes-agent Primary Agent Migration milestone started (paradigm shift: project scope broadens from movie-experts-only to personal hermes agent platform). v6.0 shipped 2026-06-24.*
+*Last updated: 2026-06-26 — v9.0 kais-movie-pipeline 闭环深化 milestone started (6 phases 38-43: SLICE / FORM / GATE / PREVIEW / DATA / VALIDATE). Returning to movie-experts deepening after v7.0 openclaw migration + v8.0 quick-task batch.*
