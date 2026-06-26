@@ -101,28 +101,28 @@ Updated during roadmap creation. v9.0 phases 38-43.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLICE-01 | Phase 38 | Pending |
-| SLICE-02 | Phase 38 | Pending |
-| SLICE-03 | Phase 38 | Pending |
-| SLICE-04 | Phase 38 | Pending |
-| FORM-01 | Phase 39 | Pending |
-| FORM-02 | Phase 39 | Pending |
-| FORM-03 | Phase 39 | Pending |
-| FORM-04 | Phase 39 | Pending |
-| GATE-01 | Phase 40 | Pending |
-| GATE-02 | Phase 40 | Pending |
-| GATE-03 | Phase 40 | Pending |
-| GATE-04 | Phase 40 | Pending |
-| PREVIEW-01 | Phase 41 | Pending |
-| PREVIEW-02 | Phase 41 | Pending |
-| PREVIEW-03 | Phase 41 | Pending |
-| DATA-01 | Phase 42 | Pending |
-| DATA-02 | Phase 42 | Pending |
-| DATA-03 | Phase 42 | Pending |
-| DATA-04 | Phase 42 | Pending |
-| VALIDATE-01 | Phase 43 | Pending |
-| VALIDATE-02 | Phase 43 | Pending |
-| VALIDATE-03 | Phase 43 | Pending |
+| SLICE-01 | Phase 38 | Phase-assigned |
+| SLICE-02 | Phase 38 | Phase-assigned |
+| SLICE-03 | Phase 38 | Phase-assigned |
+| SLICE-04 | Phase 38 | Phase-assigned |
+| FORM-01 | Phase 39 | Phase-assigned |
+| FORM-02 | Phase 39 | Phase-assigned |
+| FORM-03 | Phase 39 | Phase-assigned |
+| FORM-04 | Phase 39 | Phase-assigned |
+| GATE-01 | Phase 40 | Phase-assigned |
+| GATE-02 | Phase 40 | Phase-assigned |
+| GATE-03 | Phase 40 | Phase-assigned |
+| GATE-04 | Phase 40 | Phase-assigned |
+| PREVIEW-01 | Phase 41 | Phase-assigned |
+| PREVIEW-02 | Phase 41 | Phase-assigned |
+| PREVIEW-03 | Phase 41 | Phase-assigned |
+| DATA-01 | Phase 42 | Phase-assigned |
+| DATA-02 | Phase 42 | Phase-assigned |
+| DATA-03 | Phase 42 | Phase-assigned |
+| DATA-04 | Phase 42 | Phase-assigned |
+| VALIDATE-01 | Phase 43 | Phase-assigned |
+| VALIDATE-02 | Phase 43 | Phase-assigned |
+| VALIDATE-03 | Phase 43 | Phase-assigned |
 
 **Coverage:**
 - v9.0 requirements: 22 total (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3)
@@ -132,4 +132,4 @@ Updated during roadmap creation. v9.0 phases 38-43.
 ---
 
 *Requirements defined: 2026-06-26 — v9.0 milestone start (6 phases 38-43, 22 reqs).*
-*Last updated: 2026-06-26 — initial v9.0 requirements; traceability pre-filled with phase assignments.*
+*Last updated: 2026-06-26 — ROADMAP created; traceability status flipped Pending → Phase-assigned (22/22 mapped to Phases 38-43).*

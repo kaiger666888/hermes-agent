@@ -3,16 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: kais-movie-pipeline 闭环深化
 status: planning
-last_updated: "2026-06-26T15:23:18.377Z"
+last_updated: "2026-06-26T15:29:17.562Z"
 last_activity: 2026-06-26
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
 ---
-
 # State: Hermes Agent — Kai's Personal Agent Platform
 
 ## Project Reference
@@ -24,14 +23,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** v9.0 — Defining requirements (6 phases 38-43: SLICE / FORM / GATE / PREVIEW / DATA / VALIDATE)
+**Current focus:** v9.0 — ROADMAP created (6 phases 38-43: SLICE / FORM / GATE / PREVIEW / DATA / VALIDATE), ready for plan-phase
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 38 of 43 (not yet planned — parallel-eligible wave includes 38/39/40/41)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-26 — Milestone v9.0 started
+Status: ROADMAP created; awaiting user approval to start plan-phase
+Last activity: 2026-06-26 — v9.0 ROADMAP + STATE + REQUIREMENTS traceability written
 
 ### Progress
 
@@ -42,46 +41,87 @@ v3.0 Skills-to-DAG:             [██████████] 100% (Phases 13
 v4.0 Methodology Backfill:      [██████████] 100% (Phases 19-21, shipped 2026-06-18)
 v5.0 V8.6 Adaptation:           [██████████] 100% (Phases 22-27, shipped 2026-06-19)
 v6.0 Self-Evolution Feedback:   [██████████] 100% (Phases 28-33, shipped 2026-06-24)
+v7.0 openclaw → hermes Migration:[██████████] 100% (Phases 34-37, shipped 2026-06-25)
 
-v7.0 openclaw → hermes Migration:
-  Phase 34 (Skills Migration)              [██████████] 100% COMPLETE — 3/3 plans done (coding-agent + tmux-agents skills migrated; bidirectional related_skills wired; COEXISTENCE.md authored)
-  Phase 35 (SOUL.md Enhancement)           [██████████] 100% COMPLETE — 1/1 plan done (SOUL.md non-destructive integration + transformation note)
-  Phase 36 (Memory Ingestion)              [██████████] 100% COMPLETE — 2/2 plans done (batch_ingest.py + spot_check.py + USER.md migrated + INGESTION-NOTE)
-  Phase 37 (Validation & Report)           [██████████] 100% COMPLETE — 1/1 plan done (BENCHMARK-RESULTS + v7.0-MIGRATION-REPORT.md + 37-VERIFICATION)
+v9.0 kais-movie-pipeline 闭环深化 (in planning):
+  Phase 38 (SLICE — 平台母版切片)          [          ]   0% Not started
+  Phase 39 (FORM — 配方库 v0)              [          ]   0% Not started
+  Phase 40 (GATE — 3 新审核门)             [          ]   0% Not started
+  Phase 41 (PREVIEW — LTX2.3 Step 6.5)     [          ]   0% Not started
+  Phase 42 (DATA — 数据收敛 Step 15)       [          ]   0% Not started (waits on 38+39)
+  Phase 43 (VALIDATE — 集成验证)            [          ]   0% Not started (strictly last)
 ```
 
-**v7.0 milestone status:** All 4 phases complete (34 + 35 + 36 + 37). 14/14 requirements structurally satisfied (SKILL×4 + SOUL×3 + MEM×4 + VALIDATE×3). Ready for `/gsd:complete-milestone v7.0` archive + tag. Operator next: run 4 Operator Action Items in v7.0-MIGRATION-REPORT.md to confirm runtime behavior, then begin v8.0 milestone planning.
+**v9.0 milestone status:** ROADMAP created. 22/22 requirements mapped (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3). Parallel-eligible wave {38, 39, 40, 41} ready to plan; Phase 42 waits on 38+39; Phase 43 strictly last.
 
-### Phase Statuses (v7.0)
+### Phase Statuses (v9.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 34 | Skills Migration (coding-agent + tmux-agents) | **Complete** | SKILL-01..04. All 3 plans done: Plan 34-01 (coding-agent, 87e046b0d) + Plan 34-02 (tmux-agents, 4c64890c6) + Plan 34-03 (coexistence wiring + COEXISTENCE.md, a62c1178d + 5cbe555cc). Verification: passed 5/5. |
-| 35 | SOUL.md Identity Enhancement | **Complete** | SOUL-01..03. 1/1 plan done (35-01: SOUL.md non-destructive integration + 35-01-TRANSFORMATION-NOTE.md, 0191f5589). Verification: human_needed (structural all-pass; 2 SC require runtime observation — deferred to operator). |
-| 36 | Memory Ingestion (USER.md + 124 .md → mem0) | **Complete** | MEM-01..04. 2/2 plans done: 36-01 (batch_ingest.py + spot_check.py, d7aa2eb7c + 50ee1b8b2) + 36-02 (USER.md migrated + INGESTION-NOTE). Verification: human_needed (tooling-only; live ingest deferred pending MEM0_API_KEY). File count corrected: 124 files / 817KB (NOT 133 / 1.3MB). |
-| 37 | Validation & Migration Report | **Complete** | VALIDATE-01..03. 1/1 plan done (37-01: BENCHMARK-RESULTS 9bcfcdecc + v7.0-MIGRATION-REPORT d1f6b9b33 + 37-VERIFICATION 2cb836c5c). Verification: human_needed (3/3 structural; runtime smoke-tests deferred per scoped boundary). **v7.0 milestone ready for `/gsd:complete-milestone v7.0`.** |
+| 38 | SLICE — 平台母版切片 (Step 14) | **Not started** | SLICE-01..04. Parallel-eligible wave. Touches: SKILL.md Step 14 body + new ref `references/platform-master-slicing.md` + `pipeline_state.episode_id.variants[]` schema. FOUND-08: SKILL.md frontmatter preserved. |
+| 39 | FORM — 配方库 v0 (new plugin) | **Not started** | FORM-01..04. Parallel-eligible wave. Touches: new `plugins/formula_library/` (plugin.yaml + schema.py + 10 seed JSON) + Step 0 patch in kais-movie-pipeline SKILL.md + theory_critic body patch. No Hermes core code changes. |
+| 40 | GATE — 3 新审核门 | **Not started** | GATE-01..04. Parallel-eligible wave. Touches: `plugins/review_gates/gates.yaml` additive registration (gate 9/10/11) + `references/review-gates.md` additive update. Built on Phase 34-shipped state machine (no replacement of existing 8 gates). |
+| 41 | PREVIEW — LTX2.3 Step 6.5 | **Not started** | PREVIEW-01..03. Parallel-eligible wave. Touches: new ref `references/ltx2-preview-loop.md` + Step 6.5 wiring in SKILL.md body. **Operator-action-handoff:** live LTX2.3 GPU testing deferred (V9-FUTURE-02). |
+| 42 | DATA — 数据收敛 (Step 15) | **Blocked on 38+39** | DATA-01..04. Depends on SLICE variants[] schema + FORM formula_library target. Touches: 5 platform API adapter stubs + FeedbackRecord schema extension + formula_tuning_loop + `hermes formula stats` CLI + new ref `references/data-convergence.md`. **Operator-action-handoff:** 5 平台 API keys operator-side (V9-FUTURE-01). |
+| 43 | VALIDATE — 集成验证 + close-out | **Strictly last** | VALIDATE-01..03. Cross-5-phase integration-checker + FOUND-08 byte-diff audit vs start commit `a2a20d2be` + canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Mirrors v5.0 P27 / v6.0 P33 / v7.0 P37 close-out pattern. |
 
 ### Critical Path
 
 ```
-Phase 34 (Skills)   ──┐
-                      │
-Phase 35 (SOUL.md)  ──┼──→  Phase 37 (Validation + Report)  ← MUST run last
-                      │
-Phase 36 (Memory)   ──┘
+            ┌── Phase 38 (SLICE)  ───────┐
+            │                            ├──→ Phase 42 (DATA)  ──┐
+            ├── Phase 39 (FORM)   ───────┤                      │
+Parallel    │                            │                      │
+wave  ──────┤── Phase 40 (GATE)   ───────┘                      ├──→ Phase 43 (VALIDATE)
+(disjoint,  │                                                   │      strictly LAST
+ can start  │                                                   │
+concurrent) └── Phase 41 (PREVIEW)  ────────────────────────────┘
+                  (independent — touches Step 6.5 only)
 ```
 
-Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator SOUL / operator memories). Phase 37 strictly last — validates all three + writes the migration report.
+**Parallel-eligible wave:** Phase 38 + 39 + 40 + 41 touch disjoint paths (Step 14 SKILL body / new formula_library plugin / review_gates registration / Step 6.5 ref). All four may start concurrently after user approval.
 
-## Performance Metrics (v7.0)
+**Hard dependencies:**
+- Phase 42 (DATA) → needs variants[] from Phase 38 (SLICE) + formula_library from Phase 39 (FORM) as tuning-loop write-back target.
+- Phase 43 (VALIDATE) → strictly last; runs integration-checker across all 5 prior phases.
 
-- v7.0 phases total: 4 (Phases 34-37, continuing from v6.0 phase 33)
-- v7.0 phases completed: 0
-- v7.0 requirements total: 14
-- v7.0 requirements mapped: 14 / 14 ✓
-- v7.0 requirements orphaned: 0
-- v7.0 plans completed: 0 / TBD (plan counts to be refined in plan-phase)
-- Deliverable form: MIXED — repo-commit (skills + migration report) + operator-state (SOUL.md + memories). No Hermes-core code changes (config-only at most for mem0 plugin).
+**FOUND-08 frozen rule continues milestone-wide:** zero expert_id / frontmatter changes across all 16 active movie-experts. Byte-diff verified at Phase 43 against v9.0 start commit `a2a20d2be`.
+
+## Performance Metrics (v9.0)
+
+- v9.0 phases total: 6 (Phases 38-43, continuing from v7.0 phase 37; v8.0 was a quick-task batch, not formal milestone)
+- v9.0 phases completed: 0
+- v9.0 requirements total: 22 (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3)
+- v9.0 requirements mapped: 22 / 22 ✓
+- v9.0 requirements orphaned: 0
+- v9.0 plans completed: 0 / TBD (plan counts to be refined in plan-phase)
+- Deliverable form: repo-commit only — skills/kais-movie-pipeline/ + skills/movie-experts/ body patches + new plugins/formula_library/ + plugins/review_gates/ additive registration. **Zero Hermes core Python/JS changes** (new plugin lives in plugins/ namespace; new gates register on existing Phase 34 state machine).
+- Operator-action-handoffs (NOT gaps, per scoped-boundary design): (1) Phase 41 LTX2.3 live GPU generation testing; (2) Phase 42 5 平台 API key 配置 + live data ingestion. Both documented in v9.0-MILESTONE-AUDIT.md at close.
+
+
+
+## Decisions (v9.0 — entered planning)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| 6 phases continuing from v7.0 phase 37 (38, 39, 40, 41, 42, 43) | Project maintains sequential phase numbering; decimal phases reserved for urgent insertions only. v7.0 ended at P37; v8.0 was a quick-task batch (not formal milestone) — label consumed to avoid version collision. | Applied 2026-06-26 — ROADMAP phase numbering 38-43 |
+| Phases 38 + 39 + 40 + 41 are parallel-eligible (parallel-eligible wave) | Disjoint paths: P38 = kais-movie-pipeline SKILL.md Step 14 body + new ref; P39 = new `plugins/formula_library/` + Step 0 patch; P40 = `plugins/review_gates/gates.yaml` additive registration; P41 = Step 6.5 ref + wiring. Zero file overlap. | Applied 2026-06-26 — ROADMAP critical path annotated |
+| Phase 42 (DATA) depends on Phase 38 + Phase 39 | DATA needs variants[] schema from SLICE to attach per-platform metrics AND formula_library from FORM as tuning-loop write-back target. GATE is NOT a hard dep (read-side lookup only). | Applied 2026-06-26 — ROADMAP critical path annotated |
+| Phase 43 (VALIDATE) strictly LAST | Cross-5-phase integration-checker + FOUND-08 byte-diff audit + canonical v9.0-MILESTONE-AUDIT.md. Mirrors v5.0 P27 / v6.0 P33 / v7.0 P37 close-out pattern. | Applied 2026-06-26 — ROADMAP critical path annotated |
+| FOUND-08 frozen rule continues (zero expert_id / frontmatter changes across 16 active movie-experts) | Carried from v3 onward. v9.0 patches SKILL.md body only on (at most) kais-movie-pipeline + theory_critic + compliance_gate + editor (per Out-of-Scope). Byte-diff verified at Phase 43 against start commit `a2a20d2be`. | Applied 2026-06-26 — ROADMAP Phase 43 SC#2 + each phase's FOUND-08 note |
+| Scope discipline: no Hermes core Python/JS changes | User explicit choice — new plugin lives in `plugins/formula_library/` namespace (hermes-agent internal plugin, NOT core code); new gates register on existing Phase 34 review_gates state machine (additive, no replacement of 8 V8.6 gates). | Applied 2026-06-26 — ROADMAP overview + each phase's scope reminder |
+| V8.6 13-step numbering preserved (Step 6.5 / 14 / 15 are additive) | V8.6 numbering stability prioritized over renumbering. New steps inserted additively; existing 13-step I/O contract unchanged (verified at Phase 43 SC#1). | Applied 2026-06-26 — ROADMAP PREVIEW/DATA/SLICE phases all mark additive |
+| Skip per-phase research workflow | Source artifact (Notion "创作方向" page) is already analyzed; Tier A shipped as quick task 260626-vzl. Tier B+C requirements are well-defined; research would add latency without changing scope. | Applied 2026-06-26 — no `.planning/research/v9-*` directory created |
+| Operator-action-handoffs (NOT gaps) for Phase 41 + Phase 42 | Live LTX2.3 GPU testing + 5 平台 API key configuration are operator-side by design. v9.0 ships adapter skeletons + schema + baseline docs. Mirrors v7.0 migration-milestone scoped-boundary pattern (4 operator smoke-tests there). | Applied 2026-06-26 — Phase 41 SC#4 + Phase 42 SC#5 + Phase 43 SC#4 enumerate handoffs |
+
+### Decisions (carried forward — relevant to v9.0)
+
+| Decision | Rationale | Why relevant to v9.0 |
+|----------|-----------|----------------------|
+| Project scope broadened from movie-experts to personal hermes agent (v6→v7) | PROJECT.md `## What This Is` + `## Core Value` evolved at v7.0 start. | v9.0 returns to movie-experts deepening — operates back inside `skills/movie-experts/` + `skills/kais-movie-pipeline/`. v7.0 broadened scope is preserved; v9.0 is a movie-experts subsystem milestone. |
+| FOUND-08 frozen rule (movie-experts expert_id integrity) | Carried from v3 onward. Protects the frozen v6.0 shipped state. | v9.0 patches SKILL.md body on up to 4 experts; zero frontmatter / expert_id changes. Phase 43 byte-diff verifies. |
+| `.planning/milestones/` is canonical close-out archive location | v3-v7 all wrote milestone audit/report to `.planning/milestones/v{X}-MILESTONE-AUDIT.md`. | Phase 43 SC#3 specifies `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. |
+| Tier A → quick task 260626-vzl (2026-06-26); Tier B+C → v9.0 formal milestone | Tier A (3 refs + 3 SKILL.md patches) was small enough for quick-task flow; Tier B+C (4 new pipeline capabilities + 3 gates + plugin + data loop) needed milestone-level planning discipline. | v9.0 ROADMAP builds on Tier A's 3 refs (platform-specs.md / creative-redlines.md / genre-anchor-urban-fantasy.md) as load-bearing inputs. |
 
 ## Accumulated Context
 
@@ -185,23 +225,24 @@ Items acknowledged at v7.0 close (2026-06-25) — documented operator-action-han
 
 **If session is lost, restore context by reading:**
 
-1. `.planning/PROJECT.md` §"Current Milestone: v7.0" — milestone goal + scope broadening rationale
-2. `.planning/ROADMAP.md` — 4 phases (34-37), success criteria, coverage table, critical path
-3. `.planning/REQUIREMENTS.md` — 14 requirements with REQ-IDs + Traceability table (all mapped)
-4. `~/.openclaw/` workspace — source files for migration (read-only inputs): `skills/coding-agent/`, `skills/openclaw-skills-tmux-agents/`, `SOUL.md`, `workspace/USER.md`, `workspace/memory/*.md` (133 files)
-5. `skills/autonomous-ai-agents/` — existing 4 skills (claude-code, codex, opencode, hermes-agent) — coexistence decision input for Phase 34
-6. `plugins/memory/mem0/` — existing mem0 plugin (Phase 36 may extend with batch-ingest config)
-7. `~/.hermes/SOUL.md` — current hermes defaults (Phase 35 must preserve byte-for-byte in original section)
+1. `.planning/PROJECT.md` §"Current Milestone: v9.0" — milestone goal + Tier B/C scope discipline
+2. `.planning/ROADMAP.md` — 6 phases (38-43), success criteria, coverage table, critical path (parallel-eligible wave 38+39+40+41; DATA waits on 38+39; VALIDATE strictly last)
+3. `.planning/REQUIREMENTS.md` — 22 requirements with REQ-IDs + Traceability table (22/22 mapped, status Phase-assigned)
+4. `skills/kais-movie-pipeline/SKILL.md` — existing 13-step V8.6 pipeline; v9.0 adds Step 6.5 / 14 / 15 additively (no renumbering)
+5. `skills/kais-movie-pipeline/references/` — 7 existing refs (incl. 3 Tier A refs from quick task 260626-vzl: platform-specs.md / creative-redlines.md / genre-anchor-urban-fantasy.md)
+6. `plugins/review_gates/` — Phase 34-shipped state machine (`gate.py` + `gates.yaml` 8 V8.6 gates) — Phase 40 registers gate 9/10/11 additively
+7. v9.0 start commit `a2a20d2be` — FOUND-08 byte-diff anchor for Phase 43 VALIDATE-02
 
-**Next action:** Plan Phase 34 (`/gsd:plan-phase 34` — Skills Migration: coding-agent + tmux-agents).
+**Next action:** After user approval, plan any of the parallel-eligible wave (`/gsd:plan-phase 38` or `/gsd:plan-phase 39` or `/gsd:plan-phase 40` or `/gsd:plan-phase 41`).
 
-**Resume from interrupted phase:** Not yet started — first v7.0 phase.
+**Resume from interrupted phase:** Not yet started — first v9.0 phase.
 
 ---
 
-*Last updated: 2026-06-25 — v7.0 ROADMAP + STATE created (4 phases, 14 reqs, granularity=standard, coverage 14/14). Phase 34 ready to plan. v6.0 milestone shipped 2026-06-24 (Phases 28-33).*
+*Last updated: 2026-06-26 — v9.0 ROADMAP + STATE patched (6 phases 38-43, 22 reqs, granularity=standard, coverage 22/22). Parallel-eligible wave {38,39,40,41} ready to plan. v7.0 milestone shipped 2026-06-25 (Phases 34-37); v8.0 was a quick-task batch (P0+P1 openclaw skills, 2026-06-26).*
 
 ## Operator Next Steps
 
-- `/gsd:plan-phase 34` — plan Skills Migration (coding-agent + tmux-agents)
-- Coexistence decision for autonomous-ai-agents overlap will be resolved during Phase 34 planning
+- Awaiting user approval of v9.0 ROADMAP draft
+- After approval: `/gsd:plan-phase 38` (or 39 / 40 / 41 — all parallel-eligible)
+- Operator-action-handoffs to plan for during execution: (a) Phase 41 LTX2.3 live GPU testing; (b) Phase 42 5 平台 API key configuration
