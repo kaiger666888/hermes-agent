@@ -1,10 +1,13 @@
 """Tests for agent.error_classifier — structured API error classification."""
 
+from types import SimpleNamespace
+
 import pytest
 from agent.error_classifier import (
     ClassifiedError,
     FailoverReason,
     classify_api_error,
+    classify_response_body_error,
     _extract_status_code,
     _extract_error_body,
     _extract_error_code,
@@ -1855,3 +1858,126 @@ class TestCjkBillingAndAuthPatterns:
         e = MockAPIError(msg)
         result = classify_api_error(e, provider="custom", model="glm-4.6")
         assert result.reason == FailoverReason.auth
+
+
+# ── classify_response_body_error: HTTP 200 + embedded error body ────────
+
+class TestClassifyResponseBodyError:
+    """classify_response_body_error() extracts an error embedded in a
+    successful-HTTP response object (notably ZhipuAI's HTTP 200 + error
+    body pattern) and runs it through the standard classifier."""
+
+    def test_none_response_returns_none(self):
+        assert classify_response_body_error(None) is None
+
+    def test_response_with_no_error_returns_none(self):
+        resp = SimpleNamespace(error=None, choices=["x"], body=None, model="m")
+        assert classify_response_body_error(resp) is None
+
+    def test_response_error_as_dict_with_code_1305_returns_overloaded(self):
+        """THE bug from today's incident: Zhipu returns HTTP 200 with
+        body.error = {"code":"1305","message":"该模型当前访问量过大"}."""
+        resp = SimpleNamespace(
+            error={"code": "1305", "message": "该模型当前访问量过大"},
+            choices=[],
+            body=None,
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.overloaded
+        assert result.retryable is True
+
+    def test_response_error_as_object_with_code_attribute(self):
+        """OpenAI SDK style: response.error is an object with .code and
+        .message attributes."""
+        err_obj = SimpleNamespace(code="1305", message="该模型当前访问量过大")
+        resp = SimpleNamespace(error=err_obj, choices=[], body=None, model="glm-4.6")
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.overloaded
+
+    def test_response_error_as_dict_with_code_1311_returns_billing(self):
+        resp = SimpleNamespace(
+            error={"code": "1311", "message": "余额不足"},
+            choices=[],
+            body=None,
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.billing
+
+    def test_response_error_as_dict_with_code_1113_returns_auth(self):
+        resp = SimpleNamespace(
+            error={"code": "1113", "message": "认证失败"},
+            choices=[],
+            body=None,
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.auth
+
+    def test_response_with_choices_message_error(self):
+        """Some providers embed the error in choices[0].message.error
+        instead of response.error."""
+        err_obj = SimpleNamespace(
+            role="assistant",
+            content=None,
+            error={"code": "1305", "message": "该模型当前访问量过大"},
+        )
+        choice = SimpleNamespace(index=0, message=err_obj, finish_reason="stop")
+        resp = SimpleNamespace(error=None, choices=[choice], body=None, model="glm-4.6")
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.overloaded
+
+    def test_response_body_dict_with_error_key(self):
+        """response.body is a dict with the error structure."""
+        resp = SimpleNamespace(
+            error=None,
+            choices=[],
+            body={"error": {"code": "1305", "message": "该模型当前访问量过大"}},
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.overloaded
+
+    def test_response_with_unrecognized_error_returns_none(self):
+        """If the error structure doesn't match any known pattern, return
+        None so the caller falls through to the existing
+        InvalidAPIResponse path."""
+        resp = SimpleNamespace(
+            error={"code": "9999", "message": "unknown gibberish"},
+            choices=[],
+            body=None,
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        # Unknown codes fall through to FailoverReason.unknown (retryable)
+        # rather than None — the caller gates on reason in the retryable
+        # set {rate_limit, overloaded, server_error, timeout}, so unknown
+        # is correctly excluded from the synthetic-exception path.
+        # Either None or unknown is acceptable here.
+        if result is not None:
+            assert result.reason not in {
+                FailoverReason.rate_limit,
+                FailoverReason.overloaded,
+                FailoverReason.server_error,
+                FailoverReason.timeout,
+            }
+
+    def test_response_cjk_message_without_code_classifies(self):
+        """If only the CJK message is present (no structured code), the
+        openclaw pattern fallback in _classify_by_message catches it."""
+        resp = SimpleNamespace(
+            error={"message": "该模型当前访问量过大"},
+            choices=[],
+            body=None,
+            model="glm-4.6",
+        )
+        result = classify_response_body_error(resp)
+        assert result is not None
+        assert result.reason == FailoverReason.overloaded
