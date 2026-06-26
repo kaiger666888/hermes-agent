@@ -154,11 +154,23 @@ def _normalize_mode(mode: Any) -> GateMode | None:
 
 
 def _handle_gate_submit(args: dict, **kw) -> str:
-    """Dispatch gate_submit to runner_hooks.pause_for_review.
+    """Dispatch gate_submit to runner_hooks.pause_for_review OR
+    runner_hooks.auto_detect_and_resolve.
 
-    Builds the Gate from gates.yaml, submits to the review platform, and
-    writes awaiting_review state. On ``GateMaxRetriesExceeded`` the episode
-    is marked failed (PIPE-GUARD-01) and a tool_error envelope is returned.
+    Two dispatch paths (Plan 40-02 Task 3):
+
+    * **V8.6 HIL path** (8 gates, preserved from Phase 34): builds the Gate
+      from gates.yaml, submits to the review platform, writes
+      ``awaiting_review`` state. The gate is left PENDING awaiting manual
+      ``gate_resolve``. Returns ``status="submitted"``.
+    * **Phase 40 redline auto-detect path** (3 gates, NEW): for gate_ids
+      starting with ``redline_``, routes to
+      ``runner_hooks.auto_detect_and_resolve`` which runs the Plan-01
+      detector and auto-resolves with the detector's verdict. Returns
+      ``status="auto_resolved"`` + ``decision`` + ``suggested_action``.
+
+    On ``GateMaxRetriesExceeded`` either path marks the episode failed
+    (PIPE-GUARD-01) and returns a tool_error envelope.
     """
     gate_id = args.get("gate_id")
     episode_id = args.get("episode_id")
@@ -173,13 +185,52 @@ def _handle_gate_submit(args: dict, **kw) -> str:
             known=list(GATE_REGISTRY.keys()),
         )
 
+    payload = args.get("payload") or {}
+
+    # ── Phase 40 Plan 02: redline gates dispatch to auto-detect path ──
+    # The 3 redline gates (R1/R3/R4) auto-resolve via DETECTOR_REGISTRY.
+    # The 8 V8.6 gates keep their HIL pause_for_review path (unchanged).
+    if runner_hooks.is_redline_gate(gate_id):
+        try:
+            outcome = runner_hooks.auto_detect_and_resolve(
+                gate_id, episode_id, payload,
+            )
+        except GateMaxRetriesExceeded as exc:
+            # PIPE-GUARD-01: same fail semantics as the V8.6 path.
+            runner_hooks.mark_episode_failed(episode_id, gate_id, exc)
+            return tool_error(
+                str(exc),
+                status="episode_failed",
+                gate_id=gate_id,
+                episode_id=episode_id,
+            )
+        except KeyError as exc:
+            # T-40-05 mitigation: redline_X gate_id without a registered
+            # detector. Fail loud — never silent auto-approve.
+            return tool_error(
+                str(exc),
+                status="detector_missing",
+                gate_id=gate_id,
+                episode_id=episode_id,
+            )
+        return tool_result({
+            "status": "auto_resolved",
+            "gate_id": gate_id,
+            "episode_id": episode_id,
+            "decision": outcome.get("decision"),
+            "suggested_action": outcome.get("suggested_action"),
+            "rollback_to": outcome.get("rollback_to"),
+            "attempt": outcome.get("attempt"),
+            "resolved_at": outcome.get("resolved_at"),
+        })
+
+    # ── V8.6 HIL path (8 gates, Phase 34 behavior preserved) ──
     mode_arg = args.get("mode")
     try:
         mode = _normalize_mode(mode_arg)
     except GateError as exc:
         return tool_error(str(exc))
 
-    payload = args.get("payload") or {}
     try:
         result = runner_hooks.pause_for_review(
             gate_id, episode_id, payload, mode=mode,

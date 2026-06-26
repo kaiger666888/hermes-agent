@@ -1,10 +1,16 @@
 """review_gates plugin — Phase 31 skeleton scaffold.
 
 Registers 4 tools (gate_submit / gate_wait / gate_resolve / gates_list) into
-the ``review_gates`` toolset. Phase 31 ships **stub handlers** that return a
-degrade-style JSON envelope (``status: not_implemented``). Phase 34 will swap
-in the real HIL gate state machine + delegate_task approval callback + 8 V8.6
-gate YAML config loader without renegotiating the tool schemas declared here.
+the ``review_gates`` toolset. Phase 31 shipped **stub handlers**; Phase 34
+swapped in the real HIL gate state machine + delegate_task approval callback
++ 8 V8.6 gate YAML config loader without renegotiating the tool schemas.
+
+Phase 40 Plan 02 (GATE-04) added the redline auto-detect path:
+``runner_hooks.auto_detect_and_resolve()`` runs the Plan-01 detector in
+``plugins.review_gates.gates.DETECTOR_REGISTRY`` and auto-resolves redline
+gates with the detector's verdict (no manual ``gate_resolve`` needed). The
+8 V8.6 gates keep their manual HIL path unchanged. See
+``.planning/phases/40-gate-redlines/40-02-PLAN.md``.
 
 Mirrors the standalone multi-tool pattern established by ``plugins/spotify/``:
 
