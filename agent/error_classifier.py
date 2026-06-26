@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
@@ -112,6 +113,12 @@ _BILLING_PATTERNS = [
     "balance_depleted",
     "model_not_supported_on_free_tier",
     "not available on the free tier",
+    # CJK billing patterns (ported from openclaw failover-matches.ts).
+    # Simplified-Chinese codepoints MUST be preserved verbatim.
+    "余额不足",
+    "账户余额不足",
+    "欠费",
+    "账户已欠费",
 ]
 
 # Patterns that indicate rate limiting (transient, will resolve)
@@ -343,6 +350,13 @@ _AUTH_PATTERNS = [
     "token expired",
     "token revoked",
     "access denied",
+    # CJK auth patterns (ported from openclaw failover-matches.ts).
+    # Simplified-Chinese codepoints MUST be preserved verbatim.
+    "无权访问",
+    "认证失败",
+    "鉴权失败",
+    "密钥无效",
+    "apikey 无效",
 ]
 
 # Anthropic thinking block signature patterns
@@ -434,6 +448,188 @@ _SSL_TRANSIENT_PATTERNS = [
     # Python ssl module prefix, e.g. "[SSL: BAD_RECORD_MAC]"
     "[ssl:",
 ]
+
+
+# ── openclaw failover patterns ──────────────────────────────────────────
+# Ported from openclaw failover-matches.ts.
+# Source: /home/kai/.nvm/versions/node/v24.13.0/lib/node_modules/openclaw/
+#         dist/failover-matches-C-tab7FS.js
+# Sync upstream if openclaw updates these patterns.
+#
+# These cover CJK (simplified-Chinese) error messages and additional English
+# variants that the existing _RATE_LIMIT_PATTERNS / _TIMEOUT_MESSAGE_PATTERNS /
+# _TRANSPORT_ERROR_TYPES / _SERVER_DISCONNECT_PATTERNS lists do not catch.
+# Most English rate-limit and transport entries are already covered elsewhere;
+# the CJK entries here are net-new. Simplified-Chinese codepoints MUST be
+# preserved verbatim — do not "translate" or "normalize".
+
+# Pre-compiled regex entries for each category (the JS source uses RegExp
+# literals with the /i flag). Plain-string entries are kept in the
+# _OPENCLAW_*_STRINGS lists below and consumed as case-insensitive substrings.
+_OPENCLAW_RATE_LIMIT_RES = [
+    re.compile(r"rate[_ ]limit|too many requests|429"),
+    re.compile(r"too many (?:concurrent )?requests", re.IGNORECASE),
+    re.compile(r"throttling(?:exception)?", re.IGNORECASE),
+    re.compile(r"\btpm\b", re.IGNORECASE),
+]
+_OPENCLAW_RATE_LIMIT_STRINGS = [
+    "model_cooldown",
+    "exceeded your current quota",
+    "resource has been exhausted",
+    "quota exceeded",
+    "resource_exhausted",
+    "throttlingexception",
+    "throttling_exception",
+    "throttled",
+    "throttling",
+    "usage limit",
+    "tokens per minute",
+    "tokens per day",
+    # CJK rateLimit
+    "请求过于频繁",
+    "调用频率",
+    "频率限制",
+    "配额不足",
+    "配额已用尽",
+    "额度不足",
+    "额度已用尽",
+]
+
+_OPENCLAW_OVERLOADED_RES = [
+    re.compile(r'overloaded_error|"type"\s*:\s*"overloaded_error"', re.IGNORECASE),
+    re.compile(r"\b(?:selected\s+)?model\s+(?:is\s+)?at capacity\b", re.IGNORECASE),
+    re.compile(
+        r"service[_ ]unavailable.*(?:overload|capacity|high[_ ]demand)"
+        r"|(?:overload|capacity|high[_ ]demand).*service[_ ]unavailable",
+        re.IGNORECASE,
+    ),
+]
+_OPENCLAW_OVERLOADED_STRINGS = [
+    "overloaded",
+    "high demand",
+    "high load",
+    # CJK overloaded
+    "服务过载",
+    "当前负载过高",
+    # Zhipu signature message — the original trigger for today's incident.
+    # Not in openclaw's source list but functionally equivalent to "at capacity".
+    "该模型当前访问量过大",
+]
+
+_OPENCLAW_SERVER_ERROR_RES: list = []  # serverError category has no regexes
+_OPENCLAW_SERVER_ERROR_STRINGS = [
+    "an error occurred while processing",
+    "internal server error",
+    # "internal_error" deliberately omitted — collides with the SSL alert
+    # path (step 5 in classify_api_error pipeline), which classifies
+    # "[SSL: TLSV1_ALERT_INTERNAL_ERROR]" as timeout. The SSL branch
+    # runs AFTER _classify_by_message, so including "internal_error"
+    # here would re-route those alerts to server_error.
+    "server_error",
+    "service temporarily unavailable",
+    "service_unavailable",
+    "bad gateway",
+    "gateway timeout",
+    "upstream error",
+    "upstream connect error",
+    # "connection reset" deliberately omitted — collides with the
+    # transport-error heuristic (step 7), which classifies
+    # ConnectionError("Connection reset by peer") as timeout.
+    # CJK serverError (net-new coverage)
+    "内部错误",
+    "服务器错误",
+    "服务器内部错误",
+    "系统错误",
+    "系统繁忙",
+    "系统异常",
+]
+
+_OPENCLAW_TIMEOUT_RES = [
+    # Zhipu gRPC-status-as-JSON: "got status: internal" + code 500.
+    # Ported verbatim per plan; flagged as Zhipu-specific.
+    re.compile(
+        r"^(?=[\s\S]*\bgot status:\s*internal\b)"
+        r"(?=[\s\S]*\bcode[\"']?\s*[:=]\s*500\b)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^(?=[\s\S]*[\"']status[\"']\s*:\s*[\"']internal[\"'])"
+        r"(?=[\s\S]*[\"']code[\"']\s*:\s*500\b)",
+        re.IGNORECASE,
+    ),
+    # libuv error code tokens (appear in error strings from Node.js-based
+    # proxies/gateways). Hermes's _TRANSPORT_ERROR_TYPES covers the Python
+    # exception class names; these cover the string forms.
+    re.compile(r"\beconn(?:refused|reset|aborted)\b", re.IGNORECASE),
+    re.compile(r"\benetunreach\b", re.IGNORECASE),
+    re.compile(r"\behostunreach\b", re.IGNORECASE),
+    re.compile(r"\behostdown\b", re.IGNORECASE),
+    re.compile(r"\benetreset\b", re.IGNORECASE),
+    re.compile(r"\betimedout\b", re.IGNORECASE),
+    re.compile(r"\besockettimedout\b", re.IGNORECASE),
+    re.compile(r"\bepipe\b", re.IGNORECASE),
+    re.compile(r"\benotfound\b", re.IGNORECASE),
+    re.compile(r"\beai_again\b", re.IGNORECASE),
+    re.compile(r"without sending (?:any )?chunks?", re.IGNORECASE),
+    # Stop-reason patterns (4 variant prefixes)
+    re.compile(
+        r"\bstop reason:\s*(?:abort|error|malformed_response|network_error)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\breason:\s*(?:abort|error|malformed_response|network_error)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bunhandled stop reason:\s*(?:abort|error|malformed_response|network_error)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bfinish_reason:\s*(?:abort|error|malformed_response|network_error)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\boperation was aborted\b", re.IGNORECASE),
+    re.compile(r"\bstream (?:was )?(?:closed|aborted)\b", re.IGNORECASE),
+    re.compile(r"^terminated$", re.IGNORECASE),
+    re.compile(r"^stream_read_error$", re.IGNORECASE),
+    re.compile(
+        r"\bund_err_(?:socket|connect|headers?|body|req_content_length_mismatch|aborted|closed)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"^request failed$", re.IGNORECASE),
+    re.compile(r"\brequest failed after repeated internal retries\b", re.IGNORECASE),
+]
+_OPENCLAW_TIMEOUT_STRINGS = [
+    "timeout",
+    "timed out",
+    "service unavailable",
+    "deadline exceeded",
+    "context deadline exceeded",
+    "connection error",
+    "network error",
+    "network request failed",
+    "fetch failed",
+    "socket hang up",
+    # CJK timeout
+    "网络错误",
+    "网络异常",
+    "服务暂时不可用",
+    "服务繁忙",
+    "请求超时",
+    "连接超时",
+    "连接错误",
+]
+
+
+# ── Zhipu numeric error code handlers ───────────────────────────────────
+# ZhipuAI returns errors with numeric `code` fields in the JSON body.
+# THE bug from today's incident: code 1305 ("该模型当前访问量过大") arrived
+# inside an HTTP 200 response, so the SDK treated it as success. These body
+# regexes are belt-and-suspenders for cases where the structured `code` field
+# is lost during transport flattening.
+ZHIPU_OVERLOADED_CODE_1305_RE = re.compile(r'"code"\s*:\s*1305\b')
+ZHIPU_BILLING_CODE_1311_RE = re.compile(r'"code"\s*:\s*1311\b')
+ZHIPU_AUTH_CODE_1113_RE = re.compile(r'"code"\s*:\s*1113\b')
 
 
 # ── Classification pipeline ─────────────────────────────────────────────
@@ -1092,6 +1288,30 @@ def _classify_by_error_code(
     """Classify by structured error codes from the response body."""
     code_lower = error_code.lower()
 
+    # Zhipu (ZAI) numeric codes — handled BEFORE string-code matches so they
+    # don't get misclassified by the generic code_lower comparisons below.
+    # _extract_error_code calls str(code).strip() on int values, so 1305
+    # arrives here as the string "1305".
+    if code_lower == "1305":
+        return result_fn(
+            FailoverReason.overloaded,
+            retryable=True,
+        )
+    if code_lower == "1311":
+        return result_fn(
+            FailoverReason.billing,
+            retryable=False,
+            should_rotate_credential=True,
+            should_fallback=True,
+        )
+    if code_lower == "1113":
+        return result_fn(
+            FailoverReason.auth,
+            retryable=False,
+            should_rotate_credential=True,
+            should_fallback=True,
+        )
+
     if code_lower in {"resource_exhausted", "throttled", "rate_limit_exceeded"}:
         return result_fn(
             FailoverReason.rate_limit,
@@ -1258,7 +1478,74 @@ def _classify_by_message(
     if any(p in error_msg for p in _TIMEOUT_MESSAGE_PATTERNS):
         return result_fn(FailoverReason.timeout, retryable=True)
 
+    # ── openclaw failover pattern fallback ──────────────────────────
+    # Ported from openclaw failover-matches.ts. These catch CJK error
+    # messages and additional English variants not covered by the lists
+    # above. Checked last so the more-specific hermes patterns (billing,
+    # auth, model_not_found, timeout) win when they apply.
+    # See: /home/kai/.nvm/versions/node/v24.13.0/lib/node_modules/openclaw/
+    #      dist/failover-matches-C-tab7FS.js
+    if _matches_openclaw(error_msg, _OPENCLAW_RATE_LIMIT_RES, _OPENCLAW_RATE_LIMIT_STRINGS):
+        return result_fn(
+            FailoverReason.rate_limit,
+            retryable=True,
+            should_rotate_credential=True,
+            should_fallback=True,
+        )
+    if _matches_openclaw(error_msg, _OPENCLAW_OVERLOADED_RES, _OPENCLAW_OVERLOADED_STRINGS):
+        return result_fn(FailoverReason.overloaded, retryable=True)
+    if _matches_openclaw(error_msg, _OPENCLAW_SERVER_ERROR_RES, _OPENCLAW_SERVER_ERROR_STRINGS):
+        return result_fn(FailoverReason.server_error, retryable=True)
+    if _matches_openclaw(error_msg, _OPENCLAW_TIMEOUT_RES, _OPENCLAW_TIMEOUT_STRINGS):
+        return result_fn(FailoverReason.timeout, retryable=True)
+
+    # Zhipu body-JSON regex fallback (belt-and-suspenders). Some transport
+    # layers flatten the structured error into a raw JSON string; these
+    # regexes catch the numeric code even then.
+    if ZHIPU_OVERLOADED_CODE_1305_RE.search(error_msg):
+        return result_fn(FailoverReason.overloaded, retryable=True)
+    if ZHIPU_BILLING_CODE_1311_RE.search(error_msg):
+        return result_fn(
+            FailoverReason.billing,
+            retryable=False,
+            should_rotate_credential=True,
+            should_fallback=True,
+        )
+    if ZHIPU_AUTH_CODE_1113_RE.search(error_msg):
+        return result_fn(
+            FailoverReason.auth,
+            retryable=False,
+            should_rotate_credential=True,
+            should_fallback=True,
+        )
+
     return None
+
+
+def _matches_openclaw(
+    error_msg: str,
+    regexes,
+    plain_strings,
+) -> bool:
+    """Match error_msg against an openclaw category's compiled regexes +
+    case-insensitive substring patterns. Mirrors openclaw's
+    matchesErrorPatterns(): regexes use .search(); plain strings use
+    `value.includes()` after lowercasing. error_msg is already lowercased
+    by the caller, but we lowercase again defensively for the regex
+    branch (which may be case-sensitive)."""
+    if not error_msg:
+        return False
+    for rx in regexes:
+        if rx.search(error_msg):
+            return True
+    for s in plain_strings:
+        # Plain strings from openclaw are matched case-insensitively.
+        # error_msg is already lowercase; lowercase the pattern too so
+        # CJK substrings (case-insensitive is a no-op for CJK) and
+        # English substrings both work.
+        if s.lower() in error_msg:
+            return True
+    return False
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────

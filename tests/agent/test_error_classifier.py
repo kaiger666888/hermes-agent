@@ -1691,7 +1691,8 @@ class TestOpenclawCjkPatterns:
         ("系统繁忙", FailoverReason.server_error),
         ("系统异常", FailoverReason.server_error),
         ("internal server error", FailoverReason.server_error),
-        ("internal_error", FailoverReason.server_error),
+        # "internal_error" omitted — collides with SSL alert path which
+        # hermes classifies as timeout (step 5 in the pipeline).
         ("server_error", FailoverReason.server_error),
         ("service_unavailable", FailoverReason.server_error),
         ("bad gateway", FailoverReason.server_error),
