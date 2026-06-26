@@ -53,9 +53,9 @@ def _make_suggestion(
     suggestion_id: str = "urban-fantasy-light-01_high_hook_dropoff_1700000000",
     formula_id: str = "urban-fantasy-light-01",
     observed_metric: float = 0.32,
-    status: str = "approved",
+    status: str = "pending",
 ) -> "object":
-    """Build a TuningSuggestion fixture (status='approved' for apply)."""
+    """Build a TuningSuggestion fixture (status='pending' for apply)."""
     from plugins.platform_metrics.schema import (
         MetricTrigger,
         TuningSuggestion,
@@ -73,6 +73,34 @@ def _make_suggestion(
         status=status,
         ts_queued=datetime.now(timezone.utc).isoformat(),
     )
+
+
+def _seed_queue_with_pending(tuning_dir: Path, suggestion: "object") -> None:
+    """Seed queue.jsonl with the pending version of *suggestion*.
+
+    apply_suggestion expects the suggestion to be pending in queue.jsonl
+    before operator approval. We construct a pending clone (same id) and
+    append it, so the post-write move_suggestion call succeeds.
+    """
+    from plugins.platform_metrics.queue import append_suggestion
+    from plugins.platform_metrics.schema import (
+        MetricTrigger,
+        TuningSuggestion,
+    )
+
+    pending_clone = TuningSuggestion(
+        suggestion_id=suggestion.suggestion_id,
+        formula_id=suggestion.formula_id,
+        trigger=MetricTrigger.HIGH_HOOK_DROPOFF,
+        observed_metric=suggestion.observed_metric,
+        threshold=suggestion.threshold,
+        suggested_action=suggestion.suggested_action,
+        rationale=suggestion.rationale,
+        evidence=list(suggestion.evidence),
+        status="pending",
+        ts_queued=suggestion.ts_queued,
+    )
+    append_suggestion(pending_clone, tuning_dir=tuning_dir)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -140,6 +168,7 @@ def test_apply_suggestion_updates_eval_score(tmp_path: Path) -> None:
     tuning_dir.mkdir()
 
     suggestion = _make_suggestion(observed_metric=0.32)
+    _seed_queue_with_pending(tuning_dir, suggestion)
     commit_sha = apply_suggestion(
         suggestion=suggestion,
         library_dir=library_dir,
@@ -177,6 +206,7 @@ def test_apply_suggestion_preserves_other_fields(tmp_path: Path) -> None:
     original_snapshot = json.loads(json.dumps(original))
 
     suggestion = _make_suggestion(observed_metric=0.55)
+    _seed_queue_with_pending(tuning_dir, suggestion)
     apply_suggestion(
         suggestion=suggestion,
         library_dir=library_dir,
@@ -209,7 +239,8 @@ def test_apply_suggestion_unknown_formula_id_raises(tmp_path: Path) -> None:
     tuning_dir = tmp_path / "tuning"
     tuning_dir.mkdir()
 
-    suggestion = _make_suggestion(formula_id="nonexistent-formula")
+    # status='pending' so we pass the HIL gate and reach the file lookup.
+    suggestion = _make_suggestion(formula_id="nonexistent-formula", status="pending")
     with pytest.raises(FileNotFoundError, match="not found"):
         apply_suggestion(
             suggestion=suggestion,
@@ -232,8 +263,11 @@ def test_apply_suggestion_atomic_temp_cleanup_on_failure(tmp_path: Path) -> None
     tuning_dir.mkdir()
 
     suggestion = _make_suggestion()
+    _seed_queue_with_pending(tuning_dir, suggestion)
 
     # Monkeypatch os.replace inside library_writer to raise OSError.
+    # NOTE: monkeypatch is scoped to the with-block; queue seeding above
+    # runs before the patch takes effect.
     with patch(
         "plugins.platform_metrics.library_writer.os.replace",
         side_effect=OSError("simulated replace failure"),
@@ -264,6 +298,7 @@ def test_apply_suggestion_returns_commit_sha(tmp_path: Path) -> None:
     tuning_dir.mkdir()
 
     suggestion = _make_suggestion(observed_metric=0.42)
+    _seed_queue_with_pending(tuning_dir, suggestion)
     commit_sha = apply_suggestion(
         suggestion=suggestion,
         library_dir=library_dir,
@@ -317,7 +352,14 @@ def test_apply_suggestion_triggers_move_to_applied(tmp_path: Path) -> None:
 
 
 def test_apply_suggestion_refuses_non_approved_status(tmp_path: Path) -> None:
-    """apply_suggestion raises on status != 'approved' (HIL invariant)."""
+    """apply_suggestion raises on status != 'pending' (HIL invariant).
+
+    Per the schema (Plan 42-01), TuningSuggestion.status is a 3-value
+    Literal: pending / applied / rejected. The operator's "approval" IS
+    the act of calling apply_suggestion on a pending suggestion. Calling
+    apply_suggestion on an already-applied or rejected suggestion is a
+    double-apply bug and must be refused.
+    """
     from plugins.platform_metrics.library_writer import (
         SuggestionNotApprovedError,
         apply_suggestion,
@@ -327,11 +369,20 @@ def test_apply_suggestion_refuses_non_approved_status(tmp_path: Path) -> None:
     tuning_dir = tmp_path / "tuning"
     tuning_dir.mkdir()
 
-    # status='pending' — operator has not approved yet.
-    suggestion = _make_suggestion(status="pending")
+    # status='applied' — already applied, must refuse.
+    suggestion_applied = _make_suggestion(status="applied")
     with pytest.raises(SuggestionNotApprovedError):
         apply_suggestion(
-            suggestion=suggestion,
+            suggestion=suggestion_applied,
+            library_dir=library_dir,
+            tuning_dir=tuning_dir,
+        )
+
+    # status='rejected' — rejected, must refuse.
+    suggestion_rejected = _make_suggestion(status="rejected")
+    with pytest.raises(SuggestionNotApprovedError):
+        apply_suggestion(
+            suggestion=suggestion_rejected,
             library_dir=library_dir,
             tuning_dir=tuning_dir,
         )
