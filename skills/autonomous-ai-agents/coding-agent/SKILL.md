@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [Coding-Agent, Delegation, tmux, Codex, Claude-Code, OpenCode, Pi, Background-Worker]
-    related_skills: [claude-code, codex, opencode, hermes-agent, tmux-agents]
+    related_skills: [claude-code, codex, opencode, hermes-agent, tmux-agents, auto-dev]
 ---
 
 # Coding Agent (tmux mode)

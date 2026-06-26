@@ -9,6 +9,7 @@ metadata:
   hermes:
     tags: [RSS, Blogs, Feed-Reader, Monitoring]
     homepage: https://github.com/JulienTant/blogwatcher-cli
+    related_skills: [deep-research]
 prerequisites:
   commands: [blogwatcher-cli]
 ---
