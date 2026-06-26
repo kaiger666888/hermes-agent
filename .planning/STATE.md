@@ -31,7 +31,7 @@ progress:
 Phase: 37 of 37 (Validation & Migration Report) — COMPLETE (v7.0 milestone ready for `/gsd:complete-milestone v7.0`)
 Plan: 01 of 01 in phase (01 complete — Phase 37 fully done; v7.0 milestone closed)
 Status: Milestone complete — ready for v7.0 archive + v8.0 planning
-Last activity: 2026-06-25
+Last activity: 2026-06-26 - Completed quick task 260626-rq4: flood-aware `_send_with_retry` (Telegram retry_after parsing + clamp)
 
 ### Progress
 
@@ -147,6 +147,12 @@ Phases 34, 35, 36 are parallel-eligible (disjoint paths: repo skills / operator 
 **Inherited from v3.0 audit (deferred items, NOT in v7.0 scope):**
 
 - W-1 through W-4, VALIDATE-D1, FUTURE-09 — all movie-experts-scope; v7.0 does not touch
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260626-rq4 | flood-aware `_send_with_retry` (parse retry_after, clamp [3,60]s, default 5s) | 2026-06-26 | dda0e6c1a | [260626-rq4-flood-aware-send-retry](./quick/260626-rq4-flood-aware-send-retry/) |
 
 ## Deferred Items
 
