@@ -51,12 +51,12 @@ For completed milestone phase details, see:
 
 ### Phases
 
-- [x] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length
-- [ ] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0
+- [x] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length (shipped 2026-06-27)
+- [x] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0 (shipped 2026-06-27)
 - [x] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11 (completed 2026-06-26)
 - [x] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard (shipped 2026-06-27)
-- [ ] **Phase 42: DATA — 数据收敛 (Step 15)** — 5 平台 API adapters → FeedbackStore schema extension → formula tuning loop
-- [ ] **Phase 43: VALIDATE — 集成验证 + close-out** — cross-phase integration + FOUND-08 audit + canonical v9.0-MILESTONE-AUDIT.md
+- [x] **Phase 42: DATA — 数据收敛 (Step 15)** — 5 平台 API adapters → FeedbackStore schema extension → formula tuning loop (shipped 2026-06-27)
+- [x] **Phase 43: VALIDATE — 集成验证 + close-out** — cross-phase integration + FOUND-08 audit + canonical v9.0-MILESTONE-AUDIT.md (shipped 2026-06-27)
 
 ### Critical Path
 
@@ -99,12 +99,12 @@ wave  ──────┤                            │                      
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 38. SLICE | 0/1 | Planned (1 plan, wave 1) | - |
-| 39. FORM | 0/3 | Planned (3 plans, wave 1+2) | - |
+| 38. SLICE | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
+| 39. FORM | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26 → 2026-06-27) | 2026-06-27 |
 | 40. GATE | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26) | 2026-06-26 |
 | 41. PREVIEW | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
-| 42. DATA | 0/4 | Planned (4 plans, wave 1+2) | - |
-| 43. VALIDATE | 0/? | Not started | - |
+| 42. DATA | 4/4 | Complete (Plans 01+02+03+04 shipped 2026-06-27) | 2026-06-27 |
+| 43. VALIDATE | 1/1 | Complete (Plan 01 shipped 2026-06-27 — v9.0-MILESTONE-AUDIT.md authored) | 2026-06-27 |
 
 ---
 
@@ -135,9 +135,9 @@ wave  ──────┤                            │                      
 3. Given a `formula_lookup(genre=都市奇幻, mood=轻喜剧, platform=抖音)` call, the plugin returns the top-3 matching formulas ranked by platform_fit; `kais-movie-pipeline/SKILL.md` exposes this as Step 0 (前置); `theory_critic/SKILL.md` accepts an optional `formula_reference` input. Both SKILL.md changes are body-only (FOUND-08 frontmatter preserved).
 4. All 10 formulas carry fair-use citations (Notion 创作方向 / 公开爆款公式书 / kais-movie-agent 历史 benchmark) — no formula lands without a verifiable source.
 **Plans:** 3 plans
-- [ ] 39-01-PLAN.md — Plugin scaffold + Pydantic schema + lookup engine (FORM-01, FORM-02, FORM-04 lookup half)
-- [ ] 39-02-PLAN.md — 10 seed formulas (5×2 matrix) + LICENSE.md + bilingual README.md (FORM-03)
-- [ ] 39-03-PLAN.md — SKILL.md body patches (Step 0 + formula_reference) + tests + FOUND-08 byte-diff audit (FORM-04)
+- [x] 39-01-PLAN.md — Plugin scaffold + Pydantic schema + lookup engine (FORM-01, FORM-02, FORM-04 lookup half) — SHIPPED 2026-06-26 (34 tests)
+- [x] 39-02-PLAN.md — 10 seed formulas (5×2 matrix) + LICENSE.md + bilingual README.md (FORM-03) — SHIPPED 2026-06-26
+- [x] 39-03-PLAN.md — SKILL.md body patches (Step 0 + formula_reference) + tests + FOUND-08 byte-diff audit (FORM-04) — SHIPPED 2026-06-27 (15 tests; 49 total in plugin)
 **UI hint**: no
 
 ### Phase 40: GATE — 3 新审核门
@@ -203,4 +203,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-27 — Phase 42 DATA 4/4 plans SHIPPED (42-01 schema, 42-02 5 adapter stubs, 42-03 tuning_loop+JSONL queue+HIL-gated library_writer, 42-04 CLI+data-convergence.md+SKILL.md Step 15). Option A scope discipline: new plugins/platform_metrics/ plugin, no Hermes core edits. v9.0 progress: Phase 40 + 41 + 42 done; 38 + 39 still in planning/progress; 43 strictly last.*
+*Last updated: 2026-06-27 — Phase 43 VALIDATE complete. v9.0 milestone 6/6 phases done, 13/13 plans done, 22/22 reqs satisfied. FOUND-08 preserved milestone-wide (30 SKILL.md frontmatter byte-identical to `a2a20d2be`). Audit: `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0` (operator actions).*

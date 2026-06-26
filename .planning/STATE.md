@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: kais-movie-pipeline 闭环深化
-status: "Phase 42 DATA Plan 03 SHIPPED (formula_tuning_loop + JSONL queue + library_writer); Plan 04 also shipped in parallel; Phase 42 3/4 plans done"
-last_updated: "2026-06-27T01:25:00Z"
-last_activity: 2026-06-27 — Phase 42 DATA Plan 03 shipped (formula_tuning_loop + JSONL queue + HIL-gated library_writer; 35/35 tests GREEN; 6 task commits)
+status: "Phase 43 VALIDATE shipped — v9.0-MILESTONE-AUDIT.md authored; 22/22 reqs satisfied; FOUND-08 preserved milestone-wide; ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`"
+last_updated: "2026-06-27T03:30:00Z"
+last_activity: 2026-06-27 — Phase 43 VALIDATE shipped (3 integration flows verified + 30 SKILL.md byte-diff all match + v9.0-MILESTONE-AUDIT.md 10 sections authored)
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 12
-  percent: 67
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 13
+  percent: 100
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 42 of 43 (Plan 03 SHIPPED — Plans 01+02+03+04 all complete; Phase 42 ready for VALIDATE handoff)
-Plan: 42-03 complete
-Status: Phase 42 DATA Plan 03 SHIPPED (formula_tuning_loop + JSONL queue + library_writer); Plan 04 shipped in parallel; Phase 42 4/4 plans done
-Last activity: 2026-06-27 — Phase 42 DATA Plan 03 shipped (formula_tuning_loop + JSONL queue + HIL-gated library_writer; 35/35 tests GREEN; 6 task commits)
+Phase: 43 of 43 (Plan 01 SHIPPED — v9.0-MILESTONE-AUDIT.md authored; 22/22 reqs satisfied; FOUND-08 preserved)
+Plan: 43-01 complete
+Status: Phase 43 VALIDATE shipped — v9.0-MILESTONE-AUDIT.md (10 sections) authored; 3 integration flows verified; 30 SKILL.md frontmatter byte-identical to a2a20d2be; 301 tests GREEN; ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`
+Last activity: 2026-06-27 — Phase 43 VALIDATE shipped (integration-checker + FOUND-08 byte-diff audit + v9.0-MILESTONE-AUDIT.md + state/roadmap/requirements close-out)
 
 ### Progress
 
@@ -45,26 +45,26 @@ v6.0 Self-Evolution Feedback:   [██████████] 100% (Phases 28
 v7.0 openclaw → hermes Migration:[██████████] 100% (Phases 34-37, shipped 2026-06-25)
 
 v9.0 kais-movie-pipeline 闭环深化 (in planning):
-  Phase 38 (SLICE — 平台母版切片)          [          ]   0% Not started
-  Phase 39 (FORM — 配方库 v0)              [          ]   0% Not started
-  Phase 40 (GATE — 3 新审核门)             [██░░░░░░░░]  20% Plans 01+02 shipped (detectors + 8→11 registry wiring); Plan 03 (docs) sibling-shipped
+  Phase 38 (SLICE — 平台母版切片)          [██████████] 100% Plan 01 SHIPPED 2026-06-27 (platform-master-slicing.md + SKILL.md Step 14 body; variants[] schema)
+  Phase 39 (FORM — 配方库 v0)              [██████████] 100% Plans 01+02+03 SHIPPED 2026-06-27 (49 tests; plugin + 10 seed formulas + Step 0 + theory_critic formula_reference)
+  Phase 40 (GATE — 3 新审核门)             [██████████] 100% Plans 01+02+03 SHIPPED 2026-06-26 (145 tests; 3 detectors + 8→11 registry + auto-detect wiring + docs)
   Phase 41 (PREVIEW — LTX2.3 Step 6.5)     [██████████] 100% Plan 01 SHIPPED 2026-06-27 (ltx2-preview-loop.md + SKILL.md Step 6.5 + pipeline-dag.md annotation; FOUND-08 preserved)
-  Phase 42 (DATA — 数据收敛 Step 15)       [██████████] 100% Plans 01+02+03+04 SHIPPED 2026-06-27 (schema+adapters+tuning_loop+queue+library_writer+CLI+data-convergence.md; 35+ new tests GREEN on Plan 03; HIL invariant enforced)
-  Phase 43 (VALIDATE — 集成验证)            [          ]   0% Not started (strictly last)
+  Phase 42 (DATA — 数据收敛 Step 15)       [██████████] 100% Plans 01+02+03+04 SHIPPED 2026-06-27 (107 tests; schema+adapters+tuning_loop+queue+library_writer+CLI+data-convergence.md; HIL invariant enforced)
+  Phase 43 (VALIDATE — 集成验证)            [██████████] 100% Plan 01 SHIPPED 2026-06-27 (3 integration flows verified + FOUND-08 byte-diff all match + v9.0-MILESTONE-AUDIT.md 10 sections)
 ```
 
-**v9.0 milestone status:** ROADMAP created. 22/22 requirements mapped (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3). Parallel-eligible wave {38, 39, 40, 41} ready to plan; Phase 42 waits on 38+39; Phase 43 strictly last.
+**v9.0 milestone status:** COMPLETE — 6/6 phases shipped, 13/13 plans complete, 22/22 requirements satisfied. Audit: `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. FOUND-08 preserved milestone-wide. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0` (operator actions).
 
 ### Phase Statuses (v9.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 38 | SLICE — 平台母版切片 (Step 14) | **Not started** | SLICE-01..04. Parallel-eligible wave. Touches: SKILL.md Step 14 body + new ref `references/platform-master-slicing.md` + `pipeline_state.episode_id.variants[]` schema. FOUND-08: SKILL.md frontmatter preserved. |
-| 39 | FORM — 配方库 v0 (new plugin) | **Not started** | FORM-01..04. Parallel-eligible wave. Touches: new `plugins/formula_library/` (plugin.yaml + schema.py + 10 seed JSON) + Step 0 patch in kais-movie-pipeline SKILL.md + theory_critic body patch. No Hermes core code changes. |
-| 40 | GATE — 3 新审核门 | **Plans 01+02 shipped** | GATE-01..04. Plan 01: 3 pure-stdlib detectors (R1/R3/R4) + DETECTOR_REGISTRY. Plan 02: gates.yaml 8→11 additive + auto_detect_and_resolve wiring + tools dispatch (145 tests green). Plan 03 (docs): sibling-shipped. Built on Phase 34 state machine (8 V8.6 gates preserved byte-for-byte; gate.py FROZEN). |
-| 41 | PREVIEW — LTX2.3 Step 6.5 | **Plan 01 SHIPPED (2026-06-27)** | PREVIEW-01..03. Plan 01: 321-line `ltx2-preview-loop.md` (model selection + 3-dim thresholds 0.80/10%/15% + prompt template + 4-state fallback policy) + SKILL.md Step 6.5 wiring (References row 8 + ASCII DAG p06→p06.5→p07 + Phase↔Expert row + new H2 section) + pipeline-dag.md Step 6.5 annotation (Mermaid S65 + ASCII row + slot flow + See Also). FOUND-08 byte-verified (lines 1-21 byte-identical to `a2a20d2be`). V8.6 13-step + 8-gate structure preserved (Step 6.5 additive, escalation rides existing BLOCKING mode). **Operator-action-handoff:** live LTX2.3 GPU testing deferred (V9-FUTURE-02). |
-| 42 | DATA — 数据收敛 (Step 15) | **Plans 01+02+03+04 SHIPPED (2026-06-27)** | DATA-01..04 ALL COMPLETE. Plan 01: schema + BasePlatformAdapter + ADAPTER_REGISTRY. Plan 02: 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili). Plan 03: formula_tuning_loop + JSONL queue + HIL-gated library_writer (35/35 tests; apply_suggestion is sole library writer; non-bypassable HIL via SuggestionNotApprovedError + AST-walk). Plan 04: `hermes formula stats` CLI + data-convergence.md ref + SKILL.md Step 15 + .env.example. **Operator-action-handoff:** 5 平台 API keys operator-side (V9-FUTURE-01). |
-| 43 | VALIDATE — 集成验证 + close-out | **Strictly last** | VALIDATE-01..03. Cross-5-phase integration-checker + FOUND-08 byte-diff audit vs start commit `a2a20d2be` + canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Mirrors v5.0 P27 / v6.0 P33 / v7.0 P37 close-out pattern. |
+| 38 | SLICE — 平台母版切片 (Step 14) | **Plan 01 SHIPPED (2026-06-27)** | SLICE-01..04 satisfied. platform-master-slicing.md (346 lines) + SKILL.md Step 14 body section + variants[] schema in asset-bus-schema.md. FOUND-08 byte-identical. |
+| 39 | FORM — 配方库 v0 (new plugin) | **Plans 01+02+03 SHIPPED (2026-06-26 → 2026-06-27)** | FORM-01..04 satisfied. 49 tests GREEN. Plugin scaffold + 10 seed formulas + Step 0 + theory_critic formula_reference. theory_critic body-only patch (frontmatter byte-identical). |
+| 40 | GATE — 3 新审核门 | **Plans 01+02+03 SHIPPED (2026-06-26)** | GATE-01..04 satisfied. 145 tests GREEN. 3 detectors + gates.yaml 8→11 additive + auto_detect_and_resolve + tools dispatch + review-gates.md docs. V8.6 8-gate preserved byte-for-byte; gate.py FROZEN. |
+| 41 | PREVIEW — LTX2.3 Step 6.5 | **Plan 01 SHIPPED (2026-06-27)** | PREVIEW-01..03 satisfied. ltx2-preview-loop.md (321 lines) + SKILL.md Step 6.5 + pipeline-dag.md annotation. 4-state fallback policy rides existing BLOCKING-mode Gate. V9-FUTURE-02 operator-action-handoff. |
+| 42 | DATA — 数据收敛 (Step 15) | **Plans 01+02+03+04 SHIPPED (2026-06-27)** | DATA-01..04 satisfied. 107 tests GREEN. PlatformMetrics schema + 5 adapter stubs + formula_tuning_loop + JSONL queue + HIL-gated library_writer + CLI + data-convergence.md. V9-FUTURE-01 operator-action-handoff. |
+| 43 | VALIDATE — 集成验证 + close-out | **Plan 01 SHIPPED (2026-06-27)** | VALIDATE-01..03 satisfied. 3 integration flows verified (SLICE→DATA / FORM→GATE / PREVIEW→Step 6). FOUND-08 byte-diff: 30 SKILL.md frontmatter all match `a2a20d2be`. v9.0-MILESTONE-AUDIT.md (10 sections) authored. 301 tests GREEN final evidence. |
 
 ### Critical Path
 
@@ -242,10 +242,17 @@ Items acknowledged at v7.0 close (2026-06-25) — documented operator-action-han
 
 ---
 
-*Last updated: 2026-06-26 — v9.0 ROADMAP + STATE patched (6 phases 38-43, 22 reqs, granularity=standard, coverage 22/22). Parallel-eligible wave {38,39,40,41} ready to plan. v7.0 milestone shipped 2026-06-25 (Phases 34-37); v8.0 was a quick-task batch (P0+P1 openclaw skills, 2026-06-26).*
+*Last updated: 2026-06-27 — v9.0 milestone COMPLETE. Phase 43 VALIDATE shipped (Plan 01); v9.0-MILESTONE-AUDIT.md authored (10 sections). 6/6 phases done, 13/13 plans done, 22/22 reqs satisfied, FOUND-08 preserved milestone-wide. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`.*
 
 ## Operator Next Steps
 
-- Awaiting user approval of v9.0 ROADMAP draft
-- After approval: `/gsd:plan-phase 38` (or 39 / 40 / 41 — all parallel-eligible)
-- Operator-action-handoffs to plan for during execution: (a) Phase 41 LTX2.3 live GPU testing; (b) Phase 42 5 平台 API key configuration
+**v9.0 milestone is COMPLETE and ready for close-out.** Operator actions:
+
+1. Review `.planning/milestones/v9.0-MILESTONE-AUDIT.md` (10 sections, 22/22 reqs verified)
+2. (Optional) Re-run the verification commands in audit §9 (operator next action)
+3. `git tag v9.0` — tag the milestone
+4. `/gsd:complete-milestone v9.0` — archive and transition to next milestone
+
+**Operator-action-handoffs (post-tag, NOT gaps):**
+- (a) Phase 41 LTX2.3 live GPU testing (V9-FUTURE-02)
+- (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01)

@@ -105,24 +105,24 @@ Updated during roadmap creation. v9.0 phases 38-43.
 | SLICE-02 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
 | SLICE-03 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
 | SLICE-04 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
-| FORM-01 | Phase 39 | Phase-assigned |
-| FORM-02 | Phase 39 | Phase-assigned |
-| FORM-03 | Phase 39 | Phase-assigned |
-| FORM-04 | Phase 39 | Phase-assigned |
-| GATE-01 | Phase 40 | Phase-assigned |
-| GATE-02 | Phase 40 | Phase-assigned |
-| GATE-03 | Phase 40 | Phase-assigned |
-| GATE-04 | Phase 40 | Phase-assigned |
+| FORM-01 | Phase 39 | ✅ Complete (Plan 39-01, 2026-06-26) — plugin scaffold |
+| FORM-02 | Phase 39 | ✅ Complete (Plan 39-01, 2026-06-26) — Pydantic schema |
+| FORM-03 | Phase 39 | ✅ Complete (Plan 39-02, 2026-06-26) — 10 seed formulas |
+| FORM-04 | Phase 39 | ✅ Complete (Plan 39-03, 2026-06-27) — Step 0 + formula_reference |
+| GATE-01 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_emotion_desensitize gate 9 |
+| GATE-02 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_no_cold_open gate 10 |
+| GATE-03 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_unfinished_ending gate 11 |
+| GATE-04 | Phase 40 | ✅ Complete (Plan 40-02/03, 2026-06-26) — 8→11 additive; V8.6 preserved |
 | PREVIEW-01 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
 | PREVIEW-02 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
 | PREVIEW-03 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
-| DATA-01 | Phase 42 | Phase-assigned |
-| DATA-02 | Phase 42 | Phase-assigned |
-| DATA-03 | Phase 42 | **SHIPPED 2026-06-27 (Plan 42-03)** |
-| DATA-04 | Phase 42 | Phase-assigned |
-| VALIDATE-01 | Phase 43 | Phase-assigned |
-| VALIDATE-02 | Phase 43 | Phase-assigned |
-| VALIDATE-03 | Phase 43 | Phase-assigned |
+| DATA-01 | Phase 42 | ✅ Complete (Plan 42-01/02, 2026-06-27) — schema + 5 adapter stubs |
+| DATA-02 | Phase 42 | ✅ Complete (Plan 42-01, 2026-06-27) — FeedbackRecordExtension (Option A) |
+| DATA-03 | Phase 42 | ✅ Complete (Plan 42-03, 2026-06-27) — tuning_loop + JSONL queue + HIL writer |
+| DATA-04 | Phase 42 | ✅ Complete (Plan 42-04, 2026-06-27) — CLI + data-convergence.md + Step 15 |
+| VALIDATE-01 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — 3 integration flows verified |
+| VALIDATE-02 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — FOUND-08 byte-diff: 30 SKILL.md all match |
+| VALIDATE-03 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — v9.0-MILESTONE-AUDIT.md (10 sections) |
 
 **Coverage:**
 - v9.0 requirements: 22 total (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3)
@@ -132,4 +132,4 @@ Updated during roadmap creation. v9.0 phases 38-43.
 ---
 
 *Requirements defined: 2026-06-26 — v9.0 milestone start (6 phases 38-43, 22 reqs).*
-*Last updated: 2026-06-27 — Phase 41 PREVIEW-01/02/03 marked complete (Plan 41-01 shipped). Traceability: GATE-01..04 + PREVIEW-01..03 now Complete; SLICE / FORM / DATA / VALIDATE still Phase-assigned.*
+*Last updated: 2026-06-27 — Phase 43 VALIDATE complete; v9.0 milestone 22/22 reqs satisfied. Traceability: all 22 reqs marked ✅ Complete. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`.*
