@@ -1,0 +1,29 @@
+{
+  "formula_id": "mystery-twist-angst-01",
+  "genre": "悬疑反转",
+  "mood": "虐心",
+  "pacing": "mid-tempo",
+  "hook_pattern": "suspense",
+  "characters": [
+    "prodigal-returnee",
+    "tragic-mentor",
+    "foiled-rival"
+  ],
+  "runtime_sec": 60,
+  "platform_fit": [
+    {"platform": "抖音", "fit_score": 0.90},
+    {"platform": "视频号", "fit_score": 0.72},
+    {"platform": "快手", "fit_score": 0.65},
+    {"platform": "红果", "fit_score": 0.55},
+    {"platform": "B站", "fit_score": 0.50},
+    {"platform": "小红书", "fit_score": 0.30}
+  ],
+  "citation": {
+    "source": "three-second-hooks.md §悬念钩 示例 4 死亡后第一通电话 (revenge 重生题材 0-1s 反常规切入) + kais-movie-agent historical benchmark kais-bench-mystery-angst-01 (run 2026-Q1; 悬疑揭痛 60s 抖音-optimized)",
+    "source_type": "kais-benchmark",
+    "fair_use_status": "derived-analysis",
+    "verified_date": "2026-06-26"
+  },
+  "verified_date": "2026-06-26",
+  "eval_score": null
+}
