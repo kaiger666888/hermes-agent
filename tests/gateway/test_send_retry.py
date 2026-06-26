@@ -420,3 +420,215 @@ class TestFloodAwareRetryHelpers:
         result = SendResult(success=False, error="flood", raw_response={"retry_after": 15})
         # int should coerce to float cleanly
         assert _StubAdapter._extract_retry_after_seconds(result) == 15.0
+
+
+# ---------------------------------------------------------------------------
+# _send_with_retry — flood-aware wait path (async)
+# ---------------------------------------------------------------------------
+
+class TestFloodAwareRetry:
+    """Async tests for the flood-aware branch in _send_with_retry.
+
+    Verifies that flood errors wait the clamped retry_after seconds instead
+    of exponential backoff, while non-flood errors keep their existing
+    behavior.  Mirrors the patch-asyncio.sleep pattern from
+    TestSendWithRetryNetworkRetry.
+    """
+
+    @pytest.mark.asyncio
+    async def test_flood_waits_parsed_retry_after_from_error_string(self):
+        """Flood error string carries retry_after via regex."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="Flood control exceeded. Retry in 27 seconds"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_count == 1
+        assert mock_sleep.await_args_list[0].args[0] == 27.0
+
+    @pytest.mark.asyncio
+    async def test_flood_waits_parsed_retry_after_too_many_requests(self):
+        """'Too Many Requests: retry after 30 seconds' shape."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="Too Many Requests: retry after 30 seconds"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_count == 1
+        assert mock_sleep.await_args_list[0].args[0] == 30.0
+
+    @pytest.mark.asyncio
+    async def test_flood_with_no_parseable_hint_uses_default(self):
+        """429 flood error without a retry_after hint waits _FLOOD_WAIT_DEFAULT_SECONDS (5s)."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="429 Too Many Requests"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_count == 1
+        assert mock_sleep.await_args_list[0].args[0] == _FLOOD_WAIT_DEFAULT_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_flood_retry_after_from_raw_response_dict(self):
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="flood", raw_response={"retry_after": 25}),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == 25.0
+
+    @pytest.mark.asyncio
+    async def test_flood_retry_after_from_raw_response_attribute(self):
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(
+                success=False,
+                error="flood",
+                raw_response=SimpleNamespace(retry_after=20),
+            ),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == 20.0
+
+    @pytest.mark.asyncio
+    async def test_flood_retry_after_from_regex_only(self):
+        # Error string must carry a flood marker ("flood") for _is_flood_error
+        # to route into the flood-aware retry branch; the retry_after value
+        # itself comes from the regex on the same string.
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="flood: Retry in 18 seconds", raw_response=None),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == 18.0
+
+    @pytest.mark.asyncio
+    async def test_flood_retry_after_capped_at_max(self):
+        """A bogus retry_after of 120s is clamped to _FLOOD_WAIT_MAX_SECONDS (60s)."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="flood: Retry in 120 seconds"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == _FLOOD_WAIT_MAX_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_flood_retry_after_floored_at_min(self):
+        """A tiny retry_after of 1s is clamped up to _FLOOD_WAIT_MIN_SECONDS (3s).
+
+        The regex pattern uses 'seconds?' so the singular 'Retry in 1 second'
+        form must still match.
+        """
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(
+                success=False,
+                error="flood: Retry in 1 second",
+                raw_response={"retry_after": 1},
+            ),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == _FLOOD_WAIT_MIN_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_flood_default_when_rate_limit_without_hint(self):
+        """'429 rate limit exceeded' (no parseable retry_after) waits default."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="429 rate limit exceeded", raw_response=None),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_args_list[0].args[0] == _FLOOD_WAIT_DEFAULT_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_non_flood_error_uses_exponential_backoff(self):
+        """Regression guard: non-flood transient errors still use exponential backoff.
+
+        Patches random.uniform to return 0.0 so the delay is deterministic
+        (= base_delay * 2**(attempt-1)).  Verifies the flood log path is NOT
+        taken.
+        """
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="httpx.ConnectError: connection refused", retryable=True),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep, \
+             patch("gateway.platforms.base.random.uniform", return_value=0.0):
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_count == 1
+        # Non-flood path: delay = base_delay * 2**(attempt-1) + random.uniform(0,1) = 2.0 + 0.0
+        assert mock_sleep.await_args_list[0].args[0] == 2.0
+
+    @pytest.mark.asyncio
+    async def test_flood_twice_then_succeed_end_to_end(self):
+        """Two flood failures then success: both waits are the parsed retry_after values."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="Flood control exceeded. Retry in 27 seconds"),
+            SendResult(success=False, error="Too Many Requests: retry after 30 seconds"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=3, base_delay=2.0)
+        assert result.success
+        assert mock_sleep.await_count == 2
+        assert mock_sleep.await_args_list[0].args[0] == 27.0
+        assert mock_sleep.await_args_list[1].args[0] == 30.0
+        assert len(adapter._send_calls) == 3  # initial + 2 retries
+
+    @pytest.mark.asyncio
+    async def test_flood_emits_distinct_log_line(self):
+        """Flood retries must emit a 'Flood control: waiting' log line,
+        distinct from the normal 'Send failed (attempt' line so operators
+        can grep flood events in gateway.log."""
+        adapter = _StubAdapter()
+        adapter._send_results = [
+            SendResult(success=False, error="Flood control exceeded. Retry in 27 seconds"),
+            SendResult(success=True, message_id="ok"),
+        ]
+        with patch("asyncio.sleep", new_callable=AsyncMock), \
+             patch("gateway.platforms.base.logger.warning") as mock_warn:
+            result = await adapter._send_with_retry("chat1", "hello", max_retries=2, base_delay=2.0)
+        assert result.success
+        # Find the warning call whose formatted message would start with the flood prefix
+        # (logger.warning is called with %-args, so the format string is args[0]).
+        flood_calls = [
+            c for c in mock_warn.call_args_list
+            if "Flood control" in (c.args[0] if c.args else "")
+        ]
+        assert len(flood_calls) >= 1, "expected at least one 'Flood control' warning"
+        # The flood log message must be distinct from the normal retry log
+        normal_calls = [
+            c for c in mock_warn.call_args_list
+            if "Send failed (attempt" in (c.args[0] if c.args else "")
+        ]
+        assert len(normal_calls) == 0, "flood path must NOT emit the 'Send failed (attempt' line"

@@ -3523,7 +3523,15 @@ class BasePlatformAdapter(ABC):
             return result
 
         error_str = result.error or ""
-        is_network = result.retryable or self._is_retryable_error(error_str)
+        # Flood errors also enter the retry loop so the flood-aware branch
+        # below can wait the parsed retry_after instead of dropping the
+        # response.  _RETRYABLE_ERROR_PATTERNS intentionally excludes flood
+        # markers (it's connection-error-only), so we OR-in _is_flood_error.
+        is_network = (
+            result.retryable
+            or self._is_retryable_error(error_str)
+            or self._is_flood_error(error_str)
+        )
 
         # Timeout errors are not safe to retry (message may have been
         # delivered) and not formatting errors — return the failure as-is.
@@ -3531,13 +3539,33 @@ class BasePlatformAdapter(ABC):
             return result
 
         if is_network:
-            # Retry with exponential backoff for transient errors
+            # Retry with exponential backoff for transient errors, OR with a
+            # clamped retry_after wait when the failure is a Telegram flood
+            # control error (the ~2s/~4s exponential backoff cannot out-wait
+            # Telegram's 18-27s sliding flood window).  Mirrors the proven
+            # pattern in gateway/stream_consumer.py:_apply_flood_suspend.
+            is_flood = self._is_flood_error(error_str)
             for attempt in range(1, max_retries + 1):
-                delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
-                logger.warning(
-                    "[%s] Send failed (attempt %d/%d, retrying in %.1fs): %s",
-                    self.name, attempt, max_retries, delay, error_str,
-                )
+                if is_flood:
+                    secs = self._extract_retry_after_seconds(result)
+                    if secs is None:
+                        secs = _FLOOD_WAIT_DEFAULT_SECONDS
+                    # Clamp to [_FLOOD_WAIT_MIN_SECONDS, _FLOOD_WAIT_MAX_SECONDS]
+                    # so a malicious/malformed retry_after cannot park the
+                    # gateway indefinitely (T-rq4-01 mitigation).
+                    secs = max(_FLOOD_WAIT_MIN_SECONDS,
+                               min(secs, _FLOOD_WAIT_MAX_SECONDS))
+                    delay = secs
+                    logger.warning(
+                        "[%s] Flood control: waiting %.1fs before retry (attempt %d/%d): %s",
+                        self.name, delay, attempt, max_retries, error_str,
+                    )
+                else:
+                    delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
+                    logger.warning(
+                        "[%s] Send failed (attempt %d/%d, retrying in %.1fs): %s",
+                        self.name, attempt, max_retries, delay, error_str,
+                    )
                 await asyncio.sleep(delay)
                 result = await self.send(
                     chat_id=chat_id,
@@ -3549,7 +3577,11 @@ class BasePlatformAdapter(ABC):
                     logger.info("[%s] Send succeeded on retry %d", self.name, attempt)
                     return result
                 error_str = result.error or ""
-                if not (result.retryable or self._is_retryable_error(error_str)):
+                # Recompute is_flood so a flood -> non-flood transition uses
+                # the right delay strategy on the next iteration (mirrors the
+                # existing retryable-pattern recomputation just below).
+                is_flood = self._is_flood_error(error_str)
+                if not (result.retryable or self._is_retryable_error(error_str) or is_flood):
                     break  # error switched to non-transient — fall through to plain-text fallback
             else:
                 # All retries exhausted (loop completed without break) — notify user
