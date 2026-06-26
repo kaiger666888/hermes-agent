@@ -182,10 +182,10 @@ Plans:
 4. `hermes formula stats` prints rich per-formula / per-platform tables; `--json` flag emits counts-only for scripting.
 5. New ref `references/data-convergence.md` documents the data flow + dashboard usage. **Operator-action-handoff:** 5 平台 API keys 由 operator 配置后激活; v9.0 提供 schema + adapter 骨架 only.
 **Plans:** 4 plans
-- [ ] 42-01-PLAN.md — Plugin scaffold + PlatformMetrics + FeedbackRecordExtension + adapter base class + tests (DATA-01 schema + DATA-02 composition)
-- [ ] 42-02-PLAN.md — 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili) + adapter registry + tests (DATA-01 adapter half)
-- [ ] 42-03-PLAN.md — tuning_loop + library_writer + JSONL review queue integration tests (DATA-03)
-- [ ] 42-04-PLAN.md — hermes formula stats CLI + data-convergence.md ref + SKILL.md Step 15 + pipeline-dag.md annotation + .env.example patch (DATA-04)
+- [x] 42-01-PLAN.md — Plugin scaffold + PlatformMetrics + FeedbackRecordExtension + adapter base class + tests (DATA-01 schema + DATA-02 composition) — SHIPPED 2026-06-27
+- [x] 42-02-PLAN.md — 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili) + adapter registry + tests (DATA-01 adapter half) — SHIPPED 2026-06-27
+- [x] 42-03-PLAN.md — tuning_loop + library_writer + JSONL review queue integration tests (DATA-03) — SHIPPED 2026-06-27 (35/35 tests; HIL invariant via SuggestionNotApprovedError + AST-walk single-caller; 4 MetricTrigger rules; atomic eval_score write-back; v6.0 EVOL-02 pattern mirrored, not imported)
+- [x] 42-04-PLAN.md — hermes formula stats CLI + data-convergence.md ref + SKILL.md Step 15 + pipeline-dag.md annotation + .env.example patch (DATA-04) — SHIPPED 2026-06-27
 **UI hint**: yes
 
 ### Phase 43: VALIDATE — 集成验证 + close-out
@@ -203,4 +203,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-27 — Phase 42 DATA planned (4 plans in 2 waves: 42-01 scaffold+schema, 42-02 5 adapter stubs, 42-03 tuning_loop+library_writer, 42-04 CLI+data-convergence.md+SKILL.md Step 15). Option A scope discipline: new plugins/platform_metrics/ plugin, no Hermes core edits. v9.0 progress: Phase 40 + 41 done; 38 + 39 + 42 in planning/progress; 43 strictly last.*
+*Last updated: 2026-06-27 — Phase 42 DATA 4/4 plans SHIPPED (42-01 schema, 42-02 5 adapter stubs, 42-03 tuning_loop+JSONL queue+HIL-gated library_writer, 42-04 CLI+data-convergence.md+SKILL.md Step 15). Option A scope discipline: new plugins/platform_metrics/ plugin, no Hermes core edits. v9.0 progress: Phase 40 + 41 + 42 done; 38 + 39 still in planning/progress; 43 strictly last.*

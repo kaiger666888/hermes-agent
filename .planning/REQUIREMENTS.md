@@ -42,7 +42,7 @@
 
 - [ ] **DATA-01**: 平台 API adapter 骨架 —— 抖音开放平台 / 快手开放平台 / 视频号 / 小红书薯条 / B 站创作者 5 个 adapter stub;operator 配 API key 后激活(`~/.hermes/.env` 新增 `DOUYIN_API_KEY` 等 5 个);adapter 输出统一 `PlatformMetrics` Pydantic schema
 - [ ] **DATA-02**: Schema 扩展 v6.0 FeedbackStore —— `FeedbackRecord` 新增 `platform_metrics` 字段:`completion_rate` / `hook_dropoff_rate` / `engagement_rate` / `save_rate` / `comment_rate`,按 platform 分桶存储
-- [ ] **DATA-03**: `formula_tuning_loop` —— 收敛的 metrics 触发自动建议:卡点跳出率高 → 建议加 hook 强度;完播率高但互动低 → 建议加 CTA;建议生成 JSONL review queue(沿用 v6.0 EVOL-02 queue 模式),operator approve 后回写 formula_library
+- [x] **DATA-03**: `formula_tuning_loop` —— 收敛的 metrics 触发自动建议:卡点跳出率高 → 建议加 hook 强度;完播率高但互动低 → 建议加 CTA;建议生成 JSONL review queue(沿用 v6.0 EVOL-02 queue 模式),operator approve 后回写 formula_library — SHIPPED Plan 42-03 (2026-06-27): 4 MetricTrigger rules + TuningThresholds + JSONL queue (queue/applied/rejected) + HIL-gated library_writer.apply_suggestion (atomic eval_score write-back via temp+os.replace; SuggestionNotApprovedError + AST-walk single-caller invariant); 35/35 tests GREEN
 - [ ] **DATA-04**: 新 ref `skills/kais-movie-pipeline/references/data-convergence.md` + dashboard —— `hermes formula stats` rich tables(per-formula / per-platform metrics);`--json` counts-only flag
 
 ### VALIDATE — Phase 43 集成验证 + close-out
@@ -118,7 +118,7 @@ Updated during roadmap creation. v9.0 phases 38-43.
 | PREVIEW-03 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
 | DATA-01 | Phase 42 | Phase-assigned |
 | DATA-02 | Phase 42 | Phase-assigned |
-| DATA-03 | Phase 42 | Phase-assigned |
+| DATA-03 | Phase 42 | **SHIPPED 2026-06-27 (Plan 42-03)** |
 | DATA-04 | Phase 42 | Phase-assigned |
 | VALIDATE-01 | Phase 43 | Phase-assigned |
 | VALIDATE-02 | Phase 43 | Phase-assigned |

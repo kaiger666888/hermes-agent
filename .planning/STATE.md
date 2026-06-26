@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: kais-movie-pipeline 闭环深化
-status: Phase 41 PREVIEW complete (Plan 01 shipped); parallel-eligible wave {38,39,40,41} now has 40+41 shipped
-last_updated: "2026-06-27T00:00:00.000Z"
-last_activity: 2026-06-27 — Phase 41 PREVIEW Plan 01 shipped (ltx2-preview-loop.md + SKILL.md Step 6.5 + pipeline-dag.md annotation)
+status: "Phase 42 DATA Plan 03 SHIPPED (formula_tuning_loop + JSONL queue + library_writer); Plan 04 also shipped in parallel; Phase 42 3/4 plans done"
+last_updated: "2026-06-27T01:25:00Z"
+last_activity: 2026-06-27 — Phase 42 DATA Plan 03 shipped (formula_tuning_loop + JSONL queue + HIL-gated library_writer; 35/35 tests GREEN; 6 task commits)
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 7
-  completed_plans: 6
-  percent: 20
+  completed_phases: 4
+  total_plans: 11
+  completed_plans: 12
+  percent: 67
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 41 of 43 (Plan 01 SHIPPED — Phase 41 complete)
-Plan: 41-01 complete
-Status: Phase 41 PREVIEW closed; next eligible: Phase 38 (SLICE) or Phase 39 (FORM) in parallel wave; Phase 42 (DATA) blocked on 38+39; Phase 43 strictly last
-Last activity: 2026-06-27 — Phase 41 PREVIEW Plan 01 shipped (3 task commits + SUMMARY)
+Phase: 42 of 43 (Plan 03 SHIPPED — Plans 01+02+03+04 all complete; Phase 42 ready for VALIDATE handoff)
+Plan: 42-03 complete
+Status: Phase 42 DATA Plan 03 SHIPPED (formula_tuning_loop + JSONL queue + library_writer); Plan 04 shipped in parallel; Phase 42 4/4 plans done
+Last activity: 2026-06-27 — Phase 42 DATA Plan 03 shipped (formula_tuning_loop + JSONL queue + HIL-gated library_writer; 35/35 tests GREEN; 6 task commits)
 
 ### Progress
 
@@ -49,7 +49,7 @@ v9.0 kais-movie-pipeline 闭环深化 (in planning):
   Phase 39 (FORM — 配方库 v0)              [          ]   0% Not started
   Phase 40 (GATE — 3 新审核门)             [██░░░░░░░░]  20% Plans 01+02 shipped (detectors + 8→11 registry wiring); Plan 03 (docs) sibling-shipped
   Phase 41 (PREVIEW — LTX2.3 Step 6.5)     [██████████] 100% Plan 01 SHIPPED 2026-06-27 (ltx2-preview-loop.md + SKILL.md Step 6.5 + pipeline-dag.md annotation; FOUND-08 preserved)
-  Phase 42 (DATA — 数据收敛 Step 15)       [          ]   0% Not started (waits on 38+39)
+  Phase 42 (DATA — 数据收敛 Step 15)       [██████████] 100% Plans 01+02+03+04 SHIPPED 2026-06-27 (schema+adapters+tuning_loop+queue+library_writer+CLI+data-convergence.md; 35+ new tests GREEN on Plan 03; HIL invariant enforced)
   Phase 43 (VALIDATE — 集成验证)            [          ]   0% Not started (strictly last)
 ```
 
@@ -63,7 +63,7 @@ v9.0 kais-movie-pipeline 闭环深化 (in planning):
 | 39 | FORM — 配方库 v0 (new plugin) | **Not started** | FORM-01..04. Parallel-eligible wave. Touches: new `plugins/formula_library/` (plugin.yaml + schema.py + 10 seed JSON) + Step 0 patch in kais-movie-pipeline SKILL.md + theory_critic body patch. No Hermes core code changes. |
 | 40 | GATE — 3 新审核门 | **Plans 01+02 shipped** | GATE-01..04. Plan 01: 3 pure-stdlib detectors (R1/R3/R4) + DETECTOR_REGISTRY. Plan 02: gates.yaml 8→11 additive + auto_detect_and_resolve wiring + tools dispatch (145 tests green). Plan 03 (docs): sibling-shipped. Built on Phase 34 state machine (8 V8.6 gates preserved byte-for-byte; gate.py FROZEN). |
 | 41 | PREVIEW — LTX2.3 Step 6.5 | **Plan 01 SHIPPED (2026-06-27)** | PREVIEW-01..03. Plan 01: 321-line `ltx2-preview-loop.md` (model selection + 3-dim thresholds 0.80/10%/15% + prompt template + 4-state fallback policy) + SKILL.md Step 6.5 wiring (References row 8 + ASCII DAG p06→p06.5→p07 + Phase↔Expert row + new H2 section) + pipeline-dag.md Step 6.5 annotation (Mermaid S65 + ASCII row + slot flow + See Also). FOUND-08 byte-verified (lines 1-21 byte-identical to `a2a20d2be`). V8.6 13-step + 8-gate structure preserved (Step 6.5 additive, escalation rides existing BLOCKING mode). **Operator-action-handoff:** live LTX2.3 GPU testing deferred (V9-FUTURE-02). |
-| 42 | DATA — 数据收敛 (Step 15) | **Blocked on 38+39** | DATA-01..04. Depends on SLICE variants[] schema + FORM formula_library target. Touches: 5 platform API adapter stubs + FeedbackRecord schema extension + formula_tuning_loop + `hermes formula stats` CLI + new ref `references/data-convergence.md`. **Operator-action-handoff:** 5 平台 API keys operator-side (V9-FUTURE-01). |
+| 42 | DATA — 数据收敛 (Step 15) | **Plans 01+02+03+04 SHIPPED (2026-06-27)** | DATA-01..04 ALL COMPLETE. Plan 01: schema + BasePlatformAdapter + ADAPTER_REGISTRY. Plan 02: 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili). Plan 03: formula_tuning_loop + JSONL queue + HIL-gated library_writer (35/35 tests; apply_suggestion is sole library writer; non-bypassable HIL via SuggestionNotApprovedError + AST-walk). Plan 04: `hermes formula stats` CLI + data-convergence.md ref + SKILL.md Step 15 + .env.example. **Operator-action-handoff:** 5 平台 API keys operator-side (V9-FUTURE-01). |
 | 43 | VALIDATE — 集成验证 + close-out | **Strictly last** | VALIDATE-01..03. Cross-5-phase integration-checker + FOUND-08 byte-diff audit vs start commit `a2a20d2be` + canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Mirrors v5.0 P27 / v6.0 P33 / v7.0 P37 close-out pattern. |
 
 ### Critical Path
