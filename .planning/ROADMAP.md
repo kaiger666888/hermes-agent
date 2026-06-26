@@ -99,10 +99,10 @@ wave  ──────┤                            │                      
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 38. SLICE | 0/? | Not started | - |
+| 38. SLICE | 0/1 | Planned (1 plan, wave 1) | - |
 | 39. FORM | 0/? | Not started | - |
 | 40. GATE | 0/? | Not started | - |
-| 41. PREVIEW | 0/? | Not started | - |
+| 41. PREVIEW | 0/1 | Plan created | - |
 | 42. DATA | 0/? | Not started | - |
 | 43. VALIDATE | 0/? | Not started | - |
 
@@ -120,7 +120,8 @@ wave  ──────┤                            │                      
 2. Each variant automatically repositions the opening 3s hook, adjusts mid-segment 卡点 (pinch-point) density, and adds a new closing 3s hook — all per `platform-specs.md` rigid constraints (not manual).
 3. Every variant's metadata lands in `pipeline_state.episode_id.variants[]` with fields `platform` / `aspect_ratio` / `length` / `hook_timestamps` / `cut_points`, queryable by the downstream DATA phase.
 4. New ref `references/platform-master-slicing.md` documents the 7-variant algorithm + 4 key decision points; `SKILL.md` body contains a new Step 14 section (frontmatter byte-identical to pre-v9.0).
-**Plans:** TBD
+**Plans:** 1 plan
+- [ ] 38-01-PLAN.md — SLICE: 7-variant algorithm ref + SKILL.md Step 14 body section + variants[] schema doc (4 tasks, 4 reqs)
 **UI hint**: no
 
 ### Phase 39: FORM — 配方库 v0 (new plugin)
@@ -159,7 +160,8 @@ wave  ──────┤                            │                      
 2. `kais-movie-pipeline/SKILL.md` wires a new Step 6.5: after storyboard (Step 6) passes, the pipeline automatically invokes LTX2.3 fast-preview; preview must pass before Step 7 (dreamina CLI final render) is invoked. Frontmatter byte-identical to pre-v9.0 (FOUND-08).
 3. Failure path is deterministic: pacing deviation > 15% OR framing deviation > 10% triggers automatic fallback to Step 6 (re-storyboard), max 2 retries; exhausting 2 retries routes to operator review via the existing `plugins/review_gates/` BLOCKING mode (no silent skip).
 4. **Operator-action-handoff:** live GPU generation testing is operator-side — v9.0 ships the baseline doc + adapter skeleton only. V9-FUTURE-02 (real LTX2.3 model generation validation) is explicitly deferred.
-**Plans:** TBD
+Plans:
+- [ ] 41-01-PLAN.md — Step 6.5 LTX2.3 fast-preview wiring (4 tasks: new ref + SKILL.md body patch + DAG annotation + FOUND-08 verification)
 **UI hint**: no
 
 ### Phase 42: DATA — 数据收敛 (Step 15)
