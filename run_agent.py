@@ -4050,7 +4050,19 @@ class AIAgent:
         sanitize_anthropic_kwargs(
             api_kwargs, log_prefix=getattr(self, "log_prefix", "")
         )
-        return self._anthropic_client.messages.create(**api_kwargs)
+        # Use streaming + get_final_message() to match Claude Code's behavior.
+        # Third-party Anthropic-compat proxies (notably Zhipu's
+        # open.bigmodel.cn/api/anthropic) have a ~20s first-byte timeout that
+        # silently returns HTTP 200 with an empty content list when the upstream
+        # model is slow to start. Streaming sends an SSE ping within ~1s of
+        # connection, keeping the proxy's idle timer reset while the model
+        # generates. Bedrock's AnthropicBedrock client doesn't support
+        # messages.stream() (maps to InvokeModelWithResponseStream with
+        # different semantics), so keep messages.create() for Bedrock.
+        if getattr(self, "provider", None) == "bedrock":
+            return self._anthropic_client.messages.create(**api_kwargs)
+        with self._anthropic_client.messages.stream(**api_kwargs) as stream:
+            return stream.get_final_message()
 
     def _rebuild_anthropic_client(self) -> None:
         """Rebuild the Anthropic client after an interrupt or stale call.

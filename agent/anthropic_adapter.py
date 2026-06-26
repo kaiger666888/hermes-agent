@@ -816,7 +816,20 @@ def build_anthropic_client(
         # not use Anthropic's sk-ant-api prefix and would otherwise be misread as
         # Anthropic OAuth/setup tokens.
         kwargs["auth_token"] = api_key
-        if common_betas:
+        if _is_zhipu_anthropic_endpoint(base_url):
+            # Zhipu's Anthropic-compat proxy fingerprints clients by
+            # User-Agent and routes Claude Code traffic to a more lenient
+            # rate-limit bucket. Sending the SDK's default UA
+            # (anthropic-python/X.X.X) gets Hermes throttled harder than
+            # Claude Code on the same endpoint. Match Claude Code's
+            # identity (UA + x-app) so Hermes shares the same bucket.
+            # Betas are already stripped via _common_betas_for_base_url.
+            kwargs["default_headers"] = {
+                "user-agent": f"claude-cli/{_get_claude_code_version()} (external, cli)",
+                "x-app": "cli",
+                **( {"anthropic-beta": ",".join(common_betas)} if common_betas else {} ),
+            }
+        elif common_betas:
             kwargs["default_headers"] = {"anthropic-beta": ",".join(common_betas)}
     elif _is_third_party_anthropic_endpoint(base_url):
         # Third-party proxies (Microsoft Foundry, AWS Bedrock, etc.) use their
@@ -824,7 +837,21 @@ def build_anthropic_client(
         # don't follow Anthropic's sk-ant-* prefix convention and would be
         # misclassified as OAuth tokens.
         kwargs["api_key"] = api_key
-        if common_betas:
+        if _is_zhipu_anthropic_endpoint(base_url):
+            # Zhipu's Anthropic-compat proxy fingerprints clients by
+            # User-Agent and routes Claude Code traffic to a more lenient
+            # rate-limit bucket. Sending the SDK's default UA
+            # (anthropic-python/X.X.X) gets Hermes throttled harder than
+            # Claude Code on the same endpoint. Match Claude Code's
+            # identity (UA + x-app) so Hermes shares the same bucket.
+            # Betas are already stripped for Zhipu via
+            # _common_betas_for_base_url; the UA fingerprint is orthogonal.
+            kwargs["default_headers"] = {
+                "user-agent": f"claude-cli/{_get_claude_code_version()} (external, cli)",
+                "x-app": "cli",
+                **( {"anthropic-beta": ",".join(common_betas)} if common_betas else {} ),
+            }
+        elif common_betas:
             kwargs["default_headers"] = {"anthropic-beta": ",".join(common_betas)}
     elif _is_oauth_token(api_key):
         # OAuth access token / setup-token → Bearer auth + Claude Code identity.
