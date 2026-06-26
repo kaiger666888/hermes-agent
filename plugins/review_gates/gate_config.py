@@ -9,6 +9,11 @@ Loads ``gates.yaml`` once at import time. Exposes:
 - ``GateConfigError`` — raised on missing file, malformed YAML, or failed
   validation.
 
+Phase 40 Plan 02 (GATE-04) expanded the registry 8 -> 11 additive: the 8
+V8.6 gates are byte-preserved, and 3 Phase 40 redline gates (R1/R3/R4)
+are appended. The count check enforces exactly 11. See
+``.planning/phases/40-gate-redlines/40-02-PLAN.md`` Task 2.
+
 Architectural decisions (CONTEXT.md):
 - D-34-02: YAML is loaded eagerly at import. Hot-reload is NOT supported;
   changing a gate definition requires restarting the hermes-agent process.
@@ -73,8 +78,9 @@ def load_gates() -> dict[str, dict]:
 
     Raises:
         GateConfigError: if the file is missing, the YAML is unparseable,
-            the top-level shape is wrong, the gate count is not exactly 8,
-            or any entry fails field-level validation.
+            the top-level shape is wrong, the gate count is not exactly 11
+            (Phase 40 Plan 02 GATE-04 bumped 8 -> 11 additive), or any
+            entry fails field-level validation.
     """
     if not _YAML_PATH.exists():
         raise GateConfigError(f"gates.yaml not found at {_YAML_PATH}")
@@ -95,9 +101,12 @@ def load_gates() -> dict[str, dict]:
         raise GateConfigError(
             f"gates.yaml 'gates' must be a list, got {type(gate_list).__name__}"
         )
-    if len(gate_list) != 8:
+    if len(gate_list) != 11:
+        # Phase 40 Plan 02 (GATE-04): bumped 8 -> 11 additive. The 8 V8.6
+        # gates are byte-preserved; 3 Phase 40 redline gates (R1/R3/R4)
+        # appended. See ``.planning/phases/40-gate-redlines/40-02-PLAN.md``.
         raise GateConfigError(
-            f"gates.yaml must contain exactly 8 gates (found {len(gate_list)})"
+            f"gates.yaml must contain exactly 11 gates (found {len(gate_list)})"
         )
 
     registry: dict[str, dict] = {}

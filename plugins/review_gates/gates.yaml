@@ -1,4 +1,5 @@
-# gates.yaml — 8 V8.6 review gates (Phase 34-02, SC#2 / GATE-NATIVE-02).
+# gates.yaml — 11 review gates (Phase 34-02 V8.6 8 gates + Phase 40-02 3
+# redline gates, additive — GATE-04).
 #
 # Loaded once at plugins.review_gates import time (D-34-02). Hot-reload is NOT
 # supported — restart the hermes-agent process to pick up changes. pyyaml is
@@ -147,3 +148,54 @@ gates:
     retry_policy:
       max_retries: 3
       backoff_sec: 600
+
+  # =========================================================================
+  # Phase 40 Plan 02 (GATE-04): 3 redline gates appended additively.
+  # These fire AFTER gate 8 (delivery-gate) passes, as the final scan
+  # before master.mp4 release. They are auto-resolved by
+  # runner_hooks.auto_detect_and_resolve() via the Plan-01 DETECTOR_REGISTRY
+  # — no manual gate_resolve needed. The 8 V8.6 gates above are byte-
+  # preserved (zero behavior change to the HIL path).
+  # =========================================================================
+
+  # --- Gate 9: redline R1 — emotion desensitization -----------------------
+  # Auto-resolved via DETECTOR_REGISTRY (Plan 01). Fires after Gate 8
+  # (delivery) passes, before final master.mp4 release. Phase 40 GATE-01.
+  - gate_id: redline_emotion_desensitize
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+      - master-mp4
+    reviewer_role: redline_scanner
+    timeout_sec: 60          # auto-detect is sub-second; short budget
+    callback_url: null
+    default_mode: blocking   # runner_hooks auto-resolves, no webhook needed
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
+
+  # --- Gate 10: redline R3 — no cold open ----------------------------------
+  - gate_id: redline_no_cold_open
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: redline_scanner
+    timeout_sec: 60
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
+
+  # --- Gate 11: redline R4 — unfinished ending -----------------------------
+  - gate_id: redline_unfinished_ending
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: redline_scanner
+    timeout_sec: 60
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
