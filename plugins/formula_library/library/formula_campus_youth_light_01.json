@@ -1,0 +1,29 @@
+{
+  "formula_id": "campus-youth-light-01",
+  "genre": "校园青春",
+  "mood": "轻喜剧",
+  "pacing": "fast-cut",
+  "hook_pattern": "contrast",
+  "characters": [
+    "underdog-rookie",
+    "foiled-rival",
+    "naive-newcomer"
+  ],
+  "runtime_sec": 60,
+  "platform_fit": [
+    {"platform": "快手", "fit_score": 0.88},
+    {"platform": "抖音", "fit_score": 0.78},
+    {"platform": "B站", "fit_score": 0.70},
+    {"platform": "小红书", "fit_score": 0.62},
+    {"platform": "视频号", "fit_score": 0.40},
+    {"platform": "红果", "fit_score": 0.35}
+  ],
+  "citation": {
+    "source": "kais-movie-agent historical benchmark kais-bench-campus-01 (run 2026-Q1; 学霸vs学渣 反差钩 + 校园 60s 快手-optimized) + 公开爆款公式书《短视频爆款公式》§校园青春章",
+    "source_type": "kais-benchmark",
+    "fair_use_status": "derived-analysis",
+    "verified_date": "2026-06-26"
+  },
+  "verified_date": "2026-06-26",
+  "eval_score": null
+}

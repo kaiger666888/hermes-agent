@@ -1,0 +1,29 @@
+{
+  "formula_id": "urban-fantasy-light-01",
+  "genre": "都市奇幻",
+  "mood": "轻喜剧",
+  "pacing": "fast-cut",
+  "hook_pattern": "contrast",
+  "characters": [
+    "hidden-boss",
+    "everyman-sidekick",
+    "foiled-rival"
+  ],
+  "runtime_sec": 90,
+  "platform_fit": [
+    {"platform": "抖音", "fit_score": 0.92},
+    {"platform": "快手", "fit_score": 0.82},
+    {"platform": "红果", "fit_score": 0.78},
+    {"platform": "视频号", "fit_score": 0.55},
+    {"platform": "B站", "fit_score": 0.45},
+    {"platform": "小红书", "fit_score": 0.40}
+  ],
+  "citation": {
+    "source": "Notion 创作方向 page 32811082-af8e-8009-b097-d19a5027b46f §核心 DNA + §per-platform 内容形态 (抖音 超能力高光切片 15-60s 竖屏)",
+    "source_type": "notion",
+    "fair_use_status": "verbatim-spec",
+    "verified_date": "2026-06-26"
+  },
+  "verified_date": "2026-06-26",
+  "eval_score": null
+}
