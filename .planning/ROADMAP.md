@@ -51,7 +51,7 @@ For completed milestone phase details, see:
 
 ### Phases
 
-- [ ] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length
+- [x] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length
 - [ ] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0
 - [x] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11 (completed 2026-06-26)
 - [x] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard (shipped 2026-06-27)
@@ -121,7 +121,7 @@ wave  ──────┤                            │                      
 3. Every variant's metadata lands in `pipeline_state.episode_id.variants[]` with fields `platform` / `aspect_ratio` / `length` / `hook_timestamps` / `cut_points`, queryable by the downstream DATA phase.
 4. New ref `references/platform-master-slicing.md` documents the 7-variant algorithm + 4 key decision points; `SKILL.md` body contains a new Step 14 section (frontmatter byte-identical to pre-v9.0).
 **Plans:** 1 plan
-- [ ] 38-01-PLAN.md — SLICE: 7-variant algorithm ref + SKILL.md Step 14 body section + variants[] schema doc (4 tasks, 4 reqs)
+- [x] 38-01-PLAN.md — SLICE: 7-variant algorithm ref + SKILL.md Step 14 body section + variants[] schema doc (4 tasks, 4 reqs) — shipped 2026-06-27 (1 new ref + 3 ref/SKILL patches, FOUND-08 byte-identical)
 **UI hint**: no
 
 ### Phase 39: FORM — 配方库 v0 (new plugin)

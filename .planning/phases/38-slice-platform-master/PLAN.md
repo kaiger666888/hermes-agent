@@ -652,13 +652,13 @@ Run the Task 4 `<how-to-verify>` script end-to-end. All checks MUST print OK.
 </verification>
 
 <success_criteria>
-- [ ] `references/platform-master-slicing.md` exists, ≥250 non-empty lines, all 7 platform enums + 4 decision points + 5 schema fields + Notion citation + 4 sibling cross-links
-- [ ] `SKILL.md` has new `## Step 14 — Platform Master Slicing (Additive)` section between Review Gates and Asset Bus Schema; frontmatter byte-identical to commit `a2a20d2be`
-- [ ] `asset-bus-schema.md` has new `## Phase 38 Slots (Additive — variants[])` section with JSON schema + cross-link to platform-master-slicing.md
-- [ ] `pipeline-dag.md` has new `## Step 14 — Additive Extension (Phase 38 v9.0)` section with ASCII DAG diagram + V8.6 13-step preservation declaration
-- [ ] All 4 SLICE requirements structurally satisfied at the documentation layer (Phase 42 enforces schema consumer-side)
-- [ ] FOUND-08 preserved: zero frontmatter changes on kais-movie-pipeline SKILL.md + zero changes to any movie-experts SKILL.md
-- [ ] Zero Python/JS code changes (docs-only phase)
+- [x] `references/platform-master-slicing.md` exists, ≥250 non-empty lines, all 7 platform enums + 4 decision points + 5 schema fields + Notion citation + 4 sibling cross-links
+- [x] `SKILL.md` has new `## Step 14 — Platform Master Slicing (Additive)` section between Review Gates and Asset Bus Schema; frontmatter byte-identical to commit `a2a20d2be`
+- [x] `asset-bus-schema.md` has new `## Phase 38 Slots (Additive — variants[])` section with JSON schema + cross-link to platform-master-slicing.md
+- [x] `pipeline-dag.md` has new `## Step 14 — Additive Extension (Phase 38 v9.0)` section with ASCII DAG diagram + V8.6 13-step preservation declaration
+- [x] All 4 SLICE requirements structurally satisfied at the documentation layer (Phase 42 enforces schema consumer-side)
+- [x] FOUND-08 preserved: zero frontmatter changes on kais-movie-pipeline SKILL.md + zero changes to any movie-experts SKILL.md
+- [x] Zero Python/JS code changes (docs-only phase)
 - [ ] Task 4 human-verify checkpoint approved
 </success_criteria>
 

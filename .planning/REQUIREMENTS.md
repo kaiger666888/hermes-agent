@@ -13,10 +13,10 @@
 
 ### SLICE — Phase 38 平台母版切片 (Step 14)
 
-- [ ] **SLICE-01**: Pipeline 能从 1 个 master.mp4 产出 7 平台 variants —— 抖音竖屏 9:16 / 抖音横屏 16:9 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果/快手极短 1-2min(对应 platform-specs.md 7-row 矩阵)
-- [ ] **SLICE-02**: 每个 variant 自动调整 aspect ratio + length + hook position —— 开头 3s 钩子位置 / 中段卡点密度 / 结尾 3s 新钩子按 platform-specs.md 刚性约束
-- [ ] **SLICE-03**: 切片元数据持久化到 `pipeline_state.episode_id.variants[]` —— schema 包含 platform / aspect_ratio / length / hook_timestamps / cut_points,供下游 DATA phase 平台 API 接入
-- [ ] **SLICE-04**: 新 ref `skills/kais-movie-pipeline/references/platform-master-slicing.md` 文档化 7-variant 切片算法 + 4 关键决策点;SKILL.md body 新增 Step 14 section(不动 frontmatter)
+- [x] **SLICE-01**: Pipeline 能从 1 个 master.mp4 产出 7 平台 variants —— 抖音竖屏 9:16 / 抖音横屏 16:9 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果/快手极短 1-2min(对应 platform-specs.md 7-row 矩阵)
+- [x] **SLICE-02**: 每个 variant 自动调整 aspect ratio + length + hook position —— 开头 3s 钩子位置 / 中段卡点密度 / 结尾 3s 新钩子按 platform-specs.md 刚性约束
+- [x] **SLICE-03**: 切片元数据持久化到 `pipeline_state.episode_id.variants[]` —— schema 包含 platform / aspect_ratio / length / hook_timestamps / cut_points,供下游 DATA phase 平台 API 接入
+- [x] **SLICE-04**: 新 ref `skills/kais-movie-pipeline/references/platform-master-slicing.md` 文档化 7-variant 切片算法 + 4 关键决策点;SKILL.md body 新增 Step 14 section(不动 frontmatter)
 
 ### FORM — Phase 39 配方库 v0 (新 plugin)
 
@@ -101,10 +101,10 @@ Updated during roadmap creation. v9.0 phases 38-43.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLICE-01 | Phase 38 | Phase-assigned |
-| SLICE-02 | Phase 38 | Phase-assigned |
-| SLICE-03 | Phase 38 | Phase-assigned |
-| SLICE-04 | Phase 38 | Phase-assigned |
+| SLICE-01 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
+| SLICE-02 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
+| SLICE-03 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
+| SLICE-04 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
 | FORM-01 | Phase 39 | Phase-assigned |
 | FORM-02 | Phase 39 | Phase-assigned |
 | FORM-03 | Phase 39 | Phase-assigned |
