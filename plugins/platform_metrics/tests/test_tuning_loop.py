@@ -288,17 +288,39 @@ def test_run_tuning_loop_dedup_suggestion_ids(tmp_path: Path) -> None:
 
 
 def test_run_tuning_loop_no_v6_write() -> None:
-    """Scope-discipline grep: tuning_loop.py has no record_feedback call."""
-    # Load the module source and assert no forbidden v6 write method appears.
+    """Scope-discipline grep: tuning_loop.py invokes no v6 write method.
+
+    The loop must NEVER *call* v6.0 FeedbackStore write methods. We check
+    for invocation patterns (``.record_feedback(``, ``feedback_store.<write>``)
+    rather than bare identifiers — the forbidden names legitimately appear
+    in docstrings explaining the invariant.
+    """
+    import re
+
     source = (
         Path(__file__).resolve().parent.parent / "tuning_loop.py"
     ).read_text(encoding="utf-8")
-    # The loop must NEVER call v6 FeedbackStore write methods.
-    assert "record_feedback" not in source, (
-        "scope discipline violation: tuning_loop.py calls record_feedback "
-        "(v6.0 write method) — only query / get_record are permitted"
+    # Match actual invocations: `.record_feedback(` or `.rebuild_index(`.
+    # A bare mention in a docstring (no leading dot + paren) is allowed.
+    forbidden_calls = [
+        r"\.record_feedback\s*\(",
+        r"\.rebuild_index\s*\(",
+    ]
+    for pattern in forbidden_calls:
+        matches = re.findall(pattern, source)
+        assert not matches, (
+            f"scope discipline violation: tuning_loop.py invokes a v6.0 "
+            f"write method via pattern {pattern!r} — only query / get_record "
+            f"are permitted (found {len(matches)} call(s))"
+        )
+    # Also assert no import of v6 write modules (only the Protocol-based
+    # read API is permitted). Mirror Plan 42-01's
+    # test_feedback_record_extension_does_not_import_v6 pattern.
+    assert "from agent.feedback_store import" not in source, (
+        "scope discipline: tuning_loop.py imports agent.feedback_store "
+        "directly — use the FeedbackStoreLike Protocol instead"
     )
-    assert "rebuild_index" not in source, (
-        "scope discipline violation: tuning_loop.py calls rebuild_index "
-        "(v6.0 write method) — only query / get_record are permitted"
+    assert "from agent.feedback_schema import" not in source, (
+        "scope discipline: tuning_loop.py imports agent.feedback_schema "
+        "directly — FeedbackRecordExtension is the local schema"
     )
