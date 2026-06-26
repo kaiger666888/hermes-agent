@@ -41,9 +41,15 @@ def _reload_gate_config() -> Any:
 # ---------------------------------------------------------------------------
 
 class TestLoadGates:
-    """``load_gates()`` shape contract: dict of exactly 8 entries keyed by id."""
+    """``load_gates()`` shape contract: dict of exactly 11 entries keyed by id.
 
-    EXPECTED_GATE_IDS = {
+    Phase 40 Plan 02 (GATE-04) bumped the count 8 -> 11 additive: the 8 V8.6
+    gates are preserved byte-for-byte, and 3 Phase 40 redline gates
+    (R1/R3/R4) are appended. See ``40-02-PLAN.md`` Task 1 Test 1.
+    """
+
+    # The 8 V8.6 gate_ids (Phase 34 CF-02) — preserved byte-for-byte.
+    V86_GATE_IDS = {
         "topic-gate",
         "outline-gate",
         "script-gate",
@@ -54,17 +60,42 @@ class TestLoadGates:
         "delivery-gate",
     }
 
-    def test_load_gates_returns_dict_with_exactly_8_entries(self) -> None:
+    # The 3 Phase 40 redline gate_ids (R1 / R3 / R4 — additive).
+    REDLINE_GATE_IDS = {
+        "redline_emotion_desensitize",
+        "redline_no_cold_open",
+        "redline_unfinished_ending",
+    }
+
+    EXPECTED_GATE_IDS = V86_GATE_IDS | REDLINE_GATE_IDS
+
+    def test_load_gates_returns_dict_with_exactly_11_entries(self) -> None:
         gate_config = _reload_gate_config()
         registry = gate_config.load_gates()
         assert isinstance(registry, dict)
-        assert len(registry) == 8, f"expected 8 gates, got {len(registry)}"
+        assert len(registry) == 11, f"expected 11 gates, got {len(registry)}"
 
-    def test_load_gates_keys_match_the_8_gate_ids_from_cf02(self) -> None:
+    def test_load_gates_keys_match_the_11_gate_ids(self) -> None:
         gate_config = _reload_gate_config()
         registry = gate_config.load_gates()
         assert set(registry.keys()) == self.EXPECTED_GATE_IDS, (
             f"registry keys {set(registry.keys())} != expected {self.EXPECTED_GATE_IDS}"
+        )
+
+    def test_load_gates_preserves_8_v86_gate_ids_byte_for_byte(self) -> None:
+        """Phase 34 V8.6 gate_ids must all still be present (additive bump)."""
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        assert self.V86_GATE_IDS.issubset(set(registry.keys())), (
+            f"missing V8.6 gates: {self.V86_GATE_IDS - set(registry.keys())}"
+        )
+
+    def test_load_gates_includes_3_redline_gate_ids(self) -> None:
+        """Phase 40 redline gate_ids (R1/R3/R4) all present."""
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        assert self.REDLINE_GATE_IDS.issubset(set(registry.keys())), (
+            f"missing redline gates: {self.REDLINE_GATE_IDS - set(registry.keys())}"
         )
 
     def test_load_gates_is_idempotent(self) -> None:
@@ -83,12 +114,13 @@ class TestLoadGates:
             doc = yaml.safe_load(f)
         assert doc["version"] == 1
 
-    def test_all_gate_ids_are_unique(self) -> None:
+    def test_all_11_gate_ids_are_unique(self) -> None:
         import yaml
         yaml_path = REVIEW_GATES_DIR / "gates.yaml"
         with open(yaml_path, encoding="utf-8") as f:
             doc = yaml.safe_load(f)
         ids = [g["gate_id"] for g in doc["gates"]]
+        assert len(ids) == 11, f"expected 11 gate entries in yaml, got {len(ids)}"
         assert len(ids) == len(set(ids)), f"duplicate gate_ids: {ids}"
 
 
@@ -194,6 +226,94 @@ class TestSpecificGateValues:
 
 
 # ---------------------------------------------------------------------------
+# TestRedlineGates — Phase 40 Plan 02 (3 new gates, additive)
+# ---------------------------------------------------------------------------
+
+
+class TestRedlineGates:
+    """Phase 40 Plan 02 Task 1 Test 2: field-level spot-checks on the 3 new
+    redline gate entries. Each must satisfy the same REQUIRED_FIELDS contract
+    as the 8 V8.6 gates, with redline-specific values (reviewer_role
+    ``redline_scanner``, short timeout, blocking mode, 1 retry).
+    """
+
+    REDLINE_GATE_IDS = (
+        "redline_emotion_desensitize",
+        "redline_no_cold_open",
+        "redline_unfinished_ending",
+    )
+
+    def test_each_redline_gate_has_valid_default_mode(self) -> None:
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            assert registry[gate_id]["default_mode"] == "blocking", (
+                f"{gate_id}.default_mode must be 'blocking' (auto-resolved by "
+                f"runner_hooks.auto_detect_and_resolve; no webhook needed)"
+            )
+
+    def test_each_redline_gate_has_redline_scanner_reviewer(self) -> None:
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            rr = registry[gate_id]["reviewer_role"]
+            assert rr == "redline_scanner", (
+                f"{gate_id}.reviewer_role must be 'redline_scanner' "
+                f"(auto-detect reviewer), got {rr!r}"
+            )
+
+    def test_each_redline_gate_has_positive_timeout(self) -> None:
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            timeout = registry[gate_id]["timeout_sec"]
+            assert isinstance(timeout, int) and timeout > 0, (
+                f"{gate_id}.timeout_sec must be positive int, got {timeout!r}"
+            )
+            # Auto-detect is sub-second; budget should be short (<= 300s).
+            assert timeout <= 300, (
+                f"{gate_id}.timeout_sec should be short for auto-detect "
+                f"(<=300s), got {timeout}"
+            )
+
+    def test_each_redline_gate_retry_policy_max_retries_positive(self) -> None:
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            rp = registry[gate_id]["retry_policy"]
+            assert isinstance(rp, dict), f"{gate_id}.retry_policy must be dict"
+            assert rp.get("max_retries", 0) > 0, (
+                f"{gate_id}.retry_policy.max_retries must be > 0, got {rp.get('max_retries')}"
+            )
+            assert rp.get("backoff_sec", 0) > 0, (
+                f"{gate_id}.retry_policy.backoff_sec must be > 0, got {rp.get('backoff_sec')}"
+            )
+
+    def test_each_redline_gate_maps_to_p13_delivery_phase(self) -> None:
+        """Per Plan 40-02 Task 2 action: all 3 redline gates fire AFTER gate 8
+        (delivery-gate) passes, as the final scan before master.mp4 release.
+        They share the p13_delivery phase (additive scan post-V8.6 sequence)."""
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            assert registry[gate_id]["phase"] == "p13_delivery", (
+                f"{gate_id}.phase must be 'p13_delivery' (final scan after "
+                f"gate 8 delivery-gate), got {registry[gate_id]['phase']!r}"
+            )
+
+    def test_each_redline_gate_locks_final_shots_slot(self) -> None:
+        """Each redline gate must lock at least the 'final-shots' slot."""
+        gate_config = _reload_gate_config()
+        registry = gate_config.load_gates()
+        for gate_id in self.REDLINE_GATE_IDS:
+            slots = registry[gate_id]["asset_bus_slots_to_lock"]
+            assert "final-shots" in slots, (
+                f"{gate_id}.asset_bus_slots_to_lock must include 'final-shots', "
+                f"got {slots}"
+            )
+
+
+# ---------------------------------------------------------------------------
 # TestGateConfigConversion
 # ---------------------------------------------------------------------------
 
@@ -271,8 +391,9 @@ class TestYAMLValidationRejects:
             "    phase: p01_hook_topic\n"
             "    # missing asset_bus_slots_to_lock, reviewer_role, etc.\n"
         )
-        # Pad to 8 entries so the count check passes and we reach field check
-        for i in range(7):
+        # Pad to 11 entries so the count check passes and we reach field check
+        # (Phase 40 Plan 02 bumped the count 8 -> 11 additive).
+        for i in range(10):
             bad_yaml += (
                 f"  - gate_id: pad-{i}\n"
                 f"    phase: p0{i}_x\n"
@@ -291,7 +412,8 @@ class TestYAMLValidationRejects:
     def test_bad_mode_enum_raises_gateconfigerror(self, tmp_path: Path, monkeypatch) -> None:
         gate_config = _reload_gate_config()
         entries = []
-        for i in range(8):
+        # 11 entries (Phase 40 Plan 02 bumped count 8 -> 11).
+        for i in range(11):
             mode = "blocking" if i > 0 else "bogus_mode"
             entries.append(
                 f"  - gate_id: g{i}\n"
@@ -312,7 +434,8 @@ class TestYAMLValidationRejects:
     def test_negative_timeout_raises_gateconfigerror(self, tmp_path: Path, monkeypatch) -> None:
         gate_config = _reload_gate_config()
         entries = []
-        for i in range(8):
+        # 11 entries (Phase 40 Plan 02 bumped count 8 -> 11).
+        for i in range(11):
             timeout = 60 if i > 0 else -1
             entries.append(
                 f"  - gate_id: g{i}\n"
@@ -329,3 +452,25 @@ class TestYAMLValidationRejects:
         with pytest.raises(gate_config.GateConfigError) as exc_info:
             gate_config.load_gates()
         assert "timeout_sec" in str(exc_info.value)
+
+    def test_wrong_count_raises_gateconfigerror(self, tmp_path: Path, monkeypatch) -> None:
+        """Count check enforces exactly 11 — 8 or 10 entries must reject."""
+        gate_config = _reload_gate_config()
+        entries = []
+        # Only 8 entries (the old V8.6 count) — must fail post-Phase 40.
+        for i in range(8):
+            entries.append(
+                f"  - gate_id: g{i}\n"
+                f"    phase: p{i}\n"
+                f"    asset_bus_slots_to_lock: ['x']\n"
+                f"    reviewer_role: r\n"
+                f"    timeout_sec: 60\n"
+                f"    default_mode: blocking\n"
+                f"    retry_policy: {{max_retries: 1, backoff_sec: 30}}\n"
+            )
+        bad_yaml = "version: 1\ngates:\n" + "".join(entries)
+        yaml_path = self._write_temp_gates_yaml(tmp_path, bad_yaml)
+        monkeypatch.setattr(gate_config, "_YAML_PATH", yaml_path)
+        with pytest.raises(gate_config.GateConfigError) as exc_info:
+            gate_config.load_gates()
+        assert "exactly 11" in str(exc_info.value)

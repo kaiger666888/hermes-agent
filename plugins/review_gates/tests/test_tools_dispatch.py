@@ -163,16 +163,20 @@ class TestGateResolve:
 
 
 class TestGatesList:
-    """Verify _handle_gates_list reads the eager-loaded GATE_REGISTRY."""
+    """Verify _handle_gates_list reads the eager-loaded GATE_REGISTRY.
 
-    def test_returns_all_8_gates(self):
-        """gates_list returns count=8 (the 8 V8.6 gates from gates.yaml)."""
+    Phase 40 Plan 02 bumped the registry 8 -> 11 (3 redline gates appended
+    additively, GATE-04). gates_list now returns count=11.
+    """
+
+    def test_returns_all_11_gates(self):
+        """gates_list returns count=11 (8 V8.6 + 3 Phase 40 redline)."""
         result = _parse(_handle_gates_list({}))
-        assert result["count"] == 8
-        assert len(result["gates"]) == 8
+        assert result["count"] == 11
+        assert len(result["gates"]) == 11
 
     def test_each_gate_has_required_fields(self):
-        """Every gate carries gate_id/phase/reviewer_role/default_mode."""
+        """Every gate (all 11) carries gate_id/phase/reviewer_role/default_mode."""
         result = _parse(_handle_gates_list({}))
         for gate in result["gates"]:
             for field in ("gate_id", "phase", "reviewer_role", "default_mode"):
