@@ -61,26 +61,26 @@ def test_register_callable() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Test 3: ADAPTER_REGISTRY exists and is empty
+# Test 3: ADAPTER_REGISTRY exists and contains the 5 v9.0 platforms
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def test_adapter_registry_empty_at_import() -> None:
-    """ADAPTER_REGISTRY exists as a dict, empty after Plan 01 import.
+def test_adapter_registry_has_v9_platforms() -> None:
+    """ADAPTER_REGISTRY is a dict containing the 5 v9.0 platforms.
 
-    Plan 42-02's 5 adapter stubs (douyin/kuaishou/weixin_video/
-    xiaohongshu/bilibili) populate this registry via ``register_adapter``
-    at module import time. Plan 01 ships the empty registry + the
-    registration helper only.
+    Plan 42-01 shipped the registry + register_adapter helper; Plan 42-02
+    populated it with 5 platform adapter stubs (douyin/kuaishou/weixin_video/
+    xiaohongshu/bilibili) via register_adapter at module import time.
     """
     from plugins.platform_metrics.adapters import ADAPTER_REGISTRY
 
     assert isinstance(ADAPTER_REGISTRY, dict), (
         "ADAPTER_REGISTRY must be a dict keyed by platform name"
     )
-    assert len(ADAPTER_REGISTRY) == 0, (
-        f"Plan 01 ships an empty registry; got {ADAPTER_REGISTRY!r}. "
-        "Plan 42-02 populates it with 5 platform adapter stubs."
+    expected = {"douyin", "kuaishou", "weixin_video", "xiaohongshu", "bilibili"}
+    assert expected.issubset(ADAPTER_REGISTRY.keys()), (
+        f"v9.0 requires adapters for {expected}; got {set(ADAPTER_REGISTRY.keys())}. "
+        "Plan 42-02 populates these via register_adapter."
     )
 
 
