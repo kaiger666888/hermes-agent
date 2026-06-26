@@ -151,7 +151,7 @@ wave  ──────┤                            │                      
 3. Gate 9 / 10 / 11 fire in the correct sequence: after the existing 8 gates pass, gates 9-11 do one final scan before final delivery — documented in `references/review-gates.md` (additive; V8.6 8-gate numbering unchanged).
 4. The `suggested_action` field on each new gate is structured so it can reference a `formula_library` entry (read-side lookup) for the operator to apply a proven fix pattern.
 **Plans:** 3 plans
-- [ ] 40-01-PLAN.md — 3 pure-stdlib redline detectors (R1/R3/R4) + test suite (TDD)
+- [x] 40-01-PLAN.md — 3 pure-stdlib redline detectors (R1/R3/R4) + test suite (TDD) — shipped 2026-06-27 (54 tests, DETECTOR_REGISTRY wired)
 - [ ] 40-02-PLAN.md — gates.yaml 8→11 additive + gate_config.py count bump + runner_hooks auto-detect + tools.py dispatch (TDD)
 - [ ] 40-03-PLAN.md — references/review-gates.md 8→11 doc + plugin README update
 **UI hint**: no
