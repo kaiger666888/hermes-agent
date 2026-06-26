@@ -53,7 +53,7 @@ For completed milestone phase details, see:
 
 - [ ] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length
 - [ ] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0
-- [ ] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11
+- [x] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11 (completed 2026-06-26)
 - [ ] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard
 - [ ] **Phase 42: DATA — 数据收敛 (Step 15)** — 5 平台 API adapters → FeedbackStore schema extension → formula tuning loop
 - [ ] **Phase 43: VALIDATE — 集成验证 + close-out** — cross-phase integration + FOUND-08 audit + canonical v9.0-MILESTONE-AUDIT.md
@@ -101,7 +101,7 @@ wave  ──────┤                            │                      
 |-------|----------------|--------|-----------|
 | 38. SLICE | 0/1 | Planned (1 plan, wave 1) | - |
 | 39. FORM | 0/3 | Planned (3 plans, wave 1+2) | - |
-| 40. GATE | 0/3 | Planned (3 plans, wave 1+2) | - |
+| 40. GATE | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26) | 2026-06-26 |
 | 41. PREVIEW | 0/1 | Plan created | - |
 | 42. DATA | 0/? | Not started | - |
 | 43. VALIDATE | 0/? | Not started | - |
@@ -150,9 +150,9 @@ wave  ──────┤                            │                      
 2. Given a cut with ≥3 consecutive frames at the same emotional valence, `redline_emotion_desensitize` returns `reject` with a `suggested_action` describing how to break it up (per `creative-redlines.md` R1). Given a cut whose first 3s contains 背景铺垫, `redline_no_cold_open` rejects with suggested_action (per R3). Given a cut whose final 3s releases no new hook, `redline_unfinished_ending` rejects with suggested_action (per R4).
 3. Gate 9 / 10 / 11 fire in the correct sequence: after the existing 8 gates pass, gates 9-11 do one final scan before final delivery — documented in `references/review-gates.md` (additive; V8.6 8-gate numbering unchanged).
 4. The `suggested_action` field on each new gate is structured so it can reference a `formula_library` entry (read-side lookup) for the operator to apply a proven fix pattern.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 - [x] 40-01-PLAN.md — 3 pure-stdlib redline detectors (R1/R3/R4) + test suite (TDD) — shipped 2026-06-27 (54 tests, DETECTOR_REGISTRY wired)
-- [ ] 40-02-PLAN.md — gates.yaml 8→11 additive + gate_config.py count bump + runner_hooks auto-detect + tools.py dispatch (TDD)
+- [x] 40-02-PLAN.md — gates.yaml 8→11 additive + gate_config.py count bump + runner_hooks auto-detect + tools.py dispatch (TDD)
 - [x] 40-03-PLAN.md — references/review-gates.md 8→11 doc + plugin README update
 **UI hint**: no
 

@@ -2,16 +2,17 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: kais-movie-pipeline 闭环深化
-status: planning
-last_updated: "2026-06-26T15:29:17.562Z"
-last_activity: 2026-06-26
+status: ROADMAP created; awaiting user approval to start plan-phase
+last_updated: "2026-06-26T16:13:35.204Z"
+last_activity: 2026-06-26 — v9.0 ROADMAP + STATE + REQUIREMENTS traceability written
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 7
+  completed_plans: 5
+  percent: 17
 ---
+
 # State: Hermes Agent — Kai's Personal Agent Platform
 
 ## Project Reference
@@ -46,7 +47,7 @@ v7.0 openclaw → hermes Migration:[██████████] 100% (Phases
 v9.0 kais-movie-pipeline 闭环深化 (in planning):
   Phase 38 (SLICE — 平台母版切片)          [          ]   0% Not started
   Phase 39 (FORM — 配方库 v0)              [          ]   0% Not started
-  Phase 40 (GATE — 3 新审核门)             [          ]   0% Not started
+  Phase 40 (GATE — 3 新审核门)             [██░░░░░░░░]  20% Plans 01+02 shipped (detectors + 8→11 registry wiring); Plan 03 (docs) sibling-shipped
   Phase 41 (PREVIEW — LTX2.3 Step 6.5)     [          ]   0% Not started
   Phase 42 (DATA — 数据收敛 Step 15)       [          ]   0% Not started (waits on 38+39)
   Phase 43 (VALIDATE — 集成验证)            [          ]   0% Not started (strictly last)
@@ -60,7 +61,7 @@ v9.0 kais-movie-pipeline 闭环深化 (in planning):
 |-------|------|--------|-------|
 | 38 | SLICE — 平台母版切片 (Step 14) | **Not started** | SLICE-01..04. Parallel-eligible wave. Touches: SKILL.md Step 14 body + new ref `references/platform-master-slicing.md` + `pipeline_state.episode_id.variants[]` schema. FOUND-08: SKILL.md frontmatter preserved. |
 | 39 | FORM — 配方库 v0 (new plugin) | **Not started** | FORM-01..04. Parallel-eligible wave. Touches: new `plugins/formula_library/` (plugin.yaml + schema.py + 10 seed JSON) + Step 0 patch in kais-movie-pipeline SKILL.md + theory_critic body patch. No Hermes core code changes. |
-| 40 | GATE — 3 新审核门 | **Not started** | GATE-01..04. Parallel-eligible wave. Touches: `plugins/review_gates/gates.yaml` additive registration (gate 9/10/11) + `references/review-gates.md` additive update. Built on Phase 34-shipped state machine (no replacement of existing 8 gates). |
+| 40 | GATE — 3 新审核门 | **Plans 01+02 shipped** | GATE-01..04. Plan 01: 3 pure-stdlib detectors (R1/R3/R4) + DETECTOR_REGISTRY. Plan 02: gates.yaml 8→11 additive + auto_detect_and_resolve wiring + tools dispatch (145 tests green). Plan 03 (docs): sibling-shipped. Built on Phase 34 state machine (8 V8.6 gates preserved byte-for-byte; gate.py FROZEN). |
 | 41 | PREVIEW — LTX2.3 Step 6.5 | **Not started** | PREVIEW-01..03. Parallel-eligible wave. Touches: new ref `references/ltx2-preview-loop.md` + Step 6.5 wiring in SKILL.md body. **Operator-action-handoff:** live LTX2.3 GPU testing deferred (V9-FUTURE-02). |
 | 42 | DATA — 数据收敛 (Step 15) | **Blocked on 38+39** | DATA-01..04. Depends on SLICE variants[] schema + FORM formula_library target. Touches: 5 platform API adapter stubs + FeedbackRecord schema extension + formula_tuning_loop + `hermes formula stats` CLI + new ref `references/data-convergence.md`. **Operator-action-handoff:** 5 平台 API keys operator-side (V9-FUTURE-01). |
 | 43 | VALIDATE — 集成验证 + close-out | **Strictly last** | VALIDATE-01..03. Cross-5-phase integration-checker + FOUND-08 byte-diff audit vs start commit `a2a20d2be` + canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Mirrors v5.0 P27 / v6.0 P33 / v7.0 P37 close-out pattern. |
@@ -82,6 +83,7 @@ concurrent) └── Phase 41 (PREVIEW)  ────────────�
 **Parallel-eligible wave:** Phase 38 + 39 + 40 + 41 touch disjoint paths (Step 14 SKILL body / new formula_library plugin / review_gates registration / Step 6.5 ref). All four may start concurrently after user approval.
 
 **Hard dependencies:**
+
 - Phase 42 (DATA) → needs variants[] from Phase 38 (SLICE) + formula_library from Phase 39 (FORM) as tuning-loop write-back target.
 - Phase 43 (VALIDATE) → strictly last; runs integration-checker across all 5 prior phases.
 
@@ -97,8 +99,6 @@ concurrent) └── Phase 41 (PREVIEW)  ────────────�
 - v9.0 plans completed: 0 / TBD (plan counts to be refined in plan-phase)
 - Deliverable form: repo-commit only — skills/kais-movie-pipeline/ + skills/movie-experts/ body patches + new plugins/formula_library/ + plugins/review_gates/ additive registration. **Zero Hermes core Python/JS changes** (new plugin lives in plugins/ namespace; new gates register on existing Phase 34 state machine).
 - Operator-action-handoffs (NOT gaps, per scoped-boundary design): (1) Phase 41 LTX2.3 live GPU generation testing; (2) Phase 42 5 平台 API key 配置 + live data ingestion. Both documented in v9.0-MILESTONE-AUDIT.md at close.
-
-
 
 ## Decisions (v9.0 — entered planning)
 

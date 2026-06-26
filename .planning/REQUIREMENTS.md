@@ -27,10 +27,10 @@
 
 ### GATE — Phase 40 3 新审核门
 
-- [ ] **GATE-01**: 在现有 `plugins/review_gates/gate.py` state machine 上注册 `redline_emotion_desensitize` gate —— 检测连续 ≥3 帧相同情绪效价(per `creative-redlines.md` R1:情绪脱敏 ≤2 次连续),违规时返回 reject + suggested_action(打散/插入反差)
-- [ ] **GATE-02**: 注册 `redline_no_cold_open` gate —— 检测首 3s 是否含背景铺垫(per R3:零背景铺垫切入即冲突);违规时 reject + suggested_action(删铺垫 / 重排首帧)
-- [ ] **GATE-03**: 注册 `redline_unfinished_ending` gate —— 检测结尾 3s 是否释放新钩子(per R4:结尾必释放新钩子);违规时 reject + suggested_action(加悬念 / 加新角色登场)
-- [ ] **GATE-04**: 3 gates 接入 V8.6 8-gate review sequence(现有 `references/review-gates.md`) —— additive 加入为 gate 9 / 10 / 11,**不替换**现有 8;门序:gate 1-8 通过后,gate 9-11 在最终成片前再扫一次
+- [x] **GATE-01**: 在现有 `plugins/review_gates/gate.py` state machine 上注册 `redline_emotion_desensitize` gate —— 检测连续 ≥3 帧相同情绪效价(per `creative-redlines.md` R1:情绪脱敏 ≤2 次连续),违规时返回 reject + suggested_action(打散/插入反差)
+- [x] **GATE-02**: 注册 `redline_no_cold_open` gate —— 检测首 3s 是否含背景铺垫(per R3:零背景铺垫切入即冲突);违规时 reject + suggested_action(删铺垫 / 重排首帧)
+- [x] **GATE-03**: 注册 `redline_unfinished_ending` gate —— 检测结尾 3s 是否释放新钩子(per R4:结尾必释放新钩子);违规时 reject + suggested_action(加悬念 / 加新角色登场)
+- [x] **GATE-04**: 3 gates 接入 V8.6 8-gate review sequence(现有 `references/review-gates.md`) —— additive 加入为 gate 9 / 10 / 11,**不替换**现有 8;门序:gate 1-8 通过后,gate 9-11 在最终成片前再扫一次
 
 ### PREVIEW — Phase 41 LTX2.3 预览闭环 (Step 6.5)
 
