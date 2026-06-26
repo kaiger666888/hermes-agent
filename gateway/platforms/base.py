@@ -1692,6 +1692,21 @@ _RETRYABLE_ERROR_PATTERNS = (
     "eoferror",
 )
 
+# --- Flood-control vocabulary (mirrors gateway/stream_consumer.py:104-110) ---
+# Telegram's sliding flood window is 18-27s; exponential backoff (~2s, ~4s)
+# cannot out-wait it.  When a flood error is detected, _send_with_retry
+# waits the parsed retry_after seconds (clamped to the bounds below) instead
+# of the exponential delay.  These constants are kept in lock-step with
+# stream_consumer._MAX_FLOOD_SUSPEND_SECONDS / _MIN_FLOOD_SUSPEND_SECONDS
+# so both layers speak the same flood vocabulary.
+_FLOOD_WAIT_MAX_SECONDS = 60.0  # cap — a misbehaving server cannot park us forever
+_FLOOD_WAIT_MIN_SECONDS = 3.0   # floor — Telegram's typical minimum flood backoff
+_FLOOD_WAIT_DEFAULT_SECONDS = 5.0  # used when error is flood-shaped but no parseable retry_after
+# IDENTICAL to stream_consumer._FLOOD_RETRY_AFTER_RE (vocabulary parity).
+# Telegram's flood error strings: "Flood control exceeded. Retry in 35 seconds"
+# and the 429 "Too Many Requests: retry after 30" shape.
+_FLOOD_RETRY_AFTER_RE = re.compile(r"retry\s*(?:in|after)\s+(\d+)\s*seconds?", re.IGNORECASE)
+
 
 # Type for message handlers.  Handlers may return a plain string (normal
 # reply), an ``EphemeralReply`` to opt the reply into auto-deletion, or
@@ -3397,6 +3412,65 @@ class BasePlatformAdapter(ABC):
             return False
         lowered = error.lower()
         return "timed out" in lowered or "readtimeout" in lowered or "writetimeout" in lowered
+
+    @staticmethod
+    def _is_flood_error(error: Optional[str]) -> bool:
+        """Return True if the error string looks like Telegram flood control / rate limiting.
+
+        Uses the same markers as ``stream_consumer._is_flood_error`` plus the
+        ``"429"`` HTTP status code, which is a strong flood signal at this
+        layer (base.py doesn't always see the structured PTB RetryAfter
+        exception).  Detection is case-insensitive.
+        """
+        if not error:
+            return False
+        lowered = error.lower()
+        return (
+            "flood" in lowered
+            or "retry after" in lowered
+            or "rate limit" in lowered
+            or "429" in lowered
+        )
+
+    @staticmethod
+    def _extract_retry_after_seconds(result: "SendResult") -> Optional[float]:
+        """Parse Telegram's ``retry_after`` hint from a flood-control SendResult.
+
+        Tries three sources in order of reliability (mirrors
+        ``stream_consumer._extract_retry_after_seconds``):
+
+        1. ``result.raw_response["retry_after"]`` -- adapter-extracted value
+           (the Telegram adapter decodes the structured PTB RetryAfter
+           exception and surfaces it on SendResult).
+        2. ``result.raw_response.retry_after`` -- same, attribute form (PTB's
+           RetryAfter exception exposes ``.retry_after``).
+        3. Regex on ``result.error`` for "Retry in N seconds" / "retry after N".
+
+        Returns seconds as a float, or None if no parseable hint was found.
+        The caller is responsible for clamping to
+        ``[_FLOOD_WAIT_MIN_SECONDS, _FLOOD_WAIT_MAX_SECONDS]`` and applying
+        the ``_FLOOD_WAIT_DEFAULT_SECONDS`` fallback.
+        """
+        raw = getattr(result, "raw_response", None)
+        if raw is not None:
+            val = None
+            if isinstance(raw, dict):
+                val = raw.get("retry_after")
+            else:
+                val = getattr(raw, "retry_after", None)
+            if val is not None:
+                try:
+                    return float(val)
+                except (TypeError, ValueError):
+                    pass
+        err = getattr(result, "error", "") or ""
+        m = _FLOOD_RETRY_AFTER_RE.search(err)
+        if m:
+            try:
+                return float(m.group(1))
+            except (TypeError, ValueError):
+                return None
+        return None
 
     def _unwrap_ephemeral(self, response: Any) -> Tuple[Optional[str], int]:
         """Unwrap a handler response into (text, ttl_seconds).

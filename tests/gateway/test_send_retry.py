@@ -7,11 +7,22 @@ Verifies that:
 - User receives a delivery-failure notice when all retries are exhausted
 - Successful sends on retry return success
 - SendResult.retryable flag is respected
+- Flood-control errors wait the clamped retry_after seconds (3-60s, default 5s)
+  instead of exponential backoff, mirroring gateway/stream_consumer.py
 """
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from gateway.platforms.base import BasePlatformAdapter, SendResult, _RETRYABLE_ERROR_PATTERNS
+from gateway.platforms.base import (
+    BasePlatformAdapter,
+    SendResult,
+    _RETRYABLE_ERROR_PATTERNS,
+    _FLOOD_RETRY_AFTER_RE,
+    _FLOOD_WAIT_MAX_SECONDS,
+    _FLOOD_WAIT_MIN_SECONDS,
+    _FLOOD_WAIT_DEFAULT_SECONDS,
+)
 from gateway.platforms.base import Platform, PlatformConfig
 
 
@@ -282,3 +293,130 @@ class TestSendWithRetryFallback:
             result = await adapter._send_with_retry("chat1", "hello", max_retries=2)
         assert not result.success
         assert len(adapter._send_calls) == 2  # original + fallback only
+
+
+# ---------------------------------------------------------------------------
+# Flood-control module constants (parity with stream_consumer.py)
+# ---------------------------------------------------------------------------
+
+class TestFloodModuleConstants:
+    """Constants for flood-aware retry must match the stream_consumer contract."""
+
+    def test_flood_retry_after_regex_compiles(self):
+        assert _FLOOD_RETRY_AFTER_RE.search("Retry in 27 seconds") is not None
+        assert _FLOOD_RETRY_AFTER_RE.search("retry after 30 seconds") is not None
+        # singular form
+        assert _FLOOD_RETRY_AFTER_RE.search("Retry in 1 second") is not None
+        # non-match (the regex requires the trailing "second(s)" suffix,
+        # mirroring stream_consumer._FLOOD_RETRY_AFTER_RE byte-for-byte;
+        # bare "retry after 30" without a unit is not a parseable hint and
+        # falls through to the _FLOOD_WAIT_DEFAULT_SECONDS fallback in the
+        # retry path).
+        assert _FLOOD_RETRY_AFTER_RE.search("no hint here") is None
+        assert _FLOOD_RETRY_AFTER_RE.search("retry after 30") is None
+
+    def test_max_seconds_is_60(self):
+        assert _FLOOD_WAIT_MAX_SECONDS == 60.0
+
+    def test_min_seconds_is_3(self):
+        assert _FLOOD_WAIT_MIN_SECONDS == 3.0
+
+    def test_default_seconds_is_5(self):
+        assert _FLOOD_WAIT_DEFAULT_SECONDS == 5.0
+
+
+# ---------------------------------------------------------------------------
+# _is_flood_error / _extract_retry_after_seconds — pure function tests
+# ---------------------------------------------------------------------------
+
+class TestFloodAwareRetryHelpers:
+    """Pure-function tests for the flood detection helpers.
+
+    Mirrors the stream_consumer vocabulary so both layers speak the same
+    flood language.
+    """
+
+    # ---- _is_flood_error (string-based) ----
+
+    @pytest.mark.parametrize("err", [
+        "Flood control exceeded. Retry in 27 seconds",
+        "Too Many Requests: retry after 30",
+        "429 flood",
+        "Rate limit exceeded",
+        "429 Too Many Requests",
+    ])
+    def test_is_flood_error_true(self, err):
+        assert _StubAdapter._is_flood_error(err) is True
+
+    @pytest.mark.parametrize("err", [
+        "ConnectError: refused",
+        "Bad Request: can't parse entities",
+        "",
+        None,
+    ])
+    def test_is_flood_error_false(self, err):
+        assert _StubAdapter._is_flood_error(err) is False
+
+    def test_is_flood_error_case_insensitive(self):
+        assert _StubAdapter._is_flood_error("FLOOD CONTROL EXCEEDED") is True
+        assert _StubAdapter._is_flood_error("RETRY AFTER 30") is True
+
+    # ---- _extract_retry_after_seconds ----
+
+    def test_extract_from_error_string_retry_in(self):
+        result = SendResult(success=False, error="Retry in 27 seconds", raw_response=None)
+        assert _StubAdapter._extract_retry_after_seconds(result) == 27.0
+
+    def test_extract_from_error_string_retry_after(self):
+        # Regex requires the trailing "seconds" suffix (parity with
+        # stream_consumer._FLOOD_RETRY_AFTER_RE).
+        result = SendResult(success=False, error="retry after 30 seconds", raw_response=None)
+        assert _StubAdapter._extract_retry_after_seconds(result) == 30.0
+
+    def test_extract_from_raw_response_dict(self):
+        result = SendResult(success=False, error="flood", raw_response={"retry_after": 42})
+        assert _StubAdapter._extract_retry_after_seconds(result) == 42.0
+
+    def test_extract_from_raw_response_attribute(self):
+        # PTB RetryAfter shape: raw_response.retry_after attribute
+        result = SendResult(
+            success=False,
+            error="flood",
+            raw_response=SimpleNamespace(retry_after=18),
+        )
+        assert _StubAdapter._extract_retry_after_seconds(result) == 18.0
+
+    def test_extract_returns_none_when_no_hint(self):
+        result = SendResult(success=False, error="flood", raw_response=None)
+        assert _StubAdapter._extract_retry_after_seconds(result) is None
+
+    def test_extract_returns_none_when_not_flood_error(self):
+        # Mirrors stream_consumer test_handles_garbage_retry_after: when the
+        # error string isn't flood-shaped AND raw_response has no parseable
+        # retry_after, the helper returns None (no false positive).
+        result = SendResult(success=False, error="other error", raw_response=None)
+        assert _StubAdapter._extract_retry_after_seconds(result) is None
+
+    def test_extract_returns_none_for_garbage_retry_after(self):
+        # raw_response.retry_after is a non-numeric string AND the error
+        # string carries no regex match -> helper must return None, not crash.
+        result = SendResult(
+            success=False,
+            error="flood",
+            raw_response={"retry_after": "not-a-number"},
+        )
+        assert _StubAdapter._extract_retry_after_seconds(result) is None
+
+    def test_extract_prefers_raw_response_over_regex(self):
+        # When both sources are present, the structured value wins.
+        result = SendResult(
+            success=False,
+            error="Retry in 27 seconds",
+            raw_response={"retry_after": 99},
+        )
+        assert _StubAdapter._extract_retry_after_seconds(result) == 99.0
+
+    def test_extract_handles_int_retry_after(self):
+        result = SendResult(success=False, error="flood", raw_response={"retry_after": 15})
+        # int should coerce to float cleanly
+        assert _StubAdapter._extract_retry_after_seconds(result) == 15.0
