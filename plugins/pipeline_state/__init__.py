@@ -28,6 +28,14 @@ from plugins.pipeline_state.tools import (
     _handle_pipeline_checkpoint_save,
 )
 
+# Phase 41-01 — re-export RecipeLibrary for plugin-level discovery.
+# RecipeLibrary is a library class (NOT a tool handler); it's consumed by
+# Phase 42's feedback_ingest.py and by operators via direct import
+# (``from plugins.pipeline_state import RecipeLibrary``). The noqa suppresses
+# the unused-import warning since this import exists purely for namespace
+# visibility.
+from plugins.pipeline_state.recipe_library import RecipeLibrary  # noqa: F401
+
 # (name, schema, handler, emoji) — Phase 33 swaps handler bodies, not this list.
 _TOOLS = (
     ("pipeline_checkpoint_save", PIPELINE_CHECKPOINT_SAVE_SCHEMA, _handle_pipeline_checkpoint_save, "CK"),
