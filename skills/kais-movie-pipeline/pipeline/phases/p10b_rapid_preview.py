@@ -398,7 +398,21 @@ def _run_body(
     with select_engine() as engine:
 
         # 3. Per-shot fan-out via ThreadPoolExecutor (D-36-08 pattern from p11).
-        total_variants = len(shot_list) * VARIANTS_PER_SHOT
+        # Phase 40 WR-04 fix: track ``attempted_variants`` as an accumulator
+        # during the loop, NOT ``len(shot_list) * VARIANTS_PER_SHOT`` computed
+        # up front. If ``_build_variants`` raises mid-loop on a malformed
+        # baseline (e.g., ``hook_position_sec`` is a string from upstream),
+        # the exception propagates out of the loop body and ``fut.result()``
+        # never runs for that shot. The up-front ``total_variants`` would
+        # still reflect the planned count, so the full-degrade check
+        # ``degraded_count == total_variants`` could mis-fire: e.g., with 3
+        # planned variants and only 1 actually attempted (other 2 raised),
+        # ``degraded_count == 1`` would NOT equal ``total_variants == 3``
+        # and the episode would NOT be marked ``preview_skipped`` even
+        # though every actually-attempted variant degraded.
+        # The accumulator counts only variants that actually reached
+        # ``fut.result()`` — the denominator the full-degrade check needs.
+        attempted_variants = 0
         degraded_count = 0
         generated_count = 0
 
@@ -449,6 +463,11 @@ def _run_body(
                         paired.append((fut, shot, variant))
                 for fut, shot, variant in paired:
                     result = fut.result()
+                    # WR-04: count this variant as "attempted" — it reached
+                    # fut.result() (didn't raise from _build_variants or
+                    # engine.generate). This is the denominator for the
+                    # full-degrade check.
+                    attempted_variants += 1
                     if isinstance(result, dict) and result.get("degraded"):
                         degraded_count += 1
                         continue
@@ -468,8 +487,15 @@ def _run_body(
     #    Triggers ONLY when ALL variants across ALL shots degraded. Partial
     #    degrades are silently counted above (recoverable — the generated
     #    successes still flow to rapid-preview-clips).
-    if total_variants > 0 and degraded_count == total_variants:
-        skip_reason = f"all_variants_degraded: {degraded_count}/{total_variants}"
+    #
+    #    Phase 40 WR-04 fix: compare against ``attempted_variants`` (the
+    #    actual fan-out denominator), NOT ``len(shot_list) *
+    #    VARIANTS_PER_SHOT`` (the planned denominator). If _build_variants
+    #    or engine.generate raised mid-loop, the planned count would be
+    #    inflated relative to the actual attempts, and a "all attempted
+    #    degraded" episode could fail to mark preview_skipped.
+    if attempted_variants > 0 and degraded_count == attempted_variants:
+        skip_reason = f"all_variants_degraded: {degraded_count}/{attempted_variants}"
         logger.warning(
             "preview_skipped: episode=%s %s — falling back to p11 direct Seedance",
             episode_id, skip_reason,
