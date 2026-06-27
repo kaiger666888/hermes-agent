@@ -1,7 +1,0 @@
-name: formula_library
-version: "0.1.0"
-description: "formula library plugin — 10 seed formulas (5 genre × 2 mood matrix) + formula_lookup Step 0 ranking tool (Phase 39 FORM ships the engine; Plan 02 ships data; Plan 03 wires SKILL.md)"
-author: kais-movie-agent
-kind: standalone
-provides_tools:
-  - formula_lookup

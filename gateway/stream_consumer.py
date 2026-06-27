@@ -95,6 +95,20 @@ class GatewayStreamConsumer:
     # progressive edits for the remainder of the stream.
     _MAX_FLOOD_STRIKES = 3
 
+    # Flood-control suspend-and-resume (ported from openclaw draft-stream.ts).
+    # When Telegram returns a flood-control error, we parse retry_after and
+    # suspend ALL platform API calls (edits, fresh sends, draft frames) until
+    # the window expires.  Calling into a sliding flood window only extends it,
+    # so absolute silence is the correct response.  Cap retry_after at this
+    # many seconds so a misbehaving server cannot park the consumer forever.
+    _MAX_FLOOD_SUSPEND_SECONDS = 60.0
+    # Floor for the suspend window when retry_after is missing/unparseable.
+    # 3s matches Telegram's typical minimum flood backoff.
+    _MIN_FLOOD_SUSPEND_SECONDS = 3.0
+    # Telegram's flood error strings: "Flood control exceeded. Retry in 35 seconds"
+    # and the 429 "Too Many Requests: retry after 30" shape.
+    _FLOOD_RETRY_AFTER_RE = re.compile(r"retry\s*(?:in|after)\s+(\d+)\s*seconds?", re.IGNORECASE)
+
     # Reasoning/thinking tags that models emit inline in content.
     # Must stay in sync with cli.py _OPEN_TAGS/_CLOSE_TAGS and
     # run_agent.py _strip_think_blocks() tag variants.
@@ -165,6 +179,15 @@ class GatewayStreamConsumer:
         self._fallback_preserve_partial_messages = False
         self._flood_strikes = 0         # Consecutive flood-control edit failures
         self._current_edit_interval = self.cfg.edit_interval  # Adaptive backoff
+        # Flood-control suspend window (ported from openclaw draft-stream.ts
+        # suspendedUntilMs).  When greater than the current time.monotonic(),
+        # the consumer skips ALL platform API calls and just keeps the latest
+        # accumulated text in _accumulated; the first tick after the window
+        # expires delivers it as a single edit.  This is the critical fix:
+        # continuing to edit into a Telegram flood window only extends it.
+        # Final-flush edits (finalize=True) bypass the gate so the last text
+        # still gets a chance to land even mid-suspend.
+        self._suspended_until_monotonic: float = 0.0
         self._final_response_sent = False
         # Set when the final response content was sent to the user via
         # streaming, even if the final edit (cursor removal etc.)
@@ -994,6 +1017,62 @@ class GatewayStreamConsumer:
         err_lower = err.lower()
         return "flood" in err_lower or "retry after" in err_lower or "rate" in err_lower
 
+    def _extract_retry_after_seconds(self, result) -> Optional[float]:
+        """Parse Telegram's retry_after hint from a flood-control SendResult.
+
+        Tries three sources in order of reliability (mirrors openclaw's
+        readTelegramRetryAfterMs):
+
+        1. ``result.raw_response["retry_after"]`` -- adapter-extracted value
+           (e.g. the Telegram adapter decodes the structured PTB RetryAfter
+           exception and surfaces it on SendResult).
+        2. ``result.raw_response.retry_after`` -- same, attribute form (PTB's
+           RetryAfter exception exposes ``.retry_after``).
+        3. Regex on ``result.error`` for "Retry in N seconds" / "retry after N".
+
+        Returns seconds as a float, or None if no parseable hint was found.
+        """
+        raw = getattr(result, "raw_response", None)
+        if raw is not None:
+            val = None
+            if isinstance(raw, dict):
+                val = raw.get("retry_after")
+            else:
+                val = getattr(raw, "retry_after", None)
+            if val is not None:
+                try:
+                    return float(val)
+                except (TypeError, ValueError):
+                    pass
+        err = getattr(result, "error", "") or ""
+        m = self._FLOOD_RETRY_AFTER_RE.search(err)
+        if m:
+            try:
+                return float(m.group(1))
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    def _apply_flood_suspend(self, result) -> float:
+        """Set the suspend window from a flood-control SendResult.
+
+        Parses retry_after (capped at _MAX_FLOOD_SUSPEND_SECONDS), falls back
+        to _MIN_FLOOD_SUSPEND_SECONDS when no hint is present, and stamps
+        ``_suspended_until_monotonic``.  Returns the suspended duration in
+        seconds (for logging).
+        """
+        secs = self._extract_retry_after_seconds(result)
+        if secs is None:
+            secs = self._MIN_FLOOD_SUSPEND_SECONDS
+        secs = max(self._MIN_FLOOD_SUSPEND_SECONDS,
+                   min(secs, self._MAX_FLOOD_SUSPEND_SECONDS))
+        self._suspended_until_monotonic = time.monotonic() + secs
+        return secs
+
+    def _is_suspended(self) -> bool:
+        """True when the consumer is inside a flood-control suspend window."""
+        return self._suspended_until_monotonic > time.monotonic()
+
     def _resolve_draft_streaming(self) -> bool:
         """Decide whether this run should use native draft streaming.
 
@@ -1359,6 +1438,22 @@ class GatewayStreamConsumer:
                 and len(_visible_stripped) < _MIN_NEW_MSG_CHARS):
             return True  # too short for a standalone message — accumulate more
 
+        # Flood-control suspend gate (ported from openclaw draft-stream.ts
+        # line 339).  When the consumer is inside a flood suspend window, skip
+        # ALL platform API calls and return False so the caller leaves the
+        # latest accumulated text in _accumulated — the first tick after the
+        # suspend window expires delivers it as a single edit.  Calling into a
+        # sliding Telegram flood window only extends it.  Final flushes
+        # (finalize=True) bypass the gate so the completed answer still has a
+        # chance to land even mid-suspend; if it fails, the gateway's normal
+        # final-send retry path takes over.
+        if not finalize and self._is_suspended():
+            logger.debug(
+                "Stream edit skipped — flood suspend window active (%.1fs left)",
+                self._suspended_until_monotonic - time.monotonic(),
+            )
+            return False
+
         # Native draft streaming: route mid-stream frames through send_draft.
         # The final answer is delivered via the regular sendMessage path
         # below — drafts have no message_id so we can't finalize them
@@ -1464,8 +1559,11 @@ class GatewayStreamConsumer:
                             self._notify_new_message()
                         else:
                             self._last_sent_text = text
-                        # Successful edit — reset flood strike counter
+                        # Successful edit — reset flood strike counter and
+                        # clear any active suspend window (openclaw resets
+                        # suspendedUntilMs = 0 on consecutivePreviewFailures = 0).
                         self._flood_strikes = 0
+                        self._suspended_until_monotonic = 0.0
                         return True
                     else:
                         if (
@@ -1519,15 +1617,22 @@ class GatewayStreamConsumer:
                         # edits after _MAX_FLOOD_STRIKES consecutive failures.
                         if self._is_flood_error(result):
                             self._flood_strikes += 1
+                            # Parse retry_after from the SendResult and enter
+                            # the suspend window.  This is the critical fix:
+                            # stop calling the API for retry_after seconds so
+                            # the sliding Telegram flood window can expire.
+                            # Ported from openclaw draft-stream.ts line 449.
+                            suspend_secs = self._apply_flood_suspend(result)
                             self._current_edit_interval = min(
                                 self._current_edit_interval * 2, 10.0,
                             )
                             logger.debug(
                                 "Flood control on edit (strike %d/%d), "
-                                "backoff interval → %.1fs",
+                                "backoff interval → %.1fs, suspend %.1fs",
                                 self._flood_strikes,
                                 self._MAX_FLOOD_STRIKES,
                                 self._current_edit_interval,
+                                suspend_secs,
                             )
                             if self._flood_strikes < self._MAX_FLOOD_STRIKES:
                                 # Don't disable edits yet — just slow down.

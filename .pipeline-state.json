@@ -1,0 +1,16 @@
+{
+  "episode": "",
+  "phases": {
+    "p13_delivery": {
+      "status": "rejected",
+      "resolved_at": "2026-06-26T16:10:30.500864+00:00",
+      "decision": "reject",
+      "attempt": 1
+    }
+  },
+  "current_phase_id": null,
+  "started_at": null,
+  "completed_at": null,
+  "last_resumed_at": null,
+  "trace_id": null
+}

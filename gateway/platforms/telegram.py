@@ -1312,10 +1312,23 @@ class TelegramAdapter(BasePlatformAdapter):
                 "[%s] rich editMessageText transient failure (no legacy resend): %s",
                 self.name, exc,
             )
+            # Surface Telegram's retry_after hint (from PTB RetryAfter exception
+            # or the 429 response body) on SendResult.raw_response so the
+            # stream consumer can enter a precise flood-control suspend window
+            # instead of polling edit_interval until _MAX_FLOOD_STRIKES.
+            retry_after = getattr(exc, "retry_after", None)
+            if retry_after is None:
+                # PTB nests the Bot API response under .response.parameters
+                resp = getattr(exc, "response", None)
+                params = getattr(resp, "parameters", None) if resp is not None else None
+                if params is not None:
+                    retry_after = getattr(params, "retry_after", None)
+            raw_payload = {"retry_after": retry_after} if retry_after is not None else None
             return SendResult(
                 success=False,
                 error=str(exc),
                 retryable=(is_connect_timeout or not is_timeout),
+                raw_response=raw_payload,
             )
         return SendResult(success=True, message_id=message_id)
 

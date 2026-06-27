@@ -1244,7 +1244,6 @@ def run_conversation(
                 if response_invalid:
                     from agent.error_classifier import (
                         classify_response_body_error,
-                        FailoverReason,
                         _SyntheticBodyError,
                     )
                     _body_err = classify_response_body_error(response)
@@ -3479,9 +3478,24 @@ def run_conversation(
                                 _retry_after = min(float(_ra_raw), 120)  # Cap at 2 minutes
                             except (TypeError, ValueError):
                                 pass
-                wait_time = _retry_after if _retry_after else jittered_backoff(retry_count, base_delay=2.0, max_delay=60.0)
+                # Overloaded upstreams need substantially longer recovery time
+                # than transient errors. Zhipu's HTTP-200-embedded 1305
+                # overloaded_error in particular returns immediately but the
+                # upstream GLM model typically needs 30-60s+ to clear its
+                # backlog. The default 2/4/8s backoff hits the same overloaded
+                # window three times within 10 seconds — all fail with the
+                # same 1305. Give overloaded a real base_delay so retries
+                # land in different recovery windows.
+                if _retry_after:
+                    wait_time = _retry_after
+                elif classified.reason == FailoverReason.overloaded:
+                    wait_time = jittered_backoff(retry_count, base_delay=30.0, max_delay=180.0)
+                else:
+                    wait_time = jittered_backoff(retry_count, base_delay=2.0, max_delay=60.0)
                 if is_rate_limited:
                     agent._buffer_status(f"⏱️ Rate limited. Waiting {wait_time:.1f}s (attempt {retry_count + 1}/{max_retries})...")
+                elif classified.reason == FailoverReason.overloaded:
+                    agent._buffer_status(f"🔥 Upstream overloaded. Waiting {wait_time:.1f}s for recovery (attempt {retry_count}/{max_retries})...")
                 else:
                     agent._buffer_status(f"⏳ Retrying in {wait_time:.1f}s (attempt {retry_count}/{max_retries})...")
                 logger.warning(

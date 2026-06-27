@@ -1,0 +1,20 @@
+{
+  "value": {
+    "outcomes": [
+      {
+        "gate_id": "redline_emotion_desensitize",
+        "episode_id": "EP01",
+        "decision": "reject",
+        "suggested_action": "formula:emotion-break-up",
+        "reviewer_role": "redline_scanner",
+        "resolved_at": "2026-06-26T16:10:30.500864+00:00",
+        "attempt": 1,
+        "status": "rejected"
+      }
+    ],
+    "version": 1
+  },
+  "derived_from": [],
+  "content_hash": "d64cd608e5cb2fa72e381c5513f124329f3fa04217f098236dca35c97c123c9e",
+  "schema_version": "3.0"
+}

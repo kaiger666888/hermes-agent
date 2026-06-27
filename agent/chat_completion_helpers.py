@@ -2574,10 +2574,18 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 _close_request_client_once("stale_stream_kill")
             except Exception:
                 pass
-            # Rebuild the primary client too — its connection pool
+            # Rebuild the in-use client too — its connection pool
             # may hold dead sockets from the same provider outage.
+            # For anthropic_messages mode, the OpenAI client is a stale
+            # shim and rebuilding it via _replace_primary_openai_client
+            # raises "api_key client option must be set" because
+            # _client_kwargs doesn't carry an OpenAI api_key. Rebuild
+            # the Anthropic client instead.
             try:
-                agent._replace_primary_openai_client(reason="stale_stream_pool_cleanup")
+                if getattr(agent, "api_mode", None) == "anthropic_messages":
+                    agent._rebuild_anthropic_client()
+                else:
+                    agent._replace_primary_openai_client(reason="stale_stream_pool_cleanup")
             except Exception:
                 pass
             # Reset the timer so we don't kill repeatedly while
