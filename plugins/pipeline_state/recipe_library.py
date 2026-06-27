@@ -812,3 +812,105 @@ class RecipeLibrary:
             new_completion_rate, ci_str, new_converged,
         )
         return new_row
+
+    # ── Core method 5: query_by_structure (RECIPE-LIB-01 + RECIPE-LIB-05) ──
+    # Primary consumer-facing API — the third of three query modes
+    # (the other two — by genre, by validation status — are filters on
+    # ``list_recipes`` shipped in 41-01). This is the structure-similarity
+    # query: operators ask "what recipes worked for similar structure?"
+    #
+    # Similarity algorithm lock (CONTEXT.md):
+    #   score = 0.7 * cosine(numerical) + 0.3 * jaccard(emotion_sequence)
+    # Rationale: numerical structure (0.7) weighted higher than categorical
+    # emotion (0.3). Pure stdlib (math.sqrt + set built-in) — no scipy/numpy.
+
+    def query_by_structure(
+        self,
+        structure_query: dict,
+        top_k: int = 5,
+        min_score: float = 0.7,
+    ) -> list[tuple[dict, float]]:
+        """Return top-K recipes whose structure similarity to ``structure_query`` >= ``min_score``.
+
+        This is the primary consumer-facing API (RECIPE-LIB-05 third query
+        mode — by structure similarity). Default ``min_score=0.7`` +
+        ``top_k=5`` returns 0-5 high-similarity recipes; operators tune
+        these per use case.
+
+        Similarity score (CONTEXT.md lock — pure stdlib):
+
+            score = 0.7 * cosine(numerical) + 0.3 * jaccard(emotion_sequence)
+
+        where:
+            cosine   — over the 3-dim vector
+                       ``[hook_position_sec, mean(turning_points_sec), emotion_drop_level]``
+                       (turning_points_sec list collapsed to scalar mean per
+                       WARNING #4 refinement; ``_cosine_similarity`` returns
+                       0.0 on zero-magnitude query vector — threat T-41-14)
+            jaccard  — over ``emotion_sequence`` lists treated as sets
+                       (order-insensitive; duplicates collapse)
+
+        Only the **latest version per recipe_id** is considered (delegates to
+        ``list_recipes`` from 41-01 — threat T-41-16 mitigation: historical
+        versions do not leak into similarity results).
+
+        Args:
+            structure_query: Dict with any subset of the 5 structure fields.
+                Missing fields degrade gracefully to defaults (hook=0,
+                turning_points=[], emotion_drop_level=0, emotion_sequence=[]).
+            top_k: Maximum number of results to return (default 5). Must be
+                ``>= 1`` (threat T-41-18 mitigation).
+            min_score: Minimum combined score in ``[0.0, 1.0]`` for a recipe
+                to be included (default 0.7). Must be in ``[0.0, 1.0]``
+                (threat T-41-18 mitigation). Pass ``0.0`` to disable filtering.
+
+        Returns:
+            List of ``(recipe_dict, score_float)`` tuples, sorted descending
+            by score. Ties are broken by insertion order (Python's
+            ``sorted`` is stable — threat T-41-17 mitigation). Each
+            ``recipe_dict`` is the full 16-field row.
+
+        Raises:
+            ValueError: if ``top_k < 1`` or ``min_score`` is outside ``[0, 1]``.
+        """
+        # Input validation (threat T-41-18 — Tampering via invalid params).
+        if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k < 1:
+            raise ValueError(f"top_k must be int >= 1, got {top_k!r}")
+        if (
+            not isinstance(min_score, (int, float))
+            or isinstance(min_score, bool)
+            or not (0.0 <= float(min_score) <= 1.0)
+        ):
+            raise ValueError(
+                f"min_score must be float in [0,1], got {min_score!r}"
+            )
+
+        # Step 1: latest version per recipe_id (41-01 method).
+        candidates = self.list_recipes()
+        if not candidates:
+            return []
+
+        # Step 2: build query vector + emotion set ONCE (avoid recompute).
+        query_vec = _structure_to_numerical_vector(structure_query)
+        query_emo = structure_query.get("emotion_sequence") or []
+
+        # Step 3: score each candidate.
+        scored: list[tuple[dict, float]] = []
+        for cand in candidates:
+            cand_struct = cand.get("structure", {}) or {}
+            cand_vec = _structure_to_numerical_vector(cand_struct)
+            cand_emo = cand_struct.get("emotion_sequence") or []
+
+            cos = _cosine_similarity(query_vec, cand_vec)
+            jac = _jaccard_similarity(query_emo, cand_emo)
+            score = 0.7 * cos + 0.3 * jac
+
+            if score >= float(min_score):
+                scored.append((cand, score))
+
+        # Step 4: stable sort descending by score (ties preserve insertion
+        # order — threat T-41-17 mitigation). Python's sorted() is stable.
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+
+        # Step 5: cap at top_k.
+        return scored[:top_k]
