@@ -157,9 +157,15 @@ class TestPhaseRegistryFullDag:
                     f"{entry['id']} module missing required constant {const}"
                 )
 
-    def test_p10b_stub_module_constants_and_run_behavior(self):
-        """Phase 40-01: p10b stub exposes required constants + run() raises
-        NotImplementedError (real impl arrives in plan 40-03)."""
+    def test_p10b_module_constants_and_run_signature(self):
+        """Phase 40-03: p10b real module exposes required constants + run() works.
+
+        Plan 40-01 asserted run() raised NotImplementedError (stub boundary).
+        Plan 40-03 lands the real implementation; the stub-boundary assertion
+        is removed. The run() smoke test below uses empty inputs so no real
+        engine.generate() calls happen (select_engine() still runs, returning
+        the default SlideshowEngine, but no shots → no fan-out).
+        """
         from pipeline.phases import p10b_rapid_preview
 
         assert p10b_rapid_preview.PHASE_ID == "p10b_rapid_preview"
@@ -175,11 +181,12 @@ class TestPhaseRegistryFullDag:
             "rapid-preview-clips", "episode-meta"
         ]
         assert p10b_rapid_preview.GATE_ID is None  # no review gate for p10b
-        # run() must be callable (registry wiring check) but raise
-        # NotImplementedError until plan 40-03 lands the real impl.
+        # run() must be callable (registry wiring check) AND execute cleanly
+        # with empty inputs (real impl landed in plan 40-03).
         assert callable(p10b_rapid_preview.run)
-        with pytest.raises(NotImplementedError, match="plan 40-03"):
-            p10b_rapid_preview.run(
-                "ep", lambda s: None, lambda s, d: None,
-                lambda g, c, t: {}, None,
-            )
+        result = p10b_rapid_preview.run(
+            "ep", lambda s: None, lambda s, d: None,
+            lambda g, c, t: {}, None,
+        )
+        assert result["phase"] == "p10b_rapid_preview"
+        assert result["gate"] is None  # GATE_ID is None — CF-36-04 skip

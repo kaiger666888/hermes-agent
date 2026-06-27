@@ -245,8 +245,12 @@ class TestP10bRapidPreview:
     # Tests — run() happy path (Tests 6-9)
     # -------------------------------------------------------------------
 
-    def test_run_single_shot_calls_engine_three_times_and_writes_three_records(self):
-        """Test 6: happy path, 1 shot, parallel_shots=1 → 3 engine calls + 3 writes."""
+    def _run_single_shot_happy_path(self):
+        """Helper: run() with 1 shot + FakeEngine + parallel_shots=1.
+
+        Returns (engine, result, rapid_writes). Used by Tests 6/7/9 to avoid
+        duplicating the engine-injection boilerplate.
+        """
         engine = FakeEngine()
         # Inject the engine via monkeypatch on p10b.select_engine.
         original_select = p10b.select_engine
@@ -264,20 +268,23 @@ class TestP10bRapidPreview:
             )
         finally:
             p10b.select_engine = original_select
+        rapid_writes = recorder.writes.get("rapid-preview-clips", [])
+        return engine, result, rapid_writes
 
+    def test_run_single_shot_calls_engine_three_times_and_writes_three_records(self):
+        """Test 6: happy path, 1 shot, parallel_shots=1 → 3 engine calls + 3 writes."""
+        engine, result, rapid_writes = self._run_single_shot_happy_path()
         assert len(engine.calls) == 3, (
             f"expected 3 engine.generate() calls (1 shot × 3 variants); "
             f"got {len(engine.calls)}"
         )
-        rapid_writes = recorder.writes.get("rapid-preview-clips", [])
         assert len(rapid_writes) == 3, (
             f"expected 3 rapid-preview-clips writes; got {len(rapid_writes)}"
         )
-        return result, rapid_writes
 
     def test_rapid_preview_clips_records_have_all_six_required_fields(self):
         """Test 7: each JSONL record has shot_id/variant_id/structure_delta/clip_path/generation_time_ms/engine."""
-        result, rapid_writes = self.test_run_single_shot_calls_engine_three_times_and_writes_three_records()
+        _, _, rapid_writes = self._run_single_shot_happy_path()
         required_fields = {
             "shot_id", "variant_id", "structure_delta",
             "clip_path", "generation_time_ms", "engine",
@@ -321,7 +328,7 @@ class TestP10bRapidPreview:
 
     def test_run_returns_standard_envelope_with_gate_none(self):
         """Test 9: run() returns {phase, outputs, gate=None}."""
-        result, _ = self.test_run_single_shot_calls_engine_three_times_and_writes_three_records()
+        _, result, _ = self._run_single_shot_happy_path()
         assert result["phase"] == "p10b_rapid_preview"
         assert result["gate"] is None  # GATE_ID is None — CF-36-04 conditional skip
         assert "outputs" in result
