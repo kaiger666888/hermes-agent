@@ -3,7 +3,7 @@
 Phase 39 closes the v5.0 milestone. This file proves the three runtime
 claims that close the migration:
 
-  - SC#2 (OPENCLAW-REMOVE-04) — the full 13-phase PHASE_REGISTRY runs
+  - SC#2 (OPENCLAW-REMOVE-04) — the full 14-phase PHASE_REGISTRY runs
     end-to-end via ``run_episode`` with all external services mocked
     (delegate_task spy from Phase 36 + 4 MagicMock clients), completing
     without throwing and producing a ``master.mp4`` artifact in the workdir
@@ -48,6 +48,8 @@ _SKILL_DIR = Path(__file__).resolve().parent.parent
 if str(_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(_SKILL_DIR))
 
+from pipeline import phases as phases_mod  # noqa: E402
+from pipeline import runner as runner_mod  # noqa: E402
 from pipeline.phases import PHASE_REGISTRY  # noqa: E402
 from pipeline.runner import RunnerConfig, run_episode  # noqa: E402
 
@@ -256,7 +258,7 @@ def _stamp_master_mp4(workdir: Path) -> Path:
 
 
 def _run_degraded_episode(tmp_path, *, enable_gates: bool = False):
-    """Shared setup: build mocks, wire subscriber, run full 13-phase DAG.
+    """Shared setup: build mocks, wire subscriber, run full 14-phase DAG.
 
     Returns ``(result, mocks, subscriber, workdir, mp4_path)`` so each
     test function can assert on its specific SC without re-deriving the
@@ -289,14 +291,76 @@ def _run_degraded_episode(tmp_path, *, enable_gates: bool = False):
 
 
 # ---------------------------------------------------------------------------
-# SC#2 — OPENCLAW-REMOVE-04: full 13-phase DAG produces master.mp4
+# Phase 40 (v6.0) — p10b stub proxy for full-DAG E2E tests
+# ---------------------------------------------------------------------------
+# The real p10b_rapid_preview.run() raises NotImplementedError (impl arrives
+# in plan 40-03). All E2E tests here iterate the real PHASE_REGISTRY, so the
+# runner WILL call p10b.run() — which would crash every E2E test. The fix:
+# swap p10b's module in BOTH phases_mod.PHASE_REGISTRY AND
+# runner_mod.PHASE_REGISTRY with a no-op proxy returning a canned result.
+# Mirrors the _P11Proxy swap pattern in test_runner_full_dag.py.
+
+class _P10bStubProxy:
+    """Module proxy: replaces p10b_rapid_preview.run() with a canned result.
+
+    Returns ``{"phase": "p10b_rapid_preview", "outputs": {}, "gate": None}``
+    so the runner records p10b as completed without exercising the real
+    stub (which raises NotImplementedError until plan 40-03).
+    """
+    __name__ = "p10b_rapid_preview_stub_proxy"
+
+    PHASE_ID = "p10b_rapid_preview"
+    EXPERT = None
+    INPUT_SLOTS = ["voice-clips", "voice-timeline", "e-konte-sheets"]
+    OUTPUT_SLOTS = ["rapid-preview-clips", "episode-meta"]
+    GATE_ID = None
+
+    @staticmethod
+    def run(*args, **kwargs):
+        return {
+            "phase": "p10b_rapid_preview",
+            "outputs": {},
+            "gate": None,
+        }
+
+
+@pytest.fixture(autouse=True)
+def _swap_p10b_with_stub_proxy():
+    """Install _P10bStubProxy in both PHASE_REGISTRY copies for every test
+    in this module, restore the raise-on-call stub afterwards."""
+    def _swap_in(registry_list: list) -> tuple[int, dict] | None:
+        for i, e in enumerate(registry_list):
+            if e.get("id") == "p10b_rapid_preview":
+                saved = registry_list[i]
+                registry_list[i] = {
+                    "id": "p10b_rapid_preview",
+                    "module": _P10bStubProxy,
+                    "depends_on": saved.get("depends_on", ["p10_voice"]),
+                }
+                return i, saved
+        return None
+
+    swap_phases = _swap_in(phases_mod.PHASE_REGISTRY)
+    swap_runner = _swap_in(runner_mod.PHASE_REGISTRY)
+    yield
+    if swap_phases is not None:
+        idx, saved = swap_phases
+        phases_mod.PHASE_REGISTRY[idx] = saved
+    if swap_runner is not None:
+        idx, saved = swap_runner
+        runner_mod.PHASE_REGISTRY[idx] = saved
+
+
+# ---------------------------------------------------------------------------
+# SC#2 — OPENCLAW-REMOVE-04: full 14-phase DAG produces master.mp4
+# (Phase 40 v6.0: p10b_rapid_preview inserted between p10 and p11.)
 # ---------------------------------------------------------------------------
 
 
 def test_e2e_degraded_full_dag_produces_master_mp4(tmp_path):
-    """SC#2 — full 13-phase DAG runs in degraded mode, master.mp4 produced.
+    """SC#2 — full 14-phase DAG runs in degraded mode, master.mp4 produced.
 
-    All 13 phases must complete without throwing (degraded mode). The
+    All 14 phases must complete without throwing (degraded mode). The
     ``master.mp4`` artifact must exist in the workdir (0-byte placeholder
     per D-39-03 — the v4.0 PIPE-COMPOSE-01 contract permits this). This
     proves OPENCLAW-REMOVE-04: with openclaw OFF and all four services
@@ -304,9 +368,10 @@ def test_e2e_degraded_full_dag_produces_master_mp4(tmp_path):
     """
     result, _mocks, _sub, workdir, mp4_path = _run_degraded_episode(tmp_path)
 
-    # All 13 phases ran (none skipped — no checkpoint).
-    assert len(result["phases"]) == 13, (
-        f"expected 13 phase results, got {len(result['phases'])}; "
+    # All 14 phases ran (none skipped — no checkpoint).
+    # Phase 40 (v6.0) inserts p10b_rapid_preview between p10 and p11.
+    assert len(result["phases"]) == 14, (
+        f"expected 14 phase results, got {len(result['phases'])}; "
         f"phases: {sorted(result['phases'].keys())}"
     )
     # Phase ids exactly match the production registry.
@@ -340,7 +405,7 @@ def test_e2e_canvas_subscriber_fires_without_openclaw(tmp_path):
     The Phase 37 ``CanvasSyncSubscriber`` (wired via
     ``RunnerConfig.on_phase_complete``) must invoke the mocked canvas
     client's ``save_canvas`` HTTP path at least once per phase completion
-    (13 phases × ≥1 save each → call_count ≥ 13). This proves
+    (14 phases × ≥1 save each → call_count ≥ 14). This proves
     CANVAS-IN-HERMES-04: canvas updates reach the ``:10588`` save endpoint
     via the pure-Python subscriber path, with zero openclaw dependency.
     """
@@ -348,13 +413,14 @@ def test_e2e_canvas_subscriber_fires_without_openclaw(tmp_path):
     canvas_client = mocks["canvas_client"]
 
     # save_canvas is the Phase 37 HTTP save path (mirrors :10588 save-v2).
-    assert canvas_client.save_canvas.call_count >= 13, (
-        f"canvas save_canvas must fire ≥13× (once per phase); "
+    # Phase 40 (v6.0): 14 phases (p10b inserted between p10 and p11).
+    assert canvas_client.save_canvas.call_count >= 14, (
+        f"canvas save_canvas must fire ≥14× (once per phase); "
         f"got {canvas_client.save_canvas.call_count}"
     )
     # load_canvas also fires per phase (subscriber loads-then-modifies-then-saves).
-    assert canvas_client.load_canvas.call_count >= 13, (
-        f"canvas load_canvas must fire ≥13× (once per phase); "
+    assert canvas_client.load_canvas.call_count >= 14, (
+        f"canvas load_canvas must fire ≥14× (once per phase); "
         f"got {canvas_client.load_canvas.call_count}"
     )
 

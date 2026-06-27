@@ -5,8 +5,15 @@ vertical slice. Phase 36-05 (this commit) appends p04..p13, completing the
 full V8.6 13-phase DAG (linear chain — parallelism is intra-phase shot-level
 in p11 only, plumbed via ``RunnerConfig.parallel_shots``).
 
+Phase 40 (v6.0) inserts p10b_rapid_preview between p10 and p11 (rapid
+preview tier). The DAG now has 14 entries; p11_video_render's depends_on
+mutates from ``["p10_voice"]`` to ``["p10b_rapid_preview"]``. The p10b
+module is a stub in plan 40-01 — real implementation arrives in plan 40-03.
+
 ``runner.py`` iterates ``PHASE_REGISTRY`` in order; resume skips
-already-checkpointed phases via ``_compute_start_index``.
+already-checkpointed phases via ``_compute_start_index`` (keyed on phase
+ID strings, so p10b insertion at index 10 is safe for any resume cursor
+keyed on p08 or earlier — see BLOCKER #3 in 40-01-PLAN.md).
 
 Each entry shape::
 
@@ -38,6 +45,8 @@ from . import p07_scene_generation as p07  # noqa: F401
 from . import p08_scene_selection as p08  # noqa: F401
 from . import p09_shot_breakdown as p09  # noqa: F401
 from . import p10_voice as p10  # noqa: F401
+# Phase 40 (v6.0): p10b rapid preview inserted between p10 and p11.
+from . import p10b_rapid_preview as p10b  # noqa: F401
 from . import p11_video_render as p11  # noqa: F401
 from . import p12_composition as p12  # noqa: F401
 from . import p13_delivery as p13  # noqa: F401
@@ -54,6 +63,7 @@ p07_scene_generation = p07
 p08_scene_selection = p08
 p09_shot_breakdown = p09
 p10_voice = p10
+p10b_rapid_preview = p10b
 p11_video_render = p11
 p12_composition = p12
 p13_delivery = p13
@@ -71,7 +81,8 @@ PHASE_REGISTRY: list[dict] = [
     {"id": "p08_scene_selection",      "module": p08, "depends_on": ["p07_scene_generation"]},
     {"id": "p09_shot_breakdown",       "module": p09, "depends_on": ["p08_scene_selection"]},
     {"id": "p10_voice",                "module": p10, "depends_on": ["p09_shot_breakdown"]},
-    {"id": "p11_video_render",         "module": p11, "depends_on": ["p10_voice"]},
+    {"id": "p10b_rapid_preview",       "module": p10b, "depends_on": ["p10_voice"]},
+    {"id": "p11_video_render",         "module": p11, "depends_on": ["p10b_rapid_preview"]},
     {"id": "p12_composition",          "module": p12, "depends_on": ["p11_video_render"]},
     {"id": "p13_delivery",             "module": p13, "depends_on": ["p12_composition"]},
 ]
@@ -88,6 +99,7 @@ __all__ = [
     "p08_scene_selection",
     "p09_shot_breakdown",
     "p10_voice",
+    "p10b_rapid_preview",
     "p11_video_render",
     "p12_composition",
     "p13_delivery",

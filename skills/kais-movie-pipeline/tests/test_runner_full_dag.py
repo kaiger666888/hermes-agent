@@ -1,17 +1,25 @@
-"""test_runner_full_dag.py — Phase 36-05 Task 3: full 13-phase DAG integration.
+"""test_runner_full_dag.py — Phase 36-05 Task 3: full 14-phase DAG integration.
 
-End-to-end orchestration tests against the *real* PHASE_REGISTRY (all 13
-phase modules p01..p13). Per D-35-08 / D-36-05 these are MOCKED-DELEGATE
-tests: ``delegate_task`` is replaced with a canned-JSON spy so no real
-subagent spawns and no real HTTP/LLM is exercised. The phase modules'
-*orchestration correctness* (slot reads, goal construction, slot writes,
-gate triggering) is exercised for real.
+End-to-end orchestration tests against the *real* PHASE_REGISTRY (14
+phase modules p01..p13 + p10b). Per D-35-08 / D-36-05 these are
+MOCKED-DELEGATE tests: ``delegate_task`` is replaced with a canned-JSON
+spy so no real subagent spawns and no real HTTP/LLM is exercised. The
+phase modules' *orchestration correctness* (slot reads, goal construction,
+slot writes, gate triggering) is exercised for real.
+
+Phase 40 (v6.0) updates: registry now has 14 entries (p10b_rapid_preview
+inserted between p10 and p11). p10b is a stub whose run() raises
+NotImplementedError; the full-DAG tests use a canned-delegate spy that
+does NOT consult p10b's EXPERT (which is None), so the stub's run() is
+never invoked — the spy returns an empty payload for unknown phases. See
+``_make_full_dag_delegate_spy`` for the matching heuristic.
 
 Test coverage:
-1. Full DAG runs p01 → p13 sequentially with mocked delegate; all 13 phase
+1. Full DAG runs p01 → p13 sequentially with mocked delegate; all 14 phase
    results returned.
 2. Checkpoint resume mid-pipeline: simulate checkpoint at p07 → restart
-   runner → only p08..p13 results in the second run, resumed_from=7.
+   runner → only p08..p13 results in the second run (7 phases including
+   p10b), resumed_from=7.
 3. enable_gates=False suppresses gate triggering across the whole DAG.
 4. RunnerConfig.parallel_shots reaches p11 (D-36-08 contract — only p11
    reads the kwarg; runner forwards it via keyword-only injection).
@@ -185,11 +193,91 @@ class _StubBus:
 
 
 # ---------------------------------------------------------------------------
+# Phase 40 (v6.0) — p10b stub proxy for full-DAG tests
+# ---------------------------------------------------------------------------
+# The real p10b_rapid_preview.run() raises NotImplementedError (impl arrives
+# in plan 40-03). Full-DAG tests iterate the real PHASE_REGISTRY, so the
+# runner WILL call p10b.run() — which would crash every full-DAG test. The
+# fix: swap p10b's module in BOTH phases_mod.PHASE_REGISTRY AND
+# runner_mod.PHASE_REGISTRY with a no-op proxy that returns a canned result.
+# Mirrors the existing _P11Proxy swap pattern in
+# test_full_dag_parallel_shots_config_reaches_p11.
+
+class _P10bStubProxy:
+    """Module proxy: replaces p10b_rapid_preview.run() with a canned result.
+
+    Returns the same shape the real p10b will return (per CONTEXT.md
+    "AssetBus Integration"): ``{"phase": "p10b_rapid_preview", "outputs": {},
+    "gate": None}``. The stub writes nothing to the asset bus here — the
+    canned-delegate spy's empty payload is sufficient for downstream phases
+    (p11 reads voice-clips/voice-timeline which p10 wrote; p10b's outputs
+    are rapid-preview-clips/episode-meta which p11 doesn't read).
+    """
+    __name__ = "p10b_rapid_preview_stub_proxy"
+
+    PHASE_ID = "p10b_rapid_preview"
+    EXPERT = None  # mirrors the real stub — pure orchestration
+    INPUT_SLOTS = ["voice-clips", "voice-timeline", "e-konte-sheets"]
+    OUTPUT_SLOTS = ["rapid-preview-clips", "episode-meta"]
+    GATE_ID = None
+
+    @staticmethod
+    def run(*args, **kwargs):
+        return {
+            "phase": "p10b_rapid_preview",
+            "outputs": {},
+            "gate": None,
+        }
+
+
+def _install_p10b_stub_proxy():
+    """Swap p10b in BOTH registries with _P10bStubProxy. Returns (swap_phases,
+    swap_runner) — pass to _restore_p10b_stub() to restore."""
+    def _swap_in(registry_list: list) -> tuple[int, dict] | None:
+        for i, e in enumerate(registry_list):
+            if e.get("id") == "p10b_rapid_preview":
+                saved = registry_list[i]
+                registry_list[i] = {
+                    "id": "p10b_rapid_preview",
+                    "module": _P10bStubProxy,
+                    "depends_on": saved.get("depends_on", ["p10_voice"]),
+                }
+                return i, saved
+        return None
+
+    swap_phases = _swap_in(phases_mod.PHASE_REGISTRY)
+    swap_runner = _swap_in(runner_mod.PHASE_REGISTRY)
+    return swap_phases, swap_runner
+
+
+def _restore_p10b_stub(swap_phases, swap_runner):
+    """Restore original p10b entries (raise-on-call stub) after a test."""
+    if swap_phases is not None:
+        idx, saved = swap_phases
+        phases_mod.PHASE_REGISTRY[idx] = saved
+    if swap_runner is not None:
+        idx, saved = swap_runner
+        runner_mod.PHASE_REGISTRY[idx] = saved
+
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
 
 class TestFullDagRun:
+    """All full-DAG tests need p10b's run() stubbed out — the real
+    p10b_rapid_preview.run() raises NotImplementedError (impl arrives in
+    plan 40-03). The autouse fixture swaps p10b in both PHASE_REGISTRY
+    copies (phases_mod + runner_mod) with _P10bStubProxy for the duration
+    of each test, then restores the raise-on-call stub."""
+
+    @pytest.fixture(autouse=True)
+    def _swap_p10b_with_stub_proxy(self):
+        swap_phases, swap_runner = _install_p10b_stub_proxy()
+        yield
+        _restore_p10b_stub(swap_phases, swap_runner)
+
     def test_full_dag_runs_p01_through_p13(self, tmp_path):
         """Full DAG: runner iterates p01 → p13 with mocked delegate, returns
         13 phase results (one per registry entry)."""
@@ -207,9 +295,10 @@ class TestFullDagRun:
             },
         )
 
-        # All 13 phases ran (none skipped — no checkpoint).
-        assert len(result["phases"]) == 13, (
-            f"expected 13 phase results, got {len(result['phases'])}; "
+        # All 14 phases ran (none skipped — no checkpoint).
+        # Phase 40 (v6.0) inserts p10b_rapid_preview between p10 and p11.
+        assert len(result["phases"]) == 14, (
+            f"expected 14 phase results, got {len(result['phases'])}; "
             f"phases: {sorted(result['phases'].keys())}"
         )
         # Phase ids exactly match the registry ids.
@@ -227,7 +316,16 @@ class TestFullDagRun:
 
     def test_checkpoint_resume_mid_pipeline(self, tmp_path):
         """Checkpoint at p07 → restart runner → resumes at p08, only p08..p13
-        results returned (6 phases). resumed_from == 7 (index of p08)."""
+        results returned (7 phases, includes p10b at index 10). resumed_from
+        == 7 (index of p08).
+
+        Phase 40 (v6.0) BLOCKER #3 safety: p10b inserts at registry index 10
+        (between p10@9 and p11@was-10-now-11), which is AFTER p08@7. The
+        resume cursor is keyed on phase ID strings (not numeric index), so
+        resumed_from=7 still resolves to p08_scene_selection correctly. The
+        resumed slice now includes p10b between p10 and p11, expanding the
+        phase count from 6 to 7.
+        """
         delegate = _make_full_dag_delegate_spy()
         # Checkpoint says "p07 just completed" → resume at idx 7 (p08).
         store = _StubStore(initial_checkpoint={"phase": "p07_scene_generation"})
@@ -247,9 +345,12 @@ class TestFullDagRun:
         assert result["resumed_from"] == 7, (
             f"expected resumed_from=7 (p08 index), got {result['resumed_from']}"
         )
-        # Only p08..p13 should have run (6 phases).
-        assert len(result["phases"]) == 6, (
-            f"expected 6 phases (p08..p13), got {len(result['phases'])}; "
+        # Only p08..p13 should have run (7 phases, includes p10b at index 10).
+        # p10b inserts at index 10 (between p10@9 and p11@was-10-now-11) —
+        # within the resumed_from=7 slice.
+        assert len(result["phases"]) == 7, (
+            f"expected 7 phases (p08..p13, includes p10b), "
+            f"got {len(result['phases'])}; "
             f"phases: {sorted(result['phases'].keys())}"
         )
         # p01..p07 should NOT be in the second-run results.
@@ -257,11 +358,13 @@ class TestFullDagRun:
             assert early_phase not in result["phases"], (
                 f"{early_phase} should have been skipped on resume"
             )
-        # p08..p13 should all be present.
+        # p08..p13 should all be present, INCLUDING p10b_rapid_preview
+        # (inserted between p10_voice and p11_video_render by Phase 40).
         for late_phase in (
             "p08_scene_selection",
             "p09_shot_breakdown",
             "p10_voice",
+            "p10b_rapid_preview",
             "p11_video_render",
             "p12_composition",
             "p13_delivery",
@@ -269,6 +372,28 @@ class TestFullDagRun:
             assert late_phase in result["phases"], (
                 f"{late_phase} should have run after resume at p08"
             )
+
+    def test_p10b_insertion_preserves_p08_resume_cursor(self):
+        """BLOCKER #3 safety: p10b inserts at index 10 (between p10@9 and
+        p11), which is AFTER p08@7. resumed_from=7 must still work, and p10b
+        runs as part of the resumed slice (now 7 phases: p08..p13 inclusive).
+
+        This test pins the index invariant directly so future registry
+        edits that shift p08 or p10b indices surface immediately.
+        """
+        ids = [entry["id"] for entry in PHASE_REGISTRY]
+        assert ids.index("p08_scene_selection") == 7, (
+            f"p08_scene_selection must remain at index 7 "
+            f"(resume cursor invariant); got {ids.index('p08_scene_selection')}"
+        )
+        assert ids.index("p10b_rapid_preview") == 10, (
+            f"p10b_rapid_preview must be at index 10 (between p10@9 and "
+            f"p11@11); got {ids.index('p10b_rapid_preview')}"
+        )
+        assert ids.index("p11_video_render") == 11, (
+            f"p11_video_render must be at index 11 (was 10 pre-p10b); "
+            f"got {ids.index('p11_video_render')}"
+        )
 
     def test_full_dag_with_gates_disabled(self, tmp_path):
         """enable_gates=False → phase modules receive trigger_gate=None across
@@ -451,9 +576,10 @@ class TestFullDagRun:
             },
         )
 
-        # 13 phases × 1 save each == 13 saves, in registry order.
-        assert len(store.saved) == 13, (
-            f"expected 13 checkpoint saves, got {len(store.saved)}"
+        # 14 phases × 1 save each == 14 saves, in registry order.
+        # Phase 40 (v6.0) adds p10b_rapid_preview (now 14 phases total).
+        assert len(store.saved) == 14, (
+            f"expected 14 checkpoint saves, got {len(store.saved)}"
         )
         saved_phases = [phase for (_ep, phase) in store.saved]
         expected_phases = [entry["id"] for entry in PHASE_REGISTRY]

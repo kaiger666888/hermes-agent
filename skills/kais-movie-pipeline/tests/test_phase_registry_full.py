@@ -1,7 +1,13 @@
 """test_phase_registry_full.py — Phase 36-05 Task 2: PHASE_REGISTRY full DAG.
 
-Verifies that ``pipeline.phases.PHASE_REGISTRY`` contains all 13 V8.6 phase
-entries (p01..p13) in DAG order with correct ``depends_on`` chain.
+Verifies that ``pipeline.phases.PHASE_REGISTRY`` contains all 14 phase
+entries (p01..p13 + p10b) in DAG order with correct ``depends_on`` chain.
+
+Phase 40 (v6.0) updates this test: registry now has 14 entries (p10b
+inserted between p10/p11). The depends_on chain assertion still holds
+because p10b depends on p10_voice (now its immediate predecessor) and
+p11_video_render depends on p10b_rapid_preview (now its immediate
+predecessor).
 
 These tests do NOT clear the registry (unlike test_runner.py's fake_registry
 fixture) — they assert on the real Phase 36-05 production registry. The
@@ -24,7 +30,9 @@ if str(_SKILL_DIR) not in sys.path:
 from pipeline.phases import PHASE_REGISTRY  # noqa: E402
 
 
-# The canonical 13-phase V8.6 DAG in order (Phase 35 + Phase 36).
+# The canonical 14-phase DAG in order (Phase 35 + Phase 36 + Phase 40 p10b).
+# Phase 40 (v6.0) inserts p10b_rapid_preview between p10_voice and
+# p11_video_render.
 EXPECTED_PHASE_IDS: list[str] = [
     "p01_hook_topic",
     "p02_outline",
@@ -36,6 +44,7 @@ EXPECTED_PHASE_IDS: list[str] = [
     "p08_scene_selection",
     "p09_shot_breakdown",
     "p10_voice",
+    "p10b_rapid_preview",
     "p11_video_render",
     "p12_composition",
     "p13_delivery",
@@ -43,10 +52,11 @@ EXPECTED_PHASE_IDS: list[str] = [
 
 
 class TestPhaseRegistryFullDag:
-    def test_phase_registry_has_13_entries(self):
-        """After Phase 36-05, the registry must list all 13 V8.6 phases."""
-        assert len(PHASE_REGISTRY) == 13, (
-            f"PHASE_REGISTRY should have 13 entries (p01..p13); "
+    def test_phase_registry_has_14_entries(self):
+        """After Phase 40 (v6.0), the registry must list all 14 phases
+        (p01..p13 + p10b_rapid_preview inserted between p10 and p11)."""
+        assert len(PHASE_REGISTRY) == 14, (
+            f"PHASE_REGISTRY should have 14 entries (p01..p13 + p10b); "
             f"got {len(PHASE_REGISTRY)}"
         )
 
@@ -122,8 +132,9 @@ class TestPhaseRegistryFullDag:
             f"duplicate phase ids in registry: {ids}"
         )
 
-    def test_all_thirteen_phase_modules_importable_by_long_name(self):
-        """All 13 canonical module names must be importable from pipeline.phases."""
+    def test_all_fourteen_phase_modules_importable_by_long_name(self):
+        """All 14 canonical module names must be importable from pipeline.phases
+        (Phase 40 adds p10b_rapid_preview)."""
         import pipeline.phases as phases_mod
 
         for phase_id in EXPECTED_PHASE_IDS:
@@ -145,3 +156,30 @@ class TestPhaseRegistryFullDag:
                 assert hasattr(module, const), (
                     f"{entry['id']} module missing required constant {const}"
                 )
+
+    def test_p10b_stub_module_constants_and_run_behavior(self):
+        """Phase 40-01: p10b stub exposes required constants + run() raises
+        NotImplementedError (real impl arrives in plan 40-03)."""
+        from pipeline.phases import p10b_rapid_preview
+
+        assert p10b_rapid_preview.PHASE_ID == "p10b_rapid_preview"
+        # EXPERT is None — p10b is pure orchestration (PreviewEngine strategy
+        # replaces expert delegation per CONTEXT D-35-04).
+        assert p10b_rapid_preview.EXPERT is None
+        assert p10b_rapid_preview.INPUT_SLOTS == [
+            "voice-clips", "voice-timeline", "e-konte-sheets"
+        ]
+        # BOTH new slots declared as outputs (BLOCKER #1: episode-meta is the
+        # AssetBus slot for preview_skipped flag, NOT pipeline-state.json).
+        assert p10b_rapid_preview.OUTPUT_SLOTS == [
+            "rapid-preview-clips", "episode-meta"
+        ]
+        assert p10b_rapid_preview.GATE_ID is None  # no review gate for p10b
+        # run() must be callable (registry wiring check) but raise
+        # NotImplementedError until plan 40-03 lands the real impl.
+        assert callable(p10b_rapid_preview.run)
+        with pytest.raises(NotImplementedError, match="plan 40-03"):
+            p10b_rapid_preview.run(
+                "ep", lambda s: None, lambda s, d: None,
+                lambda g, c, t: {}, None,
+            )

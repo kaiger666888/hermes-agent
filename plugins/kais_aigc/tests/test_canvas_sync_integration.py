@@ -249,8 +249,63 @@ def reset_gate_hook():
     runner_hooks.set_gate_resolved_hook(None)
 
 
+# ---------------------------------------------------------------------------
+# Phase 40 (v6.0) — p10b stub proxy for full-DAG integration tests
+# ---------------------------------------------------------------------------
+# The real p10b_rapid_preview.run() raises NotImplementedError (impl arrives
+# in plan 40-03). Tests that exercise the full PHASE_REGISTRY via run_episode
+# need p10b's run() stubbed out. Mirrors the _P11Proxy swap pattern in
+# test_runner_full_dag.py and the proxy in test_e2e_degraded.py.
+
+class _P10bStubProxy:
+    """Module proxy: replaces p10b_rapid_preview.run() with a canned result."""
+    __name__ = "p10b_rapid_preview_stub_proxy"
+
+    PHASE_ID = "p10b_rapid_preview"
+    EXPERT = None
+    INPUT_SLOTS = ["voice-clips", "voice-timeline", "e-konte-sheets"]
+    OUTPUT_SLOTS = ["rapid-preview-clips", "episode-meta"]
+    GATE_ID = None
+
+    @staticmethod
+    def run(*args, **kwargs):
+        return {
+            "phase": "p10b_rapid_preview",
+            "outputs": {},
+            "gate": None,
+        }
+
+
+@pytest.fixture(autouse=True)
+def _swap_p10b_with_stub_proxy():
+    """Install _P10bStubProxy in both PHASE_REGISTRY copies for every test
+    in this module, restore the raise-on-call stub afterwards."""
+    def _swap_in(registry_list: list) -> tuple[int, dict] | None:
+        for i, e in enumerate(registry_list):
+            if e.get("id") == "p10b_rapid_preview":
+                saved = registry_list[i]
+                registry_list[i] = {
+                    "id": "p10b_rapid_preview",
+                    "module": _P10bStubProxy,
+                    "depends_on": saved.get("depends_on", ["p10_voice"]),
+                }
+                return i, saved
+        return None
+
+    swap_phases = _swap_in(phases_mod.PHASE_REGISTRY)
+    swap_runner = _swap_in(runner_mod.PHASE_REGISTRY)
+    yield
+    if swap_phases is not None:
+        idx, saved = swap_phases
+        phases_mod.PHASE_REGISTRY[idx] = saved
+    if swap_runner is not None:
+        idx, saved = swap_runner
+        runner_mod.PHASE_REGISTRY[idx] = saved
+
+
 # ═════════════════════════════════════════════════════════════════════════
-# Test 1 — SC#2 keystone: full 13-phase episode → 13 save-v2 calls
+# Test 1 — SC#2 keystone: full 14-phase episode → 14 save-v2 calls
+# (Phase 40 v6.0 inserts p10b_rapid_preview between p10 and p11.)
 # ═════════════════════════════════════════════════════════════════════════
 
 
@@ -296,15 +351,16 @@ class TestFullPipelineEpisodeSubscriber:
             },
         )
 
-        # All 13 phases ran.
-        assert len(result["phases"]) == 13, (
-            f"expected 13 phase results, got {len(result['phases'])}"
+        # All 14 phases ran.
+        # Phase 40 (v6.0) inserts p10b_rapid_preview between p10 and p11.
+        assert len(result["phases"]) == 14, (
+            f"expected 14 phase results, got {len(result['phases'])}"
         )
 
-        # SC#2: exactly 13 save-v2 calls — one per phase.
+        # SC#2: exactly 14 save-v2 calls — one per phase.
         save_count = _save_v2_count(captured_urls)
-        assert save_count == 13, (
-            f"SC#2 keystone: expected 13 save-v2 calls (one per phase), "
+        assert save_count == 14, (
+            f"SC#2 keystone: expected 14 save-v2 calls (one per phase), "
             f"got {save_count}. URLs: {captured_urls}"
         )
 
@@ -312,7 +368,7 @@ class TestFullPipelineEpisodeSubscriber:
         assert result["episode_id"] == "ep-integration"
 
     def test_save_v2_bodies_carry_phase_node_ids(self, tmp_path):
-        """Sanity: across the 13 save-v2 calls, every phase node id appears
+        """Sanity: across the 14 save-v2 calls, every phase node id appears
         at least once. (The MockTransport returns empty graph for every
         load-v2, so individual saves are not cumulative — that's fine; we
         just need to confirm the subscriber upserts each phase's node id
@@ -337,7 +393,7 @@ class TestFullPipelineEpisodeSubscriber:
         )
 
         save_bodies = _save_v2_bodies(captured_urls, captured_bodies)
-        assert len(save_bodies) == 13
+        assert len(save_bodies) == 14
         # Collect every node id from every saved graph.
         all_node_ids: set[str] = set()
         for body in save_bodies:
