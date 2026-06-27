@@ -1,9 +1,0 @@
-{
-  "schema_version": 1,
-  "skill_id": "screenplay",
-  "baseline_skill_sha256": "abc123def4567890abcdef1234567890abcdef1234567890abcdef1234567890",
-  "judge_model": "claude-sonnet-4-6",
-  "generated_at": "2026-06-01T00:00:00Z",
-  "prompts_path_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-  "per_prompt_composites": [3.5, 3.0, 4.0, 3.5, 3.2]
-}

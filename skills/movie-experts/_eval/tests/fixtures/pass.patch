@@ -1,7 +1,0 @@
---- a/skills/movie-experts/screenplay/SKILL.md
-+++ b/skills/movie-experts/screenplay/SKILL.md
-@@ -1,3 +1,4 @@
-+# Hook enhancement patch (synthetic fixture for gate tests)
- ---
- name: screenplay
- expert_id: screenplay
