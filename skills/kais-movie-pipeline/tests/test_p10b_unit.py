@@ -703,3 +703,165 @@ class TestP10bDegradePath:
         meta_writes = recorder.writes.get("episode-meta", [])
         assert len(meta_writes) == 1
         assert meta_writes[0]["preview_skipped"] is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 40 CR-02 fix — p10b must release engine resources via context manager
+# ---------------------------------------------------------------------------
+# Before the CR-02 fix, ``_run_body`` held the engine in a local variable
+# and never entered its context manager. ``LTXVideoEngine`` defines
+# ``close`` / ``__enter__`` / ``__exit__`` to release its ``httpx.Client``
+# connection pool — but those went unused, leaking one client per episode
+# in long-running daemons. These tests pin the contract that ``p10b.run``
+# enters and exits the engine's context manager exactly once per call.
+
+
+class _RecordingEngine(PreviewEngine):
+    """Engine double that records ``close`` calls and context-manager events."""
+
+    def __init__(self):
+        # NOTE: no super().__init__ — PreviewEngine ABC has no init state.
+        self.calls: list[str] = []  # ordered event log: "enter", "generate", "close"
+        self._lock = threading.Lock()
+
+    def __enter__(self) -> "_RecordingEngine":
+        with self._lock:
+            self.calls.append("enter")
+        return self
+
+    def __exit__(self, *exc) -> None:
+        with self._lock:
+            self.calls.append("exit")
+        # No real resources — skip super().close() to avoid double-logging.
+
+    def close(self) -> None:
+        with self._lock:
+            self.calls.append("close")
+
+    def generate(
+        self,
+        *,
+        shot_id: str,
+        prompt: str,
+        structure_delta: dict,
+        keyframe_image_path: str | None = None,
+        voice_clip_path: str | None = None,
+        output_path: str | None = None,
+    ) -> dict:
+        with self._lock:
+            self.calls.append("generate")
+        return {
+            "clip_path": output_path or f"/preview/{shot_id}.mp4",
+            "generation_time_ms": 100,
+            "engine": "recording",
+        }
+
+
+class TestP10bEngineLifecycle:
+    """Phase 40 CR-02 — ``p10b.run`` must enter and exit the engine's context
+    manager exactly once per call so engine-held resources (e.g.,
+    ``LTXVideoEngine``'s ``httpx.Client``) are released."""
+
+    def test_run_enters_and_exits_engine_context_manager_once(self):
+        """After ``p10b.run`` returns, the engine's ``__enter__`` and
+        ``__exit__`` must each have been called exactly once — proving
+        resources are released.
+
+        Pre-fix: this test FAILS — the engine's ``__enter__`` and
+        ``__exit__`` are NEVER called (the engine was held in a local
+        variable without ``with``).
+        """
+        engine = _RecordingEngine()
+        original = p10b.select_engine
+        p10b.select_engine = lambda *a, **kw: engine
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            p10b.run(
+                episode_id="ep-lifecycle",
+                asset_bus_read=recorder.read(slots),
+                asset_bus_write=recorder.make_write(),
+                delegate_task=lambda g, c, t: {},
+                trigger_gate=None,
+                parallel_shots=1,
+            )
+        finally:
+            p10b.select_engine = original
+
+        # Exactly one enter / one exit — regardless of how many variants
+        # ran. The fan-out (3 variants for 1 shot) all happen INSIDE the
+        # context manager.
+        enters = [c for c in engine.calls if c == "enter"]
+        exits = [c for c in engine.calls if c == "exit"]
+        assert len(enters) == 1, (
+            f"engine __enter__ must be called exactly once; got {len(enters)} "
+            f"(event log: {engine.calls})"
+        )
+        assert len(exits) == 1, (
+            f"engine __exit__ must be called exactly once; got {len(exits)} "
+            f"(event log: {engine.calls})"
+        )
+        # The enter happens BEFORE any generate call.
+        first_generate_idx = engine.calls.index("generate")
+        enter_idx = engine.calls.index("enter")
+        assert enter_idx < first_generate_idx, (
+            f"__enter__ must precede first generate(); log: {engine.calls}"
+        )
+        # The exit happens AFTER the last generate call.
+        last_generate_idx = max(
+            i for i, c in enumerate(engine.calls) if c == "generate"
+        )
+        exit_idx = engine.calls.index("exit")
+        assert exit_idx > last_generate_idx, (
+            f"__exit__ must follow last generate(); log: {engine.calls}"
+        )
+
+    def test_run_exits_engine_context_manager_on_engine_exception(self):
+        """If ``engine.generate`` raises mid-fanout, ``__exit__`` MUST still
+        run so resources are released even on the exception path.
+
+        Pre-fix: the engine's context manager was never entered at all, so
+        __exit__ was also never called — but more importantly, an exception
+        from generate() would propagate out of ``_run_body`` and be caught
+        by the broad ``except Exception`` in ``run()``, marking the episode
+        ``preview_skipped``. Either way, no resources were released.
+        """
+        class _RaisingEngine(_RecordingEngine):
+            def generate(self, **kwargs):
+                with self._lock:
+                    self.calls.append("generate")
+                raise RuntimeError("simulated mid-fanout engine failure")
+
+        engine = _RaisingEngine()
+        original = p10b.select_engine
+        p10b.select_engine = lambda *a, **kw: engine
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            # p10b.run should NOT raise — the broad except catches RuntimeError
+            # and emits a preview_skipped envelope.
+            result = p10b.run(
+                episode_id="ep-lifecycle-exc",
+                asset_bus_read=recorder.read(slots),
+                asset_bus_write=recorder.make_write(),
+                delegate_task=lambda g, c, t: {},
+                trigger_gate=None,
+                parallel_shots=1,
+            )
+        finally:
+            p10b.select_engine = original
+
+        # Episode degraded cleanly.
+        assert result["phase"] == "p10b_rapid_preview"
+        # __enter__ and __exit__ both ran despite the exception — the with
+        # block's __exit__ is called even when the body raises.
+        enters = [c for c in engine.calls if c == "enter"]
+        exits = [c for c in engine.calls if c == "exit"]
+        assert len(enters) == 1, (
+            f"engine __enter__ must run even on exception path; "
+            f"log: {engine.calls}"
+        )
+        assert len(exits) == 1, (
+            f"engine __exit__ MUST run on exception path (resource leak "
+            f"otherwise); log: {engine.calls}"
+        )

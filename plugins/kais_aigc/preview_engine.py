@@ -99,6 +99,33 @@ class PreviewEngine(abc.ABC):
         """Return wall-clock ms since ``start`` (monotonic delta, INFO #10)."""
         return int((time.monotonic() - start) * 1000)
 
+    # ------------------------------------------------------------------
+    # Lifecycle (Phase 40 CR-02 fix — context-manager protocol on the ABC)
+    # ------------------------------------------------------------------
+    # The ABC provides no-op defaults so callers can unconditionally use
+    # ``with select_engine() as engine:`` regardless of which concrete
+    # engine is selected. ``LTXVideoEngine`` overrides these to close its
+    # ``httpx.Client`` connection pool; ``SlideshowEngine`` inherits the
+    # no-ops (no resources to clean up — each ``subprocess.run`` spawns its
+    # own process).
+    #
+    # Before this change, ``LTXVideoEngine`` defined ``close`` /
+    # ``__enter__`` / ``__exit__`` but p10b's ``_run_body`` never entered
+    # the context manager — leaking one ``httpx.Client`` connection pool
+    # per episode in long-running daemons (gateway / cron).
+
+    def close(self) -> None:
+        """Release engine-held resources. No-op default; subclasses override."""
+        # SlideshowEngine has no resources to release. LTXVideoEngine
+        # overrides this to close its ``httpx.Client``.
+        return
+
+    def __enter__(self) -> "PreviewEngine":
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
+
 
 def select_engine(env: str | None = None) -> PreviewEngine:
     """Factory returning a concrete engine based on env-var dispatch.

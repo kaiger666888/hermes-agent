@@ -307,74 +307,81 @@ def _run_body(
     shot_list = voice_clips if isinstance(voice_clips, list) else []
 
     # 2. Engine selection (env-var-driven; defaults to slideshow per plan 02).
-    engine = select_engine()
+    # Phase 40 CR-02 fix: enter the engine's context manager so resources
+    # are released when the fan-out completes (or raises). ``PreviewEngine``
+    # declares no-op ``__enter__`` / ``__exit__`` / ``close`` on the ABC;
+    # ``LTXVideoEngine`` overrides them to close its ``httpx.Client``
+    # connection pool. Without ``with``, long-running daemons (gateway /
+    # cron) leaked one ``httpx.Client`` per episode until FD exhaustion.
+    # ``SlideshowEngine`` inherits the no-op defaults (no resources).
+    with select_engine() as engine:
 
-    # 3. Per-shot fan-out via ThreadPoolExecutor (D-36-08 pattern from p11).
-    total_variants = len(shot_list) * VARIANTS_PER_SHOT
-    degraded_count = 0
-    generated_count = 0
+        # 3. Per-shot fan-out via ThreadPoolExecutor (D-36-08 pattern from p11).
+        total_variants = len(shot_list) * VARIANTS_PER_SHOT
+        degraded_count = 0
+        generated_count = 0
 
-    def _generate_variant(
-        shot: dict,
-        shot_index: int,
-        variant: dict,
-    ) -> dict:
-        """Call engine.generate() for one variant; return the engine envelope."""
-        shot_id = shot.get("shot_id", f"shot_{shot_index:03d}")
-        # Derive engine.generate() inputs from the shot + asset-bus data.
-        prompt = shot.get("intent", f"shot {shot_index}")
-        keyframe_image_path = _resolve_keyframe(e_konte, shot_id)
-        voice_clip_path = shot.get("clip_path")
-        output_path = f"/preview/{episode_id}/{variant['variant_id']}.mp4"
-        return engine.generate(
-            shot_id=shot_id,
-            prompt=prompt,
-            structure_delta=variant["structure_delta"],
-            keyframe_image_path=keyframe_image_path,
-            voice_clip_path=voice_clip_path,
-            output_path=output_path,
-        )
+        def _generate_variant(
+            shot: dict,
+            shot_index: int,
+            variant: dict,
+        ) -> dict:
+            """Call engine.generate() for one variant; return the engine envelope."""
+            shot_id = shot.get("shot_id", f"shot_{shot_index:03d}")
+            # Derive engine.generate() inputs from the shot + asset-bus data.
+            prompt = shot.get("intent", f"shot {shot_index}")
+            keyframe_image_path = _resolve_keyframe(e_konte, shot_id)
+            voice_clip_path = shot.get("clip_path")
+            output_path = f"/preview/{episode_id}/{variant['variant_id']}.mp4"
+            return engine.generate(
+                shot_id=shot_id,
+                prompt=prompt,
+                structure_delta=variant["structure_delta"],
+                keyframe_image_path=keyframe_image_path,
+                voice_clip_path=voice_clip_path,
+                output_path=output_path,
+            )
 
-    # Fan out across shots (each shot submits its 3 variants sequentially
-    # within the per-shot thread; shots fan out across threads). This mirrors
-    # the p11 dispatch pattern — one pool.submit per shot.
-    #
-    # Pair each future with its (shot, variant) context so success records
-    # can carry all 6 required fields (3 from the engine envelope: clip_path
-    # / generation_time_ms / engine; 3 from the per-variant inputs: shot_id
-    # / variant_id / structure_delta).
-    if shot_list:
-        paired: list[tuple[Any, dict, dict]] = []
-        with ThreadPoolExecutor(max_workers=parallel_shots) as pool:
-            for shot_index, shot in enumerate(shot_list):
-                shot_id = shot.get("shot_id", f"shot_{shot_index:03d}")
-                baseline_structure = _derive_baseline_structure(
-                    shot, voice_timeline, shot_id
-                )
-                variants = _build_variants(
-                    shot_id=shot_id,
-                    shot_index=shot_index,
-                    baseline_structure=baseline_structure,
-                )
-                for variant in variants:
-                    fut = pool.submit(_generate_variant, shot, shot_index, variant)
-                    paired.append((fut, shot, variant))
-            for fut, shot, variant in paired:
-                result = fut.result()
-                if isinstance(result, dict) and result.get("degraded"):
-                    degraded_count += 1
-                    continue
-                shot_id = shot.get("shot_id", "")
-                record = {
-                    "shot_id": shot_id,
-                    "variant_id": variant["variant_id"],
-                    "structure_delta": variant["structure_delta"],
-                    "clip_path": result.get("clip_path", ""),
-                    "generation_time_ms": result.get("generation_time_ms", 0),
-                    "engine": result.get("engine", ""),
-                }
-                asset_bus_write("rapid-preview-clips", record)
-                generated_count += 1
+        # Fan out across shots (each shot submits its 3 variants sequentially
+        # within the per-shot thread; shots fan out across threads). This mirrors
+        # the p11 dispatch pattern — one pool.submit per shot.
+        #
+        # Pair each future with its (shot, variant) context so success records
+        # can carry all 6 required fields (3 from the engine envelope: clip_path
+        # / generation_time_ms / engine; 3 from the per-variant inputs: shot_id
+        # / variant_id / structure_delta).
+        if shot_list:
+            paired: list[tuple[Any, dict, dict]] = []
+            with ThreadPoolExecutor(max_workers=parallel_shots) as pool:
+                for shot_index, shot in enumerate(shot_list):
+                    shot_id = shot.get("shot_id", f"shot_{shot_index:03d}")
+                    baseline_structure = _derive_baseline_structure(
+                        shot, voice_timeline, shot_id
+                    )
+                    variants = _build_variants(
+                        shot_id=shot_id,
+                        shot_index=shot_index,
+                        baseline_structure=baseline_structure,
+                    )
+                    for variant in variants:
+                        fut = pool.submit(_generate_variant, shot, shot_index, variant)
+                        paired.append((fut, shot, variant))
+                for fut, shot, variant in paired:
+                    result = fut.result()
+                    if isinstance(result, dict) and result.get("degraded"):
+                        degraded_count += 1
+                        continue
+                    shot_id = shot.get("shot_id", "")
+                    record = {
+                        "shot_id": shot_id,
+                        "variant_id": variant["variant_id"],
+                        "structure_delta": variant["structure_delta"],
+                        "clip_path": result.get("clip_path", ""),
+                        "generation_time_ms": result.get("generation_time_ms", 0),
+                        "engine": result.get("engine", ""),
+                    }
+                    asset_bus_write("rapid-preview-clips", record)
+                    generated_count += 1
 
     # 4. Episode-level full-degrade check (RAPID-PREVIEW-05 + BLOCKER #1).
     #    Triggers ONLY when ALL variants across ALL shots degraded. Partial

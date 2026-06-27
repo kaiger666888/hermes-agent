@@ -463,3 +463,70 @@ class TestLTXVideoEngine:
         assert isinstance(engine._client, httpx.Client)
         assert engine._base_url == LTXVideoEngine.DEFAULT_BASE_URL
         engine.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 40 CR-02 fix — context-manager protocol on the ABC
+# ---------------------------------------------------------------------------
+# Before the CR-02 fix, ``LTXVideoEngine`` defined ``close`` / ``__enter__``
+# / ``__exit__`` but ``PreviewEngine`` (the ABC) and ``SlideshowEngine`` did
+# not. p10b's ``_run_body`` could not unconditionally ``with select_engine()``
+# because ``SlideshowEngine`` did not support it — so the engine was held in
+# a local variable and never closed, leaking one ``httpx.Client`` connection
+# pool per episode in long-running daemons.
+#
+# The fix moves the no-op defaults to ``PreviewEngine`` so callers can
+# unconditionally use ``with``. These tests pin the contract.
+
+
+class TestPreviewEngineContextManager:
+    """Phase 40 CR-02 — every PreviewEngine supports ``with`` so p10b can
+    unconditionally enter the context manager and release engine resources
+    (notably ``LTXVideoEngine``'s ``httpx.Client``)."""
+
+    def test_abc_provides_noop_close_default(self):
+        """``PreviewEngine.close`` is a no-op default overridable by subclasses."""
+        # We can't instantiate the ABC directly, but SlideshowEngine inherits
+        # the no-op default (it doesn't override close). Calling close() must
+        # not raise.
+        engine = SlideshowEngine()
+        engine.close()  # no-op; should not raise
+
+    def test_abc_provides_enter_exit_defaults_via_slideshow(self):
+        """``SlideshowEngine`` (which inherits ABC defaults) supports ``with``."""
+        # SlideshowEngine does NOT override __enter__/__exit__/close, so this
+        # exercises the ABC's no-op defaults. If the ABC didn't provide them,
+        # this would raise AttributeError.
+        with SlideshowEngine() as engine:
+            assert isinstance(engine, SlideshowEngine)
+        # Reaching here means __exit__ ran cleanly (no resources to release).
+
+    def test_ltx_engine_close_releases_httpx_client(self):
+        """``LTXVideoEngine.close`` closes the underlying ``httpx.Client``."""
+        engine = LTXVideoEngine(
+            transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+        )
+        # Sanity: client is open before close.
+        assert engine._client.is_closed is False
+        engine.close()
+        assert engine._client.is_closed is True
+
+    def test_ltx_engine_context_manager_closes_client_on_normal_exit(self):
+        """``with LTXVideoEngine()`` closes the client on clean exit."""
+        with LTXVideoEngine(
+            transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+        ) as engine:
+            assert engine._client.is_closed is False
+        # After the with-block: client closed → no leak.
+        assert engine._client.is_closed is True
+
+    def test_ltx_engine_context_manager_closes_client_on_exception(self):
+        """``with LTXVideoEngine()`` closes the client even when the body raises."""
+        with pytest.raises(RuntimeError, match="boom"):
+            with LTXVideoEngine(
+                transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+            ) as engine:
+                assert engine._client.is_closed is False
+                raise RuntimeError("boom")
+        # __exit__ runs on exception too — client must be closed.
+        assert engine._client.is_closed is True
