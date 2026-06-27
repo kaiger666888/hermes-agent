@@ -1,9 +1,16 @@
 """recipe_library.py — Emotion Recipe Library (Phase 41).
 
-Converts V5.0 creative-history 5-dim script_auditor scores into reusable,
-queryable emotion recipes. Pure stdlib, sync API throughout (D-07 — Phase
-32 locked sync for state modules). No third-party deps, no async, no HTTP,
-no subprocess (those concerns stay in kais_aigc/).
+Converts V5.0 story-framework + final-audit slot data (structural data +
+5-dim quality scores) into reusable, queryable emotion recipes. Pure stdlib,
+sync API throughout (D-07 — Phase 32 locked sync for state modules). No
+third-party deps, no async, no HTTP, no subprocess (those concerns stay in
+kais_aigc/).
+
+DATA SOURCE PIVOT (plan-checker BLOCKER #1, locked 2026-06-27): the original
+blueprint assumed the 5-dim scores lived in the lineage slot. V5.0 verified
+reality: structural data lives in story-framework (mcmahon_arc, anchor_
+validation) and 5-dim quality scores live in final-audit (D1-D5). This
+module reads ONLY those two slots.
 
 Sibling module to creative_history.py. RecipeLibrary mirrors the
 CreativeHistoryTracker constructor pattern (*, asset_bus: AssetBus).
@@ -479,7 +486,9 @@ class RecipeLibrary:
 
     # ── Helper: extract_structure_from_episode (RECIPE-LIB-04) ────────
     # DATA SOURCE PIVOT (plan-checker BLOCKER #1, locked 2026-06-27):
-    #   Reads `story-framework` + `final-audit` AssetBus slots (NOT creative-history).
+    #   Reads `story-framework` + `final-audit` AssetBus slots (NOT the
+    #   lineage hash-stamping slot — that contains only hashes, no creative
+    #   content per V5.0 verified reality).
     #   - story-framework slot: story_kernel.mcmahon_arc, snowflake_artifacts.
     #     anchor_validation, snyder_beats_summary (structural data).
     #   - final-audit slot: scores.D2_emotion, scores.D5_completion (quality scores).
@@ -607,3 +616,128 @@ class RecipeLibrary:
             "emotion_drop_level": emotion_drop_level,
             "ending_state": ending_state,
         }
+
+    # ── Core method 4: update_validation (RECIPE-LIB-01) ─────────────
+    # Phase 42 contract — signature is LOCKED. feedback_ingest.py will call
+    # this method after each feedback submission to close the convergence loop.
+
+    def update_validation(
+        self,
+        recipe_id: str,
+        platform: str,
+        completion_rate: float,
+        sample_size_delta: int = 1,
+    ) -> dict | None:
+        """Append a new validation{} version row to an existing recipe.
+
+        This method is the **Phase 42 contract** — ``feedback_ingest.
+        FeedbackIngestClient`` calls it after each feedback submission to
+        close the convergence loop. Signature is LOCKED.
+
+        Flow (CONTEXT.md "update_validation flow" — 4 steps):
+          1. Read latest recipe version (KeyError propagates if unknown).
+          2. Input validation: completion_rate in [0,1]; sample_size_delta >= 1;
+             platform must be a non-empty real value (not the "" unset sentinel).
+          3. Compute new validation{}: running-average completion_rate blend
+             old + new, recompute Wilson CI + converged flag.
+          4. Append a new row with version = latest + 1 (NEVER mutate latest);
+             last_validated = now ISO 8601 UTC. Return the new row. On bus
+             failure, log warning + return None (does NOT propagate).
+
+        Args:
+            recipe_id: Target recipe identifier.
+            platform: Platform enum (douyin | bilibili | youtube). Must be a
+                real value on update, NOT the empty "" unset sentinel used
+                only on initial create_recipe.
+            completion_rate: Float in [0.0, 1.0] for this batch of feedback.
+            sample_size_delta: How many new samples this update represents
+                (default 1; pass larger values for batch ingest).
+
+        Returns:
+            New version row dict, OR None if the AssetBus append failed
+            (degraded mode — logs WARNING, does not raise).
+
+        Raises:
+            KeyError: if recipe_id is unknown (delegates to get_recipe).
+            ValueError: if completion_rate is outside [0,1], sample_size_delta
+                < 1, or platform is not a valid non-empty platform enum.
+        """
+        # Step 1: Read latest version (KeyError propagates if unknown — Test 9).
+        latest = self.get_recipe(recipe_id)
+
+        # Step 2: Input validation (threat T-41-10 — Elevation of Privilege).
+        if not isinstance(completion_rate, (int, float)) or isinstance(completion_rate, bool):
+            raise ValueError(
+                f"completion_rate must be float in [0,1], got {completion_rate!r}"
+            )
+        if not (0.0 <= float(completion_rate) <= 1.0):
+            raise ValueError(
+                f"completion_rate must be in [0,1], got {completion_rate!r}"
+            )
+        if not isinstance(sample_size_delta, int) or isinstance(sample_size_delta, bool):
+            raise ValueError(
+                f"sample_size_delta must be int >= 1, got {sample_size_delta!r}"
+            )
+        if sample_size_delta < 1:
+            raise ValueError(
+                f"sample_size_delta must be >= 1, got {sample_size_delta!r}"
+            )
+        # Platform must be a real value on update (not the "" unset sentinel).
+        valid_update_platforms = _VALID_PLATFORMS - {""}
+        if platform not in valid_update_platforms:
+            raise ValueError(
+                f"platform must be one of {sorted(valid_update_platforms)}, "
+                f"got {platform!r}"
+            )
+
+        # Step 3: Compute new validation{} fields.
+        old_v = latest["validation"]
+        old_sample = old_v.get("sample_size", 0)
+        old_cr = old_v.get("completion_rate", 0.0)
+        new_sample_size = old_sample + sample_size_delta
+
+        # Running average: blend old completion_rate (weighted by old sample_size)
+        # with the new batch (weighted by sample_size_delta). Single-step from
+        # raw values (WARNING #1 — no double quantization).
+        if new_sample_size > 0:
+            cumulative_passed = old_cr * old_sample
+            new_completion_rate = (
+                cumulative_passed + float(completion_rate) * sample_size_delta
+            ) / new_sample_size
+        else:
+            new_completion_rate = 0.0
+
+        passed_int = int(round(new_completion_rate * new_sample_size))
+        lower, upper = _wilson_ci(passed_int, new_sample_size)
+        ci_str = f"±{int(round((upper - lower) / 2 * 100))}%"
+        new_converged = _is_converged(new_sample_size, lower, upper)
+
+        # Step 4: Build new row (NEVER mutate latest — append-only invariant).
+        new_row = copy.deepcopy(latest)
+        new_row["version"] = latest.get("version", 1) + 1
+        new_row["validation"] = {
+            "platform": platform,
+            "completion_rate": new_completion_rate,
+            "confidence_interval": ci_str,
+            "sample_size": new_sample_size,
+            "converged": new_converged,
+        }
+        new_row.setdefault("provenance", {})["last_validated"] = _now_iso()
+
+        try:
+            self._bus.append_line(self.SLOT, new_row)
+        except Exception as e:
+            # Threat T-41-11 (Repudiation): log warning, do NOT propagate.
+            # Old version row is unaffected (no partial write — we deep-copied).
+            logger.warning(
+                "RecipeLibrary update_validation degraded for %s: %s",
+                recipe_id, e,
+            )
+            return None
+
+        logger.info(
+            "RecipeLibrary update_validation: %s v%s (sample=%d, cr=%.3f, ci=%s, converged=%s)",
+            recipe_id, new_row["version"], new_sample_size,
+            new_completion_rate, ci_str, new_converged,
+        )
+        return new_row
