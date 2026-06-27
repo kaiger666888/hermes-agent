@@ -865,3 +865,183 @@ class TestP10bEngineLifecycle:
             f"engine __exit__ MUST run on exception path (resource leak "
             f"otherwise); log: {engine.calls}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 40 WR-02 fix — episode-meta read-modify-write
+# ---------------------------------------------------------------------------
+# Before WR-02, both ``run()``'s outer except and ``_run_body``'s
+# full-degrade check wrote ``episode-meta`` via the injected
+# ``asset_bus_write`` directly. Because ``AssetBus.write`` is atomic-replace
+# (tmp-file + ``os.replace``), a concurrent p10b invocation on the same
+# workdir would clobber the prior run's ``preview_skipped=True`` flag with
+# no trace — defeating the "no silent swallow" red line for the case where
+# both runs landed on the full-degrade path.
+#
+# The fix: ``_merge_and_write_episode_meta`` reads the existing slot,
+# merges ``updates`` into it, and writes the merged dict back. Prior
+# ``skip_reason`` is preserved as ``previous_skip_reason`` for operator
+# observability when both runs land on the skip path.
+
+
+class TestEpisodeMetaMerge:
+    """Phase 40 WR-02 — ``episode-meta`` writes use read-modify-write."""
+
+    def test_merge_preserves_existing_keys(self):
+        """Pre-existing keys NOT in ``updates`` survive the write."""
+        from pipeline.phases.p10b_rapid_preview import (
+            _merge_and_write_episode_meta,
+        )
+
+        class _Recorder:
+            def __init__(self, initial):
+                self.slots = dict(initial)
+                self.writes = []
+
+            def read(self, slot):
+                return self.slots.get(slot)
+
+            def make_write(self):
+                def _w(slot, entry):
+                    self.slots[slot] = entry
+                    self.writes.append((slot, entry))
+                return _w
+
+        rec = _Recorder({"episode-meta": {"prior_flag": "abc"}})
+        _merge_and_write_episode_meta(
+            rec.read, rec.make_write(), "ep1",
+            {"preview_skipped": True, "skip_reason": "test"},
+        )
+        merged = rec.slots["episode-meta"]
+        # New keys present.
+        assert merged["preview_skipped"] is True
+        assert merged["skip_reason"] == "test"
+        # Prior key preserved (NOT clobbered).
+        assert merged.get("prior_flag") == "abc"
+
+    def test_merge_preserves_prior_skip_reason_as_previous(self):
+        """When both prior and new writes are ``preview_skipped=True`` with
+        DIFFERENT skip_reasons, the prior reason is preserved as
+        ``previous_skip_reason`` — operators can see both events."""
+        from pipeline.phases.p10b_rapid_preview import (
+            _merge_and_write_episode_meta,
+        )
+
+        class _Recorder:
+            def __init__(self, initial):
+                self.slots = dict(initial)
+
+            def read(self, slot):
+                return self.slots.get(slot)
+
+            def make_write(self):
+                def _w(slot, entry):
+                    self.slots[slot] = entry
+                return _w
+
+        rec = _Recorder({"episode-meta": {
+            "preview_skipped": True,
+            "skip_reason": "prior_run_degrade",
+        }})
+        _merge_and_write_episode_meta(
+            rec.read, rec.make_write(), "ep1",
+            {"preview_skipped": True, "skip_reason": "this_run_degrade"},
+        )
+        merged = rec.slots["episode-meta"]
+        # Latest reason wins on skip_reason.
+        assert merged["skip_reason"] == "this_run_degrade"
+        # Prior reason preserved as previous_skip_reason.
+        assert merged.get("previous_skip_reason") == "prior_run_degrade"
+
+    def test_merge_handles_missing_slot_cleanly(self):
+        """When the slot is empty / never written, merge acts as a plain write."""
+        from pipeline.phases.p10b_rapid_preview import (
+            _merge_and_write_episode_meta,
+        )
+
+        class _Recorder:
+            def __init__(self):
+                self.slots = {}
+
+            def read(self, slot):
+                return self.slots.get(slot)
+
+            def make_write(self):
+                def _w(slot, entry):
+                    self.slots[slot] = entry
+                return _w
+
+        rec = _Recorder()
+        _merge_and_write_episode_meta(
+            rec.read, rec.make_write(), "ep1",
+            {"preview_skipped": True, "skip_reason": "first"},
+        )
+        merged = rec.slots["episode-meta"]
+        assert merged == {"preview_skipped": True, "skip_reason": "first"}
+
+    def test_merge_handles_non_dict_existing_slot(self):
+        """If the slot somehow contains a non-dict (corruption / legacy),
+        merge falls back to treating ``updates`` as the full new value
+        rather than crashing."""
+        from pipeline.phases.p10b_rapid_preview import (
+            _merge_and_write_episode_meta,
+        )
+
+        class _Recorder:
+            def __init__(self, initial):
+                self.slots = dict(initial)
+
+            def read(self, slot):
+                return self.slots.get(slot)
+
+            def make_write(self):
+                def _w(slot, entry):
+                    self.slots[slot] = entry
+                return _w
+
+        # Slot contains a list (corrupt state — shouldn't happen but be defensive).
+        rec = _Recorder({"episode-meta": ["unexpected", "list"]})
+        _merge_and_write_episode_meta(
+            rec.read, rec.make_write(), "ep1",
+            {"preview_skipped": True, "skip_reason": "post_corrupt"},
+        )
+        merged = rec.slots["episode-meta"]
+        # Merge started from {} (non-dict discarded), so updates are the whole payload.
+        assert merged == {"preview_skipped": True, "skip_reason": "post_corrupt"}
+
+    def test_p10b_full_degrade_uses_merge(self):
+        """End-to-end: when p10b's full-degrade path fires, the
+        episode-meta write goes through the merge path. Verified by
+        pre-populating episode-meta with a sentinel key and asserting it
+        survives the full-degrade write."""
+        engine = FakeDegradeEngine()
+        original = p10b.select_engine
+        p10b.select_engine = lambda *a, **kw: engine
+        try:
+            recorder = _AssetBusRecorder()
+            # Pre-populate episode-meta with a sentinel key from a "prior run".
+            recorder.slots = {
+                "episode-meta": {"prior_run_id": "abc-123"},
+                **_full_slots(n_shots=1),
+            }
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                p10b.run(
+                    episode_id="ep-merge",
+                    asset_bus_read=recorder.read(recorder.slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        # episode-meta written once.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 1
+        merged = meta_writes[0]
+        # New keys from this run.
+        assert merged["preview_skipped"] is True
+        assert "skip_reason" in merged
+        # Prior key from the "prior concurrent run" survived.
+        assert merged.get("prior_run_id") == "abc-123"

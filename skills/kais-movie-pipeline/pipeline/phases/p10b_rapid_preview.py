@@ -160,6 +160,51 @@ def _validate_structure_delta(delta: dict) -> None:
         )
 
 
+def _merge_and_write_episode_meta(
+    asset_bus_read: Callable[[str], Any],
+    asset_bus_write: Callable[[str, dict], None],
+    episode_id: str,
+    updates: dict,
+) -> None:
+    """Phase 40 WR-02 fix — read-modify-write ``episode-meta`` to avoid
+    clobbering flags from concurrent p10b invocations on the same workdir.
+
+    ``episode-meta`` is a JSON-format slot, which ``AssetBus.write`` replaces
+    atomically via tmp-file + ``os.replace``. If two concurrent p10b runs
+    (e.g., cron + manual invocation) target the same workdir, the second
+    write clobbers the first via ``os.replace`` — there is no merge. That
+    means a previous ``preview_skipped=True`` flag from one run can be
+    silently overwritten by a fresh write from the other run.
+
+    This helper performs a read-modify-write: it reads the existing slot
+    (returning ``{}`` if missing), merges ``updates`` into it (with
+    ``updates`` taking precedence on key collision), and writes the merged
+    dict back. The merge preserves any pre-existing keys the caller didn't
+    touch — e.g., a prior ``skip_reason`` from a different concurrent run
+    survives as ``previous_skip_reason`` for operator-side inspection.
+
+    Note: this is NOT a substitute for a file lock — there is still a
+    TOCTOU window between read and write. True concurrency safety requires
+    either (a) a file lock, (b) per-episode-id slot partitioning, or (c)
+    external serialization. v6.0 accepts the residual hazard (D-09 delegates
+    episode-level coordination to the operator); this helper narrows the
+    window from "always clobber" to "only clobber on exact write-write race".
+    """
+    existing = asset_bus_read("episode-meta")
+    if not isinstance(existing, dict):
+        existing = {}
+    elif existing.get("preview_skipped") is True and updates.get("preview_skipped") is True:
+        # Preserve the prior skip_reason as previous_skip_reason for operator
+        # observability — a fresh overwrite would otherwise erase the only
+        # breadcrumb from the prior concurrent-skip event.
+        prior_reason = existing.get("skip_reason")
+        if prior_reason and prior_reason != updates.get("skip_reason"):
+            # Don't overwrite an existing previous_skip_reason chain.
+            existing.setdefault("previous_skip_reason", prior_reason)
+    merged = {**existing, **updates}
+    asset_bus_write("episode-meta", merged)
+
+
 def _build_variants(
     shot_id: str,
     shot_index: int,
@@ -269,11 +314,16 @@ def run(
             "preview_skipped: episode=%s error=%s: %s — falling back to p11 direct Seedance",
             episode_id, type(exc).__name__, exc,
         )
-        asset_bus_write("episode-meta", {
-            "episode_id": episode_id,
-            "preview_skipped": True,
-            "skip_reason": f"{type(exc).__name__}: {exc}",
-        })
+        # WR-02 fix: read-modify-write to preserve prior flags from
+        # concurrent p10b invocations on the same workdir.
+        _merge_and_write_episode_meta(
+            asset_bus_read, asset_bus_write, episode_id,
+            {
+                "episode_id": episode_id,
+                "preview_skipped": True,
+                "skip_reason": f"{type(exc).__name__}: {exc}",
+            },
+        )
         return {
             "phase": PHASE_ID,
             "outputs": {
@@ -393,11 +443,16 @@ def _run_body(
             "preview_skipped: episode=%s %s — falling back to p11 direct Seedance",
             episode_id, skip_reason,
         )
-        asset_bus_write("episode-meta", {
-            "episode_id": episode_id,
-            "preview_skipped": True,
-            "skip_reason": skip_reason,
-        })
+        # WR-02 fix: read-modify-write to preserve prior flags from
+        # concurrent p10b invocations on the same workdir.
+        _merge_and_write_episode_meta(
+            asset_bus_read, asset_bus_write, episode_id,
+            {
+                "episode_id": episode_id,
+                "preview_skipped": True,
+                "skip_reason": skip_reason,
+            },
+        )
 
     # 5. No gate for p10b (GATE_ID is None — CF-36-04 conditional skip).
     return {
