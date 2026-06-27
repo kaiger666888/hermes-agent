@@ -286,3 +286,150 @@ class TestReadMissing:
         payload = {"shots": [], "version": 1}
         bus.write("creative-history", payload)
         assert bus.require("creative-history") == payload
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Phase 40-01 additions — rapid-preview-clips (JSONL) + episode-meta (JSON)
+# Per CONTEXT.md LOCKED decisions "rapid-preview-clips slot registration"
+# AND "episode-meta slot registration" (BLOCKER #1 + #5):
+#   - rapid-preview-clips is JSONL append-only (one line per variant)
+#     renamed from v3.0-era 'preview-clips' to avoid SKILL.md collision
+#   - episode-meta is JSON (episode-level metadata flags written by p10b)
+#     NOT the same as pipeline-state.json (managed by PipelineStateStore)
+# ═══════════════════════════════════════════════════════════════════
+class TestRapidPreviewClipsSlot:
+    """JSONL slot for rapid preview variants (Phase 40-01, p10b output).
+
+    Mirrors the finetune-dataset pattern: ``format: "jsonl"`` dispatches to
+    ``append_line()`` / ``read_lines()``; ``write()`` is rejected.
+    """
+
+    def test_slot_registered_in_asset_schema(self):
+        """rapid-preview-clips must be in ASSET_SCHEMA with jsonl format."""
+        assert "rapid-preview-clips" in ASSET_SCHEMA, (
+            "rapid-preview-clips slot must be registered in ASSET_SCHEMA"
+        )
+        schema = ASSET_SCHEMA["rapid-preview-clips"]
+        assert schema["format"] == "jsonl", (
+            f"rapid-preview-clips format must be 'jsonl', got {schema.get('format')!r}"
+        )
+        assert schema["file"].endswith(".jsonl"), (
+            f"rapid-preview-clips file must end with .jsonl, got {schema['file']!r}"
+        )
+        assert schema["writer_phase"] == "p10b_rapid_preview", (
+            f"rapid-preview-clips writer_phase must be 'p10b_rapid_preview', "
+            f"got {schema.get('writer_phase')!r}"
+        )
+
+    def test_list_asset_names_includes_rapid_preview_clips(self, tmp_path: Path):
+        names = AssetBus(tmp_path).list_asset_names()
+        assert "rapid-preview-clips" in names, (
+            "list_asset_names() must include 'rapid-preview-clips'"
+        )
+
+    def test_append_line_succeeds_and_returns_jsonl_path(self, tmp_path: Path):
+        bus = AssetBus(tmp_path)
+        path = bus.append_line(
+            "rapid-preview-clips",
+            {
+                "shot_id": "s1",
+                "variant_id": "v1",
+                "structure_delta": {"hook_position_sec": 5},
+                "clip_path": "/x.mp4",
+                "generation_time_ms": 4200,
+                "engine": "slideshow",
+            },
+        )
+        assert path.endswith("rapid-preview-clips.jsonl"), (
+            f"append_line must return path ending in rapid-preview-clips.jsonl; got {path}"
+        )
+
+    def test_read_lines_round_trips_two_records_in_order(self, tmp_path: Path):
+        """After appending 2 records, read_lines returns both in insertion order."""
+        bus = AssetBus(tmp_path)
+        rec1 = {"shot_id": "s1", "variant_id": "v1", "engine": "slideshow"}
+        rec2 = {"shot_id": "s1", "variant_id": "v2", "engine": "ltx"}
+        bus.append_line("rapid-preview-clips", rec1)
+        bus.append_line("rapid-preview-clips", rec2)
+        lines = bus.read_lines("rapid-preview-clips")
+        assert len(lines) == 2, f"expected 2 records, got {len(lines)}"
+        assert lines[0] == rec1, f"first record mismatch: {lines[0]}"
+        assert lines[1] == rec2, f"second record mismatch: {lines[1]}"
+
+    def test_write_rejects_jsonl_slot(self, tmp_path: Path):
+        """write() must reject the jsonl slot — use append_line()."""
+        bus = AssetBus(tmp_path)
+        with pytest.raises(AssetBusError, match="JSONL"):
+            bus.write("rapid-preview-clips", {"x": 1})
+
+    def test_read_lines_on_missing_file_returns_empty(self, tmp_path: Path):
+        bus = AssetBus(tmp_path)
+        assert bus.read_lines("rapid-preview-clips") == []
+
+
+class TestEpisodeMetaSlot:
+    """JSON slot for episode-level metadata flags (Phase 40-01, p10b output).
+
+    Carries the ``preview_skipped`` flag written when all preview engines are
+    degraded. NOT the same as pipeline-state.json (which is the runner's
+    checkpoint store managed by PipelineStateStore, separate from AssetBus).
+    """
+
+    def test_slot_registered_in_asset_schema(self):
+        assert "episode-meta" in ASSET_SCHEMA, (
+            "episode-meta slot must be registered in ASSET_SCHEMA"
+        )
+        schema = ASSET_SCHEMA["episode-meta"]
+        assert schema["format"] == "json", (
+            f"episode-meta format must be 'json', got {schema.get('format')!r}"
+        )
+        assert schema["file"].endswith(".json"), (
+            f"episode-meta file must end with .json, got {schema['file']!r}"
+        )
+        assert schema["writer_phase"] == "p10b_rapid_preview", (
+            f"episode-meta writer_phase must be 'p10b_rapid_preview', "
+            f"got {schema.get('writer_phase')!r}"
+        )
+
+    def test_list_asset_names_includes_episode_meta(self, tmp_path: Path):
+        names = AssetBus(tmp_path).list_asset_names()
+        assert "episode-meta" in names, (
+            "list_asset_names() must include 'episode-meta'"
+        )
+
+    def test_write_succeeds_and_returns_json_path(self, tmp_path: Path):
+        bus = AssetBus(tmp_path)
+        path = bus.write(
+            "episode-meta",
+            {
+                "episode_id": "ep1",
+                "preview_skipped": True,
+                "skip_reason": "all engines degraded",
+            },
+        )
+        assert path.endswith("episode-meta.json"), (
+            f"write must return path ending in episode-meta.json; got {path}"
+        )
+
+    def test_read_round_trips_written_dict(self, tmp_path: Path):
+        """After write, read returns the exact dict (envelope auto-unwrapped)."""
+        bus = AssetBus(tmp_path)
+        payload = {
+            "episode_id": "ep1",
+            "preview_skipped": True,
+            "skip_reason": "all engines degraded",
+        }
+        bus.write("episode-meta", payload)
+        assert bus.read("episode-meta") == payload, (
+            f"read() must round-trip the exact dict; got {bus.read('episode-meta')}"
+        )
+
+    def test_append_line_rejects_json_slot(self, tmp_path: Path):
+        """append_line() must reject the json slot — use write()."""
+        bus = AssetBus(tmp_path)
+        with pytest.raises(AssetBusError, match="not JSONL"):
+            bus.append_line("episode-meta", {"x": 1})
+
+    def test_read_on_missing_file_returns_none(self, tmp_path: Path):
+        bus = AssetBus(tmp_path)
+        assert bus.read("episode-meta") is None
