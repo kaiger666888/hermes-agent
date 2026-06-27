@@ -279,6 +279,38 @@ ASSET_SCHEMA: dict[str, dict] = {
         "writer_phase": "p13_delivery",
         "reader_phases": [],
     },
+
+    # ── Phase 40-01 additions — p10b rapid preview slots (BLOCKER #1 + #5) ──
+    # Wave 1 plan 40-01 registers these 2 slots so p10b_rapid_preview (the
+    # rapid preview tier between p10_voice and p11_video_render) can persist
+    # its outputs. Per CONTEXT.md LOCKED decisions:
+    #   - "rapid-preview-clips" (NOT "preview-clips") — the latter is
+    #     documented in v3.0-era SKILL.md for a future p06.5 phase with JSON
+    #     semantics; renaming avoids namespace collision (BLOCKER #5).
+    #   - "episode-meta" (NOT "pipeline-state") — pipeline-state.json is a
+    #     separate file managed by PipelineStateStore, NOT an AssetBus slot.
+    #     Use the new episode-meta AssetBus slot for the preview_skipped flag
+    #     (BLOCKER #1).
+    # Per-plan asset-bus extension (D-36-05): PRESERVES existing slots
+    # byte-equivalent — only appends.
+    "rapid-preview-clips": {
+        "file": "rapid-preview-clips.jsonl",
+        "format": "jsonl",  # append-only — use append_line() / read_lines()
+        "description": "Rapid preview variants per shot (p10b output; one line "
+                       "per variant). Renamed from v3.0-era 'preview-clips' to "
+                       "avoid collision with SKILL.md p06.5 documented future slot.",
+        "writer_phase": "p10b_rapid_preview",
+        "reader_phases": [],  # consumed operator-side per blueprint Out of Scope
+    },
+    "episode-meta": {
+        "file": "episode-meta.json",
+        "format": "json",
+        "description": "Episode-level metadata flags written by p10b "
+                       "(preview_skipped on full-degrade). NOT the same as "
+                       "pipeline-state.json (which is managed by PipelineStateStore).",
+        "writer_phase": "p10b_rapid_preview",
+        "reader_phases": [],  # consumed operator-side / by monitoring
+    },
 }
 
 
@@ -376,8 +408,15 @@ class AssetBus:
     invalidates on every write for the affected slot.
     """
 
-    # Slots that use append_line/read_lines (Plan 33-04 dispatches on this set)
-    JSONL_SLOTS = frozenset({"finetune-dataset"})
+    # Slots that use append_line/read_lines. INFORMATIONAL ONLY — the actual
+    # dispatch in append_line()/write()/read()/read_lines() consults
+    # ASSET_SCHEMA[slot]["format"] directly (verified Phase 40-01). This
+    # frozenset is retained for introspection / external tooling that scans
+    # JSONL slots by name. The "rapid-preview-clips" slot (Phase 40-01) is
+    # format=jsonl in ASSET_SCHEMA; append_line/read_lines work without
+    # modifying this set, but we add it here for completeness so introspection
+    # of "which slots are JSONL?" returns the correct answer.
+    JSONL_SLOTS = frozenset({"finetune-dataset", "rapid-preview-clips"})
 
     def __init__(self, workdir: str | Path):
         self._dir = Path(workdir) / ASSETS_DIR
