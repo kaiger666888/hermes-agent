@@ -335,6 +335,77 @@ def _is_converged(
     return sample_size >= min_sample and (upper - lower) <= max_spread
 
 
+# ─── Phase 41-03: similarity helpers (pure stdlib) ─────────────────────
+# CONTEXT.md "Structure similarity algorithm" (LOCKED):
+#   final score = 0.7 * cosine(numerical) + 0.3 * jaccard(emotion_sequence)
+# - cosine over the 3-dim numerical vector
+#   [hook_position_sec, mean(turning_points_sec), emotion_drop_level]
+#   (turning_points_sec list is collapsed to its mean BEFORE cosine —
+#    WARNING #4 refinement, keeps the vector a fixed-width comparable form)
+# - jaccard over the emotion_sequence lists treated as sets
+# Pure stdlib throughout (math.sqrt + set built-in — NO third-party
+# scientific libraries, threat T-41-15 mitigation).
+
+
+def _cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
+    """Cosine similarity = dot(a, b) / (||a|| * ||b||).
+
+    Returns ``0.0`` if either vector has zero magnitude (avoids divide-by-zero —
+    threat T-41-14 mitigation; CONTEXT.md "Edge case" requires this degrade).
+    Pure stdlib: uses ``sum`` + ``math.sqrt`` only (no third-party libs).
+
+    Range: ``[-1.0, 1.0]``. ``1.0`` = identical direction; ``0.0`` = orthogonal
+    or zero-vector input; ``-1.0`` = opposite direction.
+    """
+    dot = sum(a * b for a, b in zip(vec_a, vec_b))
+    norm_a = math.sqrt(sum(a * a for a in vec_a))
+    norm_b = math.sqrt(sum(b * b for b in vec_b))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _jaccard_similarity(list_a: list[str], list_b: list[str]) -> float:
+    """Jaccard similarity = ``|A ∩ B| / |A ∪ B|`` over the two lists as sets.
+
+    Returns ``0.0`` if both lists are empty (union has zero size — avoids
+    divide-by-zero). Order-insensitive and duplicate-insensitive (set
+    semantics — duplicates collapse, does not inflate the score).
+
+    Range: ``[0.0, 1.0]``. ``1.0`` = identical sets; ``0.0`` = disjoint or empty.
+    """
+    set_a = set(list_a)
+    set_b = set(list_b)
+    union = set_a | set_b
+    if not union:
+        return 0.0
+    return len(set_a & set_b) / len(union)
+
+
+def _structure_to_numerical_vector(structure: dict) -> list[float]:
+    """Extract the 3-dim numerical vector used for cosine similarity.
+
+    Vector layout (CONTEXT.md "Cosine similarity over numerical fields"):
+        [hook_position_sec, mean(turning_points_sec), emotion_drop_level]
+
+    WARNING #4 refinement (CONTEXT.md): the ``turning_points_sec`` list is
+    compressed to its scalar mean BEFORE cosine — the cosine vector must be a
+    fixed-width comparable form, and the list-of-ints field cannot be fed
+    directly into a dot product against another recipe's list (which may have
+    a different length).
+
+    Degrade rules:
+        - Missing ``hook_position_sec`` -> ``0.0``
+        - Missing or empty ``turning_points_sec`` -> mean ``0.0``
+        - Missing ``emotion_drop_level`` -> ``0.0``
+    """
+    hook = float(structure.get("hook_position_sec", 0) or 0)
+    tp_list = structure.get("turning_points_sec") or []
+    tp_mean = float(sum(tp_list) / len(tp_list)) if tp_list else 0.0
+    drop = float(structure.get("emotion_drop_level", 0) or 0)
+    return [hook, tp_mean, drop]
+
+
 # ─── RecipeLibrary ────────────────────────────────────────────────────
 
 
