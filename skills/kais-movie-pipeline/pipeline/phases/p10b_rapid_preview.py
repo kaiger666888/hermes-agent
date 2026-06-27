@@ -55,10 +55,17 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
-from plugins.kais_aigc.preview_engine import PreviewEngine, select_engine
+import httpx
+
+from plugins.kais_aigc.preview_engine import (
+    PreviewEngine,
+    PreviewEngineError,
+    select_engine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -293,24 +300,48 @@ def run(
     Raises:
         Nothing on engine degrade or engine constructor failure — both paths
         emit WARN + write the ``preview_skipped`` flag and return cleanly.
-        Only truly unexpected errors propagate (runner retry loop handles
-        them via the existing max_retries contract — RAPID-PREVIEW-06).
+        Programming bugs (TypeError, AttributeError, KeyError, ValueError,
+        AssetBusError, etc.) are NOT caught — they propagate up to the
+        runner, which aborts the episode so operators see real failures
+        rather than silently-degraded episodes (RAPID-PREVIEW-06 /
+        Phase 40 WR-03 fix). The caught set is:
+        ``PreviewEngineError``, ``httpx.HTTPError``,
+        ``subprocess.SubprocessError``, ``OSError``.
     """
-    # Wrap the entire body in a try/except so engine constructor failures
-    # (defensive — plan 02's select_engine should not raise) and other
-    # unexpected exceptions are caught at the phase boundary. On catch:
-    # emit WARN + write preview_skipped flag + return degrade envelope.
+    # Wrap the entire body in a try/except so engine / I/O failures are
+    # caught at the phase boundary. On catch: emit WARN (with traceback via
+    # logger.exception) + write preview_skipped flag + return degrade envelope.
+    #
+    # Phase 40 WR-03 fix: the catch is NARROWED to the specific engine /
+    # I/O exception types that legitimately indicate a degrade scenario:
+    #   - PreviewEngineError — LTX 4xx (caller bug per D-09, but the
+    #     contract says degrade rather than crash the episode)
+    #   - httpx.HTTPError — HTTP transport errors (connect / timeout / etc.)
+    #   - subprocess.SubprocessError — FFmpeg invocation errors
+    #   - OSError — filesystem / permission errors
+    # Programming bugs (TypeError, AttributeError, KeyError, ValueError,
+    # AssetBusError, etc.) are NOT caught here — they propagate up to the
+    # runner, which aborts the episode. Operators see a real failure rather
+    # than a silently-degraded episode. This is the design documented in
+    # the run() docstring below (RAPID-PREVIEW-06: "truly unexpected errors
+    # propagate") — the previous broad ``except Exception`` contradicted
+    # that docstring and is what masked CR-01.
     try:
         return _run_body(
             episode_id, asset_bus_read, asset_bus_write,
             delegate_task, trigger_gate, parallel_shots,
         )
-    except Exception as exc:
-        # Defensive: plan 02's select_engine should not raise in practice,
-        # but p10b must be robust. Episode-level fail is visible (WARN +
-        # episode-meta flag); the runner's existing retry loop handles
-        # truly unexpected errors via max_retries (RAPID-PREVIEW-06).
-        logger.warning(
+    except (
+        PreviewEngineError,
+        httpx.HTTPError,
+        subprocess.SubprocessError,
+        OSError,
+    ) as exc:
+        # Engine / I/O failure: degrade gracefully. Episode-level fail is
+        # visible (WARN with traceback via logger.exception + episode-meta
+        # flag). Use logger.exception (not warning) so operators get the
+        # full stack trace for engine-side debugging.
+        logger.exception(
             "preview_skipped: episode=%s error=%s: %s — falling back to p11 direct Seedance",
             episode_id, type(exc).__name__, exc,
         )

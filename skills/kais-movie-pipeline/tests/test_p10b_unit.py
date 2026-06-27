@@ -665,15 +665,24 @@ class TestP10bDegradePath:
         assert len(rapid_writes) == 0
 
     def test_engine_constructor_failure_caught_defensively(self):
-        """Test 8: select_engine() raising → caught, WARN emitted, episode-meta flag written.
+        """Test 8: select_engine() raising an I/O-style exception → caught,
+        WARN emitted, episode-meta flag written.
 
         Defensive: plan 02's select_engine should not raise in practice, but
         p10b must be robust. Verifies the try/except wraps the engine selection.
+
+        Phase 40 WR-03 fix: the catch is narrowed to engine / I/O exception
+        types. ``OSError`` is one of the caught types (engine constructor
+        might fail on filesystem access). Programming bugs (``RuntimeError``,
+        ``TypeError``, etc.) propagate — see
+        ``test_programming_error_propagates_not_silently_degraded`` below.
         """
         original = p10b.select_engine
 
         def _raising_select(*a, **kw):
-            raise RuntimeError("simulated engine constructor failure")
+            # Use OSError — one of the WR-03 caught types — to simulate
+            # an engine constructor failure on filesystem / network access.
+            raise OSError("simulated engine constructor I/O failure")
 
         p10b.select_engine = _raising_select
         try:
@@ -703,6 +712,55 @@ class TestP10bDegradePath:
         meta_writes = recorder.writes.get("episode-meta", [])
         assert len(meta_writes) == 1
         assert meta_writes[0]["preview_skipped"] is True
+
+    def test_programming_error_propagates_not_silently_degraded(self):
+        """Phase 40 WR-03 fix — programming errors propagate up to the
+        runner instead of being silently caught and downgraded.
+
+        Before WR-03, the broad ``except Exception`` swallowed every
+        exception — including ``RuntimeError``, ``TypeError``,
+        ``AttributeError``, ``KeyError``, ``AssetBusError`` — and marked
+        the episode ``preview_skipped=True``. Operators could not
+        distinguish a real engine degrade from a phase code bug.
+
+        After WR-03, only engine / I/O exceptions are caught
+        (``PreviewEngineError``, ``httpx.HTTPError``,
+        ``subprocess.SubprocessError``, ``OSError``). Programming bugs
+        propagate up so the runner aborts the episode visibly.
+
+        This test uses ``RuntimeError`` (a generic programming-error
+        stand-in) and asserts it propagates rather than being swallowed.
+        """
+        original = p10b.select_engine
+
+        def _raising_select(*a, **kw):
+            # RuntimeError is NOT in the WR-03 caught set — it must propagate.
+            raise RuntimeError("simulated programming bug in select_engine")
+
+        p10b.select_engine = _raising_select
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            with pytest.raises(RuntimeError, match="simulated programming bug"):
+                p10b.run(
+                    episode_id="ep-progbug",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        # The programming error propagated — episode-meta was NOT written
+        # (no silent degrade). The runner will see the exception and abort
+        # the episode.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 0, (
+            f"programming error must propagate, not silently write "
+            f"preview_skipped; got meta_writes: {meta_writes}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -825,6 +883,15 @@ class TestP10bEngineLifecycle:
         from generate() would propagate out of ``_run_body`` and be caught
         by the broad ``except Exception`` in ``run()``, marking the episode
         ``preview_skipped``. Either way, no resources were released.
+
+        Phase 40 WR-03 note: after the except clause was narrowed, a
+        ``RuntimeError`` from ``engine.generate`` is NOT caught by p10b's
+        ``except`` block (it's a programming bug, not engine/I/O failure)
+        — it propagates up to the runner, which aborts the episode. But
+        Python's ``with`` block STILL calls ``__exit__`` on the exception
+        before it propagates, so resources are released regardless. This
+        test verifies that lifecycle guarantee holds even on the
+        propagation path.
         """
         class _RaisingEngine(_RecordingEngine):
             def generate(self, **kwargs):
@@ -838,21 +905,22 @@ class TestP10bEngineLifecycle:
         try:
             recorder = _AssetBusRecorder()
             slots = _full_slots(n_shots=1)
-            # p10b.run should NOT raise — the broad except catches RuntimeError
-            # and emits a preview_skipped envelope.
-            result = p10b.run(
-                episode_id="ep-lifecycle-exc",
-                asset_bus_read=recorder.read(slots),
-                asset_bus_write=recorder.make_write(),
-                delegate_task=lambda g, c, t: {},
-                trigger_gate=None,
-                parallel_shots=1,
-            )
+            # Phase 40 WR-03: RuntimeError is NOT in the caught set, so
+            # p10b.run propagates it (operators see a real failure rather
+            # than a silent degrade). The with-block's __exit__ runs before
+            # propagation — that's what this test verifies.
+            with pytest.raises(RuntimeError, match="simulated mid-fanout"):
+                p10b.run(
+                    episode_id="ep-lifecycle-exc",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
         finally:
             p10b.select_engine = original
 
-        # Episode degraded cleanly.
-        assert result["phase"] == "p10b_rapid_preview"
         # __enter__ and __exit__ both ran despite the exception — the with
         # block's __exit__ is called even when the body raises.
         enters = [c for c in engine.calls if c == "enter"]
