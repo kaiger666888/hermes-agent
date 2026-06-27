@@ -334,3 +334,370 @@ class TestP10bRapidPreview:
         assert "outputs" in result
         # Outputs include variants_generated count (success path).
         assert result["outputs"].get("variants_generated", 0) == 3
+
+
+# ===========================================================================
+# Task 2 — Degrade WARN path + preview_skipped flag on episode-meta slot
+# ===========================================================================
+
+
+class FakeDegradeEngine(PreviewEngine):
+    """Test double that ALWAYS returns a degrade envelope.
+
+    Optionally degrades only specific variant indices (1-based position within
+    a shot's 3 variants) for partial-degrade tests. Default: degrade all.
+    """
+
+    def __init__(self, *, degrade_positions: set[int] | None = None):
+        # When None → degrade ALL variants. When a set, degrade only variants
+        # whose position-in-shot (1, 2, or 3) is in the set.
+        self._degrade_positions = degrade_positions
+        self.calls: list[dict] = []
+        self._lock = threading.Lock()
+        self._position_counter = 0  # increments per call across all shots
+
+    def generate(
+        self,
+        *,
+        shot_id: str,
+        prompt: str,
+        structure_delta: dict,
+        keyframe_image_path: str | None = None,
+        voice_clip_path: str | None = None,
+        output_path: str | None = None,
+    ) -> dict:
+        with self._lock:
+            self._position_counter += 1
+            position_in_shot = ((self._position_counter - 1) % 3) + 1
+            self.calls.append({
+                "shot_id": shot_id,
+                "structure_delta": dict(structure_delta),
+                "position_in_shot": position_in_shot,
+            })
+            should_degrade = (
+                self._degrade_positions is None
+                or position_in_shot in self._degrade_positions
+            )
+        if should_degrade:
+            return {"degraded": True, "engine": "slideshow", "reason": "test"}
+        return {
+            "clip_path": output_path or f"/preview/{shot_id}.mp4",
+            "generation_time_ms": 100,
+            "engine": "slideshow",
+        }
+
+
+class _CapLogCapture:
+    """Lightweight capture for logger.warning calls.
+
+    The p10b module uses ``logging.getLogger(__name__)``; we attach a handler
+    that records every LogRecord emitted at WARN level or above. Provides a
+    ``.records`` list and ``.messages`` list for assertions.
+    """
+
+    def __init__(self, logger_name: str):
+        self.logger = logging.getLogger(logger_name)
+        self.records: list = []
+        self.messages: list[str] = []
+        self._handler = None
+
+    def __enter__(self):
+        class _CaptureHandler(logging.Handler):
+            def __init__(self, capture):
+                super().__init__(level=logging.WARNING)
+                self._capture = capture
+
+            def emit(self, record):
+                self._capture.records.append(record)
+                self._capture.messages.append(record.getMessage())
+
+        self._handler = _CaptureHandler(self)
+        self.logger.addHandler(self._handler)
+        return self
+
+    def __exit__(self, *exc):
+        if self._handler is not None:
+            self.logger.removeHandler(self._handler)
+
+
+import logging  # noqa: E402 — needed for _CapLogCapture (placed late to keep test doubles near use)
+
+
+def _install_engine(engine):
+    """Context-manager-free helper: monkeypatch p10b.select_engine to return engine.
+
+    Returns (original_select,). Tests must restore via ``p10b.select_engine = original``
+    in a try/finally block.
+    """
+    original = p10b.select_engine
+    p10b.select_engine = lambda *a, **kw: engine
+    return original
+
+
+class TestP10bDegradePath:
+    """Task 2 tests: episode-level full-degrade WARN + episode-meta flag (BLOCKER #1)."""
+
+    def test_all_degrade_single_shot_emits_warn_and_writes_episode_meta(self):
+        """Test 1: 1 shot × 3 variants all degrade → WARN + episode-meta flag."""
+        engine = FakeDegradeEngine()  # degrade all
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                p10b.run(
+                    episode_id="ep-degrade-1",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        # WARN log emitted (>=1 warning mentioning preview_skipped).
+        preview_warns = [m for m in cap.messages if "preview_skipped" in m]
+        assert len(preview_warns) >= 1, (
+            f"expected >=1 WARN with 'preview_skipped'; got messages: {cap.messages}"
+        )
+        # episode-meta slot written with the 3-key shape.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 1, (
+            f"expected 1 episode-meta write; got {len(meta_writes)}"
+        )
+        meta = meta_writes[0]
+        assert meta["episode_id"] == "ep-degrade-1"
+        assert meta["preview_skipped"] is True
+        assert "skip_reason" in meta and isinstance(meta["skip_reason"], str)
+        # NOTHING written to rapid-preview-clips (all degraded).
+        rapid_writes = recorder.writes.get("rapid-preview-clips", [])
+        assert len(rapid_writes) == 0, (
+            f"rapid-preview-clips must be empty on full-degrade; got {len(rapid_writes)}"
+        )
+
+    def test_partial_degrade_writes_successes_no_episode_meta(self):
+        """Test 2: variant 2 degrades, variants 1 + 3 succeed → 2 writes, NO episode-meta.
+
+        Partial degrade is recoverable — episode-level WARN triggers ONLY when
+        ALL variants of ALL shots degrade.
+        """
+        # Degrade only position 2 of each shot's 3 variants.
+        engine = FakeDegradeEngine(degrade_positions={2})
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                p10b.run(
+                    episode_id="ep-partial",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        # 2 successful variants written (positions 1 + 3).
+        rapid_writes = recorder.writes.get("rapid-preview-clips", [])
+        assert len(rapid_writes) == 2, (
+            f"expected 2 rapid-preview-clips writes (variants 1 + 3); got {len(rapid_writes)}"
+        )
+        # NO episode-meta write (not all degraded).
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 0, (
+            f"episode-meta must NOT be written on partial degrade; got {len(meta_writes)}"
+        )
+        # NO WARN log for partial degrade (per-variant degrade is silent).
+        preview_warns = [m for m in cap.messages if "preview_skipped" in m]
+        assert len(preview_warns) == 0, (
+            f"partial degrade must NOT emit episode-level WARN; got: {preview_warns}"
+        )
+
+    def test_full_degrade_return_shape(self):
+        """Test 3: full-degrade run() returns {phase, outputs{generated=0, degraded=3}, gate=None}."""
+        engine = FakeDegradeEngine()
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            result = p10b.run(
+                episode_id="ep-shape",
+                asset_bus_read=recorder.read(slots),
+                asset_bus_write=recorder.make_write(),
+                delegate_task=lambda g, c, t: {},
+                trigger_gate=None,
+                parallel_shots=1,
+            )
+        finally:
+            p10b.select_engine = original
+
+        assert result["phase"] == "p10b_rapid_preview"
+        assert result["gate"] is None
+        assert result["outputs"]["variants_generated"] == 0
+        assert result["outputs"]["variants_degraded"] == 3
+
+    def test_warn_message_contains_preview_skipped_and_episode_id(self):
+        """Test 4: WARN message contains 'preview_skipped' AND the episode_id."""
+        engine = FakeDegradeEngine()
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                p10b.run(
+                    episode_id="ep-warnmsg-XYZ",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        preview_warns = [m for m in cap.messages if "preview_skipped" in m]
+        assert len(preview_warns) >= 1
+        # Episode_id must appear in at least one preview_skipped message.
+        assert any("ep-warnmsg-XYZ" in m for m in preview_warns), (
+            f"episode_id must be in WARN message; got: {preview_warns}"
+        )
+
+    def test_episode_meta_slot_name_not_pipeline_state(self):
+        """Test 5 (BLOCKER #1 explicit): asset_bus_write call uses 'episode-meta', not 'pipeline-state'.
+
+        Asserts the slot name on the full-degrade write is exactly 'episode-meta'
+        AND the written dict contains episode_id / preview_skipped / skip_reason.
+        Captures ALL writes and verifies ONE matches this shape.
+        """
+        engine = FakeDegradeEngine()
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            p10b.run(
+                episode_id="ep-blocker1",
+                asset_bus_read=recorder.read(slots),
+                asset_bus_write=recorder.make_write(),
+                delegate_task=lambda g, c, t: {},
+                trigger_gate=None,
+                parallel_shots=1,
+            )
+        finally:
+            p10b.select_engine = original
+
+        # Verify NO write to 'pipeline-state' slot (BLOCKER #1 guard).
+        assert "pipeline-state" not in recorder.writes, (
+            f"BLOCKER #1 VIOLATION: writes to 'pipeline-state' detected: "
+            f"{recorder.writes.get('pipeline-state')}"
+        )
+        # Verify the episode-meta write has the required 3-key shape.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 1
+        meta = meta_writes[0]
+        assert set(meta.keys()) == {"episode_id", "preview_skipped", "skip_reason"}, (
+            f"episode-meta must have exactly 3 keys; got: {set(meta.keys())}"
+        )
+        assert meta["episode_id"] == "ep-blocker1"
+        assert meta["preview_skipped"] is True
+        assert isinstance(meta["skip_reason"], str) and meta["skip_reason"]
+
+    def test_no_silent_path_for_engine_degrade(self):
+        """Test 6: every degrade either increments a counter that triggers episode-level WARN.
+
+        Verified by code inspection: the run() body's only ``result.get('degraded')``
+        branch increments ``degraded_count``; if ``degraded_count == total_variants``
+        the WARN fires. There is no code path where a degrade envelope is
+        swallowed without either counting toward WARN or raising.
+        """
+        # Read the source to verify the structure (Rule: code inspection test).
+        import inspect
+        source = inspect.getsource(p10b.run)
+        # The degrade branch must increment degraded_count.
+        assert "degraded_count" in source, (
+            "run() must track degraded_count for episode-level WARN threshold"
+        )
+        # Must check degraded_count == total_variants for episode-level WARN.
+        assert "degraded_count == total_variants" in source or \
+               "degraded_count == total_variants" in source.replace("  ", " "), (
+            "run() must check degraded_count == total_variants to trigger WARN"
+        )
+        # Must NOT silently swallow without logger.warning or raise.
+        assert "logger.warning" in source, (
+            "run() must emit logger.warning on episode-level degrade"
+        )
+
+    def test_multi_shot_full_degrade_emits_exactly_one_warn(self):
+        """Test 7: 4 shots × 3 variants = 12 degrades → exactly 1 episode-level WARN."""
+        engine = FakeDegradeEngine()
+        original = _install_engine(engine)
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=4)
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                p10b.run(
+                    episode_id="ep-multishot",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=4,
+                )
+        finally:
+            p10b.select_engine = original
+
+        preview_warns = [m for m in cap.messages if "preview_skipped" in m]
+        assert len(preview_warns) == 1, (
+            f"multi-shot full-degrade must emit exactly 1 episode-level WARN "
+            f"(not 12); got {len(preview_warns)}: {preview_warns}"
+        )
+        # episode-meta written exactly once.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 1, (
+            f"episode-meta must be written exactly once; got {len(meta_writes)}"
+        )
+        # rapid-preview-clips NEVER written.
+        rapid_writes = recorder.writes.get("rapid-preview-clips", [])
+        assert len(rapid_writes) == 0
+
+    def test_engine_constructor_failure_caught_defensively(self):
+        """Test 8: select_engine() raising → caught, WARN emitted, episode-meta flag written.
+
+        Defensive: plan 02's select_engine should not raise in practice, but
+        p10b must be robust. Verifies the try/except wraps the engine selection.
+        """
+        original = p10b.select_engine
+
+        def _raising_select(*a, **kw):
+            raise RuntimeError("simulated engine constructor failure")
+
+        p10b.select_engine = _raising_select
+        try:
+            recorder = _AssetBusRecorder()
+            slots = _full_slots(n_shots=1)
+            with _CapLogCapture("pipeline.phases.p10b_rapid_preview") as cap:
+                result = p10b.run(
+                    episode_id="ep-engine-fail",
+                    asset_bus_read=recorder.read(slots),
+                    asset_bus_write=recorder.make_write(),
+                    delegate_task=lambda g, c, t: {},
+                    trigger_gate=None,
+                    parallel_shots=1,
+                )
+        finally:
+            p10b.select_engine = original
+
+        # Did NOT raise — returned a standard envelope.
+        assert result["phase"] == "p10b_rapid_preview"
+        assert result["gate"] is None
+        # WARN log emitted mentioning preview_skipped.
+        preview_warns = [m for m in cap.messages if "preview_skipped" in m]
+        assert len(preview_warns) >= 1, (
+            f"engine constructor failure must emit WARN; got: {cap.messages}"
+        )
+        # episode-meta flag written.
+        meta_writes = recorder.writes.get("episode-meta", [])
+        assert len(meta_writes) == 1
+        assert meta_writes[0]["preview_skipped"] is True
