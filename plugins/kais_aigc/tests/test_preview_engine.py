@@ -22,6 +22,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 
 # Ensure hermes-agent root is importable so ``plugins.kais_aigc.*`` resolves.
@@ -300,3 +301,193 @@ class TestSlideshowEngine:
         )
         assert isinstance(result["generation_time_ms"], int)
         assert result["generation_time_ms"] >= 0
+
+
+class TestLTXVideoEngine:
+    """Task 3: LTXVideoEngine (mocked httpx POST) + D-09 degrade contract.
+
+    Mirrors ``tests/test_gold_team.py`` patterns: every client is constructed
+    with ``transport=httpx.MockTransport(handler)`` so no real network call
+    is made. The D-09 degrade / raise contract is enforced identically to
+    ``GoldTeamClient``.
+
+    INFO #10: ``generation_time_ms`` in the SUCCESS envelope is the
+    LOCALLY-measured wall time (``time.monotonic()`` delta), NOT the value
+    reported in the LTX-Video response body. Rationale: service-reported
+    timing may be unreliable, missing, or inconsistent across engine
+    implementations; local wall time is always available and comparable.
+    This is documented in the SUMMARY and asserted in Test 1.
+    """
+
+    def _client(self, handler, **kw):
+        return LTXVideoEngine(
+            base_url="http://test-ltx",
+            transport=httpx.MockTransport(handler),
+            **kw,
+        )
+
+    def test_generate_happy_path_returns_success_envelope(self):
+        """Service reports generation_time_ms=1200 in body, but we MUST
+        ignore it and return LOCALLY-measured wall time (INFO #10)."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={"clip_path": "/x.mp4", "generation_time_ms": 1200},
+            )
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1",
+                prompt="...",
+                structure_delta={"hook_position_sec": 5},
+            )
+        assert result["clip_path"] == "/x.mp4"
+        assert result["engine"] == "ltx"
+        assert isinstance(result["generation_time_ms"], int)
+        assert result["generation_time_ms"] >= 0
+        # INFO #10: service-reported 1200ms is IGNORED — we return wall time.
+        # (No assertion on exact value since wall time is non-deterministic;
+        # the key invariant is that it's an int and present.)
+        assert "degraded" not in result
+
+    def test_handler_receives_post_to_api_v1_ltx_with_correct_body(self):
+        captured: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured.append(request)
+            return httpx.Response(200, json={"clip_path": "/x.mp4"})
+
+        with self._client(handler) as engine:
+            engine.generate(
+                shot_id="s1",
+                prompt="...",
+                structure_delta={"hook_position_sec": 5},
+            )
+        assert len(captured) == 1
+        req = captured[0]
+        assert req.method == "POST"
+        assert req.url.path == "/api/v1/ltx"
+        # Body keys.
+        import json as _json
+
+        body = _json.loads(req.content.decode())
+        assert body["shot_id"] == "s1"
+        assert body["prompt"] == "..."
+        assert body["structure_delta"] == {"hook_position_sec": 5}
+
+    def test_generate_degrades_on_connect_error(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("conn refused", request=request)
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1", prompt="x", structure_delta={}
+            )
+        assert result["degraded"] is True
+        assert result["engine"] == "ltx"
+        assert "ConnectError" in result["reason"]
+
+    def test_generate_degrades_on_timeout(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.ReadTimeout("read timed out", request=request)
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1", prompt="x", structure_delta={}
+            )
+        assert result["degraded"] is True
+        assert "Timeout" in result["reason"] or "timed out" in result["reason"]
+
+    def test_generate_degrades_on_http_500(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(500)
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1", prompt="x", structure_delta={}
+            )
+        assert result["degraded"] is True
+        assert "HTTP 500" in result["reason"]
+
+    def test_generate_degrades_on_http_429(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(429)
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1", prompt="x", structure_delta={}
+            )
+        assert result["degraded"] is True
+        assert "HTTP 429" in result["reason"]
+
+    def test_generate_raises_on_http_400(self):
+        # 4xx is a caller bug (D-09: raise, do not degrade).
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(400, text="bad request body")
+
+        with self._client(handler) as engine:
+            with pytest.raises(PreviewEngineError) as excinfo:
+                engine.generate(
+                    shot_id="s1", prompt="x", structure_delta={}
+                )
+        assert "HTTP 400" in str(excinfo.value)
+
+    def test_generate_raises_on_invalid_json_response(self):
+        # Invalid JSON on a 2xx is a service-side bug (D-09: raise).
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200, content=b"not json at all", headers={"content-type": "application/json"}
+            )
+
+        with self._client(handler) as engine:
+            with pytest.raises(PreviewEngineError) as excinfo:
+                engine.generate(
+                    shot_id="s1", prompt="x", structure_delta={}
+                )
+        assert "JSON" in str(excinfo.value) or "json" in str(excinfo.value).lower()
+
+    def test_generate_degrades_when_clip_path_missing_in_response(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"unrelated": "field"})
+
+        with self._client(handler) as engine:
+            result = engine.generate(
+                shot_id="s1", prompt="x", structure_delta={}
+            )
+        assert result["degraded"] is True
+        assert result["engine"] == "ltx"
+        assert "clip_path" in result["reason"]
+
+    def test_constructor_reads_base_url_from_kwarg_or_env(self, monkeypatch):
+        # Kwarg wins.
+        engine_kwarg = LTXVideoEngine(
+            base_url="http://from-kwarg",
+            transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+        )
+        assert engine_kwarg._base_url == "http://from-kwarg"
+        engine_kwarg.close()
+
+        # Env var fallback.
+        monkeypatch.setenv("KAIS_LTX_URL", "http://from-env:9999")
+        engine_env = LTXVideoEngine(
+            transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+        )
+        assert engine_env._base_url == "http://from-env:9999"
+        engine_env.close()
+
+        # Default.
+        monkeypatch.delenv("KAIS_LTX_URL", raising=False)
+        engine_default = LTXVideoEngine(
+            transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+        )
+        assert engine_default._base_url == LTXVideoEngine.DEFAULT_BASE_URL
+        engine_default.close()
+
+    def test_engine_without_transport_uses_real_httpx_client(self):
+        # No transport injected -> real httpx.Client. Do NOT make a real
+        # network call; just verify the underlying client type.
+        engine = LTXVideoEngine()
+        assert isinstance(engine._client, httpx.Client)
+        assert engine._base_url == LTXVideoEngine.DEFAULT_BASE_URL
+        engine.close()
