@@ -36,9 +36,11 @@ from plugins.pipeline_state.asset_bus import ASSET_SCHEMA, AssetBus
 # HERMES_ROOT = tests/ → pipeline_state/ → plugins/ → hermes-agent/
 HERMES_ROOT = Path(__file__).resolve().parents[3]
 
-# V5.0 + Phase 35 + Phase 36 + Phase 40 + Phase 41 — the complete expected
-# ASSET_SCHEMA slot set. Plan prose says "33 slots" but the actual verified
-# count is 34 (off-by-one in plan comment; set equality is what matters).
+# V5.0 + Phase 35 + Phase 36 + Phase 40 + Phase 41 + Phase 42 — the complete
+# expected ASSET_SCHEMA slot set. Plan prose says "33 slots" but the actual
+# verified count is 34 (off-by-one in plan comment; set equality is what
+# matters). Phase 42-01 adds 2 more (feedback-data + feedback-rejected),
+# bringing the canonical set to 36.
 EXPECTED_SLOTS = {
     # V5.0 Phase 33 (3 typed + review-outcomes)
     "creative-history", "failed-shots", "finetune-dataset", "review-outcomes",
@@ -59,6 +61,8 @@ EXPECTED_SLOTS = {
     "rapid-preview-clips", "episode-meta",
     # v6.0 Phase 41 (1 recipe library)
     "emotion-recipe",
+    # v6.0 Phase 42 (2 feedback ingestion — added by plan 42-01)
+    "feedback-data", "feedback-rejected",
 }
 
 # Canonical V5.0 + Phase 40 test files (regression baseline — DO NOT MODIFY)

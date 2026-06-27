@@ -333,6 +333,40 @@ ASSET_SCHEMA: dict[str, dict] = {
         "writer_phase": "recipe_library",
         "reader_phases": [],  # Phase 42 feedback_ingest reads via RecipeLibrary methods
     },
+
+    # ── Phase 42-01 additions — Feedback Ingestion slots ──────────────
+    # Wave 1 plan 42-01 registers these 2 slots so FeedbackIngestClient
+    # (plugins/kais_aigc/feedback_ingest.py) can persist raw feedback
+    # records (feedback-data) and rejection audit trail (feedback-rejected).
+    # Append-only JSONL (one line per feedback / rejection). Per-plan
+    # asset-bus extension (D-36-05): PRESERVES existing slots
+    # byte-equivalent — only appends.
+    # NOTE: NOT added to AssetBus.JSONL_SLOTS frozenset (line ~444) —
+    # dispatch consults ASSET_SCHEMA[slot]["format"] directly, not
+    # JSONL_SLOTS. Keeping JSONL_SLOTS unchanged preserves the V5.0
+    # invariant asserted by test_asset_bus_phase35_slots.py::
+    # test_jsonl_slots_unchanged. The new slots' jsonl format in
+    # ASSET_SCHEMA is what the dispatch path actually checks.
+    "feedback-data": {
+        "file": "feedback-data.jsonl",
+        "format": "jsonl",  # append-only — use append_line() / read_lines()
+        "description": "Raw platform feedback records (POST /api/v1/feedback payload + "
+                       "received_at + signature_valid). One line per feedback "
+                       "submission. Reader: operator-side + RecipeLibrary.update_validation "
+                       "(Phase 42).",
+        "writer_phase": "feedback_ingest",
+        "reader_phases": [],
+    },
+    "feedback-rejected": {
+        "file": "feedback-rejected.jsonl",
+        "format": "jsonl",  # append-only — use append_line() / read_lines()
+        "description": "Rejected feedback submissions (signature/schema/semantic/episode "
+                       "existence failures). One line per rejection. Each line contains "
+                       "{feedback_id, reason, payload_snippet, timestamp}. Used for audit "
+                       "trail — never feeds RecipeLibrary.update_validation.",
+        "writer_phase": "feedback_ingest",
+        "reader_phases": [],
+    },
 }
 
 

@@ -173,13 +173,21 @@ class TestNewSlotsSchemaMetadata:
         Phase 33 contract: finetune-dataset is the original JSONL slot.
         Phase 40 (v6.0) adds rapid-preview-clips (p10b output, one line per variant).
         Phase 41 (v6.0) adds emotion-recipe (recipe_library, one line per recipe
-        version). Any further drift is a bug.
+        version).
+        Phase 42 (v6.0) adds feedback-data + feedback-rejected (feedback_ingest,
+        one line per feedback submission / rejection). Any further drift is a bug.
 
         Note: this list is derived from ASSET_SCHEMA[slot]["format"] == "jsonl",
         NOT from the AssetBus.JSONL_SLOTS frozenset. The frozenset is kept
         UNCHANGED at {finetune-dataset} — see D-36-05 + plan 41-01 Test 4.
         """
         jsonl = [s for s, cfg in ASSET_SCHEMA.items() if cfg.get("format") == "jsonl"]
-        assert jsonl == ["finetune-dataset", "rapid-preview-clips", "emotion-recipe"], (
+        assert jsonl == [
+            "finetune-dataset",
+            "rapid-preview-clips",
+            "emotion-recipe",
+            "feedback-data",
+            "feedback-rejected",
+        ], (
             f"JSONL slot set drifted: {jsonl}"
         )
