@@ -258,9 +258,13 @@ class TestSubmitFeedbackPipeline:
         )
         client.submit_feedback(body, sig)
         assert recipe_with_episode.update_call_count == 1
+        args = recipe_with_episode.last_update_args["args"]
         kwargs = recipe_with_episode.last_update_args["kwargs"]
-        assert kwargs["platform"] == "douyin"
-        assert kwargs["completion_rate"] == pytest.approx(0.48)
+        # Positional: (recipe_id, platform, completion_rate)
+        assert args[0] == "test-001"            # recipe_id from recipe_with_episode
+        assert args[1] == "douyin"              # platform
+        assert args[2] == pytest.approx(0.48)   # completion_rate
+        # Keyword: sample_size_delta + use_continuous_rate
         assert kwargs["sample_size_delta"] == 1
         assert kwargs["use_continuous_rate"] is True
 

@@ -126,26 +126,31 @@ class TestGetFeedback:
 
 
 # ===================================================================
-# Test 7: submit_feedback stub
+# Test 7: submit_feedback exists and returns a dict envelope
+# (Phase 42-02 replaced the not_implemented stub with the full
+# validation pipeline. The skeleton test now asserts the method
+# exists + returns a dict; the full pipeline behavior is verified in
+# test_feedback_validation.py.)
 # ===================================================================
 class TestSubmitFeedbackStub:
-    def test_submit_feedback_returns_not_implemented_envelope(
+    def test_submit_feedback_returns_dict_envelope(
         self, bus, recipe_library,
     ):
-        """Test 7: submit_feedback(body, signature) exists and returns the
-        documented stub envelope (full impl arrives in 42-02/03)."""
+        """Test 7: submit_feedback(body, signature) exists and returns a
+        dict envelope. Phase 42-02 replaced the not_implemented stub with
+        the full validation pipeline — without a configured secret + a
+        valid recipe, the call rejects with status='rejected'."""
         client = FeedbackIngestClient(
             asset_bus=bus, recipe_library=recipe_library,
         )
         result = client.submit_feedback(b'{"x": 1}', "sha256=abc")
         assert isinstance(result, dict)
-        assert result.get("status") == "not_implemented"
-        assert "reason" in result
-        # The stub reason should mention 42-02 / 42-03 so future plans can
-        # grep for the deferred-impl marker.
-        assert "42-02" in result["reason"] or "42-03" in result["reason"], (
-            f"stub reason should reference 42-02/42-03; got {result['reason']!r}"
-        )
+        assert "status" in result
+        # Without a configured secret, stage 1 (signature) rejects -> 401.
+        # (Phase 42 ALWAYS requires a secret — NO dev-mode escape.)
+        assert result["status"] == "rejected"
+        assert result.get("reason") == "signature"
+        assert result.get("http_status") == 401
 
 
 # ===================================================================
