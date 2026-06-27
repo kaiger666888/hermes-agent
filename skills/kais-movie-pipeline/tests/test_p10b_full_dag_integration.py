@@ -173,6 +173,16 @@ class _StubBus:
 
     Mirrors test_runner_full_dag.py's _StubBus but adds a ``writes`` recorder
     so we can assert p10b wrote rapid-preview-clips entries.
+
+    Phase 40 CR-01 fix: after the runner was patched to dispatch on
+    ``ASSET_SCHEMA[slot]["format"]`` (JSONL → append_line, JSON → write),
+    the stub MUST expose ``append_line`` / ``read_lines`` so it faithfully
+    mirrors the production AssetBus. Previously the stub's ``write`` did
+    double-duty (dispatching internally on format) — which is exactly the
+    masking behavior that hid CR-01 from the original integration tests.
+    Now the stub dispatch matches the production dispatch at the
+    call-boundary, so a regression in the runner's dispatch surfaces as a
+    stub-side failure here rather than slipping through.
     """
 
     def __init__(self, initial_slots: dict[str, Any] | None = None):
@@ -181,20 +191,44 @@ class _StubBus:
         self.writes: list[tuple[str, Any]] = []
 
     def read(self, slot: str):
-        return self.slots.get(slot)
-
-    def write(self, slot: str, entry, envelope: bool = True, **kwargs):
-        # JSON slots overwrite; JSONL slots append (we honor the format hint
-        # by checking ASSET_SCHEMA — but the V5.0 _StubBus unconditionally
-        # overwrites; to keep rapid-preview-clips as a list of records we
-        # append when slot is jsonl-format).
+        # JSONL slots must dispatch to read_lines (mirrors runner dispatch).
         from plugins.pipeline_state.asset_bus import ASSET_SCHEMA
         schema = ASSET_SCHEMA.get(slot, {})
         if schema.get("format") == "jsonl":
-            self.slots.setdefault(slot, []).append(entry)
-        else:
-            self.slots[slot] = entry
+            return self.read_lines(slot)
+        return self.slots.get(slot)
+
+    def read_lines(self, slot: str) -> list[dict]:
+        val = self.slots.get(slot)
+        if val is None:
+            return []
+        return list(val) if isinstance(val, list) else [val]
+
+    def write(self, slot: str, entry, envelope: bool = True, **kwargs):
+        # JSON slots overwrite only. JSONL-format slots routed through
+        # ``write`` raise here to surface contract violations in tests
+        # (mirrors the real AssetBus.write guard at asset_bus.py:469-472).
+        from plugins.pipeline_state.asset_bus import ASSET_SCHEMA
+        schema = ASSET_SCHEMA.get(slot, {})
+        if schema.get("format") == "jsonl":
+            raise RuntimeError(
+                f"_StubBus.write called on JSONL slot {slot!r} — use append_line()"
+            )
+        self.slots[slot] = entry
         self.writes.append((slot, entry))
+
+    def append_line(self, slot: str, entry: dict) -> str:
+        # JSONL slots append one record. JSON-format slots routed through
+        # ``append_line`` raise here (mirrors real AssetBus.append_line guard).
+        from plugins.pipeline_state.asset_bus import ASSET_SCHEMA
+        schema = ASSET_SCHEMA.get(slot, {})
+        if schema.get("format") != "jsonl":
+            raise RuntimeError(
+                f"_StubBus.append_line called on non-JSONL slot {slot!r} — use write()"
+            )
+        self.slots.setdefault(slot, []).append(entry)
+        self.writes.append((slot, entry))
+        return f"<stub>/{slot}"
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +278,57 @@ class _AlwaysDegradeEngine(PreviewEngine):
 
 
 class TestP10bFullDagIntegration:
-    """WARNING #9 fix: runner iterates PHASE_REGISTRY to p10b in a full DAG run."""
+    """WARNING #9 fix: runner iterates PHASE_REGISTRY to p10b in a full DAG run.
+
+    CRITICAL isolation note: pytest collects tests alphabetically, so
+    test_runner_full_dag.py's TestFullDagRun runs BEFORE this class.
+    TestFullDagRun uses an autouse fixture that swaps p10b in
+    PHASE_REGISTRY with _P10bStubProxy (no-op). The fixture restores the
+    registry on teardown, BUT the restore is keyed on list identity, and
+    test_p03_unit.py calls ``importlib.reload(phases_mod)`` which rebinds
+    phases_mod.PHASE_REGISTRY to a new list object — leaving
+    runner_mod.PHASE_REGISTRY holding the OLD list (still containing the
+    _P10bStubProxy entry). This autouse fixture ensures BOTH registries
+    point at the REAL p10b module before each test runs.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _restore_real_p10b_in_both_registries(self):
+        """Ensure p10b in BOTH registries points at the real module.
+
+        test_runner_full_dag.py's _P10bStubProxy swap can leak across the
+        shared/stale list boundary (see comment in test_runner_full_dag.py
+        about importlib.reload rebinding). This fixture hard-overrides
+        p10b in both registries to the real module for the duration of
+        each test in this class.
+        """
+        from pipeline.phases import p10b_rapid_preview as real_p10b
+
+        def _force_real(registry_list):
+            for i, e in enumerate(registry_list):
+                if e.get("id") == "p10b_rapid_preview":
+                    saved = registry_list[i]
+                    registry_list[i] = {
+                        "id": "p10b_rapid_preview",
+                        "module": real_p10b,
+                        "depends_on": saved.get("depends_on", ["p10_voice"]),
+                    }
+                    return i, saved
+            return None
+
+        swap_phases = _force_real(phases_mod.PHASE_REGISTRY)
+        swap_runner = _force_real(runner_mod.PHASE_REGISTRY)
+        try:
+            yield
+        finally:
+            # Restore whatever was there before (defensive — usually the
+            # real module was already there, so this is a no-op).
+            if swap_phases is not None:
+                idx, saved = swap_phases
+                phases_mod.PHASE_REGISTRY[idx] = saved
+            if swap_runner is not None:
+                idx, saved = swap_runner
+                runner_mod.PHASE_REGISTRY[idx] = saved
 
     def test_p10b_appears_in_result_phases_after_full_dag(self, tmp_path, monkeypatch):
         """Test 1: after a full DAG run with mocked engines,

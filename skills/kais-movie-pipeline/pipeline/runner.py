@@ -41,6 +41,15 @@ from typing import Any, Callable
 # skill directory on sys.path), this relative import works.
 from pipeline.phases import PHASE_REGISTRY
 
+# Phase 40 CR-01 fix: the runner's injected ``_asset_bus_write`` /
+# ``_asset_bus_read`` callables dispatch on slot format (JSON vs JSONL) to
+# route writes to the correct AssetBus method. We import ASSET_SCHEMA
+# top-level so the dispatch lookup is in the module's globals (cheap).
+# Lazy import is unnecessary here — ``asset_bus`` is already pulled in by
+# ``_make_production_bus`` when the runner actually runs, and importing the
+# module itself is cheap (stdlib-only).
+from plugins.pipeline_state.asset_bus import ASSET_SCHEMA
+
 logger = logging.getLogger(__name__)
 
 
@@ -283,10 +292,28 @@ def run_episode(
     # Asset-bus adapter callables — phase modules receive these, not the
     # raw bus object, so test doubles can be plain callables.
     def _asset_bus_read(slot: str) -> Any:
+        # JSONL slots must dispatch to read_lines; JSON slots dispatch to read.
+        # Mirrors the write-side dispatch below (Phase 40 CR-01 fix).
+        schema = ASSET_SCHEMA.get(slot, {})
+        if schema.get("format") == "jsonl":
+            return bus.read_lines(slot)
         return bus.read(slot)
 
     def _asset_bus_write(slot: str, entry: dict) -> None:
-        bus.write(slot, entry, envelope=True)
+        # Phase 40 CR-01 fix: dispatch on slot format. JSONL-format slots
+        # (e.g., rapid-preview-clips, finetune-dataset) MUST route through
+        # ``append_line`` — ``AssetBus.write()`` explicitly raises
+        # ``AssetBusError`` for JSONL slots (asset_bus.py:469-472). Without
+        # this dispatch the very first successful p10b variant record would
+        # raise inside the runner and be swallowed by p10b's outer
+        # ``except Exception``, silently downgrading every episode to
+        # ``preview_skipped=True`` regardless of actual engine health.
+        # JSON slots use the envelope-wrapped atomic write path.
+        schema = ASSET_SCHEMA.get(slot, {})
+        if schema.get("format") == "jsonl":
+            bus.append_line(slot, entry)
+        else:
+            bus.write(slot, entry, envelope=True)
 
     # Resume detection
     checkpoint = store.load_latest_checkpoint(episode_id)
