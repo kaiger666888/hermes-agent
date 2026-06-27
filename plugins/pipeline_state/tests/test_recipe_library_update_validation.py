@@ -271,13 +271,31 @@ class TestRecipeLibraryUpdateValidation:
             rl.update_validation(rid, platform="douyin", completion_rate=bad_cr)
 
     # Test 14: Phase 42 contract — signature is exactly
-    # (self, recipe_id, platform, completion_rate, sample_size_delta=1)
+    # (self, recipe_id, platform, completion_rate, sample_size_delta=1,
+    #  *, use_continuous_rate=False).
+    #
+    # Phase 42-02 widening (CONTEXT.md-authorized exception to the original
+    # Phase 41 LOCKED signature): a new keyword-only ``use_continuous_rate``
+    # parameter is added. Default ``False`` preserves Phase 41's int-passed
+    # Wilson CI path with zero behavior change. The Positional-prefix
+    # ``[self, recipe_id, platform, completion_rate, sample_size_delta]``
+    # is unchanged — only a new keyword-only param follows.
     def test_phase_42_signature_stability(self):
         sig = inspect.signature(RecipeLibrary.update_validation)
         params = list(sig.parameters.keys())
-        assert params == ["self", "recipe_id", "platform", "completion_rate", "sample_size_delta"]
-        # default for sample_size_delta must be 1
+        # Positional-prefix unchanged from Phase 41.
+        assert params[:5] == [
+            "self", "recipe_id", "platform", "completion_rate", "sample_size_delta",
+        ]
+        # Phase 42-02 addition: keyword-only use_continuous_rate.
+        assert params[5:] == ["use_continuous_rate"]
+        assert sig.parameters["use_continuous_rate"].kind == (
+            inspect.Parameter.KEYWORD_ONLY
+        )
+        # default for sample_size_delta must be 1 (Phase 41 contract).
         assert sig.parameters["sample_size_delta"].default == 1
+        # default for use_continuous_rate must be False (Phase 42-02 contract).
+        assert sig.parameters["use_continuous_rate"].default is False
         # required params (no default): recipe_id, platform, completion_rate
         for name in ("recipe_id", "platform", "completion_rate"):
             assert sig.parameters[name].default is inspect.Parameter.empty

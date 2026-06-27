@@ -24,6 +24,21 @@ RECIPE-LIB-03: emotion-recipe AssetBus slot, append-only, multi-version.
 RECIPE-LIB-05: list_recipes genre + converged filters (similarity in 41-03).
 RECIPE-LIB-06: provenance chains recipe → source_episode; recipe_id
                follows <genre-slug>-<NNN> zero-padded pattern.
+
+Phase 42-02 additions (CONTEXT.md "Wilson CI: continuous binomial rate"):
+  - ``_wilson_ci`` type annotation widened to ``int | float`` for passed
+    and total. Math body unchanged (Wilson score interval is well-defined
+    for any continuous ``p`` in ``[0,1]``). Phase 41 int-path callers are
+    fully backward compatible.
+  - ``update_validation`` gains a keyword-only ``use_continuous_rate: bool =
+    False`` parameter. When ``True`` (used by ``feedback_ingest.py``), the
+    cumulative float ``passed`` is fed directly to ``_wilson_ci`` (passed +=
+    completion_rate, total += 1.0 per feedback) — preserves information
+    versus the Phase 41 int-passed quantization. Default ``False`` preserves
+    Phase 41 behavior with zero regression.
+  - ``get_recipe_by_episode(source_episode)`` helper added for Phase 42
+    feedback_ingest._lookup_episode. Returns None on unknown (does NOT
+    raise KeyError — distinct from get_recipe semantics).
 """
 from __future__ import annotations
 
@@ -291,12 +306,23 @@ def _map_d5_to_ending_state(d5_completion: int) -> str:
 
 # ─── Phase 41-02: Wilson CI + converged flag (pure stdlib) ────────────
 
-def _wilson_ci(passed: int, total: int, z: float = 1.96) -> tuple[float, float]:
+def _wilson_ci(
+    passed: int | float,
+    total: int | float,
+    z: float = 1.96,
+) -> tuple[float, float]:
     """Wilson score confidence interval (pure stdlib — uses math.sqrt only).
 
     Returns ``(lower, upper)`` bounds at the given z-score (default 1.96 = 95% CI).
     Returns ``(0.0, 1.0)`` — the widest possible interval — when ``total <= 0``
     (CONTEXT.md: divide-by-zero mitigation, threat T-41-09).
+
+    Phase 42 widening (CONTEXT.md "Wilson CI: continuous binomial rate"):
+        ``passed`` and ``total`` now accept ``int | float``. The Wilson
+        score interval formula is mathematically well-defined for any
+        continuous ``p`` in ``[0, 1]``; the math body is unchanged from
+        Phase 41 (only the type annotations widened). Phase 41 int-path
+        callers pass ``int`` unchanged — fully backward compatible.
 
     Formula (CONTEXT.md "Wilson confidence interval"):
         p_hat   = passed / total
@@ -555,6 +581,38 @@ class RecipeLibrary:
 
         return results
 
+    # ── Core method 4: get_recipe_by_episode (Phase 42 addition) ─────
+    # CONTEXT.md "RecipeLibrary integration": FeedbackIngestClient needs
+    # to resolve an episode_id to its recipe before calling update_validation.
+    # This helper is best-effort — returns None on unknown (does NOT raise
+    # KeyError, deliberately differs from get_recipe to support 404 flows
+    # in the validation pipeline).
+
+    def get_recipe_by_episode(self, source_episode: str) -> dict | None:
+        """Return the latest recipe whose ``provenance.source_episode`` matches.
+
+        Phase 42 helper used by ``FeedbackIngestClient._lookup_episode`` to
+        resolve an inbound ``episode_id`` to its recipe before calling
+        ``update_validation``. Scans ``list_recipes()`` (latest version per
+        recipe_id) for a matching ``provenance.source_episode``.
+
+        Args:
+            source_episode: Episode identifier to look up.
+
+        Returns:
+            Latest-version recipe dict whose provenance.source_episode matches,
+            or ``None`` if no recipe matches. DOES NOT raise on unknown
+            (best-effort lookup — caller treats ``None`` as 404 episode_not_found,
+            distinct from get_recipe's KeyError-on-unknown semantics).
+        """
+        if not source_episode:
+            return None
+        for recipe in self.list_recipes():
+            prov = recipe.get("provenance") or {}
+            if prov.get("source_episode") == source_episode:
+                return recipe
+        return None
+
     # ── Helper: extract_structure_from_episode (RECIPE-LIB-04) ────────
     # DATA SOURCE PIVOT (plan-checker BLOCKER #1, locked 2026-06-27):
     #   Reads `story-framework` + `final-audit` AssetBus slots (NOT the
@@ -689,8 +747,17 @@ class RecipeLibrary:
         }
 
     # ── Core method 4: update_validation (RECIPE-LIB-01) ─────────────
-    # Phase 42 contract — signature is LOCKED. feedback_ingest.py will call
-    # this method after each feedback submission to close the convergence loop.
+    # Phase 42 contract — feedback_ingest.py calls this method after each
+    # feedback submission to close the convergence loop.
+    #
+    # Phase 42-02 widening (CONTEXT.md-authorized exception to Phase 41's
+    # LOCKED signature): adds keyword-only ``use_continuous_rate: bool = False``.
+    # Default ``False`` preserves Phase 41's int-passed Wilson CI path with
+    # zero behavior change (Test 6 + Phase 41 regression Test 7 verify this).
+    # ``True`` skips the ``int(round(...))`` quantization and passes the
+    # cumulative float ``passed`` directly to ``_wilson_ci`` — mathematically
+    # correct for continuous binomial rates (passed += cr, total += 1.0 per
+    # feedback). feedback_ingest.py uses ``use_continuous_rate=True``.
 
     def update_validation(
         self,
@@ -698,12 +765,14 @@ class RecipeLibrary:
         platform: str,
         completion_rate: float,
         sample_size_delta: int = 1,
+        *,
+        use_continuous_rate: bool = False,
     ) -> dict | None:
         """Append a new validation{} version row to an existing recipe.
 
         This method is the **Phase 42 contract** — ``feedback_ingest.
         FeedbackIngestClient`` calls it after each feedback submission to
-        close the convergence loop. Signature is LOCKED.
+        close the convergence loop.
 
         Flow (CONTEXT.md "update_validation flow" — 4 steps):
           1. Read latest recipe version (KeyError propagates if unknown).
@@ -723,6 +792,16 @@ class RecipeLibrary:
             completion_rate: Float in [0.0, 1.0] for this batch of feedback.
             sample_size_delta: How many new samples this update represents
                 (default 1; pass larger values for batch ingest).
+            use_continuous_rate: Keyword-only (default ``False``). When
+                ``False``, Phase 41's int-passed Wilson CI path is preserved
+                (``passed = int(round(cr * sample_size))`` — quantizes per
+                sample, minor information loss). When ``True``, skip the
+                quantization and pass the cumulative float ``passed`` directly
+                to ``_wilson_ci`` — mathematically correct for continuous
+                binomial rates (Wilson score interval is well-defined for any
+                ``p`` in ``[0,1]``). Used by ``feedback_ingest.py`` to preserve
+                per-feedback completion_rate information (``passed += 0.48``,
+                ``total += 1.0``).
 
         Returns:
             New version row dict, OR None if the AssetBus append failed
@@ -777,9 +856,25 @@ class RecipeLibrary:
             ) / new_sample_size
         else:
             new_completion_rate = 0.0
+            cumulative_passed = 0.0
 
-        passed_int = int(round(new_completion_rate * new_sample_size))
-        lower, upper = _wilson_ci(passed_int, new_sample_size)
+        # Wilson CI input: int-passed (Phase 41 default) vs continuous float
+        # (Phase 42 use_continuous_rate=True). The output completion_rate is
+        # the same running average either way — only the CI computation input
+        # differs. Continuous path preserves information: passed += cr (float),
+        # total += 1.0 per feedback. Wilson score interval math is unchanged.
+        if use_continuous_rate:
+            # Float passed: cumulative_passed (old_cr * old_sample) + new batch.
+            # For sample_size_delta > 1 the new batch contributes
+            # completion_rate * sample_size_delta (a float).
+            passed_for_ci = (
+                cumulative_passed + float(completion_rate) * sample_size_delta
+            )
+            lower, upper = _wilson_ci(passed_for_ci, new_sample_size)
+        else:
+            # Phase 41 int-path: quantize cumulative pass count to int.
+            passed_int = int(round(new_completion_rate * new_sample_size))
+            lower, upper = _wilson_ci(passed_int, new_sample_size)
         ci_str = f"±{int(round((upper - lower) / 2 * 100))}%"
         new_converged = _is_converged(new_sample_size, lower, upper)
 
