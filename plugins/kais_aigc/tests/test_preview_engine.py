@@ -8,13 +8,13 @@ Three test classes track the three plan tasks:
 - ``TestSlideshowEngine`` (Task 2): FFmpeg subprocess engine + degrade paths.
 - ``TestLTXVideoEngine`` (Task 3): mocked httpx POST + D-09 degrade contract.
 
-WARNING #7 lifecycle:
-- Task 1 leaves ``SlideshowEngine`` + ``LTXVideoEngine`` as stubs whose
-  ``generate()`` raises ``NotImplementedError``. Test 9 in
-  ``TestPreviewEngineABC`` asserts this at the Task 1 -> 2/3 boundary.
-- Task 2 expands ``SlideshowEngine``; Test 9 is adjusted to assert only
-  ``LTXVideoEngine.generate()`` raises ``NotImplementedError``.
-- Task 3 expands ``LTXVideoEngine``; Test 9 is removed (both stubs gone).
+WARNING #7 lifecycle (Task 1 -> 2 -> 3):
+- Task 1: Test 9 (``test_stub_subclasses_raise_not_implemented_at_task_1_boundary``)
+  asserted both stubs raised ``NotImplementedError`` on generate().
+- Task 2: SlideshowEngine expanded; Test 9 adjusted to assert only the
+  LTXVideoEngine stub still raised NIE.
+- Task 3: LTXVideoEngine expanded; Test 9 REMOVED entirely. Both engines
+  now have real implementations exercised in their own test classes.
 """
 
 from __future__ import annotations
@@ -96,43 +96,15 @@ class TestPreviewEngineABC:
         second = select_engine()
         assert isinstance(second, LTXVideoEngine)
 
-    def test_stub_subclasses_raise_not_implemented_at_task_1_boundary(self):
-        """WARNING #7 fix: validates the stub strategy at the Task 1 -> 2/3
-        boundary.
-
-        Lifecycle:
-        - Task 1: both SlideshowEngine + LTXVideoEngine stubs raise NIE.
-        - Task 2: SlideshowEngine stub expanded; this test asserts ONLY the
-          LTXVideoEngine stub still raises NIE.
-        - Task 3: LTXVideoEngine stub expanded; this test is REMOVED entirely.
-        """
-        # Task 2 onward: SlideshowEngine is no longer a stub — assert it
-        # does NOT raise NotImplementedError. (Test evolves as stubs expand.)
-        slideshow = select_engine(env="slideshow")
-        # Between Task 1 and Task 2 GREEN, slideshow.generate still raises NIE.
-        # After Task 2 GREEN, this branch is replaced with a real call. See
-        # the TestSlideshowEngine class for the full behavior coverage.
-        try:
-            slideshow.generate(
-                shot_id="s1",
-                prompt="x",
-                structure_delta={},
-                keyframe_image_path="/tmp/k.png",
-                voice_clip_path="/tmp/v.wav",
-                output_path="/tmp/o.mp4",
-            )
-        except NotImplementedError:
-            pass  # Task 1 state — still a stub.
-        except Exception:
-            # Any other exception (e.g. degrade envelope) means the stub has
-            # been expanded — that's fine, the TestSlideshowEngine class
-            # covers the real behavior.
-            pass
-
-        # LTXVideoEngine is still a stub until Task 3.
-        ltx = select_engine(env="ltx")
-        with pytest.raises(NotImplementedError):
-            ltx.generate(shot_id="s1", prompt="x", structure_delta={})
+    # NOTE: Test 9 (test_stub_subclasses_raise_not_implemented_at_task_1_boundary)
+    # has been REMOVED per plan Task 3 done criteria: "Test 9 from Task 1
+    # removed (both stubs now expanded)". Both SlideshowEngine (Task 2) and
+    # LTXVideoEngine (Task 3) have real implementations — the WARNING #7
+    # boundary check no longer applies. Lifecycle of that test:
+    #   - Task 1: asserted both stubs raise NotImplementedError (RED/GREEN).
+    #   - Task 2: adjusted to assert only LTXVideoEngine still raised NIE.
+    #   - Task 3 (now): removed entirely. Real implementations are exercised
+    #     in TestSlideshowEngine and TestLTXVideoEngine.
 
 
 class TestSlideshowEngine:

@@ -46,6 +46,8 @@ import subprocess
 import time
 from typing import Any, Callable
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 
@@ -238,14 +240,98 @@ class SlideshowEngine(PreviewEngine):
 
 
 class LTXVideoEngine(PreviewEngine):
-    """LTX-Video HTTP engine (mocked in v6.0).
+    """LTX-Video HTTP engine (mocked in v6.0; real GPU deferred to operator).
 
-    Stub at Task 1 boundary. Task 3 implements:
-    - Constructor mirroring GoldTeamClient (transport / base_url / timeout).
-    - ``_request()`` enforcing D-09 degrade-first contract.
-    - ``generate()`` POSTing to ``/api/v1/ltx`` and returning the success /
-      degrade envelope (INFO #10: locally-measured wall time).
+    POSTs to ``/api/v1/ltx`` with ``{shot_id, prompt, structure_delta}`` and
+    returns the produced clip path. Mirrors ``GoldTeamClient`` structure
+    EXACTLY for the D-09 degrade-first contract:
+
+    - ConnectError / TimeoutException / HTTPError -> degrade envelope.
+    - status >= 500 or status == 429 -> degrade envelope.
+    - status >= 400 -> raise ``PreviewEngineError`` (caller bug).
+    - 2xx -> parse JSON; invalid JSON -> raise (service bug).
+
+    INFO #10: ``generation_time_ms`` in the SUCCESS envelope is the
+    LOCALLY-measured wall time, NOT the value reported in the response body.
     """
+
+    DEFAULT_BASE_URL = "http://localhost:9001"
+    DEFAULT_TIMEOUT = 30.0  # LTX-Video is second-scale; allow generous timeout.
+
+    def __init__(
+        self,
+        *,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        """Construct the engine.
+
+        Parameters mirror ``GoldTeamClient`` (D-06 env-var configuration at
+        construction time, never at module import):
+
+        - ``base_url`` / ``KAIS_LTX_URL``: LTX-Video service base URL.
+        - ``timeout``: per-request timeout in seconds.
+        - ``transport``: hermetic test injection via ``httpx.MockTransport``.
+          ``None`` (default) uses real networking.
+        """
+        self._base_url = (
+            base_url
+            or os.environ.get("KAIS_LTX_URL")
+            or self.DEFAULT_BASE_URL
+        ).rstrip("/")
+        self._timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        # transport=None -> real network; tests inject httpx.MockTransport.
+        self._client = httpx.Client(timeout=self._timeout, transport=transport)
+
+    def _degrade(self, reason: str) -> dict[str, Any]:
+        """Return the uniform degrade envelope and log a warning (D-09).
+
+        Mirrors ``GoldTeamClient._degrade`` shape (with ``engine`` instead
+        of ``client`` / ``operation`` since the engine is single-purpose).
+        """
+        logger.warning("ltx_engine degraded: %s", reason)
+        return {"degraded": True, "engine": "ltx", "reason": reason}
+
+    def _request(self, body: dict) -> Any:
+        """Central HTTP wrapper enforcing D-09 degrade / raise contract.
+
+        Mirrors ``GoldTeamClient._request`` (lines 170-221 of gold_team.py):
+        - ConnectError / TimeoutException / HTTPError -> degrade envelope.
+        - status >= 500 or status == 429 -> degrade envelope.
+        - status >= 400 -> raise ``PreviewEngineError`` (caller bug).
+        - 2xx -> parse JSON; invalid JSON -> raise (service-side bug).
+        """
+        url = f"{self._base_url}/api/v1/ltx"
+        try:
+            response = self._client.post(
+                url,
+                headers={"Content-Type": "application/json"},
+                json=body,
+            )
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            # D-09: degrade on connect / timeout (server-side problem).
+            return self._degrade(f"{type(exc).__name__}: {exc}")
+        except httpx.HTTPError as exc:
+            # Catch-all for other httpx transport errors (also degrade).
+            return self._degrade(f"{type(exc).__name__}: {exc}")
+
+        status = response.status_code
+        text = response.text
+
+        if status >= 500 or status == 429:
+            # D-09: degrade on server errors and rate limiting.
+            return self._degrade(f"HTTP {status}")
+
+        if status >= 400:
+            # 4xx is a caller bug - raise, do not degrade.
+            raise PreviewEngineError(f"HTTP {status}: {text[:200]}")
+
+        # 2xx - parse JSON. Invalid JSON is a service-side bug, so raise.
+        try:
+            return response.json()
+        except Exception:
+            raise PreviewEngineError(f"Invalid JSON response: {text[:200]}")
 
     def generate(
         self,
@@ -257,6 +343,41 @@ class LTXVideoEngine(PreviewEngine):
         voice_clip_path: str | None = None,
         output_path: str | None = None,
     ) -> dict:
-        raise NotImplementedError(
-            "LTXVideoEngine.generate() implemented in plan 40-02 Task 3"
-        )
+        """POST one variant request to LTX-Video and return the envelope.
+
+        INFO #10: ``generation_time_ms`` is LOCALLY-measured wall time; the
+        response body's reported timing is IGNORED. Local wall time is
+        always available and comparable across engines.
+        """
+        body = {
+            "shot_id": shot_id,
+            "prompt": prompt,
+            "structure_delta": structure_delta,
+        }
+        start = time.monotonic()
+        result = self._request(body)
+        # Pass-through degrade envelope (already shaped by _degrade).
+        if isinstance(result, dict) and result.get("degraded"):
+            return result
+        # Validate response shape: must have clip_path.
+        if not isinstance(result, dict) or "clip_path" not in result:
+            return self._degrade("missing clip_path in ltx response")
+        return {
+            "clip_path": result["clip_path"],
+            "generation_time_ms": self._record_time(start),
+            "engine": "ltx",
+        }
+
+    # ------------------------------------------------------------------
+    # Lifecycle (mirrors GoldTeamClient)
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Close the underlying httpx client."""
+        self._client.close()
+
+    def __enter__(self) -> "LTXVideoEngine":
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
