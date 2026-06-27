@@ -9,7 +9,7 @@ entire "smart" Wilson-CI + convergence-detection logic lives in Phase
 receive -> verify -> store -> forward.
 
 Plan 42-01 shipped the client skeleton (__init__, get_feedback,
-submit_feedback stub). Plan 42-02 (this module version) implements:
+submit_feedback stub). Plan 42-02 implemented:
   - HMAC-SHA256 signature verification helper (``_verify_signature``)
     using ``hmac.compare_digest`` (constant-time). Phase 42 ALWAYS
     requires a secret — NO dev-mode escape (deliberate divergence from
@@ -31,7 +31,15 @@ submit_feedback stub). Plan 42-02 (this module version) implements:
     so completion_rate is passed as a float to ``_wilson_ci``
     (passed += cr, total += 1.0 per feedback).
 
-Plan 42-03 will add the HTTP server (httpx + Starlette).
+Plan 42-03 (this module version) adds the HTTP server:
+  - ``list_pending_updates``: operator-side "pending review queue" reader.
+  - ``_build_starlette_app``: pure ASGI factory wiring POST /api/v1/feedback
+    to ``submit_feedback``.
+  - ``start_feedback_server``: context manager that runs uvicorn in a
+    daemon thread (test/in-process use) and shuts it down on exit
+    (``server.should_exit = True`` + ``thread.join``).
+  - ``__main__`` CLI block for production ``python -m
+    plugins.kais_aigc.feedback_ingest`` invocation.
 
 Sibling modules: ``gold_team.py``, ``review_platform.py`` (V5.0) -
 mirrors their constructor pattern (env-var config, sync API per D-07,
@@ -40,10 +48,15 @@ context-manager lifecycle).
 DESIGN INVARIANTS:
 - D-06: env vars (KAIS_FEEDBACK_PORT, KAIS_FEEDBACK_SECRET) read at
   construction time, never at module import.
-- D-07: sync API (no async, no threads) - mirrors V5.0 kais_aigc
-  clients.
-- HTTP server deps (httpx, starlette) are deliberately NOT imported in
-  this skeleton - plan 42-03 adds them when the HTTP handler lands.
+- D-07: sync API for the validation pipeline (no async, no threads) -
+  mirrors V5.0 kais_aigc clients. The Starlette route handler is async
+  (ASGI contract) but delegates to the sync ``submit_feedback``; the
+  daemon thread that hosts uvicorn is the ONLY thread used.
+- HTTP server deps (starlette, uvicorn) are V5.0-blessed deps and are
+  imported lazily inside ``_build_starlette_app`` /
+  ``start_feedback_server`` / ``__main__`` so importing this module for
+  the validation-only path (42-01 / 42-02 callers) does NOT pull them
+  in. httpx is imported by tests + ``__main__`` only.
 - HMAC verification happens BEFORE JSON parsing - deliberate DoS
   mitigation (reject invalid signatures without burning CPU on
   potentially-malicious JSON).
@@ -61,6 +74,7 @@ pipeline itself.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import json
@@ -96,6 +110,8 @@ __all__ = [
     "_verify_signature",
     "_validate_schema",
     "_validate_semantic",
+    "_build_starlette_app",
+    "start_feedback_server",
 ]
 
 
@@ -314,6 +330,34 @@ class FeedbackIngestClient:
             rows = [r for r in rows if r.get("episode_id") == episode_id]
         return rows
 
+    def list_pending_updates(self, *, limit: int = 10) -> list[dict]:
+        """Return the most-recent N ``feedback-data`` records (newest first).
+
+        This is the operator-facing "pending review queue" — a human can
+        poll it to inspect recently-ingested platform feedback without
+        running a full SQL query against the JSONL slot. Sorting is by
+        ``received_at`` descending (ISO 8601 sorts lexicographically for
+        a fixed format, which ``_now_iso`` guarantees).
+
+        Args:
+            limit: Maximum number of records to return. Must be an int
+                >= 1. Default 10.
+
+        Returns:
+            List of at most ``limit`` feedback record dicts, newest
+            first. Returns ``[]`` when the slot is empty.
+
+        Raises:
+            ValueError: if ``limit`` is not an int or is < 1.
+        """
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+            raise ValueError(f"limit must be int >= 1, got {limit!r}")
+        rows = self._bus.read_lines(SLOT_FEEDBACK_DATA)
+        rows_sorted = sorted(
+            rows, key=lambda r: r.get("received_at", ""), reverse=True,
+        )
+        return rows_sorted[:limit]
+
     # ── Write path (full impl landed in 42-02) ────────────────────────
 
     def submit_feedback(self, body: bytes, signature: str) -> dict:
@@ -526,3 +570,219 @@ class FeedbackIngestClient:
 
     def __exit__(self, *exc: object) -> None:
         self.close()
+
+
+# ─── HTTP server wiring (plan 42-03) ──────────────────────────────────
+#
+# The Starlette + uvicorn imports live INSIDE the functions so that
+# callers using only the validation pipeline (42-01 / 42-02 paths) do
+# not pay the import cost or require the optional ASGI deps at module
+# import time. Both are V5.0-blessed deps — this is a laziness
+# optimization, not a soft-dependency escape.
+
+
+def _build_starlette_app(client: "FeedbackIngestClient"):
+    """Construct the Starlette ASGI app with ``POST /api/v1/feedback``.
+
+    Pure factory: builds the route table and returns the Starlette
+    application WITHOUT starting a server. Used by
+    ``start_feedback_server`` (real uvicorn) and by tests via
+    ``starlette.testclient.TestClient`` (in-process ASGI driving — no
+    socket bound).
+
+    The route handler:
+      1. Reads the raw body bytes via ``await request.body()``.
+      2. Reads the ``X-Signature`` header (empty string if missing).
+      3. Delegates to the SYNC ``client.submit_feedback(body, signature)``
+         — handler is async but the validation client is sync per D-07.
+      4. Strips the internal ``http_status`` key from the response body
+         (it is a transport concern, not part of the API contract) and
+         uses it to set the HTTP status code on the JSONResponse.
+
+    Args:
+        client: A constructed ``FeedbackIngestClient`` whose
+            ``submit_feedback`` will be called on every inbound request.
+
+    Returns:
+        ``starlette.applications.Starlette`` instance with one route.
+    """
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    async def feedback_handler(request: Request) -> JSONResponse:
+        body = await request.body()
+        signature = request.headers.get("X-Signature", "")
+        # Delegate to sync submit_feedback (handler is async but client
+        # is sync per D-07). No thread offload needed — the work is CPU-
+        # bound HMAC + JSON validation, sub-millisecond at typical load.
+        result = client.submit_feedback(body, signature)
+        http_status = result.get("http_status", 200)
+        # ``http_status`` is internal — strip from the JSON envelope so
+        # the public API is {status, feedback_id, ...} only (threat
+        # T-42-13 mitigation: response body carries no internal state).
+        response_body = {k: v for k, v in result.items() if k != "http_status"}
+        return JSONResponse(response_body, status_code=http_status)
+
+    return Starlette(routes=[
+        Route("/api/v1/feedback", feedback_handler, methods=["POST"]),
+    ])
+
+
+@contextlib.contextmanager
+def start_feedback_server(
+    *,
+    host: str = "127.0.0.1",
+    port: int | None = None,
+    secret: str | None = None,
+    recipe_library: Any,
+    asset_bus: Any,
+):
+    """Context manager: start a uvicorn server in a daemon thread.
+
+    Yields a ``types.SimpleNamespace`` handle with attributes:
+      - ``client``: the constructed ``FeedbackIngestClient``.
+      - ``base_url``: ``f"http://{host}:{effective_port}"``.
+      - ``server``: the underlying ``uvicorn.Server`` (exposed for
+        advanced test cases that need to inspect server state).
+
+    On exit: signals ``server.should_exit = True`` and joins the thread
+    (timeout 5s) so the port is released deterministically. The daemon
+    flag means the thread will not block process exit even if the join
+    times out — but the join should succeed for any healthy uvicorn.
+
+    Port resolution mirrors ``FeedbackIngestClient.__init__`` D-06:
+    explicit ``port`` arg wins, else ``KAIS_FEEDBACK_PORT`` env, else
+    ``DEFAULT_FEEDBACK_PORT`` (8091).
+
+    Args:
+        host: Bind address. Default ``127.0.0.1`` (loopback only —
+            test-safe). Production callers set ``0.0.0.0`` explicitly.
+        port: TCP port. ``None`` -> env / default resolution.
+        secret: HMAC secret. ``None`` -> ``KAIS_FEEDBACK_SECRET`` env.
+        recipe_library: Phase 41 RecipeLibrary (duck-typed).
+        asset_bus: V5.0 AssetBus.
+
+    Yields:
+        The server handle namespace (see above).
+
+    Example:
+        with start_feedback_server(
+            port=18091, secret="...",
+            recipe_library=rl, asset_bus=bus,
+        ) as srv:
+            httpx.post(srv.base_url + "/api/v1/feedback", ...)
+    """
+    import threading
+    import time
+    import types as _types_mod
+
+    import uvicorn
+
+    effective_port = (
+        port if port is not None
+        else int(os.environ.get("KAIS_FEEDBACK_PORT", str(DEFAULT_FEEDBACK_PORT)))
+    )
+    effective_secret = (
+        secret if secret is not None
+        else os.environ.get("KAIS_FEEDBACK_SECRET")
+    )
+
+    client = FeedbackIngestClient(
+        asset_bus=asset_bus,
+        recipe_library=recipe_library,
+        port=effective_port,
+        secret=effective_secret,
+    )
+    app = _build_starlette_app(client)
+    # worker=1 implicit (single Server instance, no --workers flag).
+    # log_level="warning" keeps the test output quiet; operators
+    # overriding via ``__main__`` get INFO-level logging instead.
+    config = uvicorn.Config(
+        app, host=host, port=effective_port, log_level="warning",
+    )
+    server = uvicorn.Server(config)
+
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    # Wait for uvicorn to signal startup (it sets ``server.started``).
+    # Poll for up to 5 seconds; if uvicorn fails to bind we will see it
+    # as the loop exiting without ``started`` flipping — caller will
+    # then hit ECONNREFUSED on the first request and the test fails
+    # loudly rather than hanging.
+    for _ in range(50):
+        if server.started:
+            break
+        time.sleep(0.1)
+
+    handle = _types_mod.SimpleNamespace(
+        client=client,
+        base_url=f"http://{host}:{effective_port}",
+        server=server,
+    )
+    try:
+        yield handle
+    finally:
+        # Graceful shutdown: ask uvicorn to exit, then join the worker
+        # thread so the port is released before the context body
+        # returns. SIGTERM-equivalent for in-process uvicorn.
+        server.should_exit = True
+        thread.join(timeout=5.0)
+
+
+# ─── Production CLI (``python -m plugins.kais_aigc.feedback_ingest``) ──
+
+
+def _run_cli() -> None:
+    """``__main__`` entry point: wire real deps and serve forever.
+
+    Constructs AssetBus + RecipeLibrary from ``KAIS_WORKDIR`` (default
+    current directory), builds the Starlette app, and runs uvicorn
+    directly on the calling thread (BLOCKING ``serve_forever`` per
+    CONTEXT.md LOCKED decision). SIGINT / SIGTERM triggers uvicorn's
+    built-in graceful shutdown handler — no extra signal wiring needed.
+    """
+    import logging as _logging
+
+    import uvicorn
+
+    _logging.basicConfig(
+        level=_logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+    workdir = os.environ.get("KAIS_WORKDIR", ".")
+    # Lazy imports — only needed for the CLI path, not for library use.
+    from plugins.pipeline_state.asset_bus import AssetBus
+    from plugins.pipeline_state.recipe_library import RecipeLibrary
+
+    bus = AssetBus(workdir)
+    rl = RecipeLibrary(asset_bus=bus)
+
+    # Construct the client + app directly (NOT via the context manager,
+    # which spins up a daemon thread suitable for tests — production
+    # wants uvicorn on the main thread so SIGINT/SIGTERM propagate).
+    client = FeedbackIngestClient(
+        asset_bus=bus,
+        recipe_library=rl,
+        port=int(os.environ.get("KAIS_FEEDBACK_PORT", str(DEFAULT_FEEDBACK_PORT))),
+        secret=os.environ.get("KAIS_FEEDBACK_SECRET"),
+    )
+    app = _build_starlette_app(client)
+    host = os.environ.get("KAIS_FEEDBACK_HOST", "0.0.0.0")
+    port = client._port  # noqa: SLF001 — already env-resolved in __init__
+
+    logger.info(
+        "feedback_ingest: starting uvicorn on %s:%s (workdir=%s)",
+        host, port, workdir,
+    )
+    # uvicorn.run blocks the main thread until SIGINT/SIGTERM. Its
+    # installed signal handlers perform graceful shutdown (in-flight
+    # requests complete, then the loop drains).
+    uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+if __name__ == "__main__":
+    _run_cli()
