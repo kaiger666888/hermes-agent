@@ -32,6 +32,7 @@ No Node.js runtime dependency (D-37-05): pure Python + httpx via
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Optional
 
 import httpx
@@ -176,6 +177,37 @@ class CanvasSyncSubscriber:
 
     # ─── private node builders ─────────────────────────
 
+    # Phase index lookup (maps phase_id prefix to V8.6 step number).
+    # Used to populate the Canvas API v2 required `phaseIndex` field.
+    _PHASE_INDEX_MAP: dict[str, int] = {
+        "p01": 1, "p02": 2, "p03": 3, "p04": 4, "p05": 5,
+        "p06": 6, "p07": 7, "p08": 8, "p09": 9, "p10": 10,
+        "p10b": 10,  # between p10 and p11 (shares index 10, ordered by depends_on)
+        "p11": 11, "p12": 12, "p13": 13,
+    }
+
+    # Phase → canvas node type + asset type mapping.
+    # canvas_type must be one of the React Flow nodeTypes registered in
+    # FlowCanvas.tsx: default | script | asset | storyboard | video | audio | zone.
+    # asset_type aligns with the kais-aigc-platform Asset Registry enum:
+    # character | scene | prop | clip | voice | video | storyboard | script_phase | outline | topic | delivery.
+    _PHASE_TYPE_MAP: dict[str, tuple[str, str]] = {
+        "p01": ("script", "topic"),
+        "p02": ("script", "outline"),
+        "p03": ("script", "script_phase"),
+        "p04": ("asset", "character"),
+        "p05": ("script", "script_phase"),
+        "p06": ("script", "script_phase"),
+        "p07": ("asset", "scene"),
+        "p08": ("asset", "scene"),
+        "p09": ("storyboard", "storyboard"),
+        "p10": ("audio", "voice"),
+        "p10b": ("video", "clip"),
+        "p11": ("video", "video"),
+        "p12": ("video", "clip"),
+        "p13": ("script", "delivery"),
+    }
+
     def _build_phase_node(
         self,
         phase_id: str,
@@ -254,12 +286,24 @@ class CanvasSyncSubscriber:
         if score is None and isinstance(summary, dict):
             score = summary.get("score")
 
+        # Canvas API v2 requires phaseIndex + phaseName as TOP-LEVEL node fields
+        # (not inside data). Infer phaseIndex from the phase_id prefix (e.g.
+        # "p01_hook_topic" → 1). Fall back to stage_order, then 0.
+        phase_prefix = phase_id[:3] if len(phase_id) >= 3 else ""
+        phase_index = self._PHASE_INDEX_MAP.get(phase_prefix, stage_order)
+        canvas_type, asset_type = self._PHASE_TYPE_MAP.get(
+            phase_prefix, ("script", "script_phase")
+        )
+
         node_data: dict[str, Any] = {
-            "type": "script",
+            "type": canvas_type,
             "position": position,
             "size": {"width": 260, "height": 180},
             "state": node_state,
             "branchId": "main",
+            # Canvas API v2 required top-level fields (save-v2 schema).
+            "phaseIndex": phase_index,
+            "phaseName": result.get("name") or phase_id,
             "data": {
                 "label": mapped["label"],
                 "phase": phase_group,
@@ -270,6 +314,7 @@ class CanvasSyncSubscriber:
                 "content": description,
                 "state": node_state,
                 "phaseName": phase_id,
+                "assetType": asset_type,
             },
         }
         if review_status is not None:
@@ -302,8 +347,12 @@ class CanvasSyncSubscriber:
             description += f": {note}"
         return {
             "type": "gate",
+            "position": {"x": 1500, "y": 200},
+            "size": {"width": 200, "height": 100},
             "state": "success" if approved else "error",
             "branchId": "main",
+            "phaseIndex": 0,
+            "phaseName": f"Gate: {gate_id}",
             "data": {
                 "label": f"Gate: {gate_id}",
                 "description": description,
@@ -333,6 +382,105 @@ def _infer_stage(phase_id: str) -> str:
         # Drop the leading p01_ / p02_ prefix, keep the rest.
         return phase_id.split("_", 1)[1]
     return phase_id
+
+
+def _ensure_project_exists(base_url: str, project_id: int) -> None:
+    """Ensure the project exists in the canvas platform's o_project table.
+
+    The Canvas API v2 ``save-v2`` endpoint stores FlowGraph data in
+    ``o_agentWorkData`` — completely independent of the ``o_project`` table.
+    The frontend canvas UI populates its project selector from ``o_project``.
+    If a FlowGraph is saved with a projectId that doesn't exist in o_project,
+    the data is stored correctly but **invisible** in the UI.
+
+    This function first checks via the HTTP project list API. If the project
+    is missing, it inserts a record directly into the SQLite database (the
+    ``addProject`` HTTP endpoint uses ``Date.now()`` as the ID, which won't
+    match our projectId — so direct DB insertion is the only reliable path).
+
+    Degrade-tolerant: if the check or creation fails, it logs a WARNING and
+    returns — the subscriber still works (data can be loaded via load-v2,
+    just not visible in the project selector).
+    """
+    try:
+        import httpx as _httpx
+
+        # Check if project already exists via HTTP project list API.
+        r = _httpx.post(
+            f"{base_url}/api/canvas/projects",
+            json={},
+            timeout=5,
+        )
+        if r.status_code == 200:
+            projects = r.json().get("data", []) or []
+            for p in projects:
+                if p.get("id") == project_id:
+                    return  # Already exists — nothing to do.
+
+        # Project not found — insert directly into SQLite.
+        # We can't use /api/project/addProject because it generates its own
+        # id via Date.now(), which won't match our project_id.
+        logger.info(
+            "canvas sync: projectId=%s not in o_project — inserting record",
+            project_id,
+        )
+
+        import sqlite3
+        import time as _time
+
+        # Locate the database — try common paths relative to the canvas server.
+        db_candidates = [
+            "/data/workspace/kais-aigc-platform/data/db2.sqlite",
+            os.environ.get("KAIS_CANVAS_DB", ""),
+        ]
+        db_path = None
+        for candidate in db_candidates:
+            if candidate and os.path.isfile(candidate):
+                db_path = candidate
+                break
+
+        if db_path is None:
+            logger.warning(
+                "canvas sync: cannot locate db2.sqlite for projectId=%s — "
+                "set KAIS_CANVAS_DB env var or create the o_project record "
+                "manually. Canvas data will exist but not be visible in the "
+                "project selector.",
+                project_id,
+            )
+            return
+
+        now_ms = int(_time.time() * 1000)
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO o_project
+                   (id, name, intro, type, mode, createTime, userId)
+                   VALUES (?, ?, ?, ?, ?, ?, 1)""",
+                (
+                    project_id,
+                    f"Pipeline Project {project_id}",
+                    "Auto-created by canvas sync",
+                    "movie-pipeline",
+                    "canvas-v2",
+                    now_ms,
+                ),
+            )
+            conn.commit()
+            logger.info(
+                "canvas sync: created o_project record for projectId=%s in %s",
+                project_id,
+                db_path,
+            )
+        finally:
+            conn.close()
+    except Exception:
+        logger.warning(
+            "canvas sync: _ensure_project_exists failed for projectId=%s "
+            "— canvas data will exist but may not be visible in the "
+            "project selector",
+            project_id,
+            exc_info=True,
+        )
 
 
 # ─── registration API ─────────────────────────────────────────────────
@@ -376,6 +524,12 @@ def register_canvas_sync(
         episodes_id=episodes_id,
         transport=transport,
     )
+
+    # Ensure the project exists in o_project so the frontend canvas UI can see
+    # it in the project selector. save-v2 stores FlowGraph data independently of
+    # the o_project table — without this check, the data exists but is invisible.
+    _ensure_project_exists(client._base_url, project_id)
+
     sub = CanvasSyncSubscriber(client, agent_name=agent_name)
     runner_config.on_phase_complete = sub.on_phase_complete
     runner_config.on_gate_resolved = sub.on_gate_resolved
