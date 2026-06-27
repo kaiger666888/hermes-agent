@@ -282,6 +282,52 @@ def _map_d5_to_ending_state(d5_completion: int) -> str:
     return "cliffhanger"
 
 
+# ─── Phase 41-02: Wilson CI + converged flag (pure stdlib) ────────────
+
+def _wilson_ci(passed: int, total: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score confidence interval (pure stdlib — uses math.sqrt only).
+
+    Returns ``(lower, upper)`` bounds at the given z-score (default 1.96 = 95% CI).
+    Returns ``(0.0, 1.0)`` — the widest possible interval — when ``total <= 0``
+    (CONTEXT.md: divide-by-zero mitigation, threat T-41-09).
+
+    Formula (CONTEXT.md "Wilson confidence interval"):
+        p_hat   = passed / total
+        denom   = 1 + z^2 / total
+        center  = (p_hat + z^2 / (2 * total)) / denom
+        spread  = z * sqrt((p_hat * (1 - p_hat) + z^2 / (4 * total)) / total) / denom
+
+    Pure stdlib verification (threat T-41-12): the function body uses
+    ``math.sqrt`` only; no third-party scientific libraries are imported
+    anywhere in this module. The corresponding unit test introspects this
+    function's source via ``inspect.getsource`` and asserts the absence of
+    forbidden third-party-library tokens.
+    """
+    if total <= 0:
+        return (0.0, 1.0)
+    p = passed / total
+    denom = 1 + z * z / total
+    center = (p + z * z / (2 * total)) / denom
+    spread = z * math.sqrt((p * (1 - p) + z * z / (4 * total)) / total) / denom
+    return (center - spread, center + spread)
+
+
+def _is_converged(
+    sample_size: int,
+    lower: float,
+    upper: float,
+    *,
+    min_sample: int = 10,
+    max_spread: float = 0.10,
+) -> bool:
+    """Converged iff ``sample_size >= min_sample`` AND ``(upper - lower) <= max_spread``.
+
+    CONTEXT.md "Converged flag": ±5% half-width means total spread ≤ 10%.
+    Both conditions required (sample sufficiency AND tightness).
+    """
+    return sample_size >= min_sample and (upper - lower) <= max_spread
+
+
 # ─── RecipeLibrary ────────────────────────────────────────────────────
 
 
