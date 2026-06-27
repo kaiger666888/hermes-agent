@@ -65,11 +65,13 @@ DESIGN INVARIANTS:
   to avoid leaking full payloads (threat T-42-06).
 
 STRUCTURAL 'not auto-modify pipeline' INVARIANT (FEEDBACK-INGEST-05):
-This module MUST NOT import pipeline.phases.p10b_rapid_preview, runner,
-or preview_engine. Verified by grep test in 42-04. The ONLY references
-are: RecipeLibrary (Phase 41) + AssetBus (V5.0) + stdlib. The recipe
-library is consumed by HUMANS making creative decisions, not by the
-pipeline itself.
+This module MUST NOT pull in any pipeline-runner module — specifically
+the rapid-preview phase, the DAG runner, or the preview engine. Verified
+by a grep test in plan 42-04 (Test 13) which asserts 0 matches for the
+forbidden import patterns. The ONLY references this module makes are:
+RecipeLibrary (Phase 41) + AssetBus (V5.0) + stdlib. The recipe library
+is consumed by HUMANS making creative decisions, not by the pipeline
+itself.
 """
 
 from __future__ import annotations
