@@ -311,6 +311,28 @@ ASSET_SCHEMA: dict[str, dict] = {
         "writer_phase": "p10b_rapid_preview",
         "reader_phases": [],  # consumed operator-side / by monitoring
     },
+
+    # ── Phase 41-01 additions — Emotion Recipe Library slot ─────────────
+    # Wave 1 plan 41-01 registers this slot so RecipeLibrary (recipe_library.py)
+    # can persist structured emotion recipes. Append-only (jsonl format); one
+    # line per recipe version (update_validation appends version=N+1).
+    # Per-plan asset-bus extension (D-36-05): PRESERVES existing slots
+    # byte-equivalent — only appends.
+    # NOTE: NOT added to AssetBus.JSONL_SLOTS frozenset (line 422) — dispatch
+    # consults ASSET_SCHEMA[slot]["format"] directly, not JSONL_SLOTS. Keeping
+    # JSONL_SLOTS unchanged preserves test_asset_bus_phase35_slots.py::
+    # test_jsonl_slots_unchanged. The emotion-recipe slot's jsonl format in
+    # ASSET_SCHEMA is what the dispatch path actually checks.
+    "emotion-recipe": {
+        "file": "emotion-recipe.jsonl",
+        "format": "jsonl",  # append-only — use append_line() / read_lines()
+        "description": "Structured emotion recipes extracted from creative-history "
+                       "5-dim script_auditor scores. One line per recipe version "
+                       "(update_validation appends version=N+1). Reader: operator-side "
+                       "+ Phase 42 feedback_ingest (calls update_validation).",
+        "writer_phase": "recipe_library",
+        "reader_phases": [],  # Phase 42 feedback_ingest reads via RecipeLibrary methods
+    },
 }
 
 
