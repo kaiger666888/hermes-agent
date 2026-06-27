@@ -20,8 +20,10 @@ RECIPE-LIB-06: provenance chains recipe → source_episode; recipe_id
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
+import math
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -195,6 +197,91 @@ def _latest_version(rows: list[dict], recipe_id: str) -> dict | None:
     return max(matching, key=lambda r: r.get("version", 0))
 
 
+# ─── Phase 41-02: structure extraction helpers (DATA SOURCE PIVOT) ────
+
+# McMahon arc -> emotion_sequence lookup table (5-6 common arcs).
+# CONTEXT.md "Updated structure{} extraction" mapping table.
+# Unknown arc -> fallback ["setup", "rising", "climax", "resolution"] + WARNING log.
+MCMAHON_ARC_EMOTIONS: dict[str, list[str]] = {
+    "man_in_a_hole":     ["hope", "descent", "crisis", "recovery"],
+    "rags_to_riches":    ["low", "rise", "peak", "fall"],
+    "the_quest":         ["call", "trial", "ordeal", "boon"],
+    "voyage_and_return": ["depart", "wonder", "terror", "return"],
+    "rebirth":           ["sin", "realization", "redemption", "new_life"],
+    "tragedy":           ["pride", "error", "catastrophe", "aftermath"],
+}
+_MCMAHON_FALLBACK_SEQUENCE = ["setup", "rising", "climax", "resolution"]
+
+# Regexes for anchor_validation parsing.
+# Format: "Catalyst ~7.5s ✓ / Midpoint ~37s ✓ / All Is Lost ~55s ✓"
+_RE_CATALYST_HOOK = re.compile(r"Catalyst\s*~(\d+(?:\.\d+)?)s")
+_RE_ALL_TIMESTAMPS = re.compile(r"~(\d+(?:\.\d+)?)s")
+# Fallback when Catalyst absent in anchor_validation: parse first snyder_beats
+# "(N-Ms)" range and take lower bound N as hook.
+_RE_FIRST_BEAT_RANGE = re.compile(r"\((\d+)-\d+s\)")
+
+
+def _parse_anchor_validation(anchor_str: str) -> tuple[int | None, list[int]]:
+    """Parse a snowflake anchor_validation string into (hook, turning_points).
+
+    Args:
+        anchor_str: e.g. "Catalyst ~7.5s ✓ / Midpoint ~37s ✓ / All Is Lost ~55s ✓"
+
+    Returns:
+        (hook_position_sec, turning_points_sec_list):
+          hook_position_sec — int(float("7.5")) == 7 (round-toward-zero).
+            None if "Catalyst ~Ns" token absent (caller handles fallback).
+          turning_points_sec_list — [int(float(x)) for x in all "~Ns" matches].
+            Empty list if no matches.
+    """
+    if not anchor_str:
+        return (None, [])
+
+    hook_match = _RE_CATALYST_HOOK.search(anchor_str)
+    hook = int(float(hook_match.group(1))) if hook_match else None
+
+    all_matches = _RE_ALL_TIMESTAMPS.findall(anchor_str)
+    turning_points = [int(float(x)) for x in all_matches]
+
+    return (hook, turning_points)
+
+
+def _map_d2_to_drop_level(d2_emotion: int) -> int:
+    """Map D2_emotion (0-20 scale) to emotion_drop_level (1-5).
+
+    Formula (CONTEXT.md): ``int((20 - D2) / 4) + 1`` clamped [1,5].
+    Lower D2 -> bigger drop. WARNING #1 (CONTEXT.md): single-step computation
+    from raw D2 scalar — no double quantization (D2 is already an int per slot
+    schema; episode-level, not per-shot mean).
+
+    Reference values:
+        D2=20 -> 1 (int(0/4)+1 = 1)
+        D2=17 -> 1 (int(3/4)+1 = int(0.75)+1 = 0+1 = 1)
+        D2=16 -> 2 (int(4/4)+1 = 1+1 = 2)
+        D2=12 -> 3 (int(8/4)+1 = 2+1 = 3)
+        D2=8  -> 4 (int(12/4)+1 = 3+1 = 4)
+        D2=4  -> 5 (int(16/4)+1 = 4+1 = 5)
+        D2=0  -> 5 (int(20/4)+1 = 5+1 = 6 -> clamp 5)
+    """
+    raw = int((20 - d2_emotion) / 4) + 1
+    return max(1, min(5, raw))
+
+
+def _map_d5_to_ending_state(d5_completion: int) -> str:
+    """Map D5_completion (0-20 scale) to ending_state enum.
+
+    Thresholds (CONTEXT.md):
+        D5 >= 16 -> "resolved"
+        D5 >= 12 -> "new_suspense"
+        else     -> "cliffhanger"
+    """
+    if d5_completion >= 16:
+        return "resolved"
+    if d5_completion >= 12:
+        return "new_suspense"
+    return "cliffhanger"
+
+
 # ─── RecipeLibrary ────────────────────────────────────────────────────
 
 
@@ -343,3 +430,134 @@ class RecipeLibrary:
             ]
 
         return results
+
+    # ── Helper: extract_structure_from_episode (RECIPE-LIB-04) ────────
+    # DATA SOURCE PIVOT (plan-checker BLOCKER #1, locked 2026-06-27):
+    #   Reads `story-framework` + `final-audit` AssetBus slots (NOT creative-history).
+    #   - story-framework slot: story_kernel.mcmahon_arc, snowflake_artifacts.
+    #     anchor_validation, snyder_beats_summary (structural data).
+    #   - final-audit slot: scores.D2_emotion, scores.D5_completion (quality scores).
+    #
+    # This is a HELPER — best-effort. Missing/malformed slot -> None + WARNING log.
+    # Operators can pass explicit structure{} to create_recipe to override.
+
+    def extract_structure_from_episode(self, episode_id: str) -> dict | None:
+        """Extract a structure{} dict from V5.0 story-framework + final-audit slots.
+
+        Applies the CONTEXT.md mapping table:
+            hook_position_sec     <- snowflake_artifacts.anchor_validation ("Catalyst ~Ns")
+                                     with fallback to first snyder_beats range
+            emotion_sequence      <- story_kernel.mcmahon_arc (lookup table)
+            turning_points_sec    <- snowflake_artifacts.anchor_validation (all "~Ns")
+            emotion_drop_level    <- scores.D2_emotion (int((20-D2)/4)+1 clamp [1,5])
+            ending_state          <- scores.D5_completion (>=16 resolved /
+                                     >=12 new_suspense / else cliffhanger)
+
+        Args:
+            episode_id: Episode identifier for traceability. The bus slots are
+                per-workdir (one workdir per episode), so the method reads
+                whatever story-framework + final-audit the bus currently holds.
+                ``episode_id`` is recorded in WARNING logs for traceability
+                but is NOT used to filter the bus — caller is responsible for
+                pointing the bus at the correct workdir.
+
+        Returns:
+            structure dict with 5 fields, OR None if either slot is missing/
+            malformed (best-effort helper — does NOT raise).
+        """
+        # 1. Read both slots (None if missing — bus.read returns None on
+        #    FileNotFoundError / JSONDecodeError per asset_bus.py:512).
+        sf = self._bus.read("story-framework")
+        fa = self._bus.read("final-audit")
+
+        if sf is None or fa is None:
+            logger.warning(
+                "extract_structure_from_episode: missing story-framework or "
+                "final-audit slot for episode %s (sf=%s, fa=%s)",
+                episode_id,
+                "present" if sf is not None else "MISSING",
+                "present" if fa is not None else "MISSING",
+            )
+            return None
+
+        # 2. Validate slot shapes (defensive — V5.0 schema drift protection).
+        if not isinstance(sf, dict) or "story_kernel" not in sf or "snowflake_artifacts" not in sf:
+            logger.warning(
+                "extract_structure_from_episode: malformed story-framework for "
+                "episode %s (missing story_kernel or snowflake_artifacts)",
+                episode_id,
+            )
+            return None
+        if not isinstance(fa, dict) or "scores" not in fa:
+            logger.warning(
+                "extract_structure_from_episode: malformed final-audit for "
+                "episode %s (missing scores)",
+                episode_id,
+            )
+            return None
+
+        # 3. emotion_sequence — mcmahon_arc lookup (fallback on unknown arc).
+        arc = sf["story_kernel"].get("mcmahon_arc", "")
+        emotion_sequence = MCMAHON_ARC_EMOTIONS.get(arc)
+        if emotion_sequence is None:
+            logger.warning(
+                "extract_structure_from_episode: unknown mcmahon_arc %r for "
+                "episode %s, using fallback sequence %s",
+                arc, episode_id, _MCMAHON_FALLBACK_SEQUENCE,
+            )
+            emotion_sequence = list(_MCMAHON_FALLBACK_SEQUENCE)
+        else:
+            emotion_sequence = list(emotion_sequence)  # defensive copy
+
+        # 4. hook_position_sec + turning_points_sec — anchor_validation parse.
+        anchor_str = sf["snowflake_artifacts"].get("anchor_validation", "")
+        hook_pos, turning_points = _parse_anchor_validation(anchor_str)
+
+        # 4b. hook fallback: Catalyst absent -> first snyder_beats range lower bound.
+        if hook_pos is None:
+            beats = sf.get("snyder_beats_summary", []) or []
+            for beat in beats:
+                if not isinstance(beat, str):
+                    continue
+                m = _RE_FIRST_BEAT_RANGE.search(beat)
+                if m:
+                    hook_pos = int(m.group(1))
+                    break
+            if hook_pos is None:
+                logger.warning(
+                    "extract_structure_from_episode: no Catalyst timestamp and "
+                    "no parseable snyder_beats range for episode %s, defaulting "
+                    "hook_position_sec to 0",
+                    episode_id,
+                )
+                hook_pos = 0
+
+        # 5. D2_emotion -> emotion_drop_level (single-step, no double quantization).
+        d2 = fa["scores"].get("D2_emotion")
+        if not isinstance(d2, int) or isinstance(d2, bool):
+            logger.warning(
+                "extract_structure_from_episode: D2_emotion not int for episode "
+                "%s (got %r), cannot extract",
+                episode_id, d2,
+            )
+            return None
+        emotion_drop_level = _map_d2_to_drop_level(d2)
+
+        # 6. D5_completion -> ending_state.
+        d5 = fa["scores"].get("D5_completion")
+        if not isinstance(d5, int) or isinstance(d5, bool):
+            logger.warning(
+                "extract_structure_from_episode: D5_completion not int for "
+                "episode %s (got %r), cannot extract",
+                episode_id, d5,
+            )
+            return None
+        ending_state = _map_d5_to_ending_state(d5)
+
+        return {
+            "hook_position_sec": hook_pos,
+            "emotion_sequence": emotion_sequence,
+            "turning_points_sec": turning_points,
+            "emotion_drop_level": emotion_drop_level,
+            "ending_state": ending_state,
+        }
