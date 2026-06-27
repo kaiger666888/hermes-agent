@@ -612,21 +612,23 @@ class TestP10bDegradePath:
         the WARN fires. There is no code path where a degrade envelope is
         swallowed without either counting toward WARN or raising.
         """
-        # Read the source to verify the structure (Rule: code inspection test).
+        # Read the module source (run() delegates to _run_body for the
+        # fan-out + degrade logic, so we inspect both).
         import inspect
-        source = inspect.getsource(p10b.run)
+        run_source = inspect.getsource(p10b.run)
+        body_source = inspect.getsource(p10b._run_body)
+        combined = run_source + "\n" + body_source
         # The degrade branch must increment degraded_count.
-        assert "degraded_count" in source, (
-            "run() must track degraded_count for episode-level WARN threshold"
+        assert "degraded_count" in combined, (
+            "run()/_run_body must track degraded_count for episode-level WARN threshold"
         )
         # Must check degraded_count == total_variants for episode-level WARN.
-        assert "degraded_count == total_variants" in source or \
-               "degraded_count == total_variants" in source.replace("  ", " "), (
-            "run() must check degraded_count == total_variants to trigger WARN"
+        assert "degraded_count == total_variants" in combined, (
+            "run()/_run_body must check degraded_count == total_variants to trigger WARN"
         )
         # Must NOT silently swallow without logger.warning or raise.
-        assert "logger.warning" in source, (
-            "run() must emit logger.warning on episode-level degrade"
+        assert "logger.warning" in combined, (
+            "run()/_run_body must emit logger.warning on episode-level degrade"
         )
 
     def test_multi_shot_full_degrade_emits_exactly_one_warn(self):

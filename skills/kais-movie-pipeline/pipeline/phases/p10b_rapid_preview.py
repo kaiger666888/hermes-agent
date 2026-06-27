@@ -244,6 +244,59 @@ def run(
         ``variants_degraded`` (degrade envelope count). On episode-level
         full-degrade, ``preview_skipped`` is set in the ``episode-meta``
         AssetBus slot (BLOCKER #1 — NOT pipeline-state).
+
+    Raises:
+        Nothing on engine degrade or engine constructor failure — both paths
+        emit WARN + write the ``preview_skipped`` flag and return cleanly.
+        Only truly unexpected errors propagate (runner retry loop handles
+        them via the existing max_retries contract — RAPID-PREVIEW-06).
+    """
+    # Wrap the entire body in a try/except so engine constructor failures
+    # (defensive — plan 02's select_engine should not raise) and other
+    # unexpected exceptions are caught at the phase boundary. On catch:
+    # emit WARN + write preview_skipped flag + return degrade envelope.
+    try:
+        return _run_body(
+            episode_id, asset_bus_read, asset_bus_write,
+            delegate_task, trigger_gate, parallel_shots,
+        )
+    except Exception as exc:
+        # Defensive: plan 02's select_engine should not raise in practice,
+        # but p10b must be robust. Episode-level fail is visible (WARN +
+        # episode-meta flag); the runner's existing retry loop handles
+        # truly unexpected errors via max_retries (RAPID-PREVIEW-06).
+        logger.warning(
+            "preview_skipped: episode=%s error=%s: %s — falling back to p11 direct Seedance",
+            episode_id, type(exc).__name__, exc,
+        )
+        asset_bus_write("episode-meta", {
+            "episode_id": episode_id,
+            "preview_skipped": True,
+            "skip_reason": f"{type(exc).__name__}: {exc}",
+        })
+        return {
+            "phase": PHASE_ID,
+            "outputs": {
+                "variants_generated": 0,
+                "variants_degraded": 0,
+                "error": str(exc),
+            },
+            "gate": None,
+        }
+
+
+def _run_body(
+    episode_id: str,
+    asset_bus_read: Callable[[str], Any],
+    asset_bus_write: Callable[[str, dict], None],
+    delegate_task: Callable[[str, str, list[str]], dict],
+    trigger_gate: Callable[[str, str], dict] | None,
+    parallel_shots: int,
+) -> dict:
+    """Body of run(), extracted so the top-level try/except can wrap it cleanly.
+
+    Implements the per-shot fan-out + episode-level degrade WARN semantics.
+    See ``run()`` docstring for the full behavioral contract.
     """
     # 1. Gather inputs (graceful when slot empty — first run / tests).
     voice_clips = asset_bus_read("voice-clips") or []
