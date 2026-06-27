@@ -44,11 +44,78 @@ import os
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Phase 40 WR-05 fix — path-traversal validation helper
+# ---------------------------------------------------------------------------
+# ``keyframe_image_path`` and ``voice_clip_path`` are read from untrusted
+# upstream slots (``e-konte-sheets`` / ``voice-clips``, both produced by
+# LLM-driven phases per CONTEXT D-35-04). These strings flow directly into
+# FFmpeg's ``-i`` argv. List-form argv (T-40-06) correctly prevents SHELL
+# injection, but does NOT prevent PATH TRAVERSAL — a malicious or buggy
+# upstream output like ``../../etc/passwd`` would still be a filesystem
+# read by FFmpeg, and the path would be persisted in the JSONL record.
+#
+# ``_validate_path_under_root`` rejects paths that escape an allow-listed
+# base directory. Default behavior (no roots configured) accepts all paths
+# — preserves test behavior and lets production wire explicit allow-lists
+# via the ``SlideshowEngine(allowed_path_roots=[...])`` constructor kwarg.
+
+
+def _validate_path_under_root(
+    path: str | None,
+    allowed_roots: list[str] | None,
+    *,
+    field_name: str = "path",
+) -> str | None:
+    """Validate ``path`` is under one of ``allowed_roots`` (or accept all
+    if ``allowed_roots`` is empty / None).
+
+    Returns the original ``path`` if it passes validation. Returns ``None``
+    if ``path`` is ``None`` (caller is responsible for the missing-input
+    degrade path).
+
+    Raises ``ValueError`` if:
+      - ``path`` contains a ``..`` sequence that resolves outside all
+        allowed roots.
+      - ``path`` is absolute and not under any allowed root.
+
+    Validation is conservative: a path is "under" a root iff
+    ``Path(path).resolve()`` is equal to or a descendant of
+    ``Path(root).resolve()`` (after symlink resolution). Both ``path``
+    and ``root`` are resolved before comparison so symbolic links can't
+    smuggle a traversal past the check.
+
+    When ``allowed_roots`` is empty or ``None``, the function is a no-op
+    pass-through — production callers MUST configure an explicit allow-list
+    to get any protection.
+    """
+    if path is None:
+        return None
+    if not allowed_roots:
+        return path
+    resolved = Path(path).resolve()
+    for root in allowed_roots:
+        try:
+            resolved_root = Path(root).resolve()
+        except (OSError, ValueError):
+            continue
+        # ``is_relative_to`` is the canonical "is descendant" check on
+        # Path; available since Python 3.9. Handles the equal-to-root
+        # case too (a path is relative to itself).
+        if resolved == resolved_root or resolved_root in resolved.parents:
+            return path
+    raise ValueError(
+        f"{field_name} {path!r} resolves outside all allowed roots "
+        f"({len(allowed_roots)} configured) — path traversal rejected"
+    )
 
 
 class PreviewEngineError(Exception):
@@ -176,6 +243,7 @@ class SlideshowEngine(PreviewEngine):
         self,
         *,
         subprocess_runner: Callable[[list[str]], "subprocess.CompletedProcess"] | None = None,
+        allowed_path_roots: list[str] | None = None,
     ) -> None:
         """Construct the engine.
 
@@ -184,8 +252,17 @@ class SlideshowEngine(PreviewEngine):
         (with ``.returncode`` and ``.stderr``). ``None`` (default) uses the
         real ``subprocess.run`` and validates the FFmpeg binary via
         ``shutil.which`` first.
+
+        ``allowed_path_roots`` (Phase 40 WR-05 fix): optional list of base
+        directories that ``keyframe_image_path`` / ``voice_clip_path`` /
+        ``output_path`` MUST resolve under. Paths escaping all roots
+        (e.g., ``../../etc/passwd`` from a malicious or buggy upstream LLM
+        output) raise ``ValueError`` from ``generate()``. Default ``None``
+        disables validation (preserves test behavior; production callers
+        should configure explicit roots like ``[workdir, "/preview"]``).
         """
         self._subprocess_runner = subprocess_runner
+        self._allowed_path_roots = list(allowed_path_roots) if allowed_path_roots else []
 
     def _degrade(self, reason: str) -> dict[str, Any]:
         """Return the uniform degrade envelope and log a warning (D-09)."""
@@ -215,6 +292,37 @@ class SlideshowEngine(PreviewEngine):
             return self._degrade("missing voice_clip_path")
         if not output_path:
             return self._degrade("missing output_path")
+
+        # Phase 40 WR-05 fix: path-traversal validation. The three paths
+        # above come from untrusted upstream slots (LLM-driven phases per
+        # CONTEXT D-35-04). List-form argv (T-40-06) prevents shell
+        # injection but NOT path traversal — without this check, a
+        # malicious ``../../etc/passwd`` keyframe path would be a real
+        # filesystem read by FFmpeg, persisted into the JSONL record, and
+        # possibly ``cat``-ed by an operator reading the record.
+        #
+        # When ``allowed_path_roots`` is empty (the default — test mode),
+        # validation is a no-op pass-through. Production callers configure
+        # explicit roots (e.g., ``[workdir, "/preview"]``) to enable
+        # protection. Paths escaping ALL roots raise ValueError; we
+        # catch it and degrade rather than propagate (the operator sees
+        # a degrade_reason mentioning path traversal, and the bad path
+        # never reaches FFmpeg).
+        try:
+            keyframe_image_path = _validate_path_under_root(
+                keyframe_image_path, self._allowed_path_roots,
+                field_name="keyframe_image_path",
+            )
+            voice_clip_path = _validate_path_under_root(
+                voice_clip_path, self._allowed_path_roots,
+                field_name="voice_clip_path",
+            )
+            output_path = _validate_path_under_root(
+                output_path, self._allowed_path_roots,
+                field_name="output_path",
+            )
+        except ValueError as exc:
+            return self._degrade(f"path_traversal_rejected: {exc}")
 
         # Binary lookup (only when using the real subprocess).
         runner = self._subprocess_runner

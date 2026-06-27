@@ -275,6 +275,170 @@ class TestSlideshowEngine:
         assert result["generation_time_ms"] >= 0
 
 
+# ---------------------------------------------------------------------------
+# Phase 40 WR-05 fix — path-traversal validation
+# ---------------------------------------------------------------------------
+# ``keyframe_image_path`` and ``voice_clip_path`` are read from untrusted
+# upstream slots (``e-konte-sheets`` / ``voice-clips``, both produced by
+# LLM-driven phases per CONTEXT D-35-04). List-form argv (T-40-06) prevents
+# shell injection but NOT path traversal. A malicious ``../../etc/passwd``
+# would be a real filesystem read by FFmpeg and persisted in the JSONL
+# record. The fix adds ``_validate_path_under_root`` + an opt-in
+# ``allowed_path_roots`` constructor kwarg on ``SlideshowEngine``.
+
+
+class TestPathTraversalValidation:
+    """Phase 40 WR-05 — ``_validate_path_under_root`` rejects escaping paths."""
+
+    def test_no_roots_configured_accepts_all_paths(self):
+        """Default behavior (no allowed_path_roots) = pass-through."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        # Any path is accepted when no roots are configured.
+        assert _validate_path_under_root("/etc/passwd", None) == "/etc/passwd"
+        assert _validate_path_under_root("../../etc/passwd", []) == "../../etc/passwd"
+        assert _validate_path_under_root("/anything", None) == "/anything"
+
+    def test_none_path_returns_none(self):
+        """``None`` input returns ``None`` (missing-input degrade path)."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        assert _validate_path_under_root(None, ["/workdir"]) is None
+
+    def test_path_under_root_accepted(self):
+        """A path resolving under an allowed root is accepted unchanged."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        # /tmp/kf/x.png is under /tmp/kf.
+        result = _validate_path_under_root(
+            "/tmp/kf/x.png", ["/tmp/kf"], field_name="kf",
+        )
+        assert result == "/tmp/kf/x.png"
+
+    def test_path_under_one_of_multiple_roots_accepted(self):
+        """Path can match any one of the configured roots."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        result = _validate_path_under_root(
+            "/voice/s1.wav", ["/tmp/kf", "/voice"], field_name="vc",
+        )
+        assert result == "/voice/s1.wav"
+
+    def test_path_outside_all_roots_rejected(self):
+        """A path resolving outside all roots raises ValueError."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        with pytest.raises(ValueError, match="path traversal rejected"):
+            _validate_path_under_root(
+                "/etc/passwd", ["/tmp/kf", "/voice"], field_name="kf",
+            )
+
+    def test_dotdot_traversal_outside_root_rejected(self):
+        """``../../etc/passwd`` from inside an allowed root escapes and is rejected."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        with pytest.raises(ValueError, match="path traversal rejected"):
+            _validate_path_under_root(
+                "/tmp/kf/../../etc/passwd", ["/tmp/kf"], field_name="kf",
+            )
+
+    def test_path_equal_to_root_accepted(self):
+        """The root directory itself is "under" itself (boundary case)."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        result = _validate_path_under_root(
+            "/tmp/kf", ["/tmp/kf"], field_name="kf",
+        )
+        assert result == "/tmp/kf"
+
+    def test_error_message_mentions_field_name(self):
+        """The ValueError message includes the field_name for debugging."""
+        from plugins.kais_aigc.preview_engine import _validate_path_under_root
+
+        with pytest.raises(ValueError, match="keyframe_image_path"):
+            _validate_path_under_root(
+                "/etc/passwd", ["/tmp/kf"], field_name="keyframe_image_path",
+            )
+
+
+class TestSlideshowEnginePathTraversal:
+    """Phase 40 WR-05 — SlideshowEngine.generate() applies path validation."""
+
+    def test_engine_accepts_paths_when_no_roots_configured(self):
+        """Default engine (no allowed_path_roots) accepts any path —
+        preserves test/v6.0-default behavior."""
+        def _stub_runner(argv):
+            class _R:
+                returncode = 0
+                stderr = b""
+            return _R()
+
+        engine = SlideshowEngine(subprocess_runner=_stub_runner)
+        # Even obviously-traversal-looking paths pass through when no
+        # roots are configured — protection is opt-in.
+        result = engine.generate(
+            shot_id="s1", prompt="p", structure_delta={},
+            keyframe_image_path="../../etc/passwd",
+            voice_clip_path="../../etc/shadow",
+            output_path="/preview/s1.mp4",
+        )
+        assert result["engine"] == "slideshow"
+        assert "clip_path" in result
+
+    def test_engine_degrades_on_traversal_when_roots_configured(self):
+        """With allowed_path_roots set, a traversal path degrades with a
+        ``path_traversal_rejected`` reason — FFmpeg never runs."""
+        def _stub_runner(argv):
+            # Must NOT be called — validation runs before runner.
+            raise AssertionError(
+                f"FFmpeg must not run on traversal path; got argv: {argv}"
+            )
+
+        engine = SlideshowEngine(
+            subprocess_runner=_stub_runner,
+            allowed_path_roots=["/tmp/kf", "/voice", "/preview"],
+        )
+        result = engine.generate(
+            shot_id="s1", prompt="p", structure_delta={},
+            keyframe_image_path="/tmp/kf/x.png",
+            voice_clip_path="/etc/passwd",  # outside roots
+            output_path="/preview/s1.mp4",
+        )
+        assert result.get("degraded") is True
+        assert "path_traversal_rejected" in result.get("reason", "")
+        assert "voice_clip_path" in result["reason"]
+
+    def test_engine_accepts_paths_under_configured_roots(self):
+        """With allowed_path_roots set, paths under those roots pass through
+        to FFmpeg normally."""
+        runner_calls = []
+
+        def _stub_runner(argv):
+            runner_calls.append(argv)
+            class _R:
+                returncode = 0
+                stderr = b""
+            return _R()
+
+        engine = SlideshowEngine(
+            subprocess_runner=_stub_runner,
+            allowed_path_roots=["/tmp/kf", "/voice", "/preview"],
+        )
+        result = engine.generate(
+            shot_id="s1", prompt="p", structure_delta={},
+            keyframe_image_path="/tmp/kf/x.png",
+            voice_clip_path="/voice/s1.wav",
+            output_path="/preview/s1.mp4",
+        )
+        assert result["engine"] == "slideshow"
+        assert result["clip_path"] == "/preview/s1.mp4"
+        # FFmpeg was actually called with the validated paths.
+        assert len(runner_calls) == 1
+        argv = runner_calls[0]
+        assert "/tmp/kf/x.png" in argv
+        assert "/voice/s1.wav" in argv
+
+
 class TestLTXVideoEngine:
     """Task 3: LTXVideoEngine (mocked httpx POST) + D-09 degrade contract.
 
