@@ -41,6 +41,8 @@ from __future__ import annotations
 import abc
 import logging
 import os
+import shutil
+import subprocess
 import time
 from typing import Any, Callable
 
@@ -133,12 +135,33 @@ def select_engine(env: str | None = None) -> PreviewEngine:
 class SlideshowEngine(PreviewEngine):
     """FFmpeg-subprocess engine.
 
-    Stub at Task 1 boundary. Task 2 implements:
-    - Constructor ``subprocess_runner`` kwarg for hermetic test injection.
-    - ``generate()`` builds the FFmpeg argv (list form — no shell=True per
-      T-40-06 mitigation), validates inputs, measures wall time, returns
-      success / degrade envelope.
+    Assembles one preview variant from a keyframe image + TTS voice clip via
+    the FFmpeg subprocess. ``generate()`` builds the argv as a Python list
+    (T-40-06: no shell=True; argument injection impossible) and degrades
+    gracefully on missing inputs, missing FFmpeg binary, or non-zero exit.
+
+    Generation target: < 10s per variant (per CONTEXT.md specifics).
     """
+
+    def __init__(
+        self,
+        *,
+        subprocess_runner: Callable[[list[str]], "subprocess.CompletedProcess"] | None = None,
+    ) -> None:
+        """Construct the engine.
+
+        ``subprocess_runner`` exists for hermetic test injection: pass a
+        callable returning a ``subprocess.CompletedProcess``-like object
+        (with ``.returncode`` and ``.stderr``). ``None`` (default) uses the
+        real ``subprocess.run`` and validates the FFmpeg binary via
+        ``shutil.which`` first.
+        """
+        self._subprocess_runner = subprocess_runner
+
+    def _degrade(self, reason: str) -> dict[str, Any]:
+        """Return the uniform degrade envelope and log a warning (D-09)."""
+        logger.warning("slideshow_engine degraded: %s", reason)
+        return {"degraded": True, "engine": "slideshow", "reason": reason}
 
     def generate(
         self,
@@ -150,9 +173,68 @@ class SlideshowEngine(PreviewEngine):
         voice_clip_path: str | None = None,
         output_path: str | None = None,
     ) -> dict:
-        raise NotImplementedError(
-            "SlideshowEngine.generate() implemented in plan 40-02 Task 2"
-        )
+        """Render one variant via FFmpeg subprocess.
+
+        Validation order (input validation before binary lookup before
+        invocation): missing inputs short-circuit to degrade envelopes so
+        we never spawn FFmpeg on bad data.
+        """
+        # Input validation.
+        if not keyframe_image_path:
+            return self._degrade("missing keyframe_image_path")
+        if not voice_clip_path:
+            return self._degrade("missing voice_clip_path")
+        if not output_path:
+            return self._degrade("missing output_path")
+
+        # Binary lookup (only when using the real subprocess).
+        runner = self._subprocess_runner
+        if runner is None:
+            if shutil.which("ffmpeg") is None:
+                return self._degrade("ffmpeg binary not found in PATH")
+            runner = subprocess.run  # type: ignore[assignment]
+
+        # T-40-06: argv as Python list — no shell=True, no string concat.
+        argv = [
+            "ffmpeg", "-y", "-loop", "1",
+            "-i", keyframe_image_path,
+            "-i", voice_clip_path,
+            "-c:v", "libx264",
+            "-tune", "stillimage",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-shortest",
+            "-pix_fmt", "yuv420p",
+            output_path,
+        ]
+
+        start = time.monotonic()
+        try:
+            result = runner(argv)
+        except OSError as exc:
+            # Unexpected OS-level error (permission denied, etc.) — degrade.
+            return self._degrade(f"{type(exc).__name__}: {exc}")
+
+        elapsed_ms = self._record_time(start)
+        returncode = getattr(result, "returncode", 0)
+        if returncode != 0:
+            stderr = getattr(result, "stderr", b"") or b""
+            if isinstance(stderr, bytes):
+                try:
+                    stderr_text = stderr.decode("utf-8", errors="replace")
+                except Exception:
+                    stderr_text = repr(stderr)
+            else:
+                stderr_text = str(stderr)
+            return self._degrade(
+                f"ffmpeg exited {returncode}: {stderr_text[:200]}"
+            )
+
+        return {
+            "clip_path": output_path,
+            "generation_time_ms": elapsed_ms,
+            "engine": "slideshow",
+        }
 
 
 class LTXVideoEngine(PreviewEngine):
