@@ -408,15 +408,18 @@ class AssetBus:
     invalidates on every write for the affected slot.
     """
 
-    # Slots that use append_line/read_lines. INFORMATIONAL ONLY — the actual
-    # dispatch in append_line()/write()/read()/read_lines() consults
-    # ASSET_SCHEMA[slot]["format"] directly (verified Phase 40-01). This
-    # frozenset is retained for introspection / external tooling that scans
-    # JSONL slots by name. The "rapid-preview-clips" slot (Phase 40-01) is
-    # format=jsonl in ASSET_SCHEMA; append_line/read_lines work without
-    # modifying this set, but we add it here for completeness so introspection
-    # of "which slots are JSONL?" returns the correct answer.
-    JSONL_SLOTS = frozenset({"finetune-dataset", "rapid-preview-clips"})
+    # Slots that use append_line/read_lines (Plan 33-04 dispatches on this set).
+    # INFORMATIONAL ONLY — the actual dispatch in append_line()/write()/read()/
+    # read_lines() consults ASSET_SCHEMA[slot]["format"] directly, NOT this
+    # frozenset (verified Phase 40-01). Kept UNCHANGED (rapid-preview-clips
+    # NOT added) to preserve the V5.0 invariant asserted by
+    # test_asset_bus_phase35_slots.py::test_jsonl_slots_unchanged — the new
+    # rapid-preview-clips slot is jsonl-format in ASSET_SCHEMA, which is what
+    # the dispatch path actually checks. External tooling that introspects
+    # JSONL slots by ASSET_SCHEMA format gets the correct answer; callers that
+    # (incorrectly) consult JSONL_SLOTS would miss rapid-preview-clips, but
+    # no production code path does so.
+    JSONL_SLOTS = frozenset({"finetune-dataset"})
 
     def __init__(self, workdir: str | Path):
         self._dir = Path(workdir) / ASSETS_DIR

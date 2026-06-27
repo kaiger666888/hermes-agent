@@ -168,8 +168,13 @@ class TestNewSlotsSchemaMetadata:
         )
 
     def test_jsonl_slots_unchanged(self):
-        """finetune-dataset remains the only JSONL slot (Phase 33 contract)."""
+        """JSONL slots are exactly the documented set.
+
+        Phase 33 contract: finetune-dataset is the original JSONL slot.
+        Phase 40 (v6.0) adds rapid-preview-clips as a second JSONL slot
+        (p10b output — one line per variant). Any further drift is a bug.
+        """
         jsonl = [s for s, cfg in ASSET_SCHEMA.items() if cfg.get("format") == "jsonl"]
-        assert jsonl == ["finetune-dataset"], (
+        assert jsonl == ["finetune-dataset", "rapid-preview-clips"], (
             f"JSONL slot set drifted: {jsonl}"
         )
