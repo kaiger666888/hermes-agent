@@ -280,6 +280,26 @@ class LTXVideoEngine(PreviewEngine):
 
     INFO #10: ``generation_time_ms`` in the SUCCESS envelope is the
     LOCALLY-measured wall time, NOT the value reported in the response body.
+
+    WARNING WR-01 (Phase 40 review — accepted limitation for v6.0): the
+    underlying ``httpx.Client`` uses a sync ``httpcore`` connection pool
+    whose thread-safety for CONCURRENT ``request()`` calls from multiple
+    threads is not part of its public contract. ``p10b`` fans out per-shot
+    via ``ThreadPoolExecutor(max_workers=parallel_shots=4)`` and shares a
+    single engine instance across worker threads. In the v6.0 default
+    (``KAIS_PREVIEW_ENGINE=slideshow``) this is harmless —
+    ``SlideshowEngine.generate`` spawns its own subprocess per call and
+    holds no shared state. In LTX mode (``KAIS_PREVIEW_ENGINE=ltx``) all
+    workers share the same ``httpx.Client`` — under real network latency,
+    interleaved ``.post()`` calls can theoretically corrupt connection
+    state or trip ``httpcore``'s "connection already in use" assertion.
+
+    v6.0 operator-side mitigation (LTX mode only): set
+    ``parallel_shots=1`` (serialize fan-out) until the proper fix lands.
+    The proper fix (deferred to v6.1) is either a ``threading.Lock`` around
+    ``engine.generate`` for LTXVideoEngine, or constructing one
+    ``LTXVideoEngine`` per worker via ``ThreadPoolExecutor(initializer=...)``
+    + ``threading.local``. Tracked in ``deferred-items.md``.
     """
 
     DEFAULT_BASE_URL = "http://localhost:9001"
