@@ -58,6 +58,17 @@ class TurnRetryState:
     primary_recovery_attempted: bool = False
     has_retried_429: bool = False
 
+    # ── GLM overloaded early-abort counter (2026-07-02 incident mitigation) ──
+    # Incremented on each FailoverReason.overloaded classification; reset to
+    # 0 on ANY other classified reason AND on a successful API call. When
+    # this reaches 3 within a single turn, the retry loop aborts early with
+    # a "GLM model overloaded" message instead of churning through all
+    # max_retries (which previously presented as a generic "model provider
+    # failed after retries" crash). See agent/glm_concurrency_guard.py +
+    # agent/retry_utils.jittered_backoff_overloaded for the companion
+    # mitigations shipped in the same commit.
+    consecutive_overloaded: int = 0
+
     # ── Restart signals (read by the outer loop after the attempt) ───────
     restart_with_compressed_messages: bool = False
     restart_with_length_continuation: bool = False

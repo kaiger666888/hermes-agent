@@ -3,6 +3,14 @@
 Replaces fixed exponential backoff with jittered delays to prevent
 thundering-herd retry spikes when multiple sessions hit the same
 rate-limited provider concurrently.
+
+The ``jittered_backoff_overloaded`` preset is tuned for Zhipu GLM 1305
+("该模型当前访问量过大" / "model overloaded_error") recovery windows
+observed during the 2026-07-02 10:05-10:25 CST incident: the default
+0.5s-base / 32s-cap path exhausted all 10 retries in under 2 minutes,
+well short of the provider's actual recovery window. The overloaded
+preset uses a 30s floor and 600s cap so retries actually span the
+typical 1305 micro-burst instead of churning uselessly.
 """
 
 import random
@@ -55,3 +63,20 @@ def jittered_backoff(
     jitter = rng.uniform(0, jitter_ratio * delay)
 
     return delay + jitter
+
+
+def jittered_backoff_overloaded(attempt: int) -> float:
+    """Backoff preset for provider-overloaded responses (HTTP 503/529, GLM 1305).
+
+    Thin wrapper around :func:`jittered_backoff` with a 30-second floor and
+    600-second cap, tuned for Zhipu GLM 1305 recovery windows. The default
+    ``jittered_backoff`` path (0.5s/32s) exhausts a 10-retry budget in under
+    two minutes — too fast to span a real provider recovery. This preset
+    ensures the third retry lands at >= 30s + jitter, giving the upstream
+    a real chance to recover before the early-abort counter fires.
+
+    See ``agent/glm_concurrency_guard.py`` and the consecutive-overloaded
+    early-abort logic in ``agent/conversation_loop.py`` for the companion
+    mitigations shipped in the same commit.
+    """
+    return jittered_backoff(attempt, base_delay=30.0, max_delay=600.0, jitter_ratio=0.5)

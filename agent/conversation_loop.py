@@ -55,7 +55,8 @@ from agent.model_metadata import (
 )
 from agent.process_bootstrap import _install_safe_stdio
 from agent.prompt_caching import apply_anthropic_cache_control
-from agent.retry_utils import jittered_backoff
+from agent.glm_concurrency_guard import acquire_glm_slot
+from agent.retry_utils import jittered_backoff, jittered_backoff_overloaded
 from agent.trajectory import has_incomplete_scratchpad
 from agent.usage_pricing import estimate_usage_cost, normalize_usage
 from hermes_constants import PARTIAL_STREAM_STUB_ID
@@ -1116,22 +1117,30 @@ def run_conversation(
 
                 from hermes_cli.middleware import run_llm_execution_middleware
 
-                response = run_llm_execution_middleware(
-                    api_kwargs,
-                    _perform_api_call,
-                    original_request=_original_api_kwargs,
-                    task_id=effective_task_id,
-                    turn_id=turn_id,
-                    api_request_id=api_request_id,
-                    session_id=agent.session_id or "",
-                    platform=agent.platform or "",
-                    model=agent.model,
-                    provider=agent.provider,
-                    base_url=agent.base_url,
-                    api_mode=agent.api_mode,
-                    api_call_count=api_call_count,
-                    middleware_trace=list(_llm_middleware_trace),
-                )
+                # GLM concurrency guard (2026-07-02 incident mitigation, part A):
+                # process-wide host-keyed semaphore caps in-flight *.bigmodel.cn
+                # requests at N=4 (configurable). No-op context manager for
+                # non-GLM providers — zero overhead on Anthropic/OpenAI/etc.
+                # The slot is released the moment _perform_api_call returns
+                # (success or exception), throttling HTTP requests not retry
+                # iterations.
+                with acquire_glm_slot(getattr(agent, "base_url", None)):
+                    response = run_llm_execution_middleware(
+                        api_kwargs,
+                        _perform_api_call,
+                        original_request=_original_api_kwargs,
+                        task_id=effective_task_id,
+                        turn_id=turn_id,
+                        api_request_id=api_request_id,
+                        session_id=agent.session_id or "",
+                        platform=agent.platform or "",
+                        model=agent.model,
+                        provider=agent.provider,
+                        base_url=agent.base_url,
+                        api_mode=agent.api_mode,
+                        api_call_count=api_call_count,
+                        middleware_trace=list(_llm_middleware_trace),
+                    )
                 
                 api_duration = time.time() - api_start_time
                 
@@ -1969,6 +1978,13 @@ def run_conversation(
                     except Exception:
                         pass
                 agent._touch_activity(f"API call #{api_call_count} completed")
+                # Reset the consecutive-overloaded counter on success so a
+                # single 1305 followed by recovery doesn't poison the next
+                # burst within the same outer iteration. (The counter is also
+                # naturally reset on the next outer iteration via the fresh
+                # TurnRetryState(), but this defensive reset covers any path
+                # that loops back without exiting the outer block.)
+                _retry.consecutive_overloaded = 0
                 break  # Success, exit retry loop
 
             except InterruptedError:
@@ -2276,6 +2292,46 @@ def run_conversation(
                     retryable=classified.retryable,
                     reason=classified.reason.value,
                 )
+
+                # ── GLM overloaded early-abort counter (2026-07-02 mitigation, part C) ──
+                # Increment on each overloaded classification; reset on any
+                # other reason. When this reaches 3 within one turn, the loop
+                # aborts early with an operator-actionable message instead of
+                # burning all max_retries (which previously surfaced as a
+                # generic "model provider failed after retries" crash).
+                # The counter also resets on a successful API call (see the
+                # success-path break above).
+                if classified.reason == FailoverReason.overloaded:
+                    _retry.consecutive_overloaded += 1
+                else:
+                    _retry.consecutive_overloaded = 0
+
+                # Early-abort guard: 3 consecutive overloaded responses means
+                # the upstream is in a sustained degraded state — additional
+                # retries within the same turn just waste wall-clock and
+                # present as a generic crash. Surface a clear "pause and
+                # retry in N minutes" message instead.
+                if _retry.consecutive_overloaded >= 3:
+                    agent._flush_status_buffer()
+                    _abort_msg = (
+                        "GLM model overloaded — 3 consecutive 1305/overloaded responses. "
+                        "Pause new requests for ~10-15 minutes and retry."
+                    )
+                    agent._emit_status(f"🔥 {_abort_msg}")
+                    logger.error(
+                        "%sGLM early-abort: 3 consecutive overloaded (1305) failures. "
+                        "Backing off rather than exhausting %s retries. %s",
+                        agent.log_prefix, max_retries, agent._client_log_context(),
+                    )
+                    agent._persist_session(messages, conversation_history)
+                    return {
+                        "messages": messages,
+                        "completed": False,
+                        "api_calls": api_call_count,
+                        "failed": True,
+                        "error": _abort_msg,
+                        "failure_reason": "glm_overloaded_abort",
+                    }
 
                 if (
                     classified.reason == FailoverReason.billing
@@ -3478,20 +3534,31 @@ def run_conversation(
                                 _retry_after = min(float(_ra_raw), 120)  # Cap at 2 minutes
                             except (TypeError, ValueError):
                                 pass
-                # Overloaded upstreams need substantially longer recovery time
-                # than transient errors. Zhipu's HTTP-200-embedded 1305
-                # overloaded_error in particular returns immediately but the
-                # upstream GLM model typically needs 30-60s+ to clear its
-                # backlog. The default 2/4/8s backoff hits the same overloaded
-                # window three times within 10 seconds — all fail with the
-                # same 1305. Give overloaded a real base_delay so retries
-                # land in different recovery windows.
+                # Claude Code alignment (cc-haha/src/services/api/withRetry.ts):
+                # BASE_DELAY_MS=500ms, maxDelayMs=32s, jitter 25%. With
+                # max_retries=10 the cumulative wait window is ~3-4 min, wide
+                # enough to span transient 1305 recovery without the slow
+                # 30s-start / 180s-cap path that burned the entire retry
+                # budget on one or two tries. Retry-After header still wins
+                # when the server provides one.
                 if _retry_after:
                     wait_time = _retry_after
                 elif classified.reason == FailoverReason.overloaded:
-                    wait_time = jittered_backoff(retry_count, base_delay=30.0, max_delay=180.0)
+                    # GLM 1305 / provider-overloaded path (2026-07-02 mitigation,
+                    # part B): the default 0.5s/32s backoff exhausts a 10-retry
+                    # budget in <2 min — too fast to span a real provider
+                    # recovery window. The overloaded preset uses 30s/600s so
+                    # retries actually span the typical 1305 micro-burst. The
+                    # 3-strike early-abort (part C) fires before this path can
+                    # churn through all 10 retries anyway.
+                    wait_time = jittered_backoff_overloaded(retry_count)
                 else:
-                    wait_time = jittered_backoff(retry_count, base_delay=2.0, max_delay=60.0)
+                    wait_time = jittered_backoff(
+                        retry_count,
+                        base_delay=0.5,
+                        max_delay=32.0,
+                        jitter_ratio=0.25,
+                    )
                 if is_rate_limited:
                     agent._buffer_status(f"⏱️ Rate limited. Waiting {wait_time:.1f}s (attempt {retry_count + 1}/{max_retries})...")
                 elif classified.reason == FailoverReason.overloaded:
