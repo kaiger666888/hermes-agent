@@ -655,6 +655,33 @@ def recover_with_credential_pool(
         elif status_code in {401, 403}:
             effective_reason = FailoverReason.auth
 
+    if effective_reason == FailoverReason.overloaded:
+        # Zhipu's HTTP 200 + overloaded_error (code 1305) and similar
+        # provider-side capacity signals (503/529) are not transient
+        # per-request errors — backoff just burns the retry budget on the
+        # same credential. Rotate immediately. BUT unlike billing (402) and
+        # rate_limit (429), overloaded means the MODEL is at capacity, not
+        # that THIS KEY's quota is gone. Marking the key STATUS_EXHAUSTED
+        # here kills one key per 1305; after N× 1305 (N = pool size) all
+        # keys are dead and rotation silently dies (2026-07-02 incident:
+        # three separate storms 10:05-10:25 / 15:33-15:36 / 16:45-16:47 CST
+        # each required manual cleanup of ~/.hermes/auth.json). Use
+        # rotate_to_next which advances _current_id WITHOUT touching
+        # last_status. When the pool cycles back to the same entry (all
+        # alternatives tried), rotate_to_next returns None and we yield to
+        # the caller — the ezx 3-strike abort then surfaces a clean
+        # "GLM model overloaded" message instead of looping forever.
+        next_entry = pool.rotate_to_next()
+        if next_entry is not None:
+            _ra().logger.info(
+                "Credential %s (overloaded) — rotated to pool entry %s (key retained)",
+                status_code if status_code is not None else 503,
+                getattr(next_entry, "id", "?"),
+            )
+            agent._swap_credential(next_entry)
+            return True, False
+        return False, has_retried_429
+
     if effective_reason == FailoverReason.billing:
         rotate_status = status_code if status_code is not None else 402
         next_entry = pool.mark_exhausted_and_rotate(status_code=rotate_status, error_context=error_context)

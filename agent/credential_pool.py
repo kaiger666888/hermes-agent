@@ -1425,6 +1425,114 @@ class CredentialPool:
                 logger.info("credential pool: rotated to %s", _next_label)
             return next_entry
 
+    def rotate_to_next(
+        self,
+        *,
+        api_key_hint: Optional[str] = None,
+    ) -> Optional[PooledCredential]:
+        """Rotate to the next available credential WITHOUT marking the current one.
+
+        Used for ``FailoverReason.overloaded`` (provider-side capacity errors
+        like Zhipu GLM 1305 "model capacity exceeded").  These errors mean the
+        MODEL is overloaded, not that THIS KEY's quota is exhausted — so
+        permanently marking the key ``STATUS_EXHAUSTED`` (as
+        ``mark_exhausted_and_rotate`` does) is wrong.  Without this method,
+        every 1305 kills one key; after N× 1305 (where N = pool size) all
+        keys are exhausted and rotation silently dies — see the 2026-07-02
+        incident where Kai's 4-key GLM rotation lost all keys three times in
+        one day.
+
+        Returns the next entry to use, or None when:
+        * the pool is empty, or
+        * there is only one entry (no alternative to rotate to), or
+        * every other entry is in exhaustion cooldown, or
+        * no DIFFERENT entry is available to rotate to (the just-rotated-away
+          entry is the only live one — signals "all alternatives tried",
+          caller should surface a clean error rather than loop forever).
+
+        IMPORTANT: this method is a NO-OP on the just-rotated-away entry's
+        ``last_status`` / ``last_error_*`` fields.  The key remains fully
+        selectable on the next ``select()`` call.
+
+        Implementation note: unlike ``mark_exhausted_and_rotate``, we cannot
+        simply set ``_current_id = None`` and call ``_select_unlocked`` —
+        that would re-select the same lowest-priority entry (still
+        available, still lowest priority).  Instead we explicitly exclude
+        the current entry from the candidate set and pick the next-best
+        available one.  This achieves real rotation without mutating state.
+
+        Contract parity with ``mark_exhausted_and_rotate``: same lock, same
+        current-entry resolution (``api_key_hint`` → ``current()`` →
+        ``_select_unlocked()``).  Differs in (a) not calling
+        ``_mark_exhausted`` and (b) using an exclusion set instead of
+        relying on exhaustion filtering to skip the current entry.
+        """
+        with self._lock:
+            entry = None
+            if api_key_hint:
+                entry = next(
+                    (e for e in self._entries if e.runtime_api_key == api_key_hint),
+                    None,
+                )
+            if entry is None:
+                entry = self.current() or self._select_unlocked()
+            if entry is None:
+                return None
+            previous_id = entry.id
+            _prev_label = entry.label or entry.id[:8]
+
+            # Pick the next available entry EXCLUDING the one we just rotated
+            # away from.  We reuse ``_available_entries`` for cooldown/refresh
+            # semantics but filter out ``previous_id`` so the same key is
+            # never immediately re-selected.  This is the load-bearing
+            # difference from ``mark_exhausted_and_rotate``: that method
+            # relies on exhaustion filtering to skip the current entry; we
+            # achieve the same skip WITHOUT mutating ``last_status``.
+            now = time.time()
+            candidates = [
+                e for e in self._available_entries(clear_expired=True, refresh=True)
+                if e.id != previous_id
+            ]
+            if not candidates:
+                logger.info(
+                    "credential pool: no alternative available for overloaded "
+                    "rotation from %s — recovery yields to caller",
+                    _prev_label,
+                )
+                return None
+
+            if self._strategy == STRATEGY_RANDOM:
+                next_entry = random.choice(candidates)
+            elif self._strategy == STRATEGY_LEAST_USED and len(candidates) > 1:
+                next_entry = min(candidates, key=lambda e: e.request_count)
+                updated = replace(next_entry, request_count=next_entry.request_count + 1)
+                self._replace_entry(next_entry, updated)
+                next_entry = updated
+            elif self._strategy == STRATEGY_ROUND_ROBIN and len(candidates) > 1:
+                # Pop the front candidate and push it to the back so the next
+                # rotation lands on a different entry.  Matches the spirit of
+                # ``_select_unlocked``'s round_robin path.
+                next_entry = candidates[0]
+                rotated = [c for c in self._entries if c.id != next_entry.id]
+                rotated.append(replace(next_entry, priority=len(self._entries) - 1))
+                self._entries = [
+                    replace(c, priority=idx) for idx, c in enumerate(rotated)
+                ]
+                self._persist()
+            else:
+                # fill_first (default) or single-candidate: take the
+                # lowest-priority candidate that ISN'T the previous entry.
+                next_entry = candidates[0]
+
+            self._current_id = next_entry.id
+            _next_label = next_entry.label or next_entry.id[:8]
+            logger.info(
+                "credential pool: overloaded rotation %s -> %s (key retained, "
+                "not marked exhausted — model capacity error is not per-key)",
+                _prev_label, _next_label,
+            )
+            return next_entry
+
     def acquire_lease(self, credential_id: Optional[str] = None) -> Optional[str]:
         """Acquire a soft lease on a credential.
 
