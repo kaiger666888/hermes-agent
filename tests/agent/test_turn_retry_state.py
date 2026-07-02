@@ -29,12 +29,27 @@ EXPECTED_FIELDS = {
     "has_retried_429",
     "restart_with_compressed_messages",
     "restart_with_length_continuation",
+    # GLM overloaded early-abort counter (2026-07-02 mitigation). This is a
+    # counter (int, default 0), NOT a one-shot guard, so it is excluded from
+    # the all-guards-default-False invariant below.
+    "consecutive_overloaded",
+}
+
+# Fields that are counters rather than one-shot guards. These default to 0
+# (int), not False (bool), and are excluded from the all-guards-default-False
+# contract.
+COUNTER_FIELDS = {
+    "consecutive_overloaded",
 }
 
 
 def test_all_guards_default_false():
     s = TurnRetryState()
     for name, value in s:
+        if name in COUNTER_FIELDS:
+            # Counters default to 0 (int), not False (bool).
+            assert value == 0, f"{name} should default to 0 (counter)"
+            continue
         assert value is False, f"{name} should default to False"
 
 

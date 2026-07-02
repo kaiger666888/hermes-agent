@@ -1174,7 +1174,13 @@ display:
 #   glm:
 #     model: glm-4.7
 #     provider: custom
-#     base_url: "https://ollama.com/v1"
+#     base_url: "https://open.bigmodel.cn/api/anthropic"
+#     # Process-wide cap on concurrent in-flight requests to *.bigmodel.cn.
+#     # Mitigates 1305 overloaded_error storms during peak hours (default 4).
+#     # Operator escape hatch during incidents: HERMES_GLM_CONCURRENCY env var
+#     # takes precedence over this value. Clamped to [1, 32] at runtime.
+#     # See agent/glm_concurrency_guard.py for details.
+#     global_concurrency: 4
 
 # =============================================================================
 # Privacy
