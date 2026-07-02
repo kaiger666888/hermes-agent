@@ -31,7 +31,7 @@ progress:
 Phase: 43 of 43 (Plan 01 SHIPPED — v9.0-MILESTONE-AUDIT.md authored; 22/22 reqs satisfied; FOUND-08 preserved)
 Plan: 43-01 complete
 Status: Phase 43 VALIDATE shipped — v9.0-MILESTONE-AUDIT.md (10 sections) authored; 3 integration flows verified; 30 SKILL.md frontmatter byte-identical to a2a20d2be; 301 tests GREEN; ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`
-Last activity: 2026-07-02 — Completed quick task 260702-ezx: GLM concurrency + retry hardening (A+B+C) — host-keyed semaphore N=4 + 1305-specific backoff + 3-strike early-abort
+Last activity: 2026-07-02 — Completed quick task 260702-o1a: credential-pool overloaded fix — rotate_to_next() replaces mark_exhausted_and_rotate on 1305, GLM 4-key rotation no longer silently dies
 
 ### Progress
 
@@ -199,6 +199,7 @@ concurrent) └── Phase 41 (PREVIEW)  ────────────�
 | 260626-t0q | CJK error classification (port openclaw failover-matches + Zhipu 1305/1311/1113 codes) | 2026-06-26 | c9e1ca8d4 | [260626-t0q-cjk-error-classification](./quick/260626-t0q-cjk-error-classification/) |
 | 260626-vzl | Encode Notion "创作方向" into kais-movie-pipeline refs (3 new refs: platform-specs / creative-redlines / genre-anchor-urban-fantasy + 3 SKILL.md References table patches: compliance_gate / theory_critic / kais-movie-pipeline) | 2026-06-26 | bd53bc387 | [260626-vzl-kmp-creative-direction-refs](./quick/260626-vzl-kmp-creative-direction-refs/) |
 | 260702-ezx | GLM concurrency + retry hardening (A+B+C): host-keyed `threading.Semaphore` N=4 for `*.bigmodel.cn`, 30s/600s backoff preset for `FailoverReason.overloaded`, 3-strike consecutive-1305 early-abort | 2026-07-02 | 4b821c29b | [260702-ezx-glm-concurrency-hardening](./quick/260702-ezx-glm-concurrency-hardening/) |
+| 260702-o1a | Credential-pool overloaded fix: new `CredentialPool.rotate_to_next()` (advances current_id without marking exhausted); overloaded branch switched from `mark_exhausted_and_rotate` → `rotate_to_next`; cycle-detection returns None on full rotation, hands off to ezx 3-strike abort | 2026-07-02 | 5839b5f78 | [260702-o1a-credential-pool-overloaded-fix](./quick/260702-o1a-credential-pool-overloaded-fix/) |
 
 ## Deferred Items
 
