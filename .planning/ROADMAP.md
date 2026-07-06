@@ -89,7 +89,7 @@ Plans:
   5. Kimi 方案中可借鉴的部分(如有)显式列出 + 评估借鉴条件
 **Plans**: 1 plan
 Plans:
-- [ ] 47-01-PLAN.md — T6 vs Kimi 全 MCP shim 7 维度对照 + subagent 形态否决论据 (FEATURES §11 B4.1) + Microsoft 三层协议验证 (FEATURES §7.4 B7.1) + Kimi-side borrowable 评估 + Phase 44 决策 1-7 cross-validation audit (5 tasks, single deliverable ~1400 lines)
+- [x] 47-01-PLAN.md — T6 vs Kimi 全 MCP shim 7 维度对照 + subagent 形态否决论据 (FEATURES §11 B4.1) + Microsoft 三层协议验证 (FEATURES §7.4 B7.1) + Kimi-side borrowable 评估 + Phase 44 决策 1-7 cross-validation audit (5 tasks, single deliverable ~1400 lines)
 **UI hint**: no
 
 ### Phase 48: CROSS-REPO-IMPACT
@@ -183,7 +183,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 44. FIRST-PRINCIPLES | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 45. AGENT-SCHEMA | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 46. ROUND-TABLE-PROTOCOL | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 47. KIMI-COMPARISON | v10.0 | 0/1 | Not started | - |
+| 47. KIMI-COMPARISON | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 48. CROSS-REPO-IMPACT | v10.0 | 0/TBD | Not started | - |
 | 49. MIGRATION-PATH | v10.0 | 0/TBD | Not started | - |
 | 50. POC-PLAN | v10.0 | 0/TBD | Not started | - |
