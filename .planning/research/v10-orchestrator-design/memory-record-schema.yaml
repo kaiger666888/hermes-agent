@@ -224,7 +224,7 @@ properties:
 
   evidence_chain:
     type: array
-    min_items: 3
+    minItems: 3
     items:
       type: object
       required: [source_type, source_id, timestamp]
@@ -266,7 +266,7 @@ properties:
 
   evidence_operator_ids:
     type: array
-    min_items: 1
+    minItems: 1
     items:
       type: string
     description: |

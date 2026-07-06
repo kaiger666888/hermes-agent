@@ -58,7 +58,7 @@ properties:
 
   description:
     type: string
-    min_length: 10
+    minLength: 10
     description: |
       One-line summary surfaced by the `agents_list` MCP tool and Hermes dashboard.
       Source: ARCHITECTURE §1.1 row 2 (SKILL description, refined if needed).
@@ -109,7 +109,7 @@ properties:
       # dispatcher when the agent is invoked via get_agent_opinion. Distinct
       # from `prerequisites.tools` (activation conditions, §2.12).
       # Examples: [hermes_llm, read_file, search_files, write_file, dreamina_cli, patch]
-    min_items: 1
+    minItems: 1
     description: |
       Runtime tool whitelist. Honored by the dispatcher (ARCHITECTURE §4.3).
       Distinct from `prerequisites.tools` (§2.12) — `tools` are runtime GRANTS,
