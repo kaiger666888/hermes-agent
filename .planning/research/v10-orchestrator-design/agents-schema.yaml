@@ -1,0 +1,408 @@
+# Hermes Agent Registry YAML Schema (v10.0)
+#
+# 18-field schema for ~/.hermes/agents/{name}.agent.yaml
+#
+# Sources:
+#   - ARCHITECTURE.md §1.1 (18-field source table, lines 29-52)
+#   - ARCHITECTURE.md §1.3 (screenplay minimal example, lines 73-116)
+#   - Phase 44 决策 5 (α agent form — root-arg-决策-5)
+#   - Phase 44 决策 6 (per-agent memory + curator-driven self-evolution — root-arg-决策-6)
+#   - SUMMARY.md CC-2 (2-layer schema mandate)
+#   - SUMMARY.md OQ-4 (fitness_score cold start) / OQ-13 (tools enum) / OQ-14 (this file is the JSON Schema)
+#   - PITFALLS.md §P1 (persona drift → persona_sha256 in evolution_log)
+#   - PITFALLS.md §P4 (cross-project leakage → memory_scope enum)
+#   - PITFALLS.md §P5 (curator failure modes → evolution_log tamper-evident chain)
+#   - PITFALLS.md §P8 (no fitness signal → fitness_score field)
+#   - PITFALLS.md §P14 (schema migration → schema_version in memory-record-schema.yaml)
+#
+# Consumers:
+#   - v11.0 PoC Python dataclass generator (consumes this as input)
+#   - Phase 51 VALIDATE-02 lint script (machine-checkable cross-doc consistency)
+#   - DESIGN-02 success criterion (SC#1: this file exists with all 18 fields)
+#
+# This is Layer 1 of the 2-layer schema split (CC-2 mandate).
+# Layer 2 (memory-record-schema.yaml) is INDEPENDENT — see design doc §1.3 + §3.
+#
+# Schema dialect: JSON Schema Draft 2020-12 (https://json-schema.org/draft/2020-12/schema)
+#
+# Stability: SC#1 ROADMAP-level lock — field add/remove requires milestone-level decision.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://hermes-agent.local/v10/agents-schema.yaml"
+title: "Hermes Agent Registry YAML Schema (v10.0)"
+description: |
+  18-field schema for ~/.hermes/agents/{name}.agent.yaml.
+  Layer 1 of the 2-layer schema (CC-2 mandate). The 18 fields lock agent identity,
+  runtime knobs, and curator-managed metadata. Per-agent memory records (time-decaying,
+  supersessable, scope-filtered) live in the INDEPENDENT memory-record-schema.yaml.
+  Source: ARCHITECTURE.md §1.1 + Phase 44 决策 5 + 决策 6.
+
+type: object
+required: [name, description, version, persona, tools, memory_scope, lineage]
+additionalProperties: false  # SC#1 lock — reject undeclared fields (T-45-01 mitigation)
+
+properties:
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.1 — Identity fields (operator-curated, stable across projects)
+  # ──────────────────────────────────────────────────────────────────────
+
+  name:
+    type: string
+    pattern: "^[a-z0-9_-]+$"
+    description: |
+      Primary identifier; MUST match filename stem of the .agent.yaml file.
+      Distinct from `expert_id` (a SKILL may transit to an agent with a different name).
+      Pattern: lowercase alphanumeric + hyphen + underscore only.
+      Source: ARCHITECTURE §1.1 row 1.
+
+  description:
+    type: string
+    min_length: 10
+    description: |
+      One-line summary surfaced by the `agents_list` MCP tool and Hermes dashboard.
+      Source: ARCHITECTURE §1.1 row 2 (SKILL description, refined if needed).
+
+  version:
+    type: string
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"  # semver
+    description: |
+      Schema version of the agent YAML itself. Bumped when fields are added.
+      Distinct from SKILL `version` (which tracks SKILL-content version) — agent YAML
+      version starts at 1.0.0 on first transform and increments on schema-affecting edits.
+      Source: ARCHITECTURE §1.1 row 3.
+      PITFALLS §P14 mitigation: schema_version also lives on every memory record
+        (see memory-record-schema.yaml) — this field is the agent-YAML-side carrier.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.4 — Persona (load-bearing difference from SKILL)
+  # ──────────────────────────────────────────────────────────────────────
+
+  persona:
+    type: string
+    description: |
+      The agent's system-prompt fragment. THE load-bearing difference from SKILL:
+      a SKILL body is injected as a USER message (imperative-second-person:
+      "You are X. Do Y."); an agent persona is injected as a SYSTEM-prompt fragment
+      (first-person expert identity: "I am X. I do Y.").
+      Mixing registers confuses the model and loses the persona-as-identity framing
+      that makes agents feel like colleagues rather than templates
+      (ARCHITECTURE §8.1 anti-pattern: "Agent YAML as Prompt Dump").
+      Phase 44 §3.1 row 8 rejection (YAML-not-prompt-dump) anchors this.
+      Source: ARCHITECTURE §1.1 row 4 (NEW — must rewrite).
+      PITFALLS §P1 mitigation (persona drift):
+        - persona_sha256 is computed at registration and carried in every
+          evolution_log entry (§2.14) and every memory record (§3.11)
+        - drift detected when recall-time persona hash ≠ write-time hash
+        - curator cannot mutate lines inside the persona fragment
+          (mirrors v6.0 bundled-skill gating pattern)
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.5 — Tools (runtime whitelist, resolves OQ-13)
+  # ──────────────────────────────────────────────────────────────────────
+
+  tools:
+    type: array
+    items:
+      type: string
+      # OQ-13 resolution: `tools` is a runtime whitelist, enforced by the
+      # dispatcher when the agent is invoked via get_agent_opinion. Distinct
+      # from `prerequisites.tools` (activation conditions, §2.12).
+      # Examples: [hermes_llm, read_file, search_files, write_file, dreamina_cli, patch]
+    min_items: 1
+    description: |
+      Runtime tool whitelist. Honored by the dispatcher (ARCHITECTURE §4.3).
+      Distinct from `prerequisites.tools` (§2.12) — `tools` are runtime GRANTS,
+      `prerequisites.tools` are activation CONDITIONS.
+      Source: ARCHITECTURE §1.1 row 5.
+      OQ-13 resolution: YES, this is an enum-like runtime whitelist.
+        The dispatcher filters the global tool registry to only the listed tools
+        when spawning the agent fork (see ARCHITECTURE §4.3 dispatcher pseudocode).
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.6 — Memory scope (P4 cross-project leakage mitigation)
+  # ──────────────────────────────────────────────────────────────────────
+
+  memory_scope:
+    type: string
+    enum: [shared, per_agent, project_scoped]
+    default: per_agent
+    description: |
+      mem0 routing convention.
+      Source: ARCHITECTURE §1.1 row 6 (NEW).
+      Values:
+        - shared: the global mem0 user_id (cross-agent, current default — v7.0 behavior)
+        - per_agent: user_id=agent:{name} namespace (recommended default for 15 movie-experts)
+        - project_scoped: user_id=project:{slug}+agent:{name} (most isolated, future use)
+      PITFALLS §P4 mitigation (cross-project leakage):
+        memory_scope=per_agent routes records by agent_id namespace; the finer-grained
+        scope field (global|project|session) on every memory record (§3.9) governs
+        cross-project VISIBILITY at retrieve time. Two-layer isolation.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.7 — Lineage (operator ownership, skill drift detection)
+  # ──────────────────────────────────────────────────────────────────────
+
+  lineage:
+    $ref: "#/$defs/Lineage"
+    description: |
+      Records provenance so curator can detect SKILL↔agent drift
+      (e.g. SKILL got a v5.0 V8.6 sync patch but agent persona didn't).
+      Source: ARCHITECTURE §1.1 row 7 (NEW).
+      Operator-owned — transform procedure in ARCHITECTURE §6.1.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.8 - §2.13 — Optional fields with defaults carried from SKILL
+  # ──────────────────────────────────────────────────────────────────────
+
+  refs:
+    type: array
+    items:
+      type: string
+    default: []
+    description: |
+      RAG reference docs the agent is allowed to retrieve from.
+      Paths are repo-relative or absolute. Flattened from SKILL `## References` table.
+      Source: ARCHITECTURE §1.1 row 8.
+
+  tags:
+    type: array
+    items:
+      type: string
+      pattern: "^[a-z0-9-]+$"  # lowercase hyphenated
+    description: |
+      Lowercase hyphenated; powers `agents_list` filtering.
+      Source: ARCHITECTURE §1.1 row 9 (SKILL metadata.hermes.tags copy).
+
+  expert_id:
+    type: string
+    description: |
+      Backward-compat anchor. When a consumer still calls the SKILL by
+      `expert_id: screenplay`, the dispatcher routes to the agent of the same name.
+      Source: ARCHITECTURE §1.1 row 10 (SKILL metadata.hermes.expert_id copy).
+      FOUND-08 preservation rule (Phase 44 decision 1): do NOT mutate frozen
+        expert_ids during the SKILL→agent transition.
+
+  metrics:
+    type: array
+    items:
+      type: string
+    description: |
+      Quality dimensions for the eval gate. Carried verbatim from
+      SKILL metadata.hermes.metrics so v6.0 eval harness still works on agent outputs.
+      Source: ARCHITECTURE §1.1 row 11.
+
+  prerequisites:
+    $ref: "#/$defs/Prerequisites"
+    description: |
+      Activation conditions (≠ `tools` runtime whitelist).
+      Source: ARCHITECTURE §1.1 row 12 (SKILL prerequisites copy).
+
+  related_agents:
+    type: array
+    items:
+      type: string
+      pattern: "^[a-z0-9_-]+$"
+    description: |
+      Collaboration DAG. Drives round table panel suggestions
+      (02-ROUND-TABLE-PROTOCOL.md consumer).
+      Source: ARCHITECTURE §1.1 row 13 (SKILL metadata.hermes.related_skills copy + rename).
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.14 — Evolution log (P5 curator failure modes mitigation)
+  # ──────────────────────────────────────────────────────────────────────
+
+  evolution_log:
+    type: array
+    items:
+      $ref: "#/$defs/EvolutionLogEntry"
+    default: []
+    description: |
+      Curator-managed, append-only, sha256-chained log of memory update events.
+      DO NOT hand-edit — curator is the only writer.
+      Source: ARCHITECTURE §1.1 row 14 (NEW).
+      PITFALLS §P5 mitigation (curator failure modes):
+        - Tamper-evident sha256 chaining (same pattern as v6.0 agent/curator_audit.py)
+        - Each entry carries persona_sha256 (P1 cross-layer detection network)
+        - Dry-run-by-default writes (see §5.2 of design doc)
+        - Evidence coverage check (evidence_chain ≥ 3 sources per P5 mitigation 2)
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.15 — Fitness score (P8 no fitness signal + OQ-4 cold start)
+  # ──────────────────────────────────────────────────────────────────────
+
+  fitness_score:
+    type: [number, "null"]
+    minimum: 0.0
+    maximum: 1.0
+    default: null
+    description: |
+      Curator-computed rolling quality score derived from eval gate + feedback verdicts.
+      `null` until first curator pass. NOT operator-set.
+      Source: ARCHITECTURE §1.1 row 15 (NEW).
+      PITFALLS §P8 mitigation (no fitness signal):
+        This is the agent-YAML-side carrier. The full fitness battery design
+        (frozen battery yaml, fitness_trend.jsonl, A/B shadow mode, model_id isolation)
+        is detailed in §2.15 of design doc + deferred to 05-POC-PLAN.md.
+      OQ-4 resolution (cold start):
+        null = neutral 0.5 for ordering (orchestrator treats null as 0.5 in
+        turn_order computation); UI displays "untested" badge when fitness_score=null.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # §2.16 - §2.18 — Optional runtime knobs
+  # ──────────────────────────────────────────────────────────────────────
+
+  platforms:
+    type: array
+    items:
+      type: string
+      enum: [linux, macos, windows, termux]
+    default: [linux, macos, windows]
+    description: |
+      OS compatibility gate, enforced identically to skill_utils.skill_matches_platform.
+      Source: ARCHITECTURE §1.1 row 16 (SKILL platforms copy).
+
+  round_table_eligible:
+    type: boolean
+    default: true
+    description: |
+      Whether this agent can be invited to a round table.
+      Set `false` for ephemeral helpers or read-only analysts.
+      Source: ARCHITECTURE §1.1 row 17 (NEW).
+
+  default_invocation:
+    type: string
+    enum: [mcp_tool, skill_fallback, disabled]
+    default: mcp_tool
+    description: |
+      Dispatcher mode.
+      Source: ARCHITECTURE §1.1 row 18 (NEW).
+      Values:
+        - mcp_tool: invoke via `get_agent_opinion` MCP tool (round-table-ready)
+        - skill_fallback: fall through to underlying SKILL (v1-v9 behavior; additive
+            transition per FOUND-08 — SKILL remains callable during migration)
+        - disabled: agent exists in registry but cannot be invoked yet
+            (transform-in-progress; used during the 15-expert migration window)
+
+# ════════════════════════════════════════════════════════════════════════
+# $defs — Reusable shapes referenced via $ref
+# ════════════════════════════════════════════════════════════════════════
+
+$defs:
+
+  # ─── Lineage (§2.7) ───
+  Lineage:
+    type: object
+    required: [derived_from_skill_id, derived_from_repo, transform_date, skill_sha256]
+    additionalProperties: false
+    description: |
+      Provenance record. Operator-owned; established at transform time (ARCHITECTURE §6.1).
+      Curator's drift-detection pass (§5.4 of design doc + ARCHITECTURE §6.2)
+      recomputes skill_sha256 and compares.
+    properties:
+      derived_from_skill_id:
+        type: string
+        description: "SKILL name (expert_id) this agent was transformed from."
+      derived_from_repo:
+        type: string
+        description: "Repo URL or local path of the source SKILL (e.g. kais-hermes-skills)."
+      transform_date:
+        type: string
+        format: date
+        description: "ISO date when the SKILL→agent transform was performed."
+      transform_notes:
+        type: string
+        description: "Free-text operator notes about the transform (e.g. persona rewrite rationale)."
+      skill_sha256:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
+        description: |
+          SHA-256 hex digest of the source SKILL.md content at transform time.
+          Curator's drift-detection pass recomputes this from the current SKILL.md;
+          mismatch triggers ADVISORY re-transform prompt (never automatic —
+          ARCHITECTURE §8.2 anti-pattern: "Auto-Re-Transform on Drift").
+
+  # ─── Prerequisites (§2.12) ───
+  Prerequisites:
+    type: object
+    additionalProperties: false
+    description: |
+      Activation conditions (≠ tools runtime whitelist).
+      Distinct from §2.5 tools: prerequisites describe what MUST be true for
+      the agent to be ACTIVATABLE; tools describe what the agent can CALL at runtime.
+    properties:
+      tools:
+        type: array
+        items:
+          type: string
+        description: "Required tools available in the runtime (activation gate)."
+      skills:
+        type: array
+        items:
+          type: string
+        description: "Required companion skills loaded (activation gate)."
+      env:
+        type: array
+        items:
+          type: string
+        description: "Required environment variables (activation gate)."
+
+  # ─── EvolutionLogEntry (§2.14) ───
+  EvolutionLogEntry:
+    type: object
+    required: [ts, sha256, diff_summary, fitness_delta, trigger, persona_sha256]
+    additionalProperties: false
+    description: |
+      Single append-only entry in the agent's evolution_log.
+      Tamper-evident via sha256 chaining: each entry's sha256 = SHA-256 of
+      (previous_entry_sha256 + canonical_json(new_entry_payload)).
+      Mirrors v6.0 agent/curator_audit.py pattern.
+      Source: ARCHITECTURE §1.1 row 14 (NEW); PITFALLS §P5 mitigation 5 (dry-run-first).
+    properties:
+      ts:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when the evolution event was recorded."
+      sha256:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
+        description: |
+          SHA-256 hex digest chaining this entry to the previous one.
+          Computed as sha256(prev_entry.sha256 + canonical_json({ts, diff_summary,
+          fitness_delta, trigger, persona_sha256})). Genesis entry sha256=sha256("").
+      diff_summary:
+        type: string
+        description: |
+          Human-readable summary of the memory delta applied
+          (e.g. "After Volvo S1-1 case 2026-06-28, cinematographer learned to
+          always include 'left-hand drive, steering wheel on the left side'
+          for car-interior shots").
+      fitness_delta:
+        type: number
+        minimum: -1.0
+        maximum: 1.0
+        description: |
+          Change in fitness_score attributed to this evolution event.
+          Range [-1.0, +1.0]. 0.0 = neutral (e.g. additive memory without
+          eval-gate signal).
+      trigger:
+        type: string
+        enum: [feedback, eval_gate, operator_edit, round_table, external, bias_canary]
+        description: |
+          What caused this evolution event.
+          - feedback: curator's _feedback_scan_phase produced an insight
+          - eval_gate: eval gate verdict triggered a fitness adjustment
+          - operator_edit: operator hand-edited persona (rare; persona_sha256 changes)
+          - round_table: round table conclusion synthesized into a memory fact
+          - external: external source (e.g. new ref doc ingested)
+          - bias_canary: bias canary flagged and auto-quarantine triggered
+      persona_sha256:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
+        description: |
+          SHA-256 of the agent's persona fragment AT THE TIME this entry was written.
+          Cross-layer invariant for P1 persona drift detection:
+          - if persona_sha256 here ≠ current agent YAML persona sha256 →
+            the memory records written under the old persona may need re-verification
+          - if persona_sha256 changes between consecutive entries →
+            operator hand-edited persona; curator flags dependent memory records
