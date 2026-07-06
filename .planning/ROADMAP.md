@@ -149,7 +149,7 @@ Plans:
   5. Audit 报告给出 milestone-level PASS / tech_debt / FAIL 结论,带 evidence 指针(每条核对项引用具体文件 + 章节)
 **Plans**: 1 plan
 Plans:
-- [ ] 51-01-PLAN.md — VALIDATE-02 cross-doc consistency lint script (4 dimensions, Python 3.11+ stdlib-only) + VALIDATE-01 milestone audit report (9 sections, 9/9 reqs + 16 OQ + 7 pitfall + 4 citation chain + verdict) (5 tasks, 2 deliverable files)
+- [x] 51-01-PLAN.md — VALIDATE-02 cross-doc consistency lint script (4 dimensions, Python 3.11+ stdlib-only) + VALIDATE-01 milestone audit report (9 sections, 9/9 reqs + 16 OQ + 7 pitfall + 4 citation chain + verdict) (5 tasks, 2 deliverable files)
 **UI hint**: no
 
 ## Critical Path & Parallel Waves
@@ -195,7 +195,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 48. CROSS-REPO-IMPACT | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 49. MIGRATION-PATH | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 50. POC-PLAN | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 51. VALIDATE | v10.0 | 0/TBD | Not started | - |
+| 51. VALIDATE | v10.0 | 1/1 | Complete    | 2026-07-06 |
 
 ---
 
