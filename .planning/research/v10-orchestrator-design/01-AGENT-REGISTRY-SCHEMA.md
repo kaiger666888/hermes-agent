@@ -1121,3 +1121,169 @@ def invoke_agent_with_memory(agent_name: str, query: str) -> str:
 **Curator state extension:** `.curator_state` 新增 `"last_memory_evolution_at": ISO_ts` 字段,确保 evolution phase 每 `interval_hours` 周期最多跑一次(matches existing cadence discipline)。
 
 ---
+
+## §6 — 15-Expert Transform Mapping Table(verbatim from ARCHITECTURE §2)
+
+### §6.0 — 本节声明:ARCHITECTURE §2 verbatim copy + FOUND-08 preservation
+
+本节是 **ARCHITECTURE.md §2 line 120-148 的 verbatim copy**,作为 SC#4 的物理载体。每个 expert 的 5-field transform pattern 在本表只列 deltas,完整字段规则见 §2 of this doc(18-field narrative)。**FOUND-08 preserved**(Phase 44 决策 1 anchored)—— 15 个 `expert_id` 值 verbatim copy,**不可 mutate**。
+
+---
+
+### §6.1 — 5-Field Transform Pattern(verbatim from ARCHITECTURE §2 line 124)
+
+15 个 movie-experts 遵循**相同的 5-field transform pattern**:
+
+> **COPY** `name`, `description`, `version`(bumped to 1.0.0), `platforms`, `tags`, `expert_id`, `metrics`, `prerequisites`, `related_skills`→`related_agents`。**DROP** `author`, `license`。**REWRITE** SKILL body into `persona`。**FLATTEN** `## References` table into `refs`。**DERIVE** `tools` from the agent's actual runtime surface。**INITIALIZE** `evolution_log=[]`, `fitness_score=null`, `memory_scope=per_agent`, `default_invocation=mcp_tool`。
+
+---
+
+### §6.2 — 15-Expert Delta Table(verbatim from ARCHITECTURE §2 lines 128-144)
+
+下表列 per-expert deltas —— 未列出的字段用 §6.1 默认规则。每行 5 列:`Expert / tools / persona framing / Notable refs (count) / related_agents (count)`。
+
+| Expert | `tools` | `persona` framing | Notable `refs` (count) | `related_agents` (count) |
+|--------|---------|-------------------|------------------------|--------------------------|
+| **hook_retention** | `[hermes_llm, read_file, search_files]` | First-person commercial留存引擎; cites 5 hook types + 5 爆款公式; defers to screenplay on dialogue | 4 refs (three-second-hooks, conflict-escalation, paywall-design, viral-formulas) | 5 |
+| **creative_source** | `[hermes_llm, read_file, search_files]` | First-person creative ideation; cites Snowflake Method 10-step + SCAMPER 7-verb; outputs StoryKernel JSON scaffold | 3 refs (snowflake-method, scamper-variations, project-corpus) | 4 |
+| **screenplay** | `[hermes_llm, read_file, search_files, write_file, patch]` | First-person scene architect; cites Snyder 15-beat + McKee value-shift + Tan interest formula; HOOK-09 marker contract is load-bearing | 5 refs (save-the-cat, mckee, cn-shortdrama, emotion-curve, dialogue-craft) | 9 |
+| **script_auditor** | `[hermes_llm, read_file, search_files]` | First-person 5-dim critic (NOT creative writer); predicts completion %, flags exposition dumps; hard-gates on `< 65% predicted_completion` | 5 refs (5-dim audit) | 4 |
+| **character_designer** | `[hermes_llm, read_file, search_files, write_file]` | First-person character psychologist; produces L1-L4 asset library specs; defers to visual_executor on turnaround sheets | 4 refs | 5 |
+| **cinematographer** | `[hermes_llm, read_file, search_files]` | First-person shot-intent owner; cites Mascelli 8-level + 180°/30° axis + 9:16 power points + 12 camera moves; does NOT execute motion (visual_executor's job); Phase 17 absorbed scene_builder | 7 refs (shot-grammar, axis-rules, vertical-screen-framing, camera-motion-catalog, e-konte-format, duration-decision-framework, ltx-video-workflows cross-ref) | 9 |
+| **style_genome** | `[hermes_llm, read_file, search_files]` | First-person 5D style vector architect; cites SCAMPER for style_blend variants; Cross-Module Alignment metric | 3 refs | 8 |
+| **prompt_injector** | `[hermes_llm, read_file, search_files, write_file]` | First-person bilingual prompt translator (camera-move intent → dreamina/Runway/Kling/Veo/Sora prompt tokens); NEW AI-native (no SKILL precedent pre-v3.0) | 2 refs | 5 |
+| **visual_executor** | `[hermes_llm, dreamina_cli, read_file, write_file, patch]` | First-person dreamina CLI executor (text2image / image2image / multimodal2video); sub_steps: [drawer, animator]; does NOT decide intent | 2 refs (dreamina-cli-baseline, scene-multi-angle-references) | 6 |
+| **continuity_auditor** | `[hermes_llm, read_file, search_files]` | First-person 4-dim continuity critic (face_identity / wardrobe_figure / color_temperature / scene_environment) + axis compliance; hard-gate on 4-dim fail | 3 refs | 5 |
+| **audio_pipeline** | `[hermes_llm, dreamina_cli (TTS path), read_file, write_file]` | First-person audio master; sub_steps: [voicer, lip_sync, composer, foley, mixer, spatial_audio]; 6 sub-step atomic operation per V8.6 §6 | 6 refs (one per sub-step) | 4 |
+| **editor** | `[hermes_llm, read_file, search_files]` | First-person rhythm + axis compliance owner; cut_density metric; defers to cinematographer on intent | 3 refs | 5 |
+| **colorist** | `[hermes_llm, read_file, search_files, write_file]` | First-person CxSxZ color narrative + LUT plan; integrates with visual_executor at Step 7 | 2 refs | 4 |
+| **compliance_gate** | `[hermes_llm, read_file, search_files]` | First-person red-line gate (redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending per v9.0); **hard-gate authority** — can block pipeline progression | 5 refs | 4 |
+| **theory_critic** | `[hermes_llm, read_file, search_files]` | First-person artistic critic; **soft-gate only** (advisory); cites McKee + Tan + classical film theory | 4 refs | 6 |
+
+---
+
+### §6.3 — Aggregate Stats + FOUND-08 Preservation Rule(verbatim from ARCHITECTURE §2 lines 146-148)
+
+**Aggregate transform stats:** 15 agents, 9 common copy-fields, 4 new fields per agent, 1 body-rewrite per agent, average 3.5 refs per agent, average 5.6 related_agents per agent。
+
+**FOUND-08 preservation rule:** All 15 `expert_id` values are copied verbatim。The transition is **additive** —— consumers can still call skills by `expert_id` and the dispatcher falls through to SKILL when `default_invocation: skill_fallback` is set(§2.18)。
+
+---
+
+## §7 — Open Questions + Pitfall Audit(SC#5 物理载体)
+
+### §7.0 — 本节声明:SC#5 审计表
+
+本节是 **SC#5 的物理载体**:
+
+- §7.1 Open Questions audit table —— 6 个 OQ(OQ-1 / OQ-4 / OQ-7 / OQ-13 / OQ-14 / OQ-16)全部 resolved 或显式 deferred
+- §7.2 Pitfalls audit table —— 7 个 load-bearing pitfalls(P1 / P2 / P4 / P5 / P8 / P10 / P14)每个有对应 schema 字段级缓解
+
+每行都标 `本文档解决章节 + 是否 defer 到 v11.0 PoC`。
+
+---
+
+### §7.1 — Open Questions Audit(6 OQs 全部 resolved 或 partial-deferred)
+
+| OQ# | 问题(一句话) | 倾向性结论(SUMMARY) | 本文档解决章节 | 是否 defer 到 v11.0? |
+|-----|---------------|----------------------|----------------|---------------------|
+| **OQ-1** | persona 版本控制:operator 手改 persona 后,prior version 是 archive 进 `evolution_log` 还是只留 diff? | **diff only**(operator 自己用 git 管 `~/.hermes/agents/`),但 memory record 必须带 `persona_sha256` 快照 | §2.4(persona_sha256 invariant)+ §3.11(memory-record persona_sha256 cross-layer) | **NO** —— schema 字段已锁;v11.0 PoC 实施 |
+| **OQ-4** | `fitness_score` 冷启动:agent 初始 `null`,orchestrator 怎么处理? | **null = neutral 0.5** for ordering;UI 显示 "untested" | §2.15(fitness_score narrative + null→0.5 mapping)+ agents-schema.yaml `fitness_score` field comment | **NO** —— schema 字段已锁 |
+| **OQ-7** | `memory.max_records` 上限:500 够不够?compaction 何时触发? | **default 500**,curator 每 N tick 跑 compaction pass | §4.4(max_records=500 aggregate + tier breakdown)+ §4.5(compaction trigger table) | **PARTIAL** —— 具体 compaction 算法(如何 select which working records to demote)+ N tick 间隔 defer 到 v11.0 PoC 实测 |
+| **OQ-13** | agent YAML `tools` 字段是否枚举(限制每个 agent 只能调特定 MCP tool)? | **YES** —— `tools` 是 runtime whitelist enforced by dispatcher | §2.5(tools narrative + OQ-13 resolution)+ agents-schema.yaml `tools` field comment | **NO** —— schema 字段已锁 |
+| **OQ-14** | agent persona YAML schema 是否需要 JSON Schema 正式定义? | **YES** —— `agents-schema.yaml` 文件 | §1.2(18-field table cross-reference to agents-schema.yaml)+ Task 2 produces agents-schema.yaml + memory-record-schema.yaml | **NO** —— JSON Schema files 已生成 |
+| **OQ-16** | curator `_memory_evolution_phase` 跟 v6.0 `_feedback_scan_phase` 的执行顺序与隔离边界? | **AFTER `_feedback_scan_phase`**,独立 try/except 包裹,dry-run-by-default | §5.1(execution order)+ §5.2(dry-run)+ §5.3(try/except isolation) | **NO** —— field contract 已锁;v11.0 PoC 实施 |
+
+**OQ-1 / OQ-4 / OQ-13 / OQ-14 / OQ-16:** 全部 resolved in this doc。**OQ-7:** schema 字段已锁(`max_records=500`),但 compaction 算法 + cadence defer 到 05-POC-PLAN.md 实测。
+
+---
+
+### §7.2 — Pitfalls Audit(7 load-bearing pitfalls 字段级缓解)
+
+| Pitfall# | 类别 | Schema field-level mitigation | 本文档章节 | PoC must-fix? |
+|----------|------|-------------------------------|------------|---------------|
+| **P1** | persona drift | `persona_sha256` carried in every `evolution_log` entry(§2.14)+ every memory record(§3.11)—— drift detected when recall-time persona hash ≠ write-time hash;Phase 44 §3.1 row 8(YAML-not-prompt-dump rejection)prevents persona from being SKILL body copy-paste that would drift via SKILL edits | §2.4(persona narrative + P1 mitigation 1-3)+ §2.14(evolution_log entry persona_sha256)+ §3.11(memory-record persona_sha256) | **YES**(load-bearing) |
+| **P2** | stale memory | `expires_at`(§3.1 hard TTL)+ `verified_at`(§3.2 periodic re-verification)+ `supersedes_memory_id`(§3.3 supersession chain)+ `confidence`(§3.4 time-decay)+ `half_life_days`(§3.5 decay rate)—— 5 字段协同 | §3.1-§3.5(memory-record narrative) | **YES** |
+| **P4** | cross-project leakage | `scope: global\|project\|session`(§3.9,finer than agents-schema memory_scope)+ `project_id` required when scope=project(§3.9)+ cross-project promotion gate(P4 mitigation 5,requires curator review + operator approval) | §3.9(scope narrative + P4 mitigation 1-5)+ §2.6(memory_scope routes records) | **YES** |
+| **P5** | curator failure modes(false-delete / hallucinate / bias amplify) | `evidence_chain` ≥3 sources(§3.6 hallucination guard)+ `evidence_operator_ids` diversity(§3.7 bias amplification guard)+ `status=archived` never hard-delete(§3.8)+ dry-run-by-default(§5.2 operator retains ownership)+ bias canary(§5.4 per-agent iteration) | §3.6(evidence_chain)+ §3.7(evidence_operator_ids)+ §3.8(status never hard-delete)+ §5.2(dry-run)+ §5.4(bias canary) | **YES** |
+| **P8** | no fitness signal | `fitness_score`(§2.15 curator-computed rolling score)+ `fitness_battery` field(deferred to PoC)+ `fitness_trend.jsonl`(deferred to PoC)+ `model_id` 隔离(deferred to PoC)—— §2.15 是 agent-YAML-side carrier | §2.15(fitness_score narrative + P8 mitigation) | **YES**(fitness_score schema 锁;fitness_battery + trend.jsonl + model_id isolation defer 到 05-POC-PLAN.md) |
+| **P10** | privacy / data leakage | `confidentiality: public\|internal\|confidential\|restricted`(§3.10)+ per-project confidentiality propagation(02-ROUND-TABLE-PROTOCOL.md consumer) | §3.10(confidentiality narrative + P10 mitigation 2) | **PARTIAL** —— PoC ships `public/internal/confidential`;`restricted` tier + PII vault defer 到 v11.1 |
+| **P14** | schema migration breaks memory store | `schema_version`(§3.12 in memory-record + §2.3 in agent YAML)—— dry-run migration mode keyed off this version;unknown fields default to safest value(e.g. unknown confidentiality → confidential,NOT public) | §3.12(schema_version narrative + P14 mitigation 1-3)+ §2.3(agent YAML version) | **YES** |
+
+**Summary:** 所有 7 个 load-bearing pitfalls 都有 schema 字段级缓解。**P10 partial defer**(`restricted` tier + cross-workspace propagation 留 v11.1);其余 6 个(P1 / P2 / P4 / P5 / P8 / P14)PoC must-fix。详细 PoC 验收条件留 05-POC-PLAN.md。
+
+---
+
+## §8 — Downstream Citation Guide + Coherence + References
+
+### §8.0 — Downstream Citation Card(后续 docs 引用契约)
+
+后续 4 份设计文档 + Phase 51 VALIDATE lint 在不重新推导 Phase 44 决策 5/6 的前提下,引用本文档字段名 —— 引用契约见下表。
+
+| Downstream doc | Cite from this doc | Do NOT re-derive | Should derive |
+|----------------|-------------------|------------------|---------------|
+| **02-ROUND-TABLE-PROTOCOL.md** | §2.6 `memory_scope` + §3.9 `scope` + §3.10 `confidentiality` + §4 memory tier + §3.6 `evidence_chain` | 18-field schema, `_memory_evolution_phase` | turn lifecycle + conflict arbitration + scope precedence + confidentiality propagation + project_id propagation in round-table turns |
+| **04-MIGRATION-PATH.md** | §2.7 `lineage` + §2.18 `default_invocation` + §6 transform table + §3.12 `schema_version` + §6.3 FOUND-08 preservation | 18-field schema | 15-expert transform rules (one per agent) + memory schema migration plan + `default_invocation: skill_fallback → mcp_tool` transition + retained-phases allowlist |
+| **05-POC-PLAN.md** | §4.5 compaction triggers + §5.2 dry-run + §5.4 per-agent iteration + §7.2 pitfall audit + §3.4 confidence + §2.15 fitness_score | entire schema | fitness battery yaml + fitness_trend.jsonl format + latency SLO (p95 < 500ms) + bias canary prompt set + threshold tuning + schema migration dry-run |
+| **06-CROSS-REPO-IMPACT.md** | §2.6 `memory_scope` + §3.9 `scope` + §3.12 `schema_version` + §5.5 `_scoped_agent_id` contextvars + §6.1 transform pattern | 18-field schema | 3-location sync (`hermes-agent` / `kais-hermes-skills` / `~/.hermes/agents/`) + Option B(v11.0)vs 物理分区(v12+)migration trigger conditions + OQ-3 旧 memory 遗留 + OQ-6 project slug 限制 |
+| **51 VALIDATE-02 lint** | entire schema(`agents-schema.yaml` + `memory-record-schema.yaml` as machine-checkable inputs) + §7 audit tables | entire schema | cross-doc consistency lint script(field name drift detection across 01/02/04/05/06 + JSON Schema validation of any sample agent YAML) |
+
+**Citation discipline:** 后续 docs 引用本文档字段时,使用 `per 01-AGENT-REGISTRY-SCHEMA §X.Y` 格式(显式章节号)。任何对本文档字段的 rename / add / remove 都需开新设计-修订里程碑(SC#1 lock)。
+
+---
+
+### §8.1 — Coherence 声明
+
+**2-layer schema(18 agent-profile fields + 10 memory-record fields)+ 3-tier memory(core/working/archival)+ curator `_memory_evolution_phase` contract = 完整 physical carrier for v10.0 设计。** 后续 4 docs(02 / 04 / 05 / 06)在不重新推导 Phase 44 决策 5/6 的前提下引用本文档字段名。
+
+**Consistency check:**
+
+- ✅ SC#1 —— 3 deliverable files exist(`01-AGENT-REGISTRY-SCHEMA.md` ≥ 800 lines + `agents-schema.yaml` ≥ 200 lines + `memory-record-schema.yaml` ≥ 150 lines)
+- ✅ SC#2 —— per-agent memory tier documented with `memory.max_records=500` cap + compaction triggers(§4.4 + §4.5,resolves OQ-7)
+- ✅ SC#3 —— curator `_memory_evolution_phase` contract documented(modeled on v6.0 `_feedback_scan_phase`,execution order + dry-run + try/except isolation,§5.1-§5.3,resolves OQ-16)
+- ✅ SC#4 —— 15-expert transform table copied verbatim from ARCHITECTURE §2(§6.2,all 15 expert rows + FOUND-08 preserved)
+- ✅ SC#5 —— 6 OQs(§7.1)+ 7 load-bearing pitfalls(§7.2)each have field-level mitigation mapped
+
+**Cross-validation:**
+
+- Every field in §2 narrative cites either ARCHITECTURE §1.1 source OR PITFALLS §P-X mitigation —— NOT invented
+- Phase 44 决策 5 + 6 cited by 决策号 throughout —— never re-derived(本文档 only specifies schema,not re-derive decisions)
+- 2-layer schema split explicit upfront(§1.3 ASCII diagram)—— no reader can conflate the two
+- All 7 load-bearing pitfalls appear in §7.2 audit table with field-level mitigation
+- All 6 OQs appear in §7.1 audit table with resolution status
+- Bilingual:EN structure(headers,schemas,field names)+ 中文 prose(rationale,examples)per CLAUDE.md skill-file convention
+
+---
+
+### §8.2 — References
+
+**Primary sources(in order of citation frequency in this doc):**
+
+- `.planning/research/v10-orchestrator-design/00-FIRST-PRINCIPLES.md`(Phase 44 root argument)—— 决策 5 + 决策 6 anchors
+- `.planning/research/v10-orchestrator-design/ARCHITECTURE.md` §1.1(18-field source table,lines 29-52)+ §1.2(SKILL compat,lines 54-71)+ §1.3(screenplay minimal example,lines 73-116)+ §2(15-expert transform table,lines 120-148)+ §3.1-§3.4(per-agent memory + curator evolution)+ §6.1(transform procedure)+ §6.2(drift detection)+ §8(anti-patterns)
+- `.planning/research/v10-orchestrator-design/PITFALLS.md` §P1(persona drift,lines 31-63)+ §P2(stale memory,lines 64-94)+ §P3(scoped retrieval perf,lines 95-125)+ §P4(cross-project leakage,lines 126-161)+ §P5(curator failure modes,lines 162-199)+ §P8(no fitness signal,lines 267-300)+ §P9(memory size growth,lines 301-336)+ §P10(privacy / data leakage,lines 337-375)+ §P14(schema migration,lines 438-457)
+- `.planning/research/v10-orchestrator-design/SUMMARY.md` CC-2(2-layer schema mandate,lines 27-29)+ Open Questions table(lines 65-82)
+- `.planning/phases/45-agent-schema/45-CONTEXT.md`(Phase 45 design discipline + Claude's discretion)
+
+**Methodology canon:**
+
+- `.planning/research/v2-pipeline-design/00-FIRST-PRINCIPLES.md`(v2.0 PRFP)—— bilingual doc structure canon + Musk 第一性原理 methodology source
+- `CLAUDE.md` —— Skill File Conventions(tags / related_skills / expert_id / metrics)+ bilingual EN structure + 中文 prose rule + JSON Schema with description/type/enum/required standard
+
+**Project context:**
+
+- `.planning/PROJECT.md` —— v10.0 milestone context,7 locked design decisions
+- `.planning/ROADMAP.md` §Phase 45(SC#1-SC#5)—— 本文档 success criteria source
+- `.planning/REQUIREMENTS.md` DESIGN-02 —— Phase 45 requirement ID
+
+**Codebase anchors(for v11.0 PoC implementer reference):**
+
+- `/data/workspace/hermes-agent/agent/curator.py` lines 2081-2095 + 2207-2221(`_feedback_scan_phase` hooks —— `_memory_evolution_phase` insert point)
+- `/data/workspace/hermes-agent/agent/curator_audit.py`(sha256-chained JSONL audit log pattern)
+- `/data/workspace/hermes-agent/agent/feedback_store.py`(`_superseded_record_ids` pattern + linear time-decay)
+- `/data/workspace/hermes-agent/plugins/memory/mem0/__init__.py`(v7.0 mem0 backend with `_read_filters` / `_write_filters` extension surface,ARCHITECTURE §3.3)
+- `/data/workspace/hermes-agent/agent/tool_executor.py:110`(ThreadPoolExecutor + contextvars pattern,§5.5 reference)
+
+---
+
+**End of 01-AGENT-REGISTRY-SCHEMA.md.** Phase 45 DESIGN-02 deliverable。下游 consumers:02-ROUND-TABLE-PROTOCOL.md / 04-MIGRATION-PATH.md / 05-POC-PLAN.md / 06-CROSS-REPO-IMPACT.md / 51 VALIDATE lint —— 见 §8.0 citation card。
