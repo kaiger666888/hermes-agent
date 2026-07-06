@@ -562,3 +562,340 @@ CC side (acknowledges receipt, round table is over):
 3. v11.0 PoC MUST NOT 添加 "parallel round table" mode 即使作为 opt-in feature flag —— 这条约束是 structural,不是 configurational。
 
 ---
+
+## §3 — Memory Conflict Arbitration(P7 完整 mitigation)
+
+### §3.0 — 本节是 PITFALLS §Pitfall 7 的完整 mitigation
+
+本节是 **PITFALLS §Pitfall 7(Round-Table Memory Conflict)的完整 mitigation**。P7 是 v10.0 round table 的核心风险 —— 多个 agent 引用各自的 scoped memory 达到矛盾结论,**无显式仲裁时 debate 被 'loud memory' agent 主导**(citation 数量胜过 correctness)。
+
+**PITFALLS §Pitfall 7 verbatim 引文:**
+
+> In a round table, the `screenplay` agent (memory: "test audiences in this project respond well to bittersweet endings") and the `theory_critic` agent (memory: "tragedy endings test 23% better than bittersweet across all projects") reach contradictory conclusions. The round table deadlocks or, worse, the loudest-memory agent wins by sheer volume of citations rather than correctness.
+>
+> **Concrete mitigations:**
+> 1. Memory annotation in round-table turns.
+> 2. Coordinator (Hermes) arbitrates conflicts.
+> 3. Scope precedence rules (session > project > global).
+> 4. Confidence-weighted voting.
+> 5. Conflict log for curator review.
+
+本节 5 个子机制对齐 PITFALLS §P7 mitigation 1-5:
+
+| § | 子机制 | PITFALLS §P7 mitigation | 物理载体 |
+|---|---|---|---|
+| §3.1 | Memory annotation in turns | mitigation 1 | `Turn.citedMemoryIds` field in round-table-state-schema.yaml |
+| §3.2 | Comparator LLM pass | mitigation 2 | Hermes coordinator role + prompt template |
+| §3.3 | Scope precedence rules | mitigation 3 | session > project > global 推理规则 |
+| §3.4 | Confidence-weighted voting | mitigation 4 | memory-record-schema `confidence` field + tie-break rule |
+| §3.5 | Conflict log for curator review | mitigation 5 | `state.conflicts` array + curator periodic pass |
+
+**所有引用 Phase 45 memory-record-schema 字段**(`record_id` / `scope` / `confidence` / `evidence_chain` / `evidence_operator_ids` / `status` / `confidentiality` / `persona_sha256`)采用 **CITE-ONLY 策略,不重定义**。Phase 45 schema 是 authoritative source,本节只在引用处标注「Cite memory-record-schema field X」。
+
+### §3.1 — Memory Annotation in Turns(P7 mitigation 1)
+
+**PITFALLS §P7 mitigation 1 verbatim:**
+
+> When an agent cites a memory in its turn, the citation includes `memory_id`, `confidence`, `scope` (global/project/session), and `evidence_record_count`. Other agents can challenge: "I disagree with memory_id #423 because my memory_id #612 contradicts it." This makes disagreement explicit and traceable.
+
+**Mechanism(详):**
+
+- **Field:** `Turn.citedMemoryIds`(list of UUID v4)—— 详见 round-table-state-schema.yaml `$defs.Turn`。
+- **At turn-append time:** 当 panelist 的 opinion 引用一个 memory 时,该 memory 的 `record_id` 被 append 到 `citedMemoryIds`。CC 在 `get_agent_opinion` 的返回值(`AgentOpinionResult`)中拿到 `citedMemoryIds` 后,直接 append 到 state file 的对应 turn。
+- **Challenge mechanism:** 下一个 panelist 可以在自己的 turn 中显式 disagree with prior turn's cited memory —— CC 在调用 `get_agent_opinion` 时把 prior turns 的 `citedMemoryIds` 作为 `priorDiscussion` argument 传给下一个 panelist,panelist 看到后可以表达 disagreement。
+- **Citation enrichment:** Hermes 在 turn append 时,**denormalize** 每个 `record_id` 的 `scope` / `confidence` / `evidence_chain` / `confidentiality` 到 ConflictRecord(如果后续该 memory 被 challenge)。这样 comparator LLM 不需要在每次 conflict 时 re-fetch memory records(cite Phase 45 memory-record-schema fields `scope` §3.9 / `confidence` §3.5 / `evidence_chain` §3.6 / `confidentiality` §3.10)。
+
+**Why this matters:** 没有 memory annotation,debate 就只能基于 panelist 的 opinion text —— 但 opinion text 不携带 confidence / scope / evidence chain 元数据,comparator LLM 无法做有依据的 arbitration。Memory annotation 把 arbitration 的「证据」explicit 化。
+
+### §3.2 — Comparator LLM Pass(P7 mitigation 2)
+
+**PITFALLS §P7 mitigation 2 verbatim:**
+
+> Per PROJECT.md decision #7, "Hermes 控 turn_order / max_rounds / schema / early_stop_rule." Add a memory-conflict-arbitration responsibility: when two agents cite conflicting memories, Hermes (the coordinator) extracts both cited memories, runs a comparator LLM pass ("which is more applicable in this project context?"), and broadcasts the resolution to all participants.
+
+**Trigger:** CC 检测到两个 panelist 的 `citedMemoryIds` 中包含 records 在语义上矛盾(embedding cosine similarity ≥ 0.7 + manual CC flag)。或者 CC 自己判断「这两个 memory 在说相反的事」。
+
+**Coordinator(Hermes)role:** Phase 44 决策 7 + PITFALLS §P7 mitigation 2 给 Hermes 增加新职责 —— **memory conflict arbitrator**。具体职责:
+
+1. **Extract both cited memories:** Hermes fetch full memory records(从 mem0 backend)by `record_id` —— 包括 `content` / `scope` / `confidence` / `evidence_chain` / `confidentiality`。
+2. **Filter by confidentiality(P10 mitigation 2 propagation rule):** Comparator LLM 只能看到 `confidentiality ≤ current_project's_level` 的 records。如果 Memory A 是 `confidential` 但当前 project 是 `internal`,comparator LLM 只能看到 Memory B(internal),Memory A 被自动 lose(或 deferred-to-operator if Memory B is also low-confidence)。
+3. **Run comparator LLM pass:** Hermes 用专用 prompt template(下方)调用 LLM,产出 `{resolution, rationale, confidence}` JSON。
+4. **Broadcast resolution:** 把 `ConflictRecord` append 到 state file `conflicts` 数组。Subsequent turns 可以读到这个 resolution —— CC 在调用下一个 `get_agent_opinion` 时把 conflict resolution 作为 `priorDiscussion` 传给后续 panelist,让他们 know about the resolution。
+
+**Comparator LLM prompt template(v11.0 PoC-ready):**
+
+```
+You are arbitrating a memory conflict in a Hermes round table.
+Project context: {project_id}
+Question under debate: {question}
+
+Memory A (cited by panelist {panelistA}):
+- content: {memoryA.content}
+- scope: {memoryA.scope} (global | project | session)
+- confidence: {memoryA.confidence} (0.0-1.0)
+- evidence_chain length: {len(memoryA.evidence_chain)}
+- evidence_operator_ids: {memoryA.evidence_operator_ids}
+
+Memory B (cited by panelist {panelistB}):
+- content: {memoryB.content}
+- scope: {memoryB.scope}
+- confidence: {memoryB.confidence}
+- evidence_chain length: {len(memoryB.evidence_chain)}
+- evidence_operator_ids: {memoryB.evidence_operator_ids}
+
+Apply scope precedence: session > project > global
+  (a session-scoped memory overrides global for THIS session;
+   a project-scoped memory overrides global for THIS project).
+
+Apply confidence-weighting: at the same scope level, higher confidence wins.
+  If both memories are at the same scope level AND confidence within 0.05 of
+  each other, defer to operator (human review).
+
+Apply evidence diversity check: prefer memory with more diverse
+  evidence_operator_ids (≥2 distinct operators per Phase 45 §3.7).
+
+Output JSON:
+{
+  "resolution": "A-wins" | "B-wins" | "both-kept" | "both-quarantined" | "deferred-to-operator",
+  "rationale": "<=200 chars human-readable",
+  "confidence": 0.0-1.0
+}
+```
+
+**Token cost estimate:** ~2K input tokens + ~200 output tokens per comparator call ≈ 2.2K tokens total。若 round table 有 3 个 conflict,总 comparator 成本 ≈ 6.6K tokens(round table 总 ~150-300K tokens 中的 ~2-4%)。**v11.0 PoC 监控指标:** if >3 conflicts/round,成本 balloons —— `earlyStopRule=comparator-confident` 可以 cap this。
+
+### §3.3 — Scope Precedence Rules(P7 mitigation 3)
+
+**PITFALLS §P7 mitigation 3 verbatim:**
+
+> When conflicts arise, scope precedence is: `session` > `project` > `global`. A project-scoped memory ("this project's audience prefers X") overrides a global-scoped memory ("audiences in general prefer Y"). The arbitration LLM is told the scope precedence and resolves accordingly.
+
+**Rule:** `session > project > global`。
+
+**Citation:** Phase 45 memory-record-schema §3.9 `scope` field(enum: global/project/session)是 authoritative definition。本节不重定义,只引用。
+
+**Implementation philosophy:** Comparator LLM **在 prompt 中被告知** scope precedence,LLM 在 in-context 推理时应用。**没有 Hermes-side hard rule** —— 即不是「if scopeA=session and scopeB=global then return A-wins」,而是「LLM 看到 scopeA=session,scopeB=global,被告知 session 优先,LLM 自己 reach A-wins conclusion」。这种 in-context 推理保留了 LLM 对 edge case 的判断力(如 session-scoped memory 内容明显错谬时,LLM 可以 defer-to-operator)。
+
+**Edge case(3+ way conflict):** 如果 3+ memories 在不同 scope 冲突:
+
+- Step 1: 按 scope 排序:session > project > global。
+- Step 2: 取 highest scope level 的 memory(如 session-scoped),与其他 memories pairwise 跑 comparator。
+- Step 3: 若 highest-scope memory 胜出所有 pairwise,resolution=its-wins。
+- Step 4: 若 highest-scope memory 在某 pairwise 输了(如 confidence 太低),flip 到 confidence-weighted voting(§3.4)。
+
+**Example(详):**
+
+- T1: `screenplay` cites Memory A(`scope=project`, confidence=0.95): "Volvo project's audience prefers bittersweet endings"。
+- T2: `theory_critic` cites Memory B(`scope=global`, confidence=0.85): "Tragedy endings test 23% better across all projects"。
+- T3: `cinematographer` cites Memory C(`scope=session`, confidence=0.6): "For this specific round, we agreed on bittersweet"。
+- T4: CC detects 3-way conflict。
+- Step 1: 排序:session(C) > project(A) > global(B)。
+- Step 2: comparator(C vs A):C scope 更高,但 C confidence=0.6 低,A confidence=0.95 高 —— LLM 可能 defer-to-operator(差距 > 0.3 but scope 不同)。
+- Step 3: comparator(C vs B):C scope=session > B scope=global,但 C confidence 0.6 vs B confidence 0.85 —— 同上,LLM 应用 scope precedence but C confidence 太低,可能 resolution=deferred-to-operator。
+- Step 4: 最终 resolution=deferred-to-operator;operator 决定。
+- T5: Conflict log records all 3 pairwise resolutions;curator 后续 review 时检查为何 session-scoped memory confidence 这么低(可能需要 curator boost evidence 或 quarantine)。
+
+### §3.4 — Confidence-Weighted Voting(P7 mitigation 4)
+
+**PITFALLS §P7 mitigation 4 verbatim:**
+
+> When N agents in a round table disagree, vote weighted by memory `confidence` field. If `screenplay` cites a 0.95-confidence project memory and `theory_critic` cites a 0.6-confidence global memory, screenplay's vote weighs more. Ties broken by coordinator.
+
+**Rule:** 当 N panelists 在**同一 scope level** disagree(如都 `scope=global`),投票 weighted by `confidence` field(cite Phase 45 memory-record-schema §3.5)。Higher confidence 胜出。
+
+**Tie-break rule(Hermes-side deterministic):** 如果 A-wins 和 B-wins 的 confidence 差距 ≤ 0.05,则 resolution=**`deferred-to-operator`**(human review)。**没有 Hermes 自动 tiebreak** —— 因为 tiebreak 规则越复杂,越容易出现 deterministic-but-wrong 决策。deferred-to-operator 把判断权交回 human,虽然慢但更安全。
+
+**Worked example:**
+
+- `screenplay` cites Memory A(scope=project, confidence=0.95)。
+- `theory_critic` cites Memory B(scope=project, confidence=0.92)。
+- Same scope level → confidence-weighted voting applies。
+- Δconfidence = |0.95 - 0.92| = 0.03 < 0.05 → resolution=`deferred-to-operator`。
+- Conflict log: `{resolution: "deferred-to-operator", rationale: "Tie at project scope (Δconfidence=0.03 < 0.05)"}`。
+- Round table continues but conclusion flagged "low-confidence" —— CC 在 final synthesis 中显式注明「two competing project memories, neither dominant」。
+
+**Citation:** Phase 45 memory-record-schema §3.5 `confidence` field(default 0.5 = neutral)。
+
+### §3.5 — Conflict Log for Curator Review(P7 mitigation 5)
+
+**PITFALLS §P7 mitigation 5 verbatim:**
+
+> Every round-table conflict is logged with both cited memories, the resolution, and the rationale. Curator's periodic pass reviews high-frequency conflicts (same memory pair conflicting >3 times) and may promote one to global scope or quarantine the loser.
+
+**Field:** `state.conflicts` array(`ConflictRecord` objects,详见 round-table-state-schema.yaml)。
+
+**Persistence rules:**
+
+- 在 `status=open` 时,comparator LLM 产出的 `ConflictRecord` 实时 append 到 `conflicts` 数组。
+- 在 `submit_round_table_result` 时(`status: open → completed`),`conflicts` 数组 **sealed**(immutable)—— 防止 post-hoc 篡改。
+- Conflict log 是 curator 后续 review 的输入。
+
+**Curator review mechanism:**
+
+- Curator 的 periodic pass(扩展自 v6.0 `_feedback_scan_phase`,详 Phase 45 §5 `_memory_evolution_phase` contract)扫描所有 completed round tables 的 `conflicts` 数组。
+- **High-frequency conflict detection:** 若同一 memory pair(`memoryIdA` + `memoryIdB`)在跨 round tables 中 conflict > 3 次,curator 可能:
+  - **Promote** winner 到更高 scope level(如 `scope=project` → `scope=global`)—— 表示「这个 project-specific insight 在多 project 都成立」。
+  - **Quarantine** loser —— flip `status: active → quarantined`(cite Phase 45 memory-record-schema §3.8 `status` field)—— 该 memory 从后续 retrieval 中 excluded,直到 operator resolve。
+- Curator decisions 写入 evolution_log(cite Phase 45 agents-schema §2.14 `evolution_log`)+ memory record 的 evidence_chain(cite Phase 45 memory-record-schema §3.6 `evidence_chain` field,append `{source_type: "round_table", source_id: <round_id>, ...}` entry)。
+
+**Citation:** PITFALLS §P7 mitigation 5 verbatim + Phase 45 §5 `_memory_evolution_phase` contract + agents-schema §2.14 `evolution_log` + memory-record-schema §3.6/§3.8。
+
+### §3.6 — Comparator LLM Decision Tree + Edge Cases
+
+**Decision tree(详):**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ Comparator LLM decision tree                                     │
+│                                                                  │
+│  1. Are scopes different?                                        │
+│     YES → Apply scope precedence (session > project > global):   │
+│            higher-scope memory wins unless confidence < 0.3      │
+│            (extreme low confidence → defer to operator)          │
+│     NO  → continue (same scope level)                            │
+│                                                                  │
+│  2. Are confidences within 0.05 of each other (tie)?             │
+│     YES → resolution = deferred-to-operator                      │
+│     NO  → continue                                               │
+│                                                                  │
+│  3. Higher confidence wins:                                      │
+│     - Δconfidence ≥ 0.3 → A-wins or B-wins (decisive)            │
+│     - Δconfidence 0.05-0.3 → winner by confidence, but flag      │
+│       "low-decisiveness" in rationale for curator review         │
+│                                                                  │
+│  4. Special cases:                                               │
+│     - Both confidences < 0.3 (no-confidence tie):                │
+│       resolution = both-quarantined                              │
+│     - Confidentiality mismatch (one memory invisible to project):│
+│       comparator sees only the visible one; auto-wins unless     │
+│       that one is also low-confidence → deferred-to-operator     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**5 possible `resolution` values + their follow-up actions:**
+
+| `resolution` | Follow-up action |
+|---|---|
+| `A-wins` | Memory B's `supersedes_memory_id` chain updated to point to A's `record_id` (cite Phase 45 memory-record-schema §3.3 `supersedes_memory_id`); B's `status: active → superseded` |
+| `B-wins` | Symmetric to A-wins |
+| `both-kept` | No action; both records remain `active`. Comparator determined they apply in different contexts |
+| `both-quarantined` | Both records' `status: active → quarantined` (cite Phase 45 §3.8); round aborts with `status=aborted`; operator review triggered |
+| `deferred-to-operator` | No automatic action; round continues but conclusion flagged "low-confidence"; curator surfaces in next `_feedback_scan_phase` |
+
+### §3.7 — Edge Cases(3+ way conflict / no-confidence tie / all-quarantined)
+
+**Edge case 1: 3+ way conflict**
+
+- **Scenario:** 3+ panelists cite memories that pairwise contradict(详 §3.3 example)。
+- **Mechanism:** Decompose into pairwise comparator calls;majority resolution wins。若 pairwise resolutions disagree(如 A vs B = A-wins, B vs C = B-wins, A vs C = C-wins —— cycle),整个 conflict set resolution=`deferred-to-operator`。
+- **Token cost:** 3-way conflict = 3 pairwise calls ≈ 6.6K tokens;v11.0 PoC warns if 4+ way conflicts emerge(成本 exponential)。
+
+**Edge case 2: No-confidence tie**
+
+- **Scenario:** All panelists cite memories with `confidence ≤ 0.3`(extreme low confidence)。
+- **Mechanism:** Resolution=`deferred-to-operator`。Round table continues but conclusion flagged "low-confidence"。CC 在 final synthesis 显式注明「all cited memories low-confidence; operator review needed before action」。
+- **Why not auto-quarantine?** Low-confidence 不等于 wrong —— 可能只是 evidence_chain 不充分。Quarantine 是 stronger action(reserved for `both-quarantined` case)。
+
+**Edge case 3: All quarantined**
+
+- **Scenario:** Comparator determines all cited memories should be quarantined(如所有 memory 来自同一 operator 但 conflict with project state,indicating poisoning attempt per P6 mitigation)。
+- **Mechanism:** Round aborts with `status=aborted`(详 round-table-state-schema.yaml `status` enum)。Operator review triggered —— 可能是 MINJA-style attack(P6)or curator hallucination(P5)or evidence-chain corruption。
+- **Audit trail:** `state.conflicts` 数组保留所有 ConflictRecord;`submitRoundTableResult` block 不写入(`status=aborted` 不通过 submit_round_table_result,通过单独的 `round_table_abort` —— v11.1+)。Conflict log 仍 sealed 给 curator review。
+
+---
+
+## §4 — Hard Constraints:Root-Cause Analysis + OQ/BP Audit
+
+### §4.0 — 本节展开 §1.5 的 3 个 hard constraints
+
+本节展开 §1.5 声明的 3 个 hard constraints(serial / STACK naming / atomic),给出每个的 root cause 分析。本节还包含 6 个 Open Questions(OQ-2/OQ-5/OQ-8/OQ-9/OQ-11/OQ-15)的决议审计表 + 7 个 borrowable points(B1.4/B2.1/B2.3/B4.2/B6.1/B7.3/B8.2)的覆盖审计表。
+
+### §4.1 — Serial Execution Root Cause(OQ-8 + MEMORY.md verbatim)
+
+**OQ-8 resolution:** Strict serial. 1 panelist 1 turn sequential `await`. 不能并发 LLM 调用。
+
+**MEMORY.md verbatim citation(`feedback-glm-overload-reduce-concurrency.md`):**
+
+> GLM 持续报 1305/overloaded 时,先 grep `~/.hermes/config.yaml` 里的 `glm.global_concurrency`。**演进历程**:**2026-07-03 从 5→3;2026-07-06 已是 1**。
+>
+> **Why:** GLM 的 anthropic-compatible 端点对并发敏感。降并发是有效的(5→3 显著减少过载);但 **concurrency 到 1 之后再降不动了——上游模型容量本身就是瓶颈**,跟本地并发无关。切 endpoint 也没用:`zai`(paas/v4)和 `zhipu-anthropic`(/api/anthropic)共享 Zhipu 后端,1305 错误是模型容量错误,不是端点错误。
+>
+> **How to apply:**
+> - 如果 `global_concurrency > 1`:降到 1...
+> - 如果 `global_concurrency == 1`:不要建议重启或继续降。此时三道安全网在工作:(1) 4-key rotation `kai-multi-1 <-> kai-multi-2`(commit 5839b5f78 保证 1305 不标 exhausted,key 保留);(2) `GLM early-abort: 3 consecutive overloaded`(3 次连续就放弃,不耗尽 10 次 retries);(3) gateway 持久化用户消息到 session,context 在用户重试时保留。
+> - Telegram 用户会收到 115 字符的「暂停 10-15 分钟」消息,这是 by design,**不需要立刻做什么**。
+
+**Token cost math(cite STACK §7):**
+
+- STACK §7 估算 single pipeline run ≈ **550K tokens**(80 opinion calls × 6.5K tokens per call),assuming serial。
+- GLM ceiling:**4 keys × 200K TPM ≈ 800K TPM**(per FEATURES §14 gap 6)。
+- Round table worst case:**7 panelists × 3 rounds × 6.5K tokens = 137K tokens** total —— fine serially(~10 seconds at 800K TPM),but **catastrophically bad in parallel**(7 concurrent calls × 6.5K = 45K tokens/turn × 3 rounds = 135K tokens burst in <1 second,瞬间撞 ceiling)。
+- Concurrent round table 还会触发 GLM `early-abort`(3 consecutive overloaded → abort),导致 round table 失败 + Telegram 用户收到「暂停」消息 —— **operator-level discipline 被 round table layer 破坏**。
+
+**Implementation discipline(load-bearing,3 invariants):**
+
+1. v11.0 PoC `get_agent_opinion` 实现 MUST 在 for-loop 中 sequential `await`,NEVER `Promise.all` 或 async-gather。
+2. v11.0 PoC dispatcher(Hermes-side)MUST reject concurrent `get_agent_opinion` calls for same `roundId`(return 429 Too Many Requests)。
+3. v11.0 PoC MUST NOT 添加 "parallel round table" mode 即使作为 opt-in feature flag —— **这条约束是 structural,不是 configurational**。
+
+**Why this is non-negotiable:** MEMORY.md `feedback-glm-overload-reduce-concurrency.md` records Kai's explicit decision(5→3→1 deprecation cycle over 3 days:2026-07-03 从 5→3,2026-07-06 已是 1)。Telegram 用户 receiving 115-char "暂停 10-15 分钟" messages is **BY DESIGN**。Re-introducing parallelism at the round table layer would undo this operator-level discipline,让 v10.0 design 直接撞 GLM ceiling,导致 round table 在生产环境不可用。
+
+### §4.2 — MCP Tool Naming STACK Form(OQ-9 + reconciliation table)
+
+**OQ-9 resolution:** STACK §3.2 form wins. No `agent_` prefix. Aligns with existing 9 messaging tools.
+
+**Reconciliation table(ARCHITECTURE §4.2 → STACK §3.2 canonical):**
+
+| ARCHITECTURE §4.2(deprecated) | STACK §3.2(canonical, ADOPTED) | Used in this doc |
+|---|---|---|
+| `agent_get_persona` | `get_agent_persona` | §2.1, §5.1 |
+| `agent_recall` | `get_agent_memory` | §3.1, §5.3 |
+| `agent_opinion` | `get_agent_opinion` | §2.2, §5.2 |
+| `agent_conclude` | `submit_round_table_result` | §2.3, §5.4 |
+| (new) | `submit_artifact` | §5.5 |
+| (new) | `query_memory` | §5.6 |
+| (new) | `run_python_phase` | §5.7 |
+| (new) | `agents_list` | (not used in this doc; discovery tool) |
+| (new) | `round_table_open` | §2.1, §5.0 |
+
+**SUMMARY.md CC-1 verbatim citation:**
+
+> STACK §3.2 uses `get_agent_persona` / `get_agent_memory` / `query_memory` (no prefix), ARCHITECTURE §4.2 uses `agent_get_persona` / `agent_recall` / `agent_conclude` (agent_ prefix). CONFLICT — downstream `02-ROUND-TABLE-PROTOCOL.md` MUST unify naming first. **Recommendation: STACK form (no prefix, aligns with existing `mcp_serve.py` 9 messaging tools style).**
+
+**Rationale(详):** Existing `mcp_serve.py` 9 个 messaging tool 是 `conversations_list` / `messages_read` / `messages_send` / `events_poll` / `permissions_respond` / `channels_list` / `conversations_archive` / `messages_search` / `conversations_create`(no `messaging_` prefix)。Adding `agent_*` prefix 给 round table tool 会破坏 tool list 视觉一致性,让 CC dispatcher 实施者(以及 CC user)混淆 —— 「为什么 messaging tool 没有 prefix 但 agent tool 有?」STACK form 保留风格统一。
+
+**Phase 51 VALIDATE lint script 强制:** Phase 51 VALIDATE phase 的 lint script 检查 `mcp_serve.py` 实际注册的 7 个 round table tool 名是否与本 doc §5 + STACK §3.2 一致。不一致触发 ADVISORY 提醒(Phase 51 是设计型,不 block)。
+
+### §4.3 — OQ Resolution Audit Table(6 OQs in scope)
+
+下表 audit 本 doc 解决的 6 个 OQ(摘自 SUMMARY.md "Open Questions Consolidated" 表):
+
+| OQ# | 问题(一句话) | 倾向性结论(SUMMARY) | 本 doc 解决章节 | 是否 defer |
+|---|---|---|---|---|
+| **OQ-2** | round table `turn_order` 策略 | default round-robin + 4 alternative strategies | §2.5(5 strategies deep dive + decision tree) | partial —— fitness-weighted + full matrix editor → v11.1+ |
+| **OQ-5** | agent deletion transcript integrity | open-time snapshot + deleted flag | §2.6 + round-table-state-schema.yaml `PanelistSnapshot.deleted` field | NO |
+| **OQ-8** | GLM 4-key rotation × concurrency | strict serial,1 panelist 1 turn await | §1.5.1 + §2.8 + §4.1(MEMORY.md verbatim) | NO(non-negotiable,by design) |
+| **OQ-9** | MCP tool naming | STACK form(no prefix) | §1.5.2 + §4.2 + §5 | NO |
+| **OQ-11** | round_id source | CC self-generates UUID v4 | §2.1 + round-table-state-schema.yaml `roundId` field | NO |
+| **OQ-15** | round-table conflict arbitration | comparator LLM + scope precedence + confidence voting + conflict log | §3.0-§3.7(5 sub-mechanisms aligned with PITFALLS §P7 mitigation 1-5) | NO |
+
+**No OQs deferred without rationale.** OQ-2 的 partial deferral(fitness-weighted + matrix editor)有 explicit rationale(详见 §2.5.5 + §2.5.4 PoC scope notes):fitness 需要 ≥10 数据点,PoC cold-start 不具备;matrix editor 需要 UI,v11.0 PoC scope 限 backend。其余 5 个 OQ 全部 v11.0 PoC 必须 support,不 defer。
+
+### §4.4 — Borrowable Points Coverage Audit(7 BPs)
+
+下表 audit FEATURES §10 borrowable points B1.4 / B2.1 / B2.3 / B4.2 / B6.1 / B7.3 / B8.2 在本 doc 的覆盖:
+
+| BP# | Source | Borrowable idea | Where addressed in this doc | How adapted |
+|---|---|---|---|---|
+| **B1.4** | LangGraph | hierarchical supervisor → round table nesting | §6.1(subpanel evaluation) | panelist `can_convene_subpanel` flag —— additive field deferred to v11.1+; v11.0 PoC is single-level only |
+| **B2.1** | AutoGen/MAF | turn_order three-state(llm/fixed/matrix) | §2.5(5 strategies deep dive) | 5-strategy enum(round-robin + fixed + llm + matrix + fitness-weighted)—— 扩展了 AutoGen 三态 |
+| **B2.3** | AutoGen | nested chat → panelist convenes sub-round table | §6.1(subpanel evaluation) | opt-in flag;v11.1+;与 B1.4 共用 implementation |
+| **B4.2** | Claude Agent SDK | hooks lifecycle → PreTurn/PostTurn audit | §6.2(audit hooks evaluation) | Hermes emits PreTurn/PostTurn events to state file;v11.0 implicit via Turn schema;v11.1+ explicit event stream |
+| **B6.1** | Camel-AI | generator+critics → panelist_role field | §6.3(panelist_role evaluation) | enum: generator/critic/synthesizer/reviewer;v11.1+ additive field on PanelistSnapshot |
+| **B7.3** | Agent-MCP | file-level lock → multi-agent parallel asset_locks | §6.4(asset_locks evaluation) | deferred —— v11.0 is serial so locks are trivial;required only if subpanels(§6.1)are added in v11.1+ |
+| **B8.2** | A2A | Task lifecycle FSM → turn state machine | §2.2(turnstile FSM)+ round-table-state-schema.yaml `status` enum | turn FSM: pending → speaking → submitted →(optionally)challenged;status FSM: open → completed/aborted/stalled |
+
+**No BPs dropped without rationale.** All 7 borrowable points explicitly addressed —— 4 are v11.0 PoC-mandatory(B2.1 / B8.2 + indirectly B4.2 via Turn schema + B7.3 trivially satisfied by serial);3 are v11.1+ deferred with explicit rationale(B1.4 / B2.3 / B6.1 / partially B4.2 explicit event stream)。
+
+---
+
