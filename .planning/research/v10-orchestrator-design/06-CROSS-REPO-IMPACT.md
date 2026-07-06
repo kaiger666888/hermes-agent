@@ -215,3 +215,253 @@ Elevator-pitch 版本 (§2 + §3 展开 per-artifact detail):
 - **15 个 SKILL.md 的具体内容** → 见 `kais-hermes-skills` repo.
 - **mem0 workspace provisioning 的 v12+ ops runbook** (monitoring / backup / gc × N backends) → v12+ design milestone.
 
+---
+
+## §2 3-Location Sync Strategy (Per-Artifact Elaboration of ARCHITECTURE §6 + §6.4)
+
+### §2.0 Elaboration 声明 (SC#2 Framing)
+
+本节是 **ROADMAP SC#2 的完整论证**. ARCHITECTURE §6 已给 3-location owner/contents 表 + §6.4 已给 v10.0/v11.0/v12+ deliverable 矩阵 —— 这两张表都是 phase-deliverable 粒度 (e.g. "hermes-agent repo: 7 design docs / agent_registry.py / hermes agent transform CLI").
+
+本节把这两张表 **细化到可执行粒度** —— 当 v11.0 PoC 实施者或 v12+ architecture owner 问 "谁能写这个 artifact? 这个 artifact 怎么 sync 到其他 location?", 本节回答. 细化维度:
+
+- **(a) Write Authority (写权限):** 谁可以 create / modify / delete 每个 artifact class.
+- **(b) Sync Direction (同步方向):** 信息流方向 + 机制 + 频率.
+- **(c) Lineage Relationships:** artifacts 如何 trace 回 sources (见 §3 deep-dive).
+
+### §2.1 Location 1 — `hermes-agent` Repo Deep-Dive
+
+- **Owner:** Kai + future contributors (standard git workflow via PR merge).
+- **v10.0 deliverable:** 7 design docs under `.planning/research/v10-orchestrator-design/` (本 doc + `00-FIRST-PRINCIPLES.md` + `01-AGENT-REGISTRY-SCHEMA.md` + `02-ROUND-TABLE-PROTOCOL.md` + `03-COMPARISON-VS-KIMI-MCP-SHIM.md` + 未来的 `04-MIGRATION-PATH.md` + `05-POC-PLAN.md`). Zero code.
+- **v11.0 PoC deliverable:**
+  - `agent/agent_registry.py` (new — sibling to `tools/registry.py` per ARCHITECTURE §7.1 Pattern)
+  - `agent/agent_dispatcher.py` (new — owns `agent_id` routing + tmux session lifecycle)
+  - `mcp_serve.py` MCP tool additions (additive — 7 new tools per STACK §3.2: `get_agent_persona` / `get_agent_memory` / `query_memory` / `round_table_open` / `submit_round_table_result` / `run_python_phase` / `agent_decide`)
+  - `plugins/memory/mem0/__init__.py` per-agent filter (additive `_scoped_agent_id` extension per ARCHITECTURE §3.3 — `_read_filters()` returns `{"user_id", "agent_id"}` when scoped)
+  - `agent/curator.py` `_memory_evolution_phase` (additive third phase after `_feedback_scan_phase`)
+- **v12+ deliverable:** `hermes agent transform --from skill --to agent --name <name>` CLI + dashboard Agents tab + (optional) A2A agent card exposition.
+- **Write Authority:** git-tracked; PR-merge via standard hermes-agent workflow.
+- **NO agent YAMLs live here** (ARCHITECTURE §6 verbatim) —— `~/.hermes/agents/*.agent.yaml` 是 operator-owned, gitignored from hermes-agent repo.
+- **Sync Direction:**
+  - **Outbound only** —— hermes-agent code 是 `~/.hermes/` runtime 的 upstream.
+  - **Frequency:** each hermes-agent release (pip install / git pull of hermes-agent; runtime reads `~/.hermes/agents/` at startup per ARCHITECTURE §6.3 row 2).
+  - **Inbound sync from `~/.hermes/` runtime state to hermes-agent code is FORBIDDEN** —— anti-pattern: agent YAML drift leaking into code, per ARCHITECTURE §8.2 spirit (auto-re-transform forbidden).
+- **Lineage:** hermes-agent code 是 **runtime owner** —— 它定义 schema (agents-schema.yaml) + protocol (round-table-state-schema.yaml) + dispatch path (`agent_dispatcher.py`), 但 **不 own 运行时数据**. Design docs (本 file + siblings) 是所有 v11.0+ implementation 的 upstream.
+
+### §2.2 Location 2 — `kais-hermes-skills` Repo Deep-Dive
+
+- **Owner:** Kai only (via kais-hermes-skills repo workflow). Per MEMORY.md `kais-movie-agent-v5-hermes-native-migration.md` (2026-07-02): cross-repo migration moved `skills/movie-experts` + 4 plugins 到 kais-hermes-skills repo. hermes-agent repo 现仅保留 GSD `.planning/` 工件 + runtime code.
+- **v10.0 deliverable:** NONE (read-only source).
+- **v11.0 PoC deliverable:** NONE (SKILLs remain as fallback per `default_invocation: skill_fallback` decision per Phase 45 / ARCHITECTURE §6.4 row 2 v11.0 column).
+- **v12+ deliverable:** Optional —— add `agent_transform_notes` frontmatter field to SKILLs that have been transformed (ARCHITECTURE §6.4 row 2 v12+ column).
+- **Write Authority:** git-tracked via kais-hermes-skills repo.
+- **hermes-agent runtime / curator / v10.0 design NEVER modify SKILL.md.** Read-only from hermes-agent's perspective.
+- **Sync Direction:**
+  - **Outbound only** —— SKILL.md 被 `~/.hermes/agents/*.agent.yaml` 通过 `lineage.derived_from_skill_id` + `skill_sha256` reference (Phase 45 agents-schema.yaml lineage block).
+  - **Transform procedure (ARCHITECTURE §6.1) reads SKILL.md, never writes back.**
+  - **Backport agent YAML → SKILL.md is OUT OF SCOPE forever** (per ARCHITECTURE §6.3 closing statement verbatim "explicitly out of scope for v10.0 (and likely forever — agents and skills are different layers, as declared in PROJECT.md paradigm shift)"; reinforced by §3.5 invariant L4 below).
+- **Lineage:** SKILL.md 是 **transform source** —— 每个 agent YAML 通过 `lineage` block 追溯到 exactly 一个 SKILL.md.
+  - **Forward chain:** SKILL.md → (transform procedure §3.2) → agent YAML. 见 §3.2.
+  - **Backward chain:** agent YAML → `lineage.derived_from_skill_id` → resolve SKILL.md path → read content + compute sha256. 见 §3.3.
+
+### §2.3 Location 3 — `~/.hermes/agents/` Deep-Dive
+
+- **Owner:** Operator (Kai). Canonical state root via `hermes_constants.get_hermes_home()` (per CLAUDE.md + MEMORY.md `hermes-gateway-systemd.md`: `~/.hermes/` 是 canonical state root).
+- **v10.0 deliverable:** NONE (directory doesn't exist yet —— agent YAMLs 是 v11.0 PoC artifact).
+- **v11.0 PoC deliverable:**
+  - 15 `*.agent.yaml` files created by manual transform (ARCHITECTURE §6.1 procedure, 5 steps, ~5-10 min per agent)
+  - `.runtime/{slug}/round_tables/*.json` state files created by dispatcher
+  - `evolution_log` initial empty (curator 周期性 append, 见下)
+- **v12+ deliverable:**
+  - Curator-managed `evolution_log` + `fitness_score` mutations (per Phase 45 SC#3 dry-run-first invariant)
+  - Potential physical-partition mem0 workspaces (见 §4.2 + §4.4 Class A threshold)
+- **Write Authority SPLIT across actors (key elaboration beyond ARCHITECTURE §6):**
+  - **Operator (Kai):** Creates `*.agent.yaml` via manual transform. Hand-tunes `persona` (operator owns the persona — first-person 5-15 lines per ARCHITECTURE §8.1 anti-pattern). Can delete agent YAML (orphan handling per Phase 46 §3 OQ-5: "open 时 snapshot identity, deleted agent 在 transcript 显示 'deleted' badge").
+  - **Curator:** Mutates ONLY `evolution_log` (append) + `fitness_score` (update) + `last_fitness_battery_run_at` (update). **Cannot modify** `persona` / `persona_sha256` / `tools` / `memory_scope` / `lineage`. Dry-run-by-default per Phase 45 SC#3.
+  - **Dispatcher (Hermes runtime):** Appends `.runtime/{slug}/round_tables/*.json` only. **NEVER touches** `*.agent.yaml` (per Phase 44 决策 7 — Hermes 控结构, CC 控内容, 但 agent YAML 是 operator-owned identity, 不是 Hermes 的结构层).
+  - **mem0 plugin:** Writes per-agent memory records (separate store — mem0 backend, NOT in `~/.hermes/agents/`. 见 §4 Option B vs Physical Partition).
+- **Sync Direction:**
+  - **Inbound from hermes-agent code** —— runtime reads schema + dispatch logic each Hermes startup.
+  - **Inbound from kais-hermes-skills** —— via transform procedure (manual v11.0 / scripted v12+).
+  - **Outbound to mem0 backend** —— via dispatcher `agent_id` routing (Option B) or workspace selection (Physical Partition, v12+).
+  - **Outbound to curator** —— for `_memory_evolution_phase` (LLM-distills memory delta from feedback → appends to `evolution_log`).
+- **Lineage:** `~/.hermes/agents/*.agent.yaml` 是 **runtime truth** —— 每个 round-table turn + 每个 mem0 memory record + 每个 curator evolution delta 都追溯到一个 YAML here.
+
+### §2.4 Per-Artifact-Class Write Authority Matrix
+
+7 artifact classes × 5 actor columns. ✅ = allowed; ❌ = forbidden (with rationale); 🔒 = locked-by-design (would violate invariant).
+
+| Artifact Class | Operator (Kai) | Curator | Dispatcher | Hermes code (PR-merge) | External contributor |
+|----------------|----------------|---------|------------|------------------------|----------------------|
+| **(1) `*.agent.yaml`** in `~/.hermes/agents/` | ✅ Create / modify / delete (manual transform + hand-tune persona) | 🔒 Cannot modify `persona` / `persona_sha256` / `tools` / `memory_scope` / `lineage` (would violate Phase 45 SC#1 `persona_sha256` invariant + PITFALLS §P1 mitigation 4). ✅ Can modify `evolution_log` + `fitness_score` (see row 4/5) | ❌ Dispatcher never writes YAML files directly (per 决策 7 — Hermes 控结构, 但 YAML 是 operator-owned identity) | ❌ Hermes repo gitignores `~/.hermes/agents/` (ARCHITECTURE §6) | ❌ Same as Hermes code |
+| **(2) Per-agent mem0 memory records** | ✅ Manually via `mem0_profile` MCP tool (debug only) | ✅ Curator `_memory_evolution_phase` writes memory deltas (per ARCHITECTURE §3.4 + Phase 45 `evidence_chain` ≥3 invariant) | ✅ Dispatcher routes via `agent_id` filter on every `mem0.add()` (Option B) or workspace select (Physical Partition) | n/a — mem0 plugin runtime code is in Hermes repo, but data is in mem0 backend | ❌ No direct mem0 access (mem0 API key operator-only) |
+| **(3) `.runtime/{slug}/round_tables/*.json`** | ❌ Operator never hand-edits state files (binary structure) | ❌ Curator reads for context but never writes | ✅ Dispatcher appends turn records via atomic write-temp-rename (per Phase 46 §4 invariant) | n/a — state is runtime data, not code | ❌ Filesystem perms |
+| **(4) `evolution_log` entries** (inside agent YAML) | ❌ Operator should not hand-write (curator's domain) | ✅ Curator `_memory_evolution_phase` appends (dry-run-by-default per Phase 45 SC#3) | ❌ Dispatcher never mutates YAML | n/a | ❌ |
+| **(5) `fitness_score` field** (inside agent YAML) | ❌ Operator does not hand-edit (curator's domain) | ✅ Curator `fitness_battery` pass updates (per PITFALLS §P8 mitigation 1) | ❌ | n/a | ❌ |
+| **(6) `.planning/research/v10-orchestrator-design/*.md`** design docs | ✅ Kai + contributors via git PR | ❌ Curator has no design-doc access | ❌ | ✅ Standard hermes-agent PR merge | ✅ Standard PR |
+| **(7) `skills/movie-experts/*/SKILL.md`** in kais-hermes-skills repo | ✅ Kai only (via kais-hermes-skills workflow) | ❌ Curator never writes to kais-hermes-skills | ❌ | ❌ hermes-agent runtime never writes SKILL.md | ❌ Cross-repo boundary |
+
+**Key 🔒 (locked-by-design) cells:**
+
+- (1) Curator cannot modify `persona` — would violate `persona_sha256` invariant (Phase 45 SC#1 + PITFALLS §P1 mitigation 4: persona drift defense).
+- (1) Dispatcher never writes YAML — would break operator ownership of persona (决策 5: α form is operator-owned identity).
+- (3) Operator never hand-edits state JSON — would corrupt atomic-write invariant (Phase 46 §4).
+- (7) All non-Kai actors forbidden from SKILL.md — kais-hermes-skills 是 separate repo, only Kai has write access (per MEMORY.md `kais-movie-agent-v5-hermes-native-migration.md`).
+
+### §2.5 Cross-Project Sharing Rules (ARCHITECTURE §5.2 Reference + Interpretation)
+
+**Cite ARCHITECTURE §5.2 verbatim** (5-row table):
+
+| Artifact | Scope | Rationale |
+|----------|-------|-----------|
+| Agent YAML (`~/.hermes/agents/*.agent.yaml`) | **Cross-project** (operator-owned) | Persona + tools + lineage are stable identity, not project state. |
+| Per-agent memory (mem0 with `agent_id` filter) | **Cross-project** (operator-owned) | "Cinematographer learned LHD declaration from Volvo case" applies everywhere cinematographer is invoked. |
+| Round table state (`~/.hermes/agents/.runtime/{slug}/round_tables/*.json`) | **Per-project** | Each project has its own questions, panel configs, and synthesis outcomes. |
+| Evolution log entries (in agent YAML) | **Cross-project** | Memory deltas accumulate across all projects (this is the "agent gets better with more projects" value prop). |
+| Fitness score (in agent YAML) | **Cross-project** | Same — single rolling quality number per agent. |
+
+本 doc **完全继承** ARCHITECTURE §5.2 这张表, **不重定义**.
+
+**Key insight for SC#4 (round-table state per-project):** round-table state 是 per-project 因为每个 project 有自己的 question / panel configs / synthesis outcomes. `.runtime/{slug}/round_tables/` 路径反映这一点 —— **slug 隔离是 load-bearing**. 见 §6.3 的具体例子 (kais-movie-pipeline Volvo S1-1 question 不能跨 project 共享).
+
+**Subtle implication (ARCHITECTURE §5.2 closing paragraph):** round-table turn snapshots 在 turn time 捕获 `fitness_score`, 所以 transcript 是 reproducible 即使 agent's current score 在 round table 结束前 drift 了. Dispatcher writes snapshot (不是 reference) —— 这 invariant 是 by-design preserved.
+
+**对 §2.4 write authority matrix 的 implication:**
+
+- Artifact class (1) + (4) + (5) 是 cross-project —— 任何 actor 写它们时要意识到改动影响所有 project.
+- Artifact class (3) 是 per-project —— 写 `.runtime/{slug}/round_tables/*.json` 只影响一个 project.
+- 这种 scope 区分解释了为什么 dispatcher (3) 可以并发写不同 project 的 state, 但 curator (1/4/5) 必须 serialize agent YAML 写入.
+
+---
+
+## §3 Lineage Relationships (Agent YAML ↔ SKILL.md Traceability Chain)
+
+### §3.0 Elaboration 声明
+
+本节是 **lineage 关系维度的完整规范**. ARCHITECTURE §6.1 给了 transform procedure 的 5 步, §6.2 给了 drift detection curator 侧 check. 本节把这些拼成 **完整 forward chain + backward chain + drift detection + 5 个不变式**, 形成 auditor-friendly traceability 规范.
+
+### §3.1 Lineage Field Schema 引用 (Phase 45 — CITE ONLY)
+
+**Phase 45 agents-schema.yaml `lineage` block (do NOT redefine):**
+
+```yaml
+lineage:
+  derived_from_skill_id: string, required
+    # format: {repo}/{path} (e.g. "kais-hermes-skills/skills/movie-experts/screenplay")
+  derived_from_repo: string, required
+    # enum: [kais-hermes-skills] (v10.0-v12+ single source)
+    # future: additional source repos allowed if Kai designates them
+  transform_date: string, required
+    # ISO 8601 date (e.g. "2026-07-15")
+  skill_sha256: string, required
+    # 64-char hex string = sha256 of source SKILL.md content at transform time
+    # encoding="utf-8" per CLAUDE.md PLW1514 rule
+```
+
+**Note:** Phase 45 可能加了额外 sub-fields (e.g. `transform_tool_version` 用于 v12+ CLI 版本追踪). 以 Phase 45 schema 为准. 本 doc 不重定义.
+
+### §3.2 Forward Chain (SKILL.md → Agent YAML)
+
+**Procedure (ARCHITECTURE §6.1 verbatim + elaboration):**
+
+1. **Read source SKILL.md** from `kais-hermes-skills` repo at operator's checkout path (e.g. `/data/workspace/kais-hermes-skills/skills/movie-experts/screenplay/SKILL.md`).
+2. **Compute `skill_sha256`** = `hashlib.sha256(skill_md_content.encode("utf-8")).hexdigest()`. encoding 显式 (per CLAUDE.md PLW1514 rule — Windows 默认 cp1252 会 silent corrupt non-ASCII).
+3. **Generate agent YAML** per Phase 45 SC#4 15-expert transform mapping (5-field mapping table — details in 04-MIGRATION-PATH, **不在本 doc**).
+4. **Write to** `~/.hermes/agents/{name}.agent.yaml`.
+5. **Record lineage block** (per §3.1 schema).
+
+**v10.0 / v11.0 PoC:** Manual —— operator runs steps by hand, ~5-10 minutes per agent. Total: 15 agents × ~7 min = ~2 hours one-time work at v11.0 PoC kickoff.
+
+**v12+:** Scripted via `hermes agent transform --from skill --to agent --name <name>` CLI (ARCHITECTURE §6.1 closing + §6.4 row 1 v12+ column).
+
+**Frequency:**
+
+- Once at v11.0 PoC kickoff per agent (one-time bulk).
+- Re-transform only when curator flags drift (§3.4).
+- Re-transform 是 **manual** even in v12+ —— CLI 只是 automates steps 1-5, 仍 operator-initiated, 仍 respects operator's persona hand-tuning (ARCHITECTURE §8.2 anti-pattern: auto-re-transform forbidden).
+
+### §3.3 Backward Chain (Agent YAML → SKILL.md)
+
+**Use case:** Auditor (Kai 或 future contributor) 问 "这个 agent 的 persona 来自哪个 SKILL? 源内容在 transform time 是什么? 源是否变过?"
+
+**Resolution chain:**
+
+1. Read `~/.hermes/agents/{name}.agent.yaml` `lineage.derived_from_skill_id` (e.g. `kais-hermes-skills/skills/movie-experts/screenplay`).
+2. Resolve source repo path: operator's `kais-hermes-skills` checkout (typically `/data/workspace/kais-hermes-skills/` per MEMORY.md context).
+3. Read current SKILL.md content at `{checkout_path}/{derived_from_skill_id_without_repo_prefix}/SKILL.md`.
+4. Compute current sha256 (`hashlib.sha256(content.encode("utf-8")).hexdigest()`).
+5. Compare to `lineage.skill_sha256`:
+   - **Match:** source unchanged since transform. agent YAML reflects current SKILL.
+   - **Mismatch:** drift detected (§3.4).
+
+**Two-anchor design rationale:**
+
+- `derived_from_skill_id` (**path anchor**) —— 不够, 因为 repo 可能 moved / renamed.
+- `skill_sha256` (**content anchor**) —— 不够, 因为 SKILL.md 可能 legitimately edited (operator-approved kais-hermes-skills PR).
+- **Two anchors together** provide robust traceability: path 给 resolution 起点, content sha256 给 drift 信号.
+
+**Anti-pattern (§3.5 invariant L6 reinforcement):** 单靠 `derived_from_skill_id` 路径不验证内容 —— typo 或 malicious actor 可以 spoof 路径. content sha256 是 cryptographic guard.
+
+### §3.4 Drift Detection Chain
+
+**Cite ARCHITECTURE §6.2 `_detect_skill_agent_drift()` function skeleton verbatim:**
+
+```python
+def _detect_skill_agent_drift() -> List[Dict[str, Any]]:
+    """Detect SKILL.md changes since last transform.
+
+    For each ~/.hermes/agents/*.agent.yaml with lineage.derived_from_skill_id:
+      1. Resolve source SKILL.md path in the recorded repo.
+      2. Compute current sha256.
+      3. Compare to lineage.skill_sha256.
+      4. If mismatch: append to drift report.
+
+    Returns list of {agent_name, skill_path, old_sha, new_sha, drift_age_days}.
+    """
+```
+
+**Drift triggers ADVISORY, NOT auto-re-transform:** operator 决定是否 re-run transform with fresh persona rewrite. 这 preserves **operator ownership of persona** (hand-tuned beyond initial transform —— operator 可能在 persona 里加了 "cite Volvo S1-1 case" 这种 v9.0 lesson).
+
+**Drift advisory delivery:**
+
+- **v11.0 PoC:** curator log (`~/.hermes/logs/agent.log` + `errors.log` per CLAUDE.md logging conventions).
+- **v12+:** dashboard notification (Agents tab per ARCHITECTURE §6.4 row 1 v12+ column).
+
+**Drift frequency expectation:** Low —— kais-hermes-skills SKILLs 是 stable post-v9.0 ship. Major SKILL edits trigger vN+ milestone work (e.g. v5.0 kais-movie-agent V8.6 sync), 不是 ambient drift.
+
+**Anti-pattern (ARCHITECTURE §8.2):** Auto-re-transform on drift. Explicitly forbidden —— 会 overwrite operator's hand-tuned persona, 违反 决策 5 (α form is operator-owned identity) + PITFALLS §P1 mitigation 4 (persona drift defense).
+
+### §3.5 Lineage 不变式声明 (L1-L5)
+
+5 个 explicit invariants —— 每个 with rationale + source citation:
+
+#### L1: Every `~/.hermes/agents/*.agent.yaml` MUST have non-empty `lineage` block
+
+- **Rationale:** Traceability 是 load-bearing for audit + drift detection. 没有 lineage 的 YAML 是 orphan, 无法追溯 source.
+- **Source:** Phase 45 agents-schema.yaml (`lineage` required field).
+- **Enforcement:** Schema validation at agent_registry load time.
+
+#### L2: `lineage.derived_from_repo` MUST be `kais-hermes-skills` for v10.0-v12+ agents
+
+- **Rationale:** Single transform source repo (per ARCHITECTURE §6 row 2). 未来: additional source repos allowed if Kai designates them (e.g. 第三方 agent library).
+- **Source:** ARCHITECTURE §6.
+- **Enforcement:** Schema enum check.
+
+#### L3: `lineage.skill_sha256` MUST match current SKILL.md content OR trigger drift advisory
+
+- **Rationale:** Drift detection invariant. curator 每 `_memory_evolution_phase` pass 跑 `_detect_skill_agent_drift()` check.
+- **Source:** ARCHITECTURE §6.2.
+- **Enforcement:** Curator periodic check. Mismatch triggers advisory (§3.4), not auto-re-transform.
+
+#### L4: Backport agent YAML → SKILL.md is OUT OF SCOPE forever
+
+- **Rationale:** Agents 和 skills 是 different layers per PROJECT.md paradigm shift declaration (skills 是 Hermes-side prompt injection; agents 是 operator-owned identity with per-agent memory + curator-driven evolution).
+- **Source:** ARCHITECTURE §6.3 closing statement verbatim "explicitly out of scope for v10.0 (and likely forever)".
+- **Enforcement:** 设计层面 —— 没有 code path 实现 backport. 如果未来需要, 是新 milestone 决策, 不是本 doc 范围.
+
+#### L5: Agent YAML `persona` field is operator-owned; curator CANNOT modify
+
+- **Rationale:** `persona_sha256` invariant (Phase 45 SC#1 + PITFALLS §P1 mitigation 4: persona drift defense). Curator 只能修改 `evolution_log` + `fitness_score`.
+- **Source:** 决策 5 (α form is operator-owned identity) + Phase 45 SC#1 + PITFALLS §P1 mitigation 4.
+- **Enforcement:** §2.4 write authority matrix row 1 + curator code path explicit field whitelist (`evolution_log` / `fitness_score` / `last_fitness_battery_run_at` —— 其他 fields rejected).
+
