@@ -673,3 +673,182 @@ switch directly to mcp_tool without special handling.
 **Total edge-case cells:** 4 + 4 + 3 + 3 + 1 = **15 cells with edge cases** (out of 75 total). Remaining 60 cells follow the default rule (§2.1). This is the load-bearing elaboration that ARCHITECTURE §1.2 + §2 didn't provide — §2 of this doc fills the 15-cell edge-case gap.
 
 ---
+
+## §3 — `default_invocation: skill_fallback → mcp_tool` 切换机制 (SC#3 Deep-Dive)
+
+### §3.0 Why a Full Section on a 3-Enum Field?
+
+本节是 **ROADMAP SC#3 的完整论证**. ARCHITECTURE §1.1 field 18 已定义 `default_invocation` enum (`mcp_tool | skill_fallback | disabled`, default `mcp_tool`), ARCHITECTURE §6.4 已声明 "SKILLs remain as fallback per `default_invocation: skill_fallback`". 本节的贡献是把三态语义**细化到 failure-mode matrix + transition path + safe-default-on-unknown 的可执行粒度** —— 当 v11.0 PoC 实施者问:
+
+- "MCP tool 失败时怎么办?"
+- "没有 `default_invocation` field 时 default 是什么?"
+- "15 个 expert 哪些先切 `mcp_tool`?"
+
+本节回答. 12-cell failure-mode matrix + 5-step per-agent transition path + FOUND-08 backward-compat anchor (via `expert_id` field, ARCHITECTURE §1.1 field 10) 共同构成 SC#3 的完整实施规则.
+
+### §3.1 三态语义定义 (CITE agents-schema.yaml Field 18)
+
+**CITE `agents-schema.yaml` field 18 verbatim (do NOT redefine enum):**
+
+- **`mcp_tool` (default):** Agent invoked via `get_agent_opinion(name, question, context?)` MCP tool (STACK §3.2 Tool 2). Persona injected as **system-prompt fragment** (not user message). Output captured via `submit_round_table_result`. Round-table eligible (per `round_table_eligible` field 17).
+- **`skill_fallback`:** Fall through to underlying SKILL body injection (**v1-v9 behavior**). SKILL body injected as **user message** (not system prompt). Output captured via existing skill output channel. NOT round-table eligible (SKILL has no `round_table_eligible` flag, default `false` for safety).
+- **`disabled`:** Agent exists in `~/.hermes/agents/` registry but dispatcher rejects invocation. Used for:
+  - **transform-in-progress** (persona not finalized)
+  - **operator-locked** (`compliance_gate` pending policy review per §3.6)
+
+Round-table NOT eligible in `disabled` state.
+
+### §3.2 12-Cell Failure-Mode Matrix (3 Modes × 4 States)
+
+**3 failure modes:**
+
+- **(a) MCP tool runtime unavailable:** `mcp_serve.py` down / tool dispatch error / network partition (rare for stdio transport per Phase 44 决策 1 T6 协议)
+- **(b) Agent persona missing or malformed:** YAML parse error / `persona` field empty / `tools` whitelist references non-existent tool
+- **(c) Agent not in registry:** no `~/.hermes/agents/{name}.agent.yaml` for requested name/expert_id
+
+**4 transition states:**
+
+- **(1) `mcp_tool` active** — agent fully transformed + operator-verified
+- **(2) `skill_fallback` active** — agent YAML exists but operator hasn't switched yet (intentional fallback during transition)
+- **(3) `disabled`** — agent YAML exists but invocation locked (transform-in-progress or operator-locked)
+- **(4) unknown** — no `default_invocation` field in YAML (schema-violation; agents-schema.yaml says field is optional with default `mcp_tool`, so this means operator authored YAML without the field)
+
+**12-cell matrix:**
+
+| Failure mode ＼ State | (1) `mcp_tool` active | (2) `skill_fallback` active | (3) `disabled` | (4) unknown (no field) |
+|---|---|---|---|---|
+| **(a) MCP tool unavailable** | Retry per tenacity backoff (3 retries, exponential). If all fail: return error to CC. **DOES NOT auto-fall to `skill_fallback`** — would change output semantics (system-prompt vs user-message persona injection). | N/A — already on `skill_fallback` path (no MCP tool invocation). | N/A — disabled agents aren't invoked at all. | Treat as `mcp_tool` (per agents-schema.yaml default); retry per tenacity; fail-with-error if exhausted. |
+| **(b) Persona missing/malformed** | Return dispatcher error "agent persona invalid"; do NOT auto-fall to `skill_fallback` (persona corruption may indicate deeper YAML issue). Log to `errors.log`. Operator must fix YAML. | N/A — already on `skill_fallback`, persona not consumed in this path. | N/A — disabled. | Treat as `mcp_tool`; same error path as (1). |
+| **(c) Agent not in registry** | N/A — agent not found means `mcp_tool` state is impossible. | N/A — same. | N/A — same. | **Always fall to SKILL fallback if SKILL exists** (v1-v9 backward-compat). If SKILL also missing: error "unknown agent/skill {name}". |
+
+**Key insights from matrix:**
+
+1. **Failure (a) + state (1)** is the **only ambiguous case** — should dispatcher auto-fall to SKILL when MCP fails? Decision: **NO** — output semantics differ (system-prompt vs user-message persona injection), so silent fallback would produce inconsistent results. Explicit error + operator intervention is safer.
+2. **Failure (c)** is the **only always-fallback case** — missing agent is normal pre-transform state; SKILL fallback preserves v1-v9 behavior.
+3. **State (4) unknown** always defaults to `mcp_tool` semantics (per agents-schema.yaml) — forward-compat for v11.0+ agents authored without explicit field.
+
+### §3.3 Safe-Default-on-Unknown (Two Rules)
+
+**Two safe-default rules cover the ambiguous dispatch cases:**
+
+**Rule 1: Agent YAML missing `default_invocation` field → default to `mcp_tool`**
+- Rationale: forward-compat. v11.0+ agents are agent-first; agents-schema.yaml declares `mcp_tool` as the field default.
+- Risk: if operator creates an agent YAML intending `skill_fallback` but forgets the field, dispatcher treats as `mcp_tool`. Mitigation: Phase 51 VALIDATE lint should warn on agent YAMLs missing explicit `default_invocation` field.
+
+**Rule 2: SKILL missing agent sibling → default to `skill_fallback`**
+- Rationale: backward-compat. v1-v9 SKILLs continue working without transform; dispatcher falls through to SKILL body injection.
+- Risk: if operator renames an agent YAML but forgets to update the SKILL `metadata.hermes.expert_id`, dispatcher may find SKILL but not agent. Mitigation: §3.5 routing order resolves by `name` first, then `expert_id` fallback.
+
+**Both-exist-but-ambiguous case:** Agent YAML + SKILL both exist for same name/expert_id → **agent wins** (agent registry is source of truth per ARCHITECTURE §4.1 Sibling Registry pattern). Operator can force SKILL fallback by setting agent's `default_invocation: skill_fallback` explicitly.
+
+### §3.4 Per-Agent Transition Path (5 Steps, NOT All-At-Once)
+
+**Transition is per-agent, not all-at-once.** Operator transforms one SKILL → creates `~/.hermes/agents/{name}.agent.yaml` → switches `default_invocation`. Other 14 SKILLs continue as `skill_fallback` (or no agent at all).
+
+**5-step transition sequence (per agent):**
+
+1. **Run §2.X transform rules** for this expert → produce agent YAML with `default_invocation: disabled` initially
+2. **Verify persona output via smoke test** — manually invoke the agent with a test question; check that persona produces first-person expert voice (not generic assistant)
+3. **Switch to `default_invocation: mcp_tool`** — agent now invocable via `get_agent_opinion` MCP tool
+4. **Update `round_table_eligible` to `true`** if desired — agent can now join round tables (Phase 46 protocol)
+5. **(Optional) Mark SKILL as transformed** — v12+ may add `agent_transform_notes` frontmatter to source SKILL per ARCHITECTURE §6.4 row 2; v10.0/v11.0 PoC skips this
+
+**Cite ARCHITECTURE §6.4 v11.0 PoC deliverable:** "15 `*.agent.yaml` files created by manual transform" — transition is manual, one expert at a time, ~5-10 minutes per expert (read SKILL → compute sha256 → fill 5-field table → write YAML → smoke test).
+
+**Per-agent switch order recommendation (for v11.0 PoC):**
+
+1. **First:** `screenplay` (central narrative role, 9 related_agents, HOOK-09 contract load-bearing — high-value test case)
+2. **Second:** `cinematographer` (9 related_agents, scene_builder absorption — tests FOUND-08 mapping)
+3. **Third:** `theory_critic` (soft-gate, safe to switch directly — tests `mcp_tool` baseline)
+4. **Last:** `compliance_gate` (hard-gate, recommend `disabled` initially — operator must verify gate logic before unlock per §3.6)
+
+### §3.5 FOUND-08 Backward-Compat Anchor
+
+**`expert_id` field (agents-schema.yaml field 10, CITE-ONLY) preserves v1-v9 caller convention.**
+
+Legacy caller invoking `expert_id: screenplay` still resolves. **Dispatcher routing order:**
+
+1. **Check agent registry by `name`** — `agent_registry.get_agent(name="screenplay")` (per ARCHITECTURE §4.1)
+2. **If agent found + `default_invocation: mcp_tool`** → invoke agent via `get_agent_opinion` MCP tool
+3. **If agent found + `default_invocation: skill_fallback`** → fall through to SKILL body injection (v1-v9 behavior preserved)
+4. **If agent found + `default_invocation: disabled`** → return dispatcher error "agent disabled"
+5. **If agent NOT found by `name`** → check by `expert_id` fallback (agent YAML `expert_id` field, which may differ from `name` in rare rename cases)
+6. **If agent NOT found by name OR expert_id** → default to SKILL fallback (v1-v9 behavior) — §3.3 Rule 2
+
+**Cite ARCHITECTURE §1.1 field 10 + §1.2 SKILL body disposition:** `expert_id` is the bridge between old (skill) and new (agent) worlds. SKILL body disposition says "NOT copied. Becomes input to persona rewrite." — but `expert_id` is COPIED verbatim, preserving the routing key.
+
+### §3.6 13/15 Standard Transition + 2/15 Special Handling
+
+**13/15 standard transition (`mcp_tool` default):**
+
+`hook_retention`, `creative_source`, `screenplay`, `script_auditor`, `character_designer`, `cinematographer`, `style_genome`, `prompt_injector`, `visual_executor`, `continuity_auditor`, `audio_pipeline`, `editor`, `colorist`, `theory_critic` — wait, that's 14. Let me recount: 13 standard excludes `compliance_gate` (special) and `theory_critic`. But `theory_critic` is also special — soft-gate framing, but `default_invocation: mcp_tool` is safe (no blocking authority). So 14 standard + 1 special (`compliance_gate` only).
+
+**Correction:** 14/15 standard transition. Only `compliance_gate` needs special handling.
+
+Actually, re-reading §2.17 + §2.15 + §2.16: `theory_critic` was flagged in §2.17 as "2/15 special handling (compliance_gate + theory_critic)". The distinction is:
+
+- **`compliance_gate` special:** recommend `disabled` initially (operator unlocks after policy review). Hard-gate authority — premature `mcp_tool` activation could block pipeline progression before operator verifies gate logic.
+- **`theory_critic` "special":** actually defaults to `mcp_tool` directly (soft-gate, safe). The "special handling" is just **acknowledging** in documentation that theory_critic is soft-gate (vs compliance_gate hard-gate). No `disabled` intermediate state needed.
+
+**Net special handling:**
+
+| Expert | `default_invocation` initial | Rationale |
+|--------|------------------------------|-----------|
+| 14 of 15 | `mcp_tool` (standard) | All advisory/generative/hard-gate-on-specific-dim experts are safe to switch directly after smoke test per §3.4 step 2 |
+| `compliance_gate` | **`disabled` initially** (operator unlocks to `mcp_tool` after policy review) | Hard-gate authority — premature activation could block pipeline. Operator must verify the 3 v9.0 red-lines (`redline_emotion_desensitize` / `redline_no_cold_open` / `redline_unfinished_ending`) before unlock. |
+
+**Transition step for `compliance_gate`:**
+
+1. Transform per §2.15 → `default_invocation: disabled`
+2. Operator reviews policy (3 red-lines + gate logic)
+3. Smoke test with non-blocking test cases
+4. Operator unlocks: `default_invocation: mcp_tool`
+5. Update `round_table_eligible: true` (compliance_gate joins round tables as hard-gate panelist)
+
+**Count reconciliation (§2.17 vs §3.6):**
+
+§2.17 declared "2/15 special handling" (compliance_gate + theory_critic). §3.6 declares "1/15 special + 14/15 standard". The reconciliation:
+
+- **§2.17 view (persona-framing perspective):** 2 experts have **persona-level** special framing — compliance_gate (hard-gate) + theory_critic (soft-gate). Both need persona to declare their authority level explicitly.
+- **§3.6 view (dispatch perspective):** 1 expert has **dispatch-level** special handling — only compliance_gate needs `disabled` initially. theory_critic's soft-gate is safe for direct `mcp_tool` (no blocking authority, no pipeline risk).
+
+Both counts are correct from their respective perspectives. The dispatch perspective (§3.6) is the load-bearing one for `default_invocation` switching — 14/15 standard + 1/15 special.
+
+### §3.7 Round Table 消费 `default_invocation`
+
+**CITE Phase 46 `round_table_eligible` field (agents-schema.yaml field 17) — 协同:**
+
+`get_agent_opinion` MCP tool (STACK §3.2 Tool 2) checks panelist agent's `default_invocation` BEFORE invoking. Only `mcp_tool` state agents can join round tables. `skill_fallback` + `disabled` cannot.
+
+**Why (rationale):**
+
+- Round table requires **system-prompt-fragment persona** (mcp_tool mode) for panelist identity consistency across turns
+- `skill_fallback` mode injects SKILL body as **user message** — no stable panelist identity across multiple turns (each invocation is stateless)
+- Output capture via `submit_round_table_result` (Phase 46 atomic close event) only works in `mcp_tool` mode (skill_fallback has no MCP tool binding)
+
+**Enforcement:**
+
+`round_table_open` MCP tool (Phase 46) validates all panelists at open time:
+
+```python
+# pseudo-code — actual implementation in v11.0 PoC
+for panelist_name in panel:
+    agent = agent_registry.get_agent(panelist_name)
+    if not agent or agent.get("default_invocation") != "mcp_tool":
+        return tool_error(
+            f"Panelist {panelist_name} not invocable "
+            f"(state={agent.get('default_invocation') if agent else 'missing'})"
+        )
+```
+
+Round table cannot open if any panelist is in `skill_fallback` or `disabled` state. **Cite Phase 46 `PanelistSnapshot` schema** (round-table-state-schema.yaml lines 263-307) — captures `agentId` + `fitnessScore` + `tools` + `memoryScope` at open time; `default_invocation` check is a precondition for entry into the snapshot.
+
+**Mid-round state change edge case:**
+
+If an agent's `default_invocation` flips mid-round (operator edits YAML while round table is open), the round table state file's `PanelistSnapshot` (captured at open time per Phase 46 OQ-5 resolution) prevails. Subsequent turns for that panelist continue using the open-time snapshot identity. The flip applies only to **new** round table opens. This prevents mid-round persona inconsistency.
+
+**Phase 51 VALIDATE lint cross-check:**
+
+VALIDATE lint will verify that every agent YAML with `round_table_eligible: true` also has `default_invocation: mcp_tool`. The combination `round_table_eligible: true` + `default_invocation: skill_fallback|disabled` is a configuration error (round-table-ineligible state flagged as eligible) — lint rejects it.
+
+---
