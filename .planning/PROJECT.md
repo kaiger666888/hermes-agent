@@ -8,11 +8,11 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current State (v9.0 started 2026-06-26)
+## Current State (v10.0 started 2026-07-06)
 
-v7.0 SHIPPED (2026-06-25, openclaw → hermes migration). v8.0 was a quick-task batch (P0+P1 openclaw skills, 2026-06-26) — not a formal milestone, but the v8.0 label is consumed to avoid version collision. v9.0 now starts as the next formal milestone, returning to movie-experts deepening — specifically closing the kais-movie-pipeline loop (创意→生产→分发→反馈) Tier B+C from the Notion "创作方向" analysis.
+v9.0 SHIPPED + closed 2026-07-06(tag `v9.0` @ `599ef61a8`,phases 归档至 `.planning/milestones/v9.0-phases/`)。v10.0 现为 active milestone —— **设计型**,不动代码,产出 v11.0 PoC 的设计套件。借鉴 Kimi Notion 架构2.0 + 本 repo 已 ship 的 coding-agent/GSD/curator,推导 Hermes 总调度器 + Hermes-native expert agents + CC 执行场的三层架构。
 
-**Tier A shipped (2026-06-26, quick task 260626-vzl):** 3 refs (platform-specs.md / creative-redlines.md / genre-anchor-urban-fantasy.md) + 3 SKILL.md References table patches. Foundation laid for Tier B+C.
+**v10.0 paradigm shift:** 与 v1-v9 把 movie-experts 当 SKILL 用法不同,v10.0 设计**新的 agent 形态**(YAML + persona + memory_scope + lineage),per-agent 跨项目自进化,CC 仅做场地+协调员+结构化助手。SKILL 形态作 fallback 保留。
 
 **v9.0 scope (6 phases 38-43):**
 - 平台母版切片 (Step 14)
@@ -22,29 +22,80 @@ v7.0 SHIPPED (2026-06-25, openclaw → hermes migration). v8.0 was a quick-task 
 - 数据收敛 (Step 15 平台 API → FeedbackStore → formula tuning)
 - 集成验证 + close-out
 
-## Current Milestone: v9.0 — kais-movie-pipeline 闭环深化
+## Current Milestone: v10.0 — Hermes-Agent 编排架构第一性原理推导(设计型)
+
+**Goal:** 借鉴 Kimi 2026-07-06 Notion 架构2.0,结合本 repo 已 ship 的 coding-agent / GSD / curator / mem0,从第一性原理推导 **Hermes-Agent 总调度器 + Hermes-native expert agents + Claude Code 执行场**的三层架构 —— 产出可指导 v11.0 PoC 的设计套件,**不动任何代码**。范式类比 v2.0 PRFP(纯设计 milestone)。
+
+**Target features(7 个设计文档,均放在 `.planning/research/v10-orchestrator-design/`):**
+
+1. **00-FIRST-PRINCIPLES.md** —— 从「编排器需要什么 / agent 身份是什么 / CC 角色边界 / 状态层选型 / 故障恢复 / 多 agent 协作 / 创作内容如何流转」推到最简必要协议集
+2. **01-AGENT-REGISTRY-SCHEMA.md + agents-schema.yaml** —— agent YAML schema(persona / tools / refs / memory_scope / lineage)+ 15 个 movie-expert → agent 转化对照表
+3. **02-ROUND-TABLE-PROTOCOL.md + round-table-schema.yaml** —— round table 协议(panel / turn_order / max_rounds / early_stop_rule / output_schema)+ 7 个新 MCP tool 契约
+4. **03-COMPARISON-VS-KIMI-MCP-SHIM.md** —— T6 vs Kimi 全 MCP 方案对比 + 7 个设计决策的推导记录
+5. **04-MIGRATION-PATH.md** —— Python runner 增量迁移计划(B3a:9 个 delegate-only phase 迁 CC,4 个 ComfyUI-calling phase + Step 0/6.5/15 保留 Python)
+6. **05-POC-PLAN.md** —— v11.0 PoC 验证计划(目标 / 垂直切片 / 成功标准 / 工作量估算)
+7. **06-CROSS-REPO-IMPACT.md** —— hermes-agent repo / kais-hermes-skills repo / `~/.hermes/` 的物理位置分配
+
+**Key context(7 个已锁的设计决策):**
+
+| # | 决策 | 选型 | 理由 |
+|---|------|------|------|
+| 1 | **协议**(T6) | Hermes MCP server(扩展现有 `mcp_serve.py`)+ tmux dispatch(复用 coding-agent)+ CC native MCP client for callbacks | 复用 4 个已 ship 组件,零自定义 shim,稳定性最高 |
+| 2 | **Python runner**(B3a 增量迁移) | delegate-only phase(9 个创意 step)迁 CC;ComfyUI-calling phase(4 个生成 step)+ Step 0/6.5/15 保留 Python runner | 保留 v3-v9 五 milestone 硬化的 ComfyUI 集成 + asset bus + GoalBuilder |
+| 3 | **Storyboard-first-class**(D2) | V8.6 编号保留,在 orchestrator 调度层做 round-based parallel(跨场景,不跨 step) | 守住 FOUND-08,真实价值在跨场景并行 |
+| 4 | **通用 vs 专属**(G2) | 抽象 pipeline orchestration pattern,kais-movie-pipeline 作为首个 sample | v12+ 扩展 music video / long-form 容易 |
+| 5 | **Agent 形态**(α) | YAML + persona prompt + tools + refs + memory_scope + lineage,物理位置 `~/.hermes/agents/{name}.agent.yaml` | 干净的 agent / skill 分层;SKILL 形态作 fallback 保留 |
+| 6 | **Agent 记忆** | per-agent scoped memory(扩展 mem0 backend),curator 驱动跨项目自进化 | 满足"agent 随项目越多越有经验"核心诉求 |
+| 7 | **CC 角色**((vi) 分层) | Hermes 控 turn_order / max_rounds / schema / early_stop_rule;CC 控 question framing + synthesis | 审计性 + 可重现 + token 成本低 + 充分用 CC 推理能力 |
+
+**关键范式声明(与 Kimi 方案的本质差异):**
+
+- **Kimi 默认**:CC 是 agent 容器 + 执行器(`.claude/agents/*.md` Teammates)
+- **v10.0 设计**:Hermes 是 agent 容器(新形态),CC 仅是**场地 + 协调员 + 结构化助手**
+- **Agent vs Skill 分层**:不是把现有 SKILL 当 agent 用,也不是把 agent 塞进 CC;agent 是 Hermes-side 独立 YAML 实体,有 per-agent memory + 自进化能力
+- **CC 的 Team Lead 配置极薄**:不定义 Expert,只描述 round table 协调员工作流
+
+**Constraints(沿用 + 新增):**
+
+- **范围严格收口:** 仅设计文档,**零代码改动**(不动 SKILL.md / Python / plugin manifest / `mcp_serve.py`)
+- **物理位置:** 仅 hermes-agent repo(单 repo 收敛,与 Kai 2026-07-06 决策对齐)
+- **类比 v2.0 PRFP:** 同设计型 milestone;v2.0 PRFP 产 18 个文档(340KB),v10.0 预计产 7 个文档(200-300KB)
+- **目标读者:** Kai + Kimi(便于 Notion 续聊)+ 未来 v11.0 PoC 实施者
+- **输入来源:**
+  - Notion "架构2.0" page_id `39511082-af8e-80d7-83b6-e5df50d3f07c`(Kimi 设计)
+  - `skills/autonomous-ai-agents/coding-agent/SKILL.md`(本 repo v7.0 ship)
+  - `.planning/research/v2-pipeline-design/`(本 repo v2.0 PRFP 设计套件,作为方法论参考)
+  - `skills/movie-experts/`(在 kais-hermes-skills repo,作为 agent 转化源)
+- **阶段编号:** 继续从 v9.0 phase 43 起 → v10.0 phase 44 起
+
+**Source artifact:** Notion page "架构2.0"(Kimi 2026-07-06 生成,page_id `39511082-af8e-80d7-83b6-e5df50d3f07c`)。
+
+---
+
+## Previous Milestone: v9.0 — kais-movie-pipeline 闭环深化 ✅ SHIPPED 2026-06-27
 
 **Goal:** 把 Notion "创作方向" Tier B+C 落地为 kais-movie-pipeline 的 4 个新能力 —— 平台母版切片 / 配方库 v0 / LTX2.3 预览闭环 / 数据收敛回流 —— 加 3 个跨平台红线审核门,完成「创意→生产→分发→反馈」全闭环。
 
-**Target features:**
+**Stats:** 6 phases (38-43) · 13 plans · 22/22 reqs satisfied · Tag `v9.0` (anchored at `599ef61a8`)
 
-1. **平台母版切片 (Step 14, SLICE)** —— 1 个 master.mp4 → 7 平台 variants (抖音竖屏/横屏、快手、B 站、小红书、视频号、红果);每个 variant 的 aspect ratio / hook position / length / intro-outro 差异化策略
-2. **配方库 v0 (FORM)** —— 新 plugin `plugins/formula_library/` 持久化爆款公式 schema (genre × mood × pacing × hook_pattern × characters × runtime × platform_fit × citation);10 条种子公式 + `formula_lookup` step 集成到 kais-movie-pipeline
-3. **3 新审核门 (GATE)** —— 在现有 `plugins/review_gates/gate.py` state machine 上注册 3 个新 gate,对应 `creative-redlines.md` R1/R3/R4:情绪脱敏 / 零背景铺垫 / 结尾必释放新钩子
-4. **LTX2.3 预览闭环 (PREVIEW, Step 6.5)** —— 在 Step 6 (storyboard) 与 Step 11 (final render) 之间插入 Step 6.5 fast-preview(LTX2.3 ~5s 生成)校验 composition / framing / pacing,失败回退到 Step 6 重新分镜
-5. **数据收敛 (DATA, Step 15)** —— 平台 API (完播率 / 卡点跳出率 / 互动率) → v6.0 FeedbackStore → formula_library tuning loop;per-platform dashboard
-6. **集成验证 + close-out (VALIDATE)** —— 全 milestone integration-checker + FOUND-08 preserved audit + canonical v9.0-MILESTONE-AUDIT.md
+**Target features shipped:**
 
-**Key context:**
+1. **平台母版切片 (Step 14, SLICE)** —— 1 master.mp4 → 7 平台 variants(抖音竖屏/横屏、快手、B 站、小红书、视频号、红果)
+2. **配方库 v0 (FORM)** —— 新 plugin `plugins/formula_library/` + 10 seed formulas + Step 0 集成
+3. **3 新审核门 (GATE)** —— gates.yaml 8→11 additive(redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending)
+4. **LTX2.3 预览闭环 (PREVIEW, Step 6.5)** —— LTX2.3 default model + 4-state fallback policy + BLOCKING gate escalation
+5. **数据收敛 (DATA, Step 15)** —— PlatformMetrics schema + 5 adapter stubs + formula_tuning_loop + JSONL queue + HIL-gated library_writer
+6. **集成验证 (VALIDATE)** —— 3 integration flows verified + 30 SKILL.md byte-diff all match `a2a20d2be` + v9.0-MILESTONE-AUDIT.md authored
 
-- **范围严格收口:** 仅 `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 新 plugin `plugins/formula_library/`,**不碰 Hermes 核心 Python/JS**;新 gate 注册到现有 `plugins/review_gates/` 框架(Phase 34 已交付)
-- **延续 V8.6 编号:** 新增 Step 6.5 / Step 14 / Step 15,不动现有 13 step
-- **FOUND-08 frozen rule 继续生效:** zero expert_id / frontmatter changes across all movie-experts skills
-- **双语 SKILL.md (EN 结构 + 中文 body);refs 中文为主**
-- **物理位置:** 全部 deliverable 在 hermes-agent repo;kais-movie-agent repo 保持 read-only(per v5.0 cross-repo migration decision)
-- **数据接入 operator-action:** 平台 API key (抖音开放平台 / 快手开放平台 / 视频号 / 小红书薯条 / B 站创作者) 由 operator 配置;v9.0 提供 schema + adapter 骨架,operator 配 key 后激活
+**Audit:** `.planning/milestones/v9.0-MILESTONE-AUDIT.md` — status: passed (22/22 reqs, 6/6 phases, 3/3 integration flows, FOUND-08 preserved milestone-wide).
 
-**Source artifact:** Notion page "心流♥ → aigc开发 → 创作方向" (page_id 32811082-af8e-8009-b097-d19a5027b46f); Tier A 已落地为 quick task 260626-vzl refs。
+**Cross-repo migration (post-v9.0 ship, 2026-06-27):** Commit `f10495332` moved `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 5 plugins (formula_library / kais_aigc / pipeline_state / platform_metrics / review_gates) to 独立 repo `/data/workspace/kais-hermes-skills/`。hermes-agent repo 现仅保留 GSD `.planning/` 工件。
+
+**Operator-action-handoffs (NOT gaps):**
+- (a) Phase 41 LTX2.3 live GPU generation testing (V9-FUTURE-02)
+- (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01)
+
+See `.planning/milestones/v9.0-phases/` for archived phase artifacts.
 
 ## Next Milestone Goals
 
@@ -410,4 +461,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 — v9.0 kais-movie-pipeline 闭环深化 milestone started (6 phases 38-43: SLICE / FORM / GATE / PREVIEW / DATA / VALIDATE). Returning to movie-experts deepening after v7.0 openclaw migration + v8.0 quick-task batch.*
+*Last updated: 2026-07-06 — v10.0 Hermes-Agent 编排架构第一性原理推导(设计型)milestone started. v9.0 closed (tag `v9.0` @ `599ef61a8`). 7 design decisions locked: T6 protocol / B3a Python runner 增量迁移 / D2 storyboard round-parallel / G2 通用框架 / α agent YAML / per-agent memory 自进化 / (vi) 分层 CC 角色.*

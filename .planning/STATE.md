@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.0
-milestone_name: kais-movie-pipeline 闭环深化
-status: "Phase 43 VALIDATE shipped — v9.0-MILESTONE-AUDIT.md authored; 22/22 reqs satisfied; FOUND-08 preserved milestone-wide; ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`"
-last_updated: "2026-06-27T03:30:00Z"
-last_activity: 2026-06-27 — Phase 43 VALIDATE shipped (3 integration flows verified + 30 SKILL.md byte-diff all match + v9.0-MILESTONE-AUDIT.md 10 sections authored)
+milestone: v10.0
+milestone_name: Hermes-Agent 编排架构第一性原理推导(设计型)
+status: planning
+last_updated: "2026-07-06T12:58:57.186Z"
+last_activity: 2026-07-06
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 43 of 43 (Plan 01 SHIPPED — v9.0-MILESTONE-AUDIT.md authored; 22/22 reqs satisfied; FOUND-08 preserved)
-Plan: 43-01 complete
-Status: Phase 43 VALIDATE shipped — v9.0-MILESTONE-AUDIT.md (10 sections) authored; 3 integration flows verified; 30 SKILL.md frontmatter byte-identical to a2a20d2be; 301 tests GREEN; ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`
-Last activity: 2026-07-02 — Completed quick task 260702-o1a: credential-pool overloaded fix — rotate_to_next() replaces mark_exhausted_and_rotate on 1305, GLM 4-key rotation no longer silently dies
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-06 — Milestone v10.0 started
 
 ### Progress
 
@@ -256,5 +256,6 @@ Items acknowledged at v7.0 close (2026-06-25) — documented operator-action-han
 4. `/gsd:complete-milestone v9.0` — archive and transition to next milestone
 
 **Operator-action-handoffs (post-tag, NOT gaps):**
+
 - (a) Phase 41 LTX2.3 live GPU testing (V9-FUTURE-02)
 - (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01)
