@@ -769,3 +769,355 @@ schema_version: "1.0.0"  # v11.0 PoC initial schema
 ```
 
 ---
+
+## §4 — Per-Agent Memory Tier:Core / Working / Archival
+
+### §4.0 — 本节结构声明 + 3-Tier 加严理由(P3 + P9)
+
+v10.0 把 per-agent memory **显式分为 3 tier**(core / working / archival),不是单一 namespace。这是 PITFALLS §P3(scoped retrieval performance collapse)+ §P9(memory size growth)加严 —— 单层 mem0 namespace 在 500 records 时会因 HNSW 全局图退化(post-filter scanning 50-100× more nodes than necessary,P3 mitigation 1)。分层后:
+
+- **Core tier** 始终 ≤ 50 records(常驻 agent persona fragment + immutable operator facts),保证 O(ms) retrieval
+- **Working tier** ≤ 200 records(默认 retrieval target,mem0 status=active)
+- **Archival tier** ≤ 250 records(status=archived;只在 working miss 时检索)
+
+**Layer-2 `memory-record-schema.yaml` 的 `status` field**(`active | archived | quarantined | superseded`)对应 working / archival tier 的切换。Core tier **不是独立 mem0 namespace** —— 它是常驻 agent persona 的 immutable operator facts(写死在 YAML + persona_sha256 锁定,§2.4)。这样 core tier 不参与 HNSW retrieval 性能问题,直接拼入 system prompt。
+
+**3-tier aggregate cap = 500 records per agent(OQ-7 resolution,详见 §4.4)。**
+
+---
+
+### §4.1 — Core tier(persona-aligned,always-loaded)
+
+**Location:** Agent YAML `persona` fragment(§2.4)+ `lineage.transform_notes` immutable facts(if any)+ immutable system facts(e.g. "agent is the Screenplay Expert")。
+
+**max_records:** ~50(effectively bounded by persona length —— operator 写 persona 时已控制)。
+
+**Retrieval:** **Always loaded into system prompt**;no mem0 query。每次 agent 被 `get_agent_opinion` 调用时,persona 直接拼入 system_prompt_override(ARCHITECTURE §4.3 dispatcher pseudocode)。
+
+**Writes:** **Operator-only**(YAML edits via hand-edit 或 future `hermes agent transform` CLI)。Curator 不能 mutate core tier(§2.4 P1 mitigation 3)。
+
+**PITFALLS mitigation:**
+- **P1(persona drift):** `persona_sha256` invariant locks the content。任何 persona edit 都会改变 sha256,触发 cross-layer re-verification(§3.11)
+- **P5(curator failure modes):** curator 写 memory record 时不能污染 core tier —— core tier 在 YAML 不在 mem0
+
+**Example:** 见 §2.4 screenplay persona —— 那 7 行 first-person text 就是 core tier 的内容。
+
+---
+
+### §4.2 — Working tier(default retrieval target,active records)
+
+**Location:** mem0 backend,`agent_id` namespace,**`status=active` records**。`memory-record-schema.yaml` 的 `status` field 决定归属(`active` = working)。
+
+**max_records:** ~200(default retrieval target;OQ-7 aggregate cap 500 的一部分)。
+
+**Retrieval:** Every `get_agent_opinion` call queries this tier。Retrieve API:`retrieve(query, agent_id, project_id, scope_filter, status="active")`。返回 top-5 records 拼入 system prompt(在 persona 之后,retrieved-memory block)。
+
+**Writes:**
+- Curator `_memory_evolution_phase`(§5)writes new records here
+- Round table conclusions(`trigger=round_table`)with `project_id` set
+- Operator explicit `mem0_conclude` calls
+
+**PITFALLS mitigation:**
+- **P2(stale memory):** `expires_at` + `verified_at` + `half_life_days` time-decay;out-of-date records auto-demoted to archival by compaction pass(§4.5)
+- **P4(cross-project leakage):** `scope=project`(default)+ `project_id` required;records 不跨 project retrieve unless scope=global
+- **P5(curator failure modes):** `evidence_chain ≥ 3` + `evidence_operator_ids` diversity before write
+
+---
+
+### §4.3 — Archival tier(historical + low-confidence,miss-fallback)
+
+**Location:** mem0 backend,`agent_id` namespace,**`status=archived | superseded` records**。
+
+**max_records:** ~250(OQ-7 aggregate cap 500 的一部分)。
+
+**Retrieval:** **Only on working-tier miss** OR explicit operator query(`hermes agent memory recall --include-archival`)。Retrieve API:`retrieve(query, agent_id, project_id, status="archived|superseded")`。
+
+**Writes:**
+- Compaction pass(§4.5)demotes working → archival when records are stale / low-confidence / superseded
+- Explicit `supersedes_memory_id` chain creates `status=superseded` records
+
+**PITFALLS mitigation:**
+- **P9(memory size growth):** archival tier 提供 graceful degradation —— 旧数据不被删,只是不默认 retrieve。Operator 可手动 promote archival → working if needed。
+- **P5(curator failure modes):** archived records kept for audit;`hermes curator audit-log --verify` walks supersession chains。
+
+---
+
+### §4.4 — max_records 上限:500 aggregate(OQ-7 resolution)
+
+**OQ-7 resolution:** `memory.max_records` 默认 **500 records per agent**,作为 3-tier aggregate cap(working + archival;core tier 在 YAML 不计 mem0)。
+
+**Cap breakdown(默认值,可 config 调):**
+
+| Tier | Default cap | Source |
+|------|-------------|--------|
+| Core | ~50(bounded by persona length) | Operator-curated |
+| Working | ~200 | PITFALLS §P3 mitigation 3 + §P9 |
+| Archival | ~250 | PITFALLS §P9 |
+| **Total aggregate** | **500** | **OQ-7 resolution** |
+
+**Trigger threshold:** 当 `working + archival > 450`(90% cap)时,**触发 compaction pass**(§4.5)。
+
+**PITFALLS citations:** §P3 mitigation 3(per-agent memory budget cap)+ §P9 mitigation 1(same,reinforcing)。Config:`agent.memory.max_records: 500`(per-agent override possible in agent YAML `prerequisites.env` or future field)。
+
+**OQ-7 deferred to v11.0 PoC(§7.1 audit row):**
+- 具体 compaction 算法(how to select which 50 working records to demote when cap exceeded)
+- compaction pass 的 N tick 间隔(`interval_hours` —— v6.0 default 7 days,可能需要 v10.0 独立 cadence)
+- fitness_score 与 archival promote/demote 的 coupling
+
+---
+
+### §4.5 — Compaction trigger + behavior
+
+Compaction pass 是 curator's periodic maintenance job(hook into `_memory_evolution_phase`,§5.4 per-agent iteration 的最后一步)。Trigger conditions + actions:
+
+| Trigger | Threshold | Action |
+|---------|-----------|--------|
+| Aggregate cap pressure | `working + archival > 450`(90%) | Demote lowest-`confidence` working records to archival until ≤ 400 |
+| Hard expiry | `record.expires_at < now` | Auto-flip `status: active → archived`;log to curator_audit |
+| Time-decay collapse | `record.confidence(now) < 0.1` (after half_life decay) | Demote `working → archival` |
+| Supersession | `record.status = superseded`(set by another record's `supersedes_memory_id`) | Demote `working → archival`(keep for audit) |
+| Bias canary flag | Operator disputes record; bias canary triggers | Flip `status: active → quarantined`;exclude from retrieval until resolved |
+| Archival overflow | `archival tier > 250` | Drop lowest-`confidence` archived records;log to curator_audit |
+
+**Never hard-delete invariant(P5 mitigation 1):** Compaction can only demote / quarantine / drop-archived-with-lowest-confidence。Original records stay in audit log(sha256-chained)。Restore is one CLI call(`hermes agent memory restore --record-id <id>`)。
+
+**Drop heuristic for archival overflow:** Select archived records with lowest `confidence × recall_count` score;this favors dropping records that are both low-confidence AND rarely-recalled。Log dropped record IDs + content hashes to curator_audit for traceability。
+
+---
+
+### §4.6 — 3-Tier ASCII Tier Diagram(retrieval + write + compaction flow)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ CORE TIER (operator-owned, always-loaded)                              │
+│ Location: agent YAML persona (§2.4) + lineage.transform_notes          │
+│ Retrieval: ALWAYS injected into system prompt (no mem0 query)          │
+│ Writes: operator-only (hand-edit or future `hermes agent transform`)   │
+│ PITFALLS: P1 (persona_sha256 invariant)                                │
+└────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ system prompt includes persona
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ WORKING TIER (default retrieval target, status=active)                 │
+│ Location: mem0 backend, agent_id namespace                             │
+│ Cap: ~200 records (default retrieval target)                           │
+│ Retrieval: every get_agent_opinion call queries this tier              │
+│   - WHERE agent_id=<agent> AND status=active                           │
+│   - AND (expires_at IS NULL OR expires_at > now())                     │
+│   - AND project_id matches (if scope=project)                          │
+│   - ORDER BY confidence DESC LIMIT 5                                   │
+│ Writes: curator _memory_evolution_phase / round_table / operator       │
+│ PITFALLS: P2 (time-decay) + P4 (scope isolation) + P5 (evidence ≥3)    │
+└────────────────────────────────────────────────────────────────────────┘
+                                    │
+            ┌───────────────────────┴───────────────────────┐
+            │                                               │
+            │ Compaction pass triggers (§4.5):              │
+            │  - cap > 90% → demote lowest-confidence       │
+            │  - expires_at < now → auto-archive            │
+            │  - confidence < 0.1 → demote                  │
+            │  - status=superseded → demote                 │
+            │                                               │
+            ▼                                               ▼
+┌──────────────────────────────────────────────────┐  ┌──────────────────────────────────────────┐
+│ ARCHIVAL TIER (miss-fallback, status=archived|   │  │ QUARANTINE (incident response,           │
+│   superseded)                                    │  │   status=quarantined)                     │
+│ Location: mem0 backend, same agent_id namespace  │  │ Location: mem0 backend, excluded from     │
+│ Cap: ~250 records                                │  │   retrieval until operator resolves       │
+│ Retrieval: ONLY on working-tier miss OR explicit │  │ Triggers: bias canary / poisoning         │
+│   `--include-archival` operator query            │  │   suspected / operator disputed           │
+│ PITFALLS: P9 (graceful degradation, no data loss)│  │ PITFALLS: P5 mitigation 6 + P6 mitigation 6│
+└──────────────────────────────────────────────────┘  └──────────────────────────────────────────┘
+```
+
+**Flow summary:**
+1. Every `get_agent_opinion` call: core tier from YAML + working tier top-5 from mem0
+2. Compaction pass(§4.5)demotes working → archival / quarantine based on triggers
+3. Working-tier miss → operator can explicitly query archival tier
+4. Quarantine records excluded from all automated retrieval;restore requires operator command
+
+---
+
+## §5 — Curator `_memory_evolution_phase` Field Contract(OQ-16 resolution)
+
+### §5.0 — 本节声明:additive extension of v6.0 `_feedback_scan_phase`
+
+`_memory_evolution_phase` 是 v6.0 `_feedback_scan_phase` 的 **additive extension** —— 不替换、不并行,在 `_feedback_scan_phase` 之后**串行插入**。Pattern 来自:
+
+- **v6.0 FOUND-06 additive phase discipline:** New background behaviors are added as new phases in `run_curator_review`,NOT as separate daemons(ARCHITECTURE §7.2 pattern:Additive Curator Phase)
+- **Phase 44 §1.3 paradigm shift:** Agent 是 Hermes-side 独立实体,curator 是其自进化机制。Curator 既 scan SKILL feedback(v6.0),也 scan agent memory evolution(v10.0 新加)。
+
+**Resolves OQ-16(详见 §5.1-§5.3)。**
+
+---
+
+### §5.1 — Execution order(AFTER `_feedback_scan_phase`,never before,never parallel)
+
+**OQ-16 resolution:** `_memory_evolution_phase(start)` runs **immediately AFTER** `_feedback_scan_phase(start)` in `_llm_pass()`,in the same `_llm_pass` block。
+
+**Hook location:** `agent/curator.py` lines 2081-2095 + 2207-2221(两个 `_feedback_scan_phase` hook 点 —— `_llm_pass` 函数内的两段)。新增 `_memory_evolution_phase` call 紧跟在每段 `_feedback_scan_phase` call 之后。
+
+**Pseudo-code(agent/curator.py 的 `_llm_pass` sketch,v11.0 PoC 实施 target):**
+
+```python
+def _llm_pass(self, start: datetime):
+    """v10.0 extended: feedback scan + memory evolution in sequence."""
+    # ... existing v6.0 logic above ...
+
+    # v6.0 _feedback_scan_phase (shipped)
+    try:
+        feedback_summary = _feedback_scan_phase(start)
+        # logs to curator.log + curator_audit
+    except Exception as exc:
+        log_warning("_feedback_scan_phase failed: %s", exc)
+        feedback_summary = {"scanned": 0, "evolved": []}
+
+    # v10.0 NEW _memory_evolution_phase (additive, AFTER feedback_scan)
+    try:
+        memory_summary = _memory_evolution_phase(start)
+        # logs to curator.log + curator_audit
+    except Exception as exc:
+        log_warning("_memory_evolution_phase failed: %s", exc)
+        memory_summary = {"agents_walked": 0, "memory_facts_synthesized": 0}
+
+    # ... existing v6.0 logic below ...
+
+    return {
+        **feedback_summary,
+        "memory_evolution": memory_summary,  # additive key
+    }
+```
+
+**Why AFTER and not BEFORE?** Memory evolution depends on feedback signals —— 先 feedback scan(聚合 new feedback since last pass),再 memory evolution(基于 feedback signals 决定哪些 memory 需 update)。Reverse order 会丢失本轮 feedback 的贡献。
+
+**Why NOT parallel?** Two phases share the same LLM client(pool);parallel 会 double LLM cost + race on agent YAML writes(evolution_log append)。串行更安全。
+
+---
+
+### §5.2 — Dry-run-by-default contract
+
+**Discipline:** New phase defaults `dry_run=True`。Memory writes(mem0_conclude calls)在 dry-run mode 下被 skipped;only summary dict returned。**Mutation requires explicit operator flag**(二选一):
+
+- Env var:`HERMES_CURATOR_MEMORY_EVOLUTION_LIVE=1`
+- CLI flag:`hermes curator run --live-memory-evolution`
+
+**Sources:** v6.0 FOUND-06 discipline + PITFALLS §P5 mitigation 5(curator failure modes —— operator retains ownership of memory state)。
+
+**Why dry-run-by-default?** Per PITFALLS §P5 mitigation 5:"curator's memory-write path is dry-run by default,requires explicit `--apply-memory` flag for live writes。Same ast-walk invariant pattern as `TestNonBypassableHumanInLoop`。" Operator 必须 explicitly opt-in to mutation,防止 curator bug silently 污染 memory store。
+
+**Test invariant(v11.0 PoC):** `TestNonBypassableHumanInLoop` ast-walk extends to cover `_memory_evolution_phase`'s mem0_conclude calls —— only callable from `hermes_cli/feedback.py:_cmd_approve` 或 explicit `--live-memory-evolution` CLI path。
+
+---
+
+### §5.3 — try/except isolation contract
+
+**Discipline:** Wrap entire `_memory_evolution_phase` body in try/except。On Exception:
+
+1. Log warning with stack trace to `errors.log` + `curator.log`
+2. Append error entry to `curator_audit.jsonl`(sha256-chained)
+3. Return `{"agents_walked": 0, "memory_facts_synthesized": 0, "errors": [str(exc)]}` summary dict
+4. **Never propagate up** to crash `run_curator_review`
+
+**Boundary:** Same isolation boundary as `_feedback_scan_phase`。One phase's failure never crashes the other。
+
+**Pseudo-code:**
+```python
+def _memory_evolution_phase(start: datetime) -> Dict[str, Any]:
+    """ADDITIVE per-agent memory evolution phase. OQ-16 resolution."""
+    try:
+        # ... walk ~/.hermes/agents/*.agent.yaml ...
+        # ... per-agent iteration (§5.4) ...
+        return {
+            "agents_walked": N,
+            "memory_facts_synthesized": M,
+            "memory_facts_written": W,  # 0 in dry-run
+            # ... etc ...
+        }
+    except Exception as exc:
+        logger.warning("_memory_evolution_phase failed: %s", exc, exc_info=True)
+        append_audit(action="memory_evolve_error", error=str(exc))
+        return {"agents_walked": 0, "memory_facts_synthesized": 0, "errors": [str(exc)]}
+```
+
+---
+
+### §5.4 — Per-agent iteration contract
+
+**Discipline:** Walks `~/.hermes/agents/*.agent.yaml`(ARCHITECTURE §4.1 sibling scanner)。For each agent with `memory_scope == "per_agent"`:
+
+1. **Load YAML + evolution_log。** Parse via `agent/skill_utils.parse_frontmatter` generalization(ARCHITECTURE §4.1 `_discover_agents` pseudocode)。
+2. **Walk evolution_log since last phase run**(`start` param = `last_memory_evolution_at` from `.curator_state`)。Filter entries with `trigger in (feedback, eval_gate)` —— these are candidates for memory synthesis。
+3. **For each candidate entry with `trigger=feedback` or `trigger=eval_gate`:**
+   - Validate `evidence_chain`(≥3 sources per P5 mitigation 2)
+   - Validate `evidence_operator_ids`(≥2 distinct operators per P5 mitigation 3,recommended)
+   - If valid:**synthesize memory fact via LLM consolidation**(reuse `_feedback_scan_phase` LLM helper from v6.0)
+   - **Optional write:** `mem0_conclude` scoped to `agent_id` via `_scoped_agent_id` contextvars(§5.5)
+4. **Append new evolution_log entry** with sha256 chain(`trigger=feedback` or `trigger=eval_gate`,`persona_sha256=<current>`,`fitness_delta=<delta>`)。
+5. **Update `fitness_score`** if eval_gate evidence present(P8 mitigation)。
+6. **Run compaction pass**(§4.5)if `working + archival > 450`。
+
+**Skip agents with:** `memory_scope == "shared"`(uses global mem0 namespace,no per-agent memory to evolve)/ `default_invocation == "disabled"`(transform-in-progress,do not touch)。
+
+---
+
+### §5.5 — mem0_conclude integration(`_scoped_agent_id` contextvars pattern)
+
+**Discipline:** When writing memory via `mem0_conclude`,the phase **sets `provider._scoped_agent_id = agent_name`** before the call;resets in `finally` block。Thread-safe via `contextvars`(matches `agent/tool_executor.py` ThreadPoolExecutor pattern)。
+
+**Source:** ARCHITECTURE §3.3 `_scoped_agent_id` contextvars pattern。
+
+**Pseudo-code:**
+```python
+import contextvars
+
+_scoped_agent_id: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "_scoped_agent_id", default=None
+)
+
+def _set_memory_agent_scope(agent_name: Optional[str]) -> None:
+    _scoped_agent_id.set(agent_name)
+
+def invoke_agent_with_memory(agent_name: str, query: str) -> str:
+    provider = _get_active_memory_provider()
+    token = _scoped_agent_id.set(agent_name)
+    try:
+        return agent_registry.dispatch(agent_name, query)
+    finally:
+        _scoped_agent_id.reset(token)
+```
+
+**Why contextvars and not threading.local?** Hermes uses `ThreadPoolExecutor` for concurrent tool execution(`agent/tool_executor.py:110`)。`threading.local` 会 leak scope across task boundaries in the same worker thread;`contextvars` 自动 isolate per-task。**v11.0 PoC must use contextvars**(SUMMARY.md Gaps to Address)。
+
+---
+
+### §5.6 — Return shape(parallel to `_feedback_scan_phase`)
+
+**Discipline:** Returns `Dict[str, Any]` parallel to `_feedback_scan_phase` return shape。Keys:
+
+```python
+{
+    "agents_walked": int,                  # 总共 walk 多少个 agent YAML
+    "memory_facts_synthesized": int,       # LLM consolidation 生成的 memory fact 总数
+    "memory_facts_written": int,           # 实际写入 mem0 的数量(0 in dry-run)
+    "evidence_chain_failures": int,        # 因 evidence < 3 被拒的候选数
+    "operator_diversity_failures": int,    # 因 operator 单一被拒的候选数
+    "fitness_score_updates": int,          # fitness_score 调整的 agent 数
+    "compaction_passes_triggered": int,    # compaction 触发次数
+    "errors": [str, ...],                  # per-agent error logs(if any)
+    "duration_seconds": float,             # 总耗时
+}
+```
+
+**Logging:** Summary dict appended to `curator_audit.jsonl`(sha256-chained,v6.0 pattern)。`hermes curator stats --memory-evolution` renders sparkline of last N runs。
+
+**Operator observability:** Operator 可 `hermes curator stats --memory-evolution --bias-audit` 查看:
+
+- 哪些 agent 在过去 N runs 中 fitness_score 上升 / 下降
+- 哪些 operator 在 evidence_operator_ids 中占比 >50%(bias 警告)
+- 哪些 memory record 因 evidence 不足被拒
+- 哪些 compaction pass 触发了 drop
+
+**Curator state extension:** `.curator_state` 新增 `"last_memory_evolution_at": ISO_ts` 字段,确保 evolution phase 每 `interval_hours` 周期最多跑一次(matches existing cadence discipline)。
+
+---
