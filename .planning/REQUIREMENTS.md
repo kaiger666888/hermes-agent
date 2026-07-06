@@ -141,7 +141,7 @@
 |--------|-------|--------|------|--------|-------------|--------------|
 | DESIGN-01 | Phase 44 | Complete | 00-FIRST-PRINCIPLES.md | — | — | FEATURES §10,11 + ARCHITECTURE §8 + PITFALLS 全文 |
 | DESIGN-02 | Phase 45 | Complete | 01-AGENT-REGISTRY-SCHEMA.md + agents-schema.yaml + memory-record-schema.yaml | OQ-1,4,7,13,14,16 | P1,P2,P4,P5,P8,P10,P14 | ARCHITECTURE §1,2,3,4 + PITFALLS 全文 + STACK §3.2 |
-| DESIGN-03 | Phase 46 | Pending | 02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml | OQ-2,5,9,11,15 | P7,P11 | STACK §3.2 + ARCHITECTURE §4,5 + FEATURES §1.3,2.3,10 + PITFALLS §P7,11 |
+| DESIGN-03 | Phase 46 | Complete | 02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml | OQ-2,5,9,11,15 | P7,P11 | STACK §3.2 + ARCHITECTURE §4,5 + FEATURES §1.3,2.3,10 + PITFALLS §P7,11 |
 | DESIGN-04 | Phase 47 | Pending | 03-COMPARISON-VS-KIMI-MCP-SHIM.md | — | — | FEATURES §4,7.4,11 + STACK §1-5 + Kimi Notion 架构2.0 |
 | DESIGN-05 | Phase 49 | Pending | 04-MIGRATION-PATH.md | OQ-3,10 | P14 | ARCHITECTURE §2,6 + STACK §3.2 Tool 7 |
 | DESIGN-06 | Phase 50 | Pending | 05-POC-PLAN.md | — | P1-P14(全部 PoC 验收) | PITFALLS 全文 + STACK §7 + FEATURES §14 |
