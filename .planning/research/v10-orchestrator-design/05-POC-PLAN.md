@@ -598,3 +598,354 @@ SC#2 PASS.
 
 ---
 
+## §4 7-Item Acceptance Criteria Checklist (SC#3 Deep-Dive, 12 Person-days total)
+
+> 本节是 ROADMAP SC#3 的完整论证. 7 项 acceptance criteria + 每项 1-3 天工作量估算 = **12 person-days total**. 每 item cite PITFALLS §PX mitigation + Phase 45 schema field + Phase 49 §4-§5 / Phase 46 protocol reference. 工作量估算基于 **first-principles task decomposition** (设计 + 实施 + 验证 三 phase per item), 不是 gut feel.
+
+### §4.0 Acceptance Criteria Strategy
+
+7 项 acceptance criteria 覆盖 v11.0 PoC must-pass 的 7 个维度. 每 criterion 都对应一个 PITFALLS §PX mitigation (P1/P3/P5/P8/P9/P13/P14) 的 PoC 实施验证. 这 7 个维度是:
+
+1. **Fitness battery** (P1+P8 mitigation) —— regression-detection 信号
+2. **Latency SLO** (P3 mitigation) —— mem0 scoped retrieval 性能 baseline
+3. **Bias canary** (P5 mitigation) —— curator `_memory_evolution_phase` hallucination guard
+4. **Compaction pass** (P9 mitigation) —— memory size 增长控制
+5. **Threshold tuning** (P13 mitigation) —— curator loop 反馈阈值
+6. **Dry-run-first invariant** (P5 mitigation) —— non-bypassable human-in-loop
+7. **Schema migration dry-run** (P14 mitigation) —— memory schema 前向兼容
+
+每 criterion 的工作量估算分解为 **设计 + 实施 + 验证** 三 phase, sub-task 级 day-fraction (e.g. `0.5d` / `1d`).
+
+**为什么是这 7 项** (not arbitrary):
+- 这 7 项 来自 PITFALLS §Risk Register Summary (line 470-488) + SUMMARY §Gaps to Address (line 172-178) 的 PoC-必须-验证 subset. P1/P2/P4/P5/P6/P7/P8 (SC#4 7-pitfall scope) 的 mitigations 散布在这 7 项 acceptance criteria 中 (cross-mapping 见 §4.8 + §5).
+- 这 7 项 **不包括** P10/P11/P12 (Phase 51 VALIDATE + v11.1+ scope, 不在 PoC must-pass), 也不重复 P3 (latency SLO §4.2 已 cover) 或 P9 (compaction §4.4 已 cover).
+- 每 item 1-3 day estimate 基于 first-principles task decomposition (设计 + 实施 + 验证 三 phase), 不是 gut feel. 总 12 person-days 是 PoC budget (§2.4 ~15-17 person-days total) 的主体.
+
+**Cross-criterion dependency** (precondition chain):
+- §4.1 fitness battery 是 §4.3 bias canary + §4.6 dry-run-first + §4.7 schema migration 的 regression-detection backstop (later criteria changes need fitness battery to detect regression)
+- §4.7 schema migration dry-run 是 §4.3 bias canary 的 precondition (bias canary 需要 clean memory layer, schema migration 验证 memory layer 数据完整性)
+- §4.6 dry-run-first 是 §4.3 bias canary 的姊妹 criterion (both gate P5 curator failure modes)
+
+详细 sequencing 见 §6.1 PoC implementation path.
+
+### §4.1 Acceptance Criterion #1 — Fitness Battery Design (3 days)
+
+**Citations**:
+- PITFALLS §P8 mitigation 1: frozen fitness battery per agent at registration (changes require new `persona_sha256`)
+- PITFALLS §P8 mitigation 2: longitudinal `fitness_trend.jsonl` (schema: `{ts, battery_version, mean_score, per_prompt_scores, persona_sha256, model_id}`)
+- PITFALLS §P8 mitigation 3: A/B shadow mode before applying memory change
+- PITFALLS §P8 mitigation 4: distinguishing agent-drift from model-drift (every fitness run records `model_id` + `provider`)
+- PITFALLS §P8 mitigation 5: fitness battery review cadence (quarterly operator review)
+- Label Studio "How to Evaluate Agent Memory" (4 competencies: accurate retrieval / test-time learning / long-range understanding / conflict resolution — directly applicable to fitness battery prompt design)
+- Shaped.ai "A/B Testing Retrieval" (Recall@K, NDCG, and other quantitative metrics — proves agents getting better)
+- GetMaxim "A/B Testing Strategies for AI Agents" (10K-trajectories-per-arm rule of thumb — sets expectation: Hermes scale = noisy signal, fitness signals will be noisy)
+- Phase 45 agents-schema.yaml field: `fitness_battery` (path to battery YAML) + `persona_sha256` (drift probe baseline)
+- MEMORY.md v6-self-evolution-milestone: v6.0 fitness battery precedent (`gate.py:decide_verdict` MT-Bench position-swap; PoC 设计 leverages v6.0 patterns + adds longitudinal trend + per-agent-cross-patch baseline)
+
+**Task decomposition**:
+- (a) **0.5d 设计 battery**: design 10-20 prompt battery for screenplay agent. Battery exercises HOOK-09 emotion_curve marker contract + Snyder 15-beat + McKee value-shift + Tan interest formula (per ARCHITECTURE §2 screenplay row refs). Each prompt designed to discriminate: a generic LLM should score 0.4-0.5; a well-persona'd screenplay agent should score 0.7+. Battery prompts frozen at agent registration under `_eval/persona_probes/screenplay.yaml` per PITFALLS §P1 mitigation 2.
+- (b) **0.5d 实施 CLI**: implement `hermes agent fitness <agent_id>` CLI wrapper (calls existing v6.0 `_eval/gate.py:decide_verdict` pattern, but writes to `fitness_trend.jsonl` instead of overwriting `scores.json` baseline). CLI accepts `--battery <path>` (default: agent's `fitness_battery` field) + `--shadow` flag (run against proposed memory set per PITFALLS §P8 mitigation 3 A/B shadow mode)
+- (c) **1d 实施 baseline + schema**: run baseline on screenplay agent + commit `fitness_trend.jsonl` schema (per PITFALLS §P8 mitigation 2 fields). Each entry:
+  ```json
+  {
+    "ts": "2026-07-XX",
+    "battery_version": "v1-screenplay-baseline",
+    "mean_score": <baseline>,
+    "per_prompt_scores": {"<prompt_id>": <score>, ...},
+    "persona_sha256": "<agent persona_sha256 at registration>",
+    "model_id": "glm-5.2",
+    "provider": "zai"
+  }
+  ```
+- (d) **1d 实施 regression auto-quarantine**: logic that mean_score drop > 0.5 across 3 consecutive runs triggers auto-quarantine of recent memory writes (mirrors PITFALLS §P8 mitigation 2 last sentence). Auto-quarantine sets `status="quarantined"` on memory records written in the window between first and third run; operator can `hermes agent memory restore` to undo if false-positive.
+
+**Acceptance check**: `fitness_trend.jsonl` exists with ≥1 baseline entry for screenplay. Regression logic verified on synthetic test (manually inject bad memory write → next fitness run mean_score drops > 0.5 → auto-quarantine triggers within 3 runs).
+
+**Failure mode**: if fitness battery design fails (e.g. battery prompts don't discriminate persona drift — generic LLM scores same as persona-aligned agent), P1 (persona drift) + P8 (no fitness signal) mitigations are unverified. PoC blocks until battery redesigned with more discriminating prompts.
+
+**Pitfall gated**: P1 (persona drift, partial — drift probe via mean_score trend) + P8 (no fitness signal, full — this is THE acceptance criterion for P8).
+
+### §4.2 Acceptance Criterion #2 — Latency SLO p95 < 500ms (2 days)
+
+**Citations**:
+- PITFALLS §P3 mitigation 4: read-path latency SLO + observability (`_latency_ms` field in retrieval log + stats CLI p50/p95/p99 per agent)
+- PITFALLS §P3 mitigation 1 (physical partitioning) + 2 (local SQLite index): related context for what to do if SLO fails
+- Phase 48 §3 Option B vs 物理分区 migration trigger: latency SLO fail → 物理分区 evaluation
+- SUMMARY §Gaps to Address line 174: mem0 Platform API 真实 filter 行为 (v11.0 PoC week-1 跑 latency benchmark, 若 p95 > 500ms 立即触发物理分区切换)
+- STACK §7.4 line 1035-1046: latency breakdown (stdio round-trip <5ms, MCP server dispatch <10ms, tool function body LLM call 2-15s — SLO excludes LLM-bound calls)
+- Phase 45 memory-record-schema.yaml fields: `agent_id` + `project_id` (filter axis)
+
+**Task decomposition**:
+- (a) **0.5d 实施 log field**: add `_latency_ms` field to memory retrieval log entry (per PITFALLS §P3 mitigation 4). Log entry already exists in `Mem0MemoryProvider.search()` return path; add timing wrapper using `time.perf_counter()` around mem0 client call.
+- (b) **0.5d 实施 stats CLI**: implement `hermes curator stats --latency <agent_id>` CLI with p50/p95/p99 per-agent breakdown. CLI reads recent N=100 retrieval log entries, computes percentiles via `statistics.quantiles()` (stdlib, no scipy dep — mirrors v6.0 `_eval/gate.py` pattern).
+- (c) **1d 验证 benchmark**: run week-1 benchmark on test-coordinator.agent.yaml with 3 record counts:
+  - **100 records** (small, baseline): 100 sequential `get_agent_memory` calls, measure p95. Expected: <100ms (mem0 small-scale latency).
+  - **500 records** (medium, SLO threshold): 100 sequential calls, measure p95. SLO: <500ms.
+  - **1000 records** (large, stress test): 100 sequential calls, measure p95. Expected: <1000ms (if >1000ms, P3 mitigation 1 物理分区 evaluation triggered even at PoC scale).
+
+**Acceptance check**: p95 < 500ms on 500-record `get_agent_memory` benchmark (excluding LLM call). SLO scopes to mem0 scoped retrieval only (`get_agent_memory` + `query_memory`); does NOT include LLM-bound tool calls (per STACK §7.4 LLM call = 2-15s, not in 500ms budget). Verify the 3-record-count progression: 100→500→1000 records should scale sub-linearly (e.g. 50ms → 200ms → 600ms, NOT 50ms → 1000ms → 5000ms which would indicate HNSW post-filter collapse per PITFALLS §P3).
+
+**Failure mode**: if p95 > 500ms on 500-record benchmark, trigger Phase 48 §3 物理分区 evaluation (per SUMMARY §Gaps line 174). PoC blocks until either:
+- (a) mem0 backend tuned to meet SLO (e.g. cache common queries per PITFALLS §P3 mitigation 5), or
+- (b) 物理分区 migration plan committed (可能 defer 物理分区实施到 v11.1+, but evaluation必须在 PoC 内做 — output: documented migration trigger analysis + recommended 物理分区 deployment topology)
+
+If progression 100→500→1000 scales super-linearly (>3x p95 jump per 2x records), this is early sign of HNSW post-filter collapse (PITFALLS §P3 root cause) and 物理分区 evaluation becomes mandatory.
+
+**Pitfall gated**: P3 (scoped retrieval perf collapse) — full.
+
+### §4.3 Acceptance Criterion #3 — Bias Canary (2 days)
+
+**Citations**:
+- PITFALLS §P5 mitigation 4: bias canary in eval gate (5 prompts explicitly designed to surface single-operator preferences; if patch improves operator-A's prompts but regresses on operator-B-equivalent prompts, gate fails)
+- PITFALLS §P5 mitigation 2: `evidence_chain` coverage check (embedding cosine ≥ 0.7, `_check_evidence_coverage(new_memory, evidence_chain) -> bool`)
+- PITFALLS §P5 mitigation 3: operator diversity (`_check_operator_diversity(feedback_records, min_distinct_operators=2)`)
+- SUMMARY §Gaps to Address line 176: curator `_memory_evolution_phase` LLM aggregation hallucination rate (v11.0 PoC acceptance criterion: `evidence_chain` coverage check + bias canary 必须跑通)
+- Phase 45 memory-record-schema.yaml fields: `evidence_chain` + `evidence_operator_ids`
+
+**Task decomposition**:
+- (a) **0.5d 设计 bias-canary prompts**: design 5 bias-canary prompts (single-operator preference surfacing). E.g. "Should the screenplay always end with a twist?" (one operator's preference; should not become universal rule). Each prompt designed to surface preference that 1 operator would approve but 2+ operators would dispute.
+- (b) **0.5d 实施 coverage check**: implement `_check_evidence_coverage(new_memory, evidence_chain) -> bool` (per PITFALLS §P5 mitigation 2). For each `feedback_record_id` in `evidence_chain`, retrieve the record text, compute embedding cosine similarity with `new_memory.text`. If any record's cosine < 0.7, the evidence doesn't actually support the new memory → reject (hallucination guard).
+- (c) **0.5d 实施 diversity check**: implement `_check_operator_diversity(feedback_records, min_distinct_operators=2)` (per PITFALLS §P5 mitigation 3). Extract `operator_id` from each feedback record (Phase 45 memory-record-schema.yaml `evidence_operator_ids` field). If `len(set(operator_ids)) < min_distinct_operators`, single-operator bias risk → reject.
+- (d) **0.5d 验证**: run curator `_memory_evolution_phase` in dry-run on synthetic 10-feedback-record input (all from one operator with similar preference), verify bias canary rejects single-operator-derived insight. Also run with 10 records from 2+ operators with consistent evidence → verify acceptance (false-positive rate test).
+
+**Acceptance check**: curator dry-run rejects single-operator-derived insight with explicit error "evidence_operator_ids has < min_distinct_operators=2 distinct operators; bias canary triggered". AND curator dry-run accepts multi-operator insight with `evidence_chain` coverage cosine ≥ 0.7 (false-positive test).
+
+**Failure mode**: if bias canary accepts single-operator insight (false negative), P5 (curator failure modes — bias amplification) mitigation is broken. Curator silently writes biased rules → agent degrades over time. If bias canary rejects valid multi-operator insight (false positive), curator stalls — PoC iteration blocked.
+
+**Pitfall gated**: P5 (curator failure modes — bias amplification + hallucination), partial (bias canary covers bias amplification + hallucination; full P5 also needs §4.6 dry-run-first for the non-bypassable human-in-loop on `--apply-memory` mode).
+
+### §4.4 Acceptance Criterion #4 — Compaction Pass (1 day)
+
+**Citations**:
+- PITFALLS §P9 mitigation 1 (per-agent memory budget cap) + mitigation 2 (3-tier core/working/archival compaction)
+- SUMMARY OQ-7 (memory.max_records 上限 default 500, curator 每 N tick 跑 compaction pass)
+- Phase 45 agents-schema.yaml field: `memory.max_records` (default 500)
+
+**Task decomposition**:
+- (a) **0.3d 实施 cap enforcement**: enforce `agent.memory.max_records: 500` cap in dispatcher (reject write above cap with explicit error "agent.memory.max_records=500 reached; run `hermes agent memory compact <agent_id>` or remove obsolete records first"). Cap is hard ceiling per PITFALLS §P9 mitigation 1.
+- (b) **0.3d 实施 compaction trigger**: implement curator compaction pass trigger (every N ticks, N=10 default per SUMMARY OQ-7). Compaction merges low-confidence / old records into summary record per PITFALLS §P9 mitigation 2 + 3 (additive summarization with `source_record_ids` preserved; originals archived, not deleted).
+- (c) **0.4d 验证**: run compaction on 600-record synthetic input (above cap), verify output follows 3-tier structure per PITFALLS §P9 mitigation 2:
+  - **Tier 1 (core, ≤10 records)**: manually curated, always in prompt. Personas + hard rules. e.g. "screenplay agent always preserves HOOK-09 emotion_curve marker contract"
+  - **Tier 2 (working, ≤100 records)**: retrieved on demand via mem0 search. Top-5 results injected. Recent operational context.
+  - **Tier 3 (archival, ≤10000 records)**: full history, only via explicit `memory_recall` tool. Long-term archive.
+  - **Compaction output**: 600 records → Tier 1: 5-10 records (manually selected); Tier 2: 100 records (high-confidence recent); Tier 3: 490 records (everything else, archived with `source_record_ids` chain preserved)
+
+**Acceptance check**: compaction pass output on 600-record input produces valid 3-tier structure (core ≤10 / working ≤100 / archival ≤10000, with originals archived not deleted per PITFALLS §P9 mitigation 3 additive summarization). Total post-compaction record count = 600 (no data loss, just tier reorganization). Compaction log entry written per PITFALLS §P9 mitigation 5.
+
+**Failure mode**: if compaction fails or produces wrong-tier output (e.g. archival >10000, or originals deleted), P9 (memory size growth) mitigation is broken. Memory grows unbounded → context overflow + summarization detail loss.
+
+**Pitfall gated**: P9 (memory size growth) — full.
+
+### §4.5 Acceptance Criterion #5 — Threshold Tuning (1 day)
+
+**Citations**:
+- PITFALLS §P13 mitigation 1 (adaptive thresholds: `feedback_threshold_count = max(3, active_projects * 2)`)
+- PITFALLS §P13 mitigation 2 (queue-depth backpressure)
+- PITFALLS §P13 mitigation 3 (auto-reject old pending patches)
+- v6.0 baseline: `DEFAULT_FEEDBACK_THRESHOLD_COUNT = 3`
+
+**Task decomposition**:
+- (a) **0.3d 文档 defaults**: document initial defaults:
+  - `DEFAULT_FEEDBACK_THRESHOLD_COUNT = 3` (v6.0 baseline per `agent/curator.py`)
+  - Compaction trigger `N = 10` (per SUMMARY OQ-7: curator 每 10 ticks 跑 compaction pass)
+  - Bias canary `min_distinct_operators = 2` (per §4.3)
+  - Auto-quarantine mean_score drop threshold = 0.5 across 3 runs (per §4.1)
+  - Each threshold documented with rationale + tuning path + audit log entry schema
+- (b) **0.3d 文档 tuning path**: document CLI override for each threshold (e.g. `hermes curator set --feedback-threshold-count=N`) + audit log entry when threshold changed (fields: `operator_id`, `threshold_name`, `old_value`, `new_value`, `rationale_text`, `ts`). Overrides captured in `~/.hermes-poc/curator_thresholds.yaml` for persistence.
+- (c) **0.4d 验证 runaway**: run curator with `threshold=1` (overly aggressive, simulating misconfiguration) on synthetic input with 10 active_projects, verify:
+  - Audit log captures "threshold too low, runaway risk" warning per PITFALLS §P13 mitigation 1 (`feedback_threshold_count < max(3, active_projects * 2)` triggers warning)
+  - Queue-depth backpressure kicks in per PITFALLS §P13 mitigation 2 (review queue > 50 pending patches → curator pauses proposal generation)
+  - Auto-reject of pending patches older than 30 days per PITFALLS §P13 mitigation 3
+
+**Acceptance check**: audit log captures runaway warning + rate-limit kicks in when threshold set to overly-aggressive value (threshold=1 with active_projects=10). Backpressure pause observable in curator stats (`hermes curator stats --queue-depth`).
+
+**Failure mode**: if no runaway protection, P13 (curator loop runaway) mitigation is broken. Operator drowns in low-quality proposals + starts rubber-stamping approvals → feedback loop degrades.
+
+**Pitfall gated**: P13 (curator loop runaway) — full.
+
+**Adaptive threshold formula** (per PITFALLS §P13 mitigation 1):
+```
+feedback_threshold_count = max(3, active_projects * 2)
+```
+At PoC scale (active_projects=1, `~/.hermes-poc/` single-project workspace): threshold stays at default `3`. At production scale (active_projects=10): threshold scales to `max(3, 20) = 20`, preventing single-project feedback from dominating curator proposals.
+
+**Auto-reject old patches** (per PITFALLS §P13 mitigation 3): pending patches older than 30 days auto-rejected (`status="expired"`). Forces operator to keep up or accept that old proposals lapse. Reduces rubber-stamping risk.
+
+**Queue-depth backpressure detail** (per PITFALLS §P13 mitigation 2): curator pauses proposal generation when review queue > 50 pending patches. Stats CLI `hermes curator stats --queue-depth` surfaces backlog. Auto-resume when queue drains below 25 (hysteresis prevents flapping).
+
+**Why threshold tuning is only 1 day**: v6.0 已 ship `DEFAULT_FEEDBACK_THRESHOLD_COUNT=3` + audit log; PoC 仅需 add adaptive scaling + backpressure + auto-reject, all config-level changes (no new schema fields, no new tool surfaces). Verification is single synthetic test.
+
+**Cross-criterion note**: §4.5 threshold tuning 与 §4.4 compaction pass 共享 `N=10` compaction trigger 参数. 两者 都 curator config-level, 不互相 block, 可 parallel run in Week 5 (per §4.10).
+
+### §4.6 Acceptance Criterion #6 — Dry-Run-First Invariant (1 day)
+
+**Citations**:
+- PITFALLS §P5 mitigation 5: dry-run-first invariant (curator memory-write path is dry-run by default, requires explicit `--apply-memory` flag for live writes)
+- SUMMARY OQ-16: curator `_memory_evolution_phase` dry-run-by-default (mirrors v6.0 `CURATOR_DRY_RUN_BANNER` AST-walk pattern)
+- v6.0 pattern: `TestNonBypassableHumanInLoop` ast-walk invariant on `apply_patch_transaction`
+
+**Task decomposition**:
+- (a) **0.3d 实施 default dry-run**: implement curator memory-write path dry-run default (requires explicit `--apply-memory` flag for live writes, mirrors v6.0 `CURATOR_DRY_RUN_BANNER` AST-walk pattern). Default mode prints "DRY-RUN: would write N memory records to agent X" but commits zero writes.
+- (b) **0.3d 实施 non-bypassable test**: implement `_check_non_bypassable_human_in_loop` test (mirrors v6.0 `TestNonBypassableHumanInLoop` in `tests/test_curator_audit.py`). AST-walk verifies memory-write code path (`apply_memory_transaction` or equivalent) only callable from `hermes_cli/memory.py:apply_memory_cmd` (the single approved entry). Test fails build if AST-walk finds bypass path.
+- (c) **0.4d 验证**: run curator in default mode, verify zero memory writes (dry-run banner shows what WOULD be written, `evidence_chain` + `evidence_operator_ids` per record); run with `--apply-memory`, verify writes proceed with audit log entry per write (`action="memory_write"`, `agent_id`, `memory_id`, `operator_id`, `ts`, per PITFALLS §P6 mitigation 5 extension to memory).
+
+**Acceptance check**: default mode = zero memory writes (dry-run banner shows what WOULD be written). `--apply-memory` mode = writes proceed with audit log entry. AST-walk test passes (no bypass path).
+
+**Failure mode**: if dry-run-first invariant is bypassable (e.g. memory write code path callable from non-approved entry, AST-walk test fails), P5 (curator failure modes) mitigation is broken. Curator silently writes hallucinated rules. Build fails until bypass fixed.
+
+**Pitfall gated**: P5 (curator failure modes — full when combined with §4.3 bias canary) + P6 partial (`operator_signature` schema field validated in `--apply-memory` path, see §5.5 for full P6 verdict).
+
+### §4.7 Acceptance Criterion #7 — Schema Migration Dry-Run (2 days)
+
+**Citations**:
+- Phase 49 §4.5 dry-run migration mode: `hermes agent memory migrate --dry-run`
+- Phase 49 §4.7 6-step migration execution (backup → dry-run → approval → live → shadow 30d → decommission)
+- PITFALLS §P14 mitigation 1 (schema_version on every record) + mitigation 2 (safe defaults) + mitigation 3 (dry-run migration script)
+- Phase 45 memory-record-schema.yaml field: `schema_version: int`
+
+**Task decomposition**:
+- (a) **0.5d 实施 dry-run script**: implement dry-run migration script `hermes agent memory migrate --dry-run` (reads v6.0 `FeedbackStore` JSONL buckets at `~/.hermes/feedback/`, no write). Script walks buckets, applies Phase 49 §4.3 mapping table (v6.0 FeedbackRecord → v10.0 memory record), outputs 5-metric plan.
+- (b) **0.5d 实施 output plan**: implement dry-run output plan with 5 metrics per Phase 49 §4.5:
+  - **Total source count**: number of v6.0 FeedbackRecord read
+  - **Per-field default fill rate**: for each new memory-record-schema.yaml field (e.g. `scope` / `project_id` / `evidence_chain` / `confidence` / `expires_at`), what % of source records have a non-default value vs require backfill
+  - **Conflict count**: records that map to multiple targets (e.g. one FeedbackRecord generates 2 memory records due to evidence_chain split)
+  - **Estimated target storage**: total tokens / bytes after migration
+  - **Mapping warnings**: records that require manual review (e.g. `correction` text is empty + `verdict=bad` → ambiguous, needs operator)
+- (c) **0.5d 验证 dry-run**: run dry-run on synthetic 100-record `FeedbackStore` input, verify output plan correctness (each metric reasonable + no silent drops). Manual spot-check 5 random records: does the mapped memory record make sense?
+- (d) **0.5d 验证 live + shadow**: run live migration on same 100-record input with backup-first (Phase 49 §4.7 Step 1 `~/.hermes/feedback.backup.YYYYMMDD/`). Then run 30-day shadow-run window (Phase 49 §4.7 Step 5): dual-read from both v6.0 FeedbackStore + v10.0 memory layer, log retrieval discrepancies. Acceptance: <1% discrepancy (≤1 record out of 100 differs).
+
+**Acceptance check**: dry-run output plan correct on synthetic input (5 metrics reasonable + 5 spot-checks pass) + live migration shadow-run <1% retrieval discrepancy (per Phase 49 §4.7 Step 5 dual-read).
+
+**Failure mode**: if dry-run output plan is wrong (e.g. mapping table has bugs producing nonsense records) OR live migration causes >1% retrieval discrepancy, P14 (schema migration breaks memory store) mitigation is broken. Memory schema migration is blocked until dry-run + live + shadow pass. PoC scope reduction: defer schema migration to v11.1+ (但 v11.0 PoC 必须 evaluate 失败原因 + 推荐修复 path).
+
+**Pitfall gated**: P14 (schema migration) — full.
+
+**Safe defaults principle** (per PITFALLS §P14 mitigation 2): unknown fields in migration default to **safest value, not most permissive**. Examples:
+- Unknown `confidentiality` → default `confidential` (not `public`)
+- Unknown `scope` → default `project` (not `global`, prevents cross-project leak per P4)
+- Unknown `status` → default `archived` (not `active`, keeps surface area minimal)
+- Unknown `confidence` → default `0.3` (low, requires re-verification)
+
+This principle prevents silent escalation of trust on migrated records.
+
+**Dual-read invariant** (per Phase 49 §4.7 Step 5): during the 30-day shadow-run window, both v6.0 FeedbackStore + v10.0 memory layer are read in parallel. Discrepancies logged:
+- v6.0 returns record X, v10.0 doesn't → v10.0 missing (mapping table gap)
+- v10.0 returns record Y, v6.0 doesn't → v10.0 over-generated (curator drift)
+- Both return but content differs → mapping table bug or evidence_chain split issue
+
+Acceptance: <1% discrepancy (≤1 record out of 100 in synthetic test). If >1%, migration is not safe to ship; PoC scope reduction: defer migration to v11.1+ with documented failure analysis.
+
+### §4.8 Acceptance Criteria Summary Table (7 rows, 12 person-days total)
+
+| # | Criterion | Cite | Days | Acceptance check | Pitfall gated |
+|---|-----------|------|------|------------------|---------------|
+| 1 | Fitness battery design | PITFALLS §P8 mitigation 1 + Label Studio + Shaped.ai + GetMaxim | 3 | `fitness_trend.jsonl` baseline + regression logic triggers on mean_score drop > 0.5 | P1 (partial) + P8 |
+| 2 | Latency SLO p95<500ms | PITFALLS §P3 mitigation 4 + Phase 48 Option B + SUMMARY §Gaps line 174 | 2 | p95 < 500ms on 500-record `get_agent_memory` benchmark (excluding LLM call) | P3 |
+| 3 | Bias canary | PITFALLS §P5 mitigation 4 + SUMMARY §Gaps line 176 | 2 | curator dry-run rejects single-operator insight | P5 (partial) |
+| 4 | Compaction pass | PITFALLS §P9 + SUMMARY OQ-7 | 1 | 3-tier output on 600-record synthetic input | P9 |
+| 5 | Threshold tuning | PITFALLS §P13 + v6.0 baseline | 1 | audit log captures runaway warning + rate-limit on threshold=1 | P13 |
+| 6 | Dry-run-first invariant | PITFALLS §P5 mitigation 5 + SUMMARY OQ-16 + v6.0 `TestNonBypassableHumanInLoop` | 1 | default mode zero writes; `--apply-memory` mode writes with audit log | P5 (full when + §4.3) |
+| 7 | Schema migration dry-run | Phase 49 §4.5 + PITFALLS §P14 mitigation 3 | 2 | dry-run output plan correct + live migration shadow <1% discrepancy | P14 |
+| **Total** | | | **12 person-days** | | |
+
+**Per-criterion coverage**:
+- **P1** (persona drift): §4.1 (fitness battery drift probe)
+- **P3** (scoped retrieval perf): §4.2 (latency SLO)
+- **P5** (curator failure modes): §4.3 (bias canary) + §4.6 (dry-run-first)
+- **P8** (no fitness signal): §4.1 (fitness battery)
+- **P9** (memory size growth): §4.4 (compaction)
+- **P13** (curator runaway): §4.5 (threshold tuning)
+- **P14** (schema migration): §4.7 (migration dry-run)
+
+**SC#4 7-pitfall cross-mapping** (see §5 for full risk register):
+- **P1** (persona drift, must-fix): gated by §4.1 (drift probe via mean_score trend)
+- **P2** (stale memory, must-fix): gated by §4.4 (compaction validates TTL filter in retrieve path)
+- **P4** (cross-project leakage, must-fix): gated by §4.7 (schema migration populates `scope=project` + `project_id`) + §4.2 (latency benchmark uses `agent_id+project_id` filter)
+- **P5** (curator failure modes, must-fix): gated by §4.3 (bias canary) + §4.6 (dry-run-first)
+- **P6** (memory poisoning, PARTIAL): `operator_signature` gated by §4.6 (validated in `--apply-memory` path); outlier detection deferred with monitoring per §5.10
+- **P7** (round-table conflict, must-fix): gated by §3.2 creative slice (9-agent screenplay round table exercises Phase 46 conflict arbitration)
+- **P8** (no fitness signal, must-fix): gated by §4.1 (fitness battery)
+
+**PoC SC#3 cross-validation**: 7 项 + 每项 1-3 天 + total 12 person-days. All ✓.
+
+**Why these 7 (not 14)**: P10 (privacy) + P11 (recall-vs-use) + P12 (cross-agent contamination) 是 Phase 51 VALIDATE + v11.1+ scope, 不在 PoC must-pass (single-project PoC 不触发 P10/P12). P3 (scoped retrieval perf) + P9 (memory size growth) + P13 (curator runaway) + P14 (schema migration) 是 secondary pitfalls 已在 §4.2/§4.4/§4.5/§4.7 cover.
+
+**Mitigation cost alignment with PITFALLS §Risk Register Summary (line 470-488)**:
+
+| Pitfall | PITFALLS mitigation cost | PoC implementation cost (this doc) | Aligned? |
+|---------|--------------------------|------------------------------------|----------|
+| P1 | M (persona hash + drift probe) | §4.1 3d (includes drift probe + regression auto-quarantine) | ✅ |
+| P3 | H (per-agent workspace) | §4.2 2d (latency benchmark only; 物理分区 defer to v12+) | ✅ (defer-with-monitoring) |
+| P5 | M (evidence coverage + operator diversity) | §4.3 2d + §4.6 1d = 3d | ✅ |
+| P8 | M (fitness battery + trend) | §4.1 3d | ✅ |
+| P9 | M (tier compaction) | §4.4 1d | ✅ |
+| P13 | L (adaptive thresholds) | §4.5 1d | ✅ |
+| P14 | M (schema_version + safe defaults) | §4.7 2d | ✅ |
+
+Total PoC implementation cost = 12 person-days, aligned with PITFALLS mitigation cost estimates.
+
+### §4.9 Per-Criterion Token Cost + Concurrency Implication
+
+每 acceptance criterion 的 token cost + concurrency 影响 (cite STACK §7.3 + §7.5). STACK §7.3 estimates ~550K tokens per full pipeline run + ~340 MCP calls; per-vertical-slice estimate ~42K tokens = 550K/13. Acceptance criteria 是 vertical slice setup 之后跑的 verification, 不直接产生 pipeline tokens —— 它们的 token cost 是 fitness battery LLM calls + curator LLM aggregation + bias canary prompts 等.
+
+| # | Criterion | Token estimate | Concurrency pattern |
+|---|-----------|----------------|---------------------|
+| 1 | Fitness battery | ~10K tokens per fitness run (10-20 prompt battery × 500-1000 tokens) | 串行 (1 LLM call per prompt, no parallel within battery to keep deterministic MT-Bench position-swap baseline) |
+| 2 | Latency SLO | N/A (latency 测量, not LLM token cost) | N/A |
+| 3 | Bias canary | ~5K tokens per bias canary run (5 prompts × 1000 tokens) | 串行 |
+| 4 | Compaction pass | ~3K tokens curator LLM aggregation (10 records → 1 summary) | 串行 |
+| 5 | Threshold tuning | N/A (threshold logic, not LLM call) | N/A |
+| 6 | Dry-run-first | ~0 token dry-run (no LLM call); live mode ~3K tokens per write | 串行 |
+| 7 | Schema migration | ~5K tokens (dry-run + live migration LLM aggregation) | 串行 |
+| **Total per PoC iteration** | | **~26K tokens** (well within 800K TPM ceiling) | 全串行 per STACK §7.5 + MEMORY.md `feedback-glm-overload-reduce-concurrency.md` global concurrency==1 |
+
+**Concurrency note**: 全部 acceptance criteria 是串行执行 (per STACK §7.5 v11.0 PoC 建议 no batch + 串行 first). 这与 MEMORY.md `feedback-glm-overload-reduce-concurrency.md` 的 global concurrency==1 policy 一致. PoC 不需要并发, 也不触发 GLM 4-key rotation ceiling. Multi-panelist round table (creative slice screenplay Step 3) 是 1 panelist 1 turn 顺序 await per Phase 46 §4 强制串行约束, 不是 7 panelist 并行 LLM call.
+
+**contextvars prerequisite** (per SUMMARY §Gaps line 178): curator + memory layer 必须用 `contextvars` (not `threading.local`) for per-agent `agent_id` + `project_id` context propagation in ThreadPoolExecutor (`agent/tool_executor.py:110`). v6.0 Hermes 已用 contextvars for plugin tool whitelists (`hermes_cli/plugins.py:1654`). PoC implementation MUST verify contextvars (not threading.local) for `_scoped_agent_id` — otherwise cross-agent memory contamination (P12) surfaces in PoC. Verification: add unit test `_check_contextvars_not_threading_local()` that AST-walks `plugins/memory/mem0/__init__.py` + asserts no `threading.local()` call in scoped retrieval path.
+
+**Token budget bottom-up**:
+- STACK §7.3 estimates per-pipeline-run ~550K tokens / 13 steps ≈ 42K tokens / single round table average
+- PoC vertical slice token cost (§6.2):
+  - Creative slice screenplay Step 3 (9 related_agents, denser than average): ~148K tokens (~4.5K MCP overhead + ~143K LLM opinion calls)
+  - Infra slice 1 round table invocation (3 agents × 1 turn × 2 call): ~10K tokens
+- Acceptance criteria verification token cost (§4.9 table): ~26K tokens per PoC iteration
+- Total PoC iteration (vertical slice + acceptance): ~148K + ~10K + ~26K = ~184K tokens
+- PoC iteration count: ~3-5 iterations (debugging + retry) = ~550K-920K tokens total PoC budget
+- Within GLM 4-key × 200K TPM ≈ 800K TPM ceiling for serial execution (per §6.4)
+
+### §4.10 Acceptance Criteria Run Order (aligned with §6 implementation path)
+
+Acceptance criteria 不按 §4.1-§4.7 顺序跑, 而是按 §6 implementation path 的 sequencing rationale:
+
+| Week | Criteria run | Why this order |
+|------|--------------|----------------|
+| Week 1 | §4.2 latency SLO | P3 mitigation validation earliest — if fails, 物理分区 evaluation 触发, 影响 PoC 整体 timeline |
+| Week 2 | §4.1 fitness battery | P1+P8 mitigation — regression-detection foundation must exist before §4.3/§4.6/§4.7 curator changes |
+| Week 3 | §4.7 schema migration dry-run | P14 mitigation — validates memory layer before §4.3 bias canary (which depends on clean memory layer) |
+| Week 4 | §4.3 bias canary + §4.6 dry-run-first | P5 mitigation — bias canary needs fitness battery (regression detection) + clean memory layer as preconditions |
+| Week 5 | §4.4 compaction + §4.5 threshold tuning | P9 + P13 mitigation — secondary criteria, depend on §4.1-§4.7 baseline |
+| Week 6 | all 7 re-run + report | PoC exit, 30-day shadow-run window closes |
+
+**Precondition chain**: §4.1 (fitness battery) → §4.7 (schema migration) → §4.3 (bias canary) is the load-bearing sequence. Other criteria can shift weeks if needed.
+
+**Why §4.2 latency SLO runs Week 1** (before §4.1 fitness battery Week 2):
+- Latency SLO 是 infrastructure concern (mem0 backend performance). Infrastructure failure 影响 PoC 整体 timeline 最多 (如果 mem0 backend 不行, 整个 v11.0 设计需 rethink). Earliest validation = earliest course-correction.
+- Latency benchmark 不依赖 fitness battery (it's a pure infrastructure measurement on `get_agent_memory`).
+
+**Why §4.1 fitness battery runs Week 2** (after §4.2 latency SLO):
+- Fitness battery 是 regression-detection foundation. Without it, later criteria changes (§4.3 bias canary / §4.6 dry-run-first / §4.7 schema migration) have no signal to detect regression from.
+- Fitness battery 依赖 §3.2 creative slice setup完成 (need screenplay agent + battery prompts).
+
+**Why §4.7 schema migration dry-run runs Week 3** (after §4.1 fitness battery):
+- Schema migration validates memory layer 数据完整性. Bias canary (§4.3 Week 4) depends on clean memory layer — if memory records are corrupted by bad migration, bias canary results are noise.
+- Fitness battery is regression-detection backstop during the migration (if migration breaks something, fitness battery detects it).
+
+**Why §4.3 bias canary + §4.6 dry-run-first run Week 4** (after §4.7 schema migration):
+- Both gate P5 curator failure modes. Bias canary needs fitness battery (regression detection) + clean memory layer (schema migration verified) as preconditions.
+- §4.6 dry-run-first 是 §4.3 bias canary 的姊妹 criterion (both gate P5); running them together allows joint P5 acceptance check.
+
+**Why §4.4 compaction + §4.5 threshold tuning run Week 5** (last before exit):
+- These are secondary criteria (P9 memory size growth + P13 curator runaway). They depend on §4.1-§4.7 baseline established in Weeks 1-4.
+- They are tuning-style criteria (operators can adjust thresholds + compaction cadence iteratively even after PoC exit).
+
+---
