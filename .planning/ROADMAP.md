@@ -147,7 +147,9 @@ Plans:
   3. 文件 `.planning/milestones/v10.0-MILESTONE-AUDIT.md` 存在,9/9 reqs 逐 req 核对 deliverables(每 req 引用其 phase SUMMARY)
   4. Audit 报告核对:7 design docs cross-reference 一致(术语 / schema / 决策号 across docs 不矛盾)+ 16 Open Questions(SUMMARY.md OQ-1..OQ-16)全部解决或显式 defer 到 v11.0 + 7 load-bearing pitfalls 全部有字段级缓解(在 45 / 46 / 50 中)+ 4 research 引用链完整(每 design doc 引用的 STACK/FEATURES/ARCHITECTURE/PITFALLS 章节可追溯)
   5. Audit 报告给出 milestone-level PASS / tech_debt / FAIL 结论,带 evidence 指针(每条核对项引用具体文件 + 章节)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 51-01-PLAN.md — VALIDATE-02 cross-doc consistency lint script (4 dimensions, Python 3.11+ stdlib-only) + VALIDATE-01 milestone audit report (9 sections, 9/9 reqs + 16 OQ + 7 pitfall + 4 citation chain + verdict) (5 tasks, 2 deliverable files)
 **UI hint**: no
 
 ## Critical Path & Parallel Waves
