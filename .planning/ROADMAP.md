@@ -2,205 +2,248 @@
 
 ## Overview
 
-**Current milestone:** v9.0 — kais-movie-pipeline 闭环深化 (Phases 38-43, in planning).
-
-v9.0 returns to movie-experts deepening after v7.0 (openclaw migration) + v8.0 (quick-task batch). Source: Notion page "心流♥ → aigc开发 → 创作方向" (page_id 32811082-af8e-8009-b097-d19a5027b46f). Tier A shipped as quick task 260626-vzl (3 refs + 3 SKILL.md patches, 2026-06-26). v9.0 implements Tier B + Tier C — closing the 创意→生产→分发→反馈 loop via 4 new pipeline capabilities + 3 cross-platform redline gates.
-
-**Scope discipline (load-bearing):**
-- Only `skills/kais-movie-pipeline/` + `skills/movie-experts/` + new plugin `plugins/formula_library/`
-- **No Hermes core Python/JS changes** — new plugin lives in `plugins/` namespace; new gates register into existing `plugins/review_gates/` framework (Phase 34-shipped state machine)
-- **FOUND-08 frozen rule continues:** zero expert_id / frontmatter changes across all 16 active movie-experts
-- **V8.6 13-step numbering preserved** — Step 6.5 / 14 / 15 are additive
-- **Bilingual SKILL.md** (EN structure + 中文 body); refs 中文为主
-
----
+v10.0 is a **design-only milestone** (zero code changes, analog to v2.0 PRFP). It produces 7 design docs + 2 validation artifacts that together specify the Hermes-Agent orchestrator + Hermes-native expert agents + Claude Code execution场 three-layer architecture, derived from first principles and informed by Kimi Notion 架构2.0 + the 4 in-repo research threads (STACK / FEATURES / ARCHITECTURE / PITFALLS). The design suite will guide the v11.0 PoC implementation milestone. Milestone numbering continues from v9.0 Phase 43.
 
 ## Milestones
 
-- ✅ **v1 Movie-Experts Suite v2** — Phases 0-6 (shipped 2026-06-15)
-- ✅ **v2.0 PRFP** — Phases 7-12 (shipped 2026-06-16)
-- ✅ **v3.0 Skills-to-DAG Alignment** — Phases 13-18 (shipped 2026-06-17)
-- ✅ **v4.0 Methodology Backfill** — Phases 19-21 (shipped 2026-06-18)
-- ✅ **v5.0 kais-movie-agent V8.6 Adaptation** — Phases 22-27 (shipped 2026-06-19)
-- ✅ **v6.0 Self-Evolution & Feedback Loop** — Phases 28-33 (shipped 2026-06-24)
-- ✅ **v7.0 openclaw → hermes-agent Primary Agent Migration** — Phases 34-37 (shipped 2026-06-25)
-- ⏳ **v8.0** — quick-task batch only (P0+P1 openclaw skills, 2026-06-26); label consumed to avoid version collision, not a formal milestone
-- 🚧 **v9.0 kais-movie-pipeline 闭环深化** — Phases 38-43 (started 2026-06-26, in planning)
+- ✅ **v1.0 Movie-Experts Suite v2** - Phases 0-6 (shipped 2026-06-15)
+- ✅ **v2.0 PRFP Pipeline Design** - Phases 7-12 (shipped 2026-06-16)
+- ✅ **v3.0 Skills-to-DAG Alignment** - Phases 13-18 (shipped 2026-06-17)
+- ✅ **v4.0 Methodology Backfill** - Phases 19-21 (shipped 2026-06-18)
+- ✅ **v5.0 V8.6 Adaptation** - Phases 22-27 (shipped 2026-06-19)
+- ✅ **v6.0 Self-Evolution Feedback Loop** - Phases 28-33 (shipped 2026-06-24)
+- ✅ **v7.0 openclaw → hermes Migration** - Phases 34-37 (shipped 2026-06-25)
+- ✅ **v9.0 kais-movie-pipeline 闭环深化** - Phases 38-43 (shipped 2026-06-27)
+- 🚧 **v10.0 Hermes-Agent 编排架构第一性原理推导(设计型)** - Phases 44-51 (in planning)
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (44, 45, 46...): Planned v10.0 milestone work
+- Decimal phases (e.g., 45.1): Urgent insertions after planning (marked INSERTED)
+
+- [ ] **Phase 44: FIRST-PRINCIPLES** - 7 锁定决策推导链 + 「v10.0 显式拒绝」总表(FEATURES §11 + ARCHITECTURE §8 + PITFALLS 行业案例三合一)
+- [ ] **Phase 45: AGENT-SCHEMA** - 18-field agent YAML schema + memory-record-schema + curator evolution phase 契约(7 load-bearing pitfall 字段级缓解的物理载体)
+- [ ] **Phase 46: ROUND-TABLE-PROTOCOL** - Turn lifecycle + memory conflict arbitration + 强制串行约束 + 7 MCP tool 契约
+- [ ] **Phase 47: KIMI-COMPARISON** - T6 vs Kimi 全 MCP shim 7 维度对照 + subagent 形态否决论据 + Microsoft 三层协议验证(parallel-eligible)
+- [ ] **Phase 48: CROSS-REPO-IMPACT** - 3-location 同步策略 + Option B → 物理分区迁移触发条件 + project slug 稳定性(parallel-eligible)
+- [ ] **Phase 49: MIGRATION-PATH** - 15 expert × 5-field transform + memory schema 迁移 + retained-phases allowlist
+- [ ] **Phase 50: POC-PLAN** - v11.0 PoC 验收条件清单(fitness battery / latency SLO / bias canary / compaction / dry-run-first)
+- [ ] **Phase 51: VALIDATE** - Cross-doc consistency lint script + milestone audit(严格 LAST,类比 v9.0 Phase 43)
+
+## Phase Details
+
+### Phase 44: FIRST-PRINCIPLES
+**Goal**: 锁定 7 个设计决策的第一性原理推导论据 + 合并业界 anti-features 为「v10.0 显式拒绝」总表,作为后续 6 份设计文档的共同基础
+**Depends on**: Nothing (first phase of v10.0)
+**Requirements**: DESIGN-01
+**Success Criteria** (what must be TRUE):
+  1. 文件 `.planning/research/v10-orchestrator-design/00-FIRST-PRINCIPLES.md` 存在,包含 7 个决策的 first-principles 推导链(每决策从根本需求推到选型,非类比)
+  2. 「v10.0 显式拒绝」总表 ≥10 条 anti-features / anti-patterns,每条引用三个 source(FEATURES §X + ARCHITECTURE §Y + PITFALLS §Z)的具体章节号
+  3. 显式覆盖 FEATURES §10 borrowable points 中至少 B1.3 / B3.5 / B4.1 / B7.2 / B5.1(每点有明确赞同/拒绝/改造结论)
+  4. 后续 6 份设计文档可在不重新推导决策的前提下引用本文档作为字段/协议/迁移决策的根论据
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 45: AGENT-SCHEMA
+**Goal**: 定义 18-field agent YAML schema + memory-record-schema,作为所有下游设计文档(02/04/05/06)字段引用的物理载体,把 7 个 load-bearing pitfall 的字段级缓解固化
+**Depends on**: Phase 44(FIRST-PRINCIPLES 锁定 anti-features 总表作为 schema 字段论据)
+**Requirements**: DESIGN-02
+**Success Criteria** (what must be TRUE):
+  1. 文件 `01-AGENT-REGISTRY-SCHEMA.md` + `agents-schema.yaml`(完整 JSON Schema 定义,18 字段)+ `memory-record-schema.yaml`(独立 schema,含 `expires_at` / `verified_at` / `supersedes_memory_id` / `confidence` / `half_life_days` / `evidence_chain` / `evidence_operator_ids` / `status` / `confidentiality` / `scope`)全部存在
+  2. per-agent memory tier 规范文档化(core / working / archival 三层 + `memory.max_records` 上限 + compaction 触发条件,解决 OQ-7)
+  3. curator `_memory_evolution_phase` 字段契约文档化(类比 v6.0 `_feedback_scan_phase`,执行顺序 + dry-run-by-default + try/except 隔离边界,解决 OQ-16)
+  4. 15 expert 转化映射表(从 ARCHITECTURE §2 拷贝,SKILL frontmatter → agent YAML)
+  5. 6 个 Open Questions(OQ-1 / OQ-4 / OQ-7 / OQ-13 / OQ-14 / OQ-16)显式解决或显式 defer 到 v11.0;7 个 load-bearing pitfalls(P1/P2/P4/P5/P8/P10/P14)每个有对应 schema 字段级缓解
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 46: ROUND-TABLE-PROTOCOL
+**Goal**: 定义 round table 协议(turn lifecycle / conflict arbitration / state schema),消费 45 的 agent schema,解决 memory 冲突,强制串行以兼容 GLM 4-key rotation
+**Depends on**: Phase 45(AGENT-SCHEMA,agent schema 字段是协议参数)
+**Requirements**: DESIGN-03
+**Success Criteria** (what must be TRUE):
+  1. 文件 `02-ROUND-TABLE-PROTOCOL.md` + `round-table-state-schema.yaml` 存在
+  2. Turn lifecycle 完整定义(`round_table_open` → turn N → `submit_round_table_result`),包括 `turn_order` 策略(default round-robin + 可切换,解决 OQ-2)+ `round_id` CC 自生成 uuid 机制(解决 OQ-11)
+  3. Memory conflict arbitration 规则文档化:comparator LLM pass + scope precedence(session > project > global)+ confidence-weighted voting + conflict log(解决 OQ-15,避免 P7)
+  4. 强制串行约束显式声明(1 panelist 1 turn 顺序 `await`,引用 MEMORY.md `feedback-glm-overload-reduce-concurrency.md` 全局 concurrency==1 policy,解决 OQ-8)
+  5. MCP tool 命名统一采用 STACK §3.2 形态(无前缀,与现有 9 个 messaging tool 风格一致,解决 OQ-9),涵盖 FEATURES borrowable points B1.4 / B2.1 / B2.3 / B4.2 / B6.1 / B7.3 / B8.2
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 47: KIMI-COMPARISON
+**Goal**: 产出 T6 vs Kimi 全 MCP shim 方案的逐维度对照,作为 7 个锁定决策的横向验证 + subagent 形态否决的论据库
+**Depends on**: Phase 44(FIRST-PRINCIPLES,7 决策推导链已锁定)
+**Requirements**: DESIGN-04
+**Success Criteria** (what must be TRUE):
+  1. 文件 `03-COMPARISON-VS-KIMI-MCP-SHIM.md` 存在
+  2. 7 维度对照表(协议 / dispatch / callback / state / 多 agent / 实现成本 / 稳定性)逐维度给出 T6 vs Kimi 方案的优劣势 + 选型论据
+  3. Subagent 形态否决论据完整(引用 FEATURES §11 B4.1),包括 Claude Agent SDK 默认 context-isolated 不适合做 round table panelist 的具体原因
+  4. Microsoft 三层协议分层验证(引用 FEATURES §7.4 B7.1:internal → platform-native;tool → MCP;cross-platform → A2A)证明 v10.0 T6 选型符合业界共识
+  5. Kimi 方案中可借鉴的部分(如有)显式列出 + 评估借鉴条件
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 48: CROSS-REPO-IMPACT
+**Goal**: 定义 3-location(hermes-agent repo / kais-hermes-skills repo / `~/.hermes/`)同步策略 + Option B(v11.0 PoC filter 路由)vs 物理分区(v12+ 每 agent 一 workspace)迁移触发条件
+**Depends on**: Phase 44(FIRST-PRINCIPLES)
+**Requirements**: DESIGN-07
+**Success Criteria** (what must be TRUE):
+  1. 文件 `06-CROSS-REPO-IMPACT.md` 存在
+  2. 3-location 同步策略表完整(每 location 列出存放内容 + 写权限 + 同步方向 + lineage 关系,例如 agent YAML lineage 追溯到 kais-hermes-skills SKILL)
+  3. Option B(v11.0 PoC:mem0 单 backend + `agent_id` filter)vs 物理分区(v12+:每 agent 一 workspace)迁移触发条件显式文档化(规模阈值 / latency 阈值 / 何时切换,解决 OQ-12,避免 P3/P12)
+  4. Round table state per-project 落盘路径设计(`.runtime/{slug}/round_tables/`,引用 ARCHITECTURE §5.1)
+  5. Project slug 稳定性策略文档化(短期接受 breakage,long-term 用 `.hermes/project.id` stable ID,解决 OQ-6)
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 49: MIGRATION-PATH
+**Goal**: 定义 Python runner 增量迁移计划 —— 15 expert 从 SKILL frontmatter 到 agent YAML 的 transform 规则 + memory schema 从 v6.0 FeedbackStore 到新 memory-record-schema 的迁移 + retained-phases allowlist
+**Depends on**: Phase 45(AGENT-SCHEMA)+ Phase 46(ROUND-TABLE-PROTOCOL)
+**Requirements**: DESIGN-05
+**Success Criteria** (what must be TRUE):
+  1. 文件 `04-MIGRATION-PATH.md` 存在
+  2. 15 expert × 5-field transform 规则表完整(每 expert 列出 SKILL frontmatter → agent YAML 的 5 个字段映射 + 默认值 + edge cases)
+  3. `default_invocation: skill_fallback → mcp_tool` 切换机制文档化(agent 优先用 MCP tool,失败回退 SKILL form)
+  4. Memory schema 迁移计划(从 v6.0 FeedbackStore JSONL 到新 memory-record-schema),包括 `schema_version` 字段 + dry-run migration 模式(避免 P14)
+  5. Retained-phases allowlist 显式声明(`run_python_phase` 只接受 Step 7/10/11/12/0/6.5/15,allowlist 位置在 `round-table-schema.yaml`,解决 OQ-10)+ 旧 v7.0 mem0 `agent_id=hermes` memory 遗留策略(解决 OQ-3)
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 50: POC-PLAN
+**Goal**: 收口 v10.0 设计 —— 汇总前 6 份文档的 pitfall 缓解,产 v11.0 PoC 的验收条件清单 + 工作量估算 + risk register,作为 v11.0 实施者直接照着写的实施蓝本
+**Depends on**: Phase 49(MIGRATION-PATH,transform 规则就绪)+ 间接依赖前面所有 design docs
+**Requirements**: DESIGN-06
+**Success Criteria** (what must be TRUE):
+  1. 文件 `05-POC-PLAN.md` 存在
+  2. PoC 目标明确(vertical slice:1 个 creative phase + 1 个 infra phase,具体选择有论据)
+  3. 验收条件清单完整,涵盖:fitness battery 设计(引用 PITFALLS §P8)+ latency SLO(p95 < 500ms,mem0 scoped retrieval)+ bias canary(curator `_memory_evolution_phase` hallucination 检测)+ compaction pass(`memory.max_records` 触发)+ threshold tuning(初始默认值 + 调优路径)+ dry-run-first invariant(curator 默认 dry-run)+ schema migration dry-run —— 每项 1-3 天工作量估算
+  4. Risk register(7 load-bearing pitfalls P1/P2/P4/P5/P6/P7/P8 × PoC deferral 评估)完整,每 pitfall 标注 must-fix-in-PoC vs defer-with-monitoring
+  5. PoC 实施路径图(从 fitness battery → schema migration dry-run → bias canary 顺序,引用 STACK §7 token 成本估算 ~550K/pipeline run)
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 51: VALIDATE
+**Goal**: v10.0 milestone close-out —— 产出 cross-doc consistency lint 脚本(VALIDATE-02)+ milestone audit 报告(VALIDATE-01),验证 9/9 reqs 满足 + 7 design docs cross-reference 一致 + 16 Open Questions 全部解决或显式 defer
+**Depends on**: All previous phases(44-50)—— audit 必须严格 LAST,类比 v9.0 Phase 43 / v5.0 Phase 27 close-out 模式
+**Requirements**: VALIDATE-01, VALIDATE-02
+**Success Criteria** (what must be TRUE):
+  1. `scripts/v10-consistency-check.py` lint 脚本存在,自动检查 7 design docs 的术语一致(`agent` / `skill` / `round table` / `panel` / `turn` 等)+ schema 引用一致(`agents-schema.yaml` 字段名 == design docs 提及)+ 决策号引用一致(决策 1-7 在每个 doc 描述一致)+ MCP tool 命名一致(统一 STACK 形态)
+  2. lint 脚本对所有 7 design docs 跑通,零 ERROR(WARNING 可接受,需在 audit 报告列出)
+  3. 文件 `.planning/milestones/v10.0-MILESTONE-AUDIT.md` 存在,9/9 reqs 逐 req 核对 deliverables(每 req 引用其 phase SUMMARY)
+  4. Audit 报告核对:7 design docs cross-reference 一致(术语 / schema / 决策号 across docs 不矛盾)+ 16 Open Questions(SUMMARY.md OQ-1..OQ-16)全部解决或显式 defer 到 v11.0 + 7 load-bearing pitfalls 全部有字段级缓解(在 45 / 46 / 50 中)+ 4 research 引用链完整(每 design doc 引用的 STACK/FEATURES/ARCHITECTURE/PITFALLS 章节可追溯)
+  5. Audit 报告给出 milestone-level PASS / tech_debt / FAIL 结论,带 evidence 指针(每条核对项引用具体文件 + 章节)
+**Plans**: TBD
+**UI hint**: no
+
+## Critical Path & Parallel Waves
+
+```
+                                                                                                              ┌─────────────────────────────┐
+                                                                                                              │ Phase 51 (VALIDATE)          │
+                                                                                                              │ strictly LAST                │
+                                                                                                              │ (lint script + audit)        │
+                                                                                                              └────────────▲────────────────┘
+                                                                                                                           │
+                                                                ┌──────────────── Phase 50 (POC-PLAN) ────┘
+                                                                │   收口,依赖前面所有
+                                                                │
+                                          ┌──── Phase 49 (MIGRATION) ───┘
+                                          │     依赖 45+46
+                                          │
+                  ┌──── Phase 46 (ROUND-TABLE) ──┐
+                  │     依赖 45                    │
+                  │                               │
+Phase 44 ──┬──── Phase 45 (AGENT-SCHEMA) ────────┘
+(FIRST-    │
+ PRINCIPLES)├──── Phase 47 (KIMI-COMPARISON) ────────────────────────────┐  PARALLEL-ELIGIBLE WAVE:
+           │     独立,只依赖 44                                            │  {47, 48} 可与 {45, 46}
+           └──── Phase 48 (CROSS-REPO) ───────────────────────────────────┘  并行启动(独立横切文档)
+                 独立,只依赖 44
+```
+
+**Critical path:** 44 → 45 → 46 → 49 → 50 → 51(6 sequential steps)
+**Parallel-eligible:** Phase 47 + Phase 48 可与 Phase 45/46 并行(独立横切文档,不依赖 schema 字段细节)
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}.
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 44. FIRST-PRINCIPLES | v10.0 | 0/TBD | Not started | - |
+| 45. AGENT-SCHEMA | v10.0 | 0/TBD | Not started | - |
+| 46. ROUND-TABLE-PROTOCOL | v10.0 | 0/TBD | Not started | - |
+| 47. KIMI-COMPARISON | v10.0 | 0/TBD | Not started | - |
+| 48. CROSS-REPO-IMPACT | v10.0 | 0/TBD | Not started | - |
+| 49. MIGRATION-PATH | v10.0 | 0/TBD | Not started | - |
+| 50. POC-PLAN | v10.0 | 0/TBD | Not started | - |
+| 51. VALIDATE | v10.0 | 0/TBD | Not started | - |
+
+---
 
 <details>
-<summary>✅ v1 through v7.0 (Phases 0-37) — SHIPPED</summary>
+<summary>✅ v9.0 kais-movie-pipeline 闭环深化 (Phases 38-43) - SHIPPED 2026-06-27</summary>
 
-For completed milestone phase details, see:
-- `.planning/milestones/v1-ROADMAP.md`
-- `.planning/milestones/v3.0-ROADMAP.md`
-- `.planning/milestones/v4.0-ROADMAP.md`
-- `.planning/milestones/v5.0-ROADMAP.md`
-- `.planning/milestones/v6.0-ROADMAP.md`
-- `.planning/milestones/v7.0-ROADMAP.md`
-- `.planning/milestones/v7.0-MIGRATION-REPORT.md` (v7.0 canonical close-out)
+**Stats:** 6 phases · 13 plans · 22/22 reqs ✓ · Tag `v9.0` (anchored at `599ef61a8`)
+
+**One sentence:** 把 Notion "创作方向" Tier B+C 落地为 kais-movie-pipeline 的 4 个新能力(平台母版切片 / 配方库 v0 / LTX2.3 预览闭环 / 数据收敛回流)+ 3 个跨平台红线审核门,完成「创意→生产→分发→反馈」全闭环。
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 38 | SLICE — 平台母版切片 (Step 14) | SHIPPED (Plan 01, 2026-06-27) |
+| 39 | FORM — 配方库 v0 (new plugin) | SHIPPED (Plans 01+02+03, 2026-06-27) |
+| 40 | GATE — 3 新审核门 | SHIPPED (Plans 01+02+03, 2026-06-26) |
+| 41 | PREVIEW — LTX2.3 Step 6.5 | SHIPPED (Plan 01, 2026-06-27) |
+| 42 | DATA — 数据收敛 (Step 15) | SHIPPED (Plans 01+02+03+04, 2026-06-27) |
+| 43 | VALIDATE — 集成验证 + close-out | SHIPPED (Plan 01, 2026-06-27) |
+
+See `.planning/milestones/v9.0-MILESTONE-AUDIT.md` for full audit (status: passed, 22/22 reqs, 6/6 phases, FOUND-08 preserved milestone-wide).
+
+</details>
+
+<details>
+<summary>✅ v7.0 openclaw → hermes Migration (Phases 34-37) - SHIPPED 2026-06-25</summary>
+
+**Stats:** 4 phases · 7 plans · 14/14 reqs ✓ · Tag `v7.0`
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 34 | Skills Migration (coding-agent + tmux-agents) | SHIPPED |
+| 35 | SOUL.md Identity Enhancement | SHIPPED |
+| 36 | Memory Ingestion (USER.md + mem0 scripts) | SHIPPED |
+| 37 | Validation + Migration Report | SHIPPED |
+
+</details>
+
+<details>
+<summary>✅ v6.0 Self-Evolution Feedback Loop (Phases 28-33) - SHIPPED 2026-06-24</summary>
+
+**Stats:** 6 phases · 13 plans · 26/26 reqs ✓ · Tag `v6.0`
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 28 | INGEST — Multi-source Feedback | SHIPPED |
+| 29 | STORE — Durable FeedbackStore | SHIPPED |
+| 30 | GATE — Eval gate | SHIPPED |
+| 31 | EVOL — Knowledge evolution | SHIPPED |
+| 32 | CURATE — Curator upgrade + EVOL-02 | SHIPPED |
+| 33 | OBS — Observability + close-out | SHIPPED |
+
+</details>
+
+<details>
+<summary>✅ Earlier milestones (v1-v5) - SHIPPED 2026-06-15 → 2026-06-19</summary>
+
+- **v5.0 V8.6 Adaptation** (Phases 22-27, shipped 2026-06-19): 30/30 reqs ✓
+- **v4.0 Methodology Backfill** (Phases 19-21, shipped 2026-06-18): 14/14 reqs ✓
+- **v3.0 Skills-to-DAG Alignment** (Phases 13-18, shipped 2026-06-17): 12/12 reqs ✓
+- **v2.0 PRFP Pipeline Design** (Phases 7-12, shipped 2026-06-16): 52/52 reqs ✓ (design-only)
+- **v1.0 Movie-Experts Suite v2** (Phases 0-6, shipped 2026-06-15): all v1 reqs ✓
 
 </details>
 
 ---
 
-## v9.0 — kais-movie-pipeline 闭环深化
-
-**Granularity:** standard (6 phases derived from 6 requirement categories — no compression or padding needed)
-**Coverage:** 22 / 22 v1 requirements mapped ✓ (no orphans, no duplicates)
-**Model profile:** quality
-
-### Phases
-
-- [x] **Phase 38: SLICE — 平台母版切片 (Step 14)** — 1 master.mp4 → 7 平台 variants with per-platform aspect/hook/length (shipped 2026-06-27)
-- [x] **Phase 39: FORM — 配方库 v0 (new plugin)** — `plugins/formula_library/` with 10 seed formulas + `formula_lookup` Step 0 (shipped 2026-06-27)
-- [x] **Phase 40: GATE — 3 新审核门** — redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending registered as gate 9/10/11 (completed 2026-06-26)
-- [x] **Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)** — fast-preview between storyboard (Step 6) and final render (Step 11), failure → re-storyboard (shipped 2026-06-27)
-- [x] **Phase 42: DATA — 数据收敛 (Step 15)** — 5 平台 API adapters → FeedbackStore schema extension → formula tuning loop (shipped 2026-06-27)
-- [x] **Phase 43: VALIDATE — 集成验证 + close-out** — cross-phase integration + FOUND-08 audit + canonical v9.0-MILESTONE-AUDIT.md (shipped 2026-06-27)
-
-### Critical Path
-
-```
-            ┌── Phase 38 (SLICE)  ───────┐
-            │                            ├──→ Phase 42 (DATA)  ──┐
-Parallel    ├── Phase 39 (FORM)   ───────┤                      │
-wave  ──────┤                            │                      │
-(can start  ├── Phase 40 (GATE)   ───────┘                      ├──→ Phase 43 (VALIDATE)
- disjoint)  │                            (DATA needs variants[]  │      strictly LAST
-            │                             from SLICE + formulas  │
-            │                             from FORM; GATE        │
-            │                             suggested_action       │
-            │                             references formula)    │
-            │                                                    │
-            └── Phase 41 (PREVIEW)  ────────────────────────────┘
-                  (independent — touches Step 6.5 only)
-```
-
-**Dependency rules:**
-
-- **Parallel-eligible wave:** Phase 38 + 39 + 40 + 41 all touch disjoint paths (SLICE → Step 14 in SKILL.md + new ref; FORM → new `plugins/formula_library/` + Step 0 patch; GATE → review_gates registration; PREVIEW → Step 6.5 + new ref). All four may start concurrently.
-- **Phase 42 (DATA) depends on Phase 38 + Phase 39.** DATA needs (a) variants[] schema from SLICE to attach per-platform metrics, and (b) formula_library from FORM as the tuning-loop write-back target. GATE is NOT a hard dependency for DATA (GATE's suggested_action references formula as a read-side lookup only).
-- **Phase 43 (VALIDATE) strictly LAST.** It runs the cross-5-phase integration-checker + FOUND-08 byte-diff audit + writes the canonical milestone audit. Mirrors v5.0 Phase 27 / v6.0 Phase 33 / v7.0 Phase 37 close-out pattern.
-- **FOUND-08 frozen rule preserved milestone-wide.** Zero expert_id / frontmatter changes across all 16 active movie-experts (byte-diff verified at Phase 43 against start commit `a2a20d2be`).
-
-### Coverage Table
-
-| Phase | Requirements | Count |
-|-------|--------------|-------|
-| 38 — SLICE | SLICE-01, SLICE-02, SLICE-03, SLICE-04 | 4 |
-| 39 — FORM | FORM-01, FORM-02, FORM-03, FORM-04 | 4 |
-| 40 — GATE | GATE-01, GATE-02, GATE-03, GATE-04 | 4 |
-| 41 — PREVIEW | PREVIEW-01, PREVIEW-02, PREVIEW-03 | 3 |
-| 42 — DATA | DATA-01, DATA-02, DATA-03, DATA-04 | 4 |
-| 43 — VALIDATE | VALIDATE-01, VALIDATE-02, VALIDATE-03 | 3 |
-| **Total** | | **22 / 22 ✓** |
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 38. SLICE | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
-| 39. FORM | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26 → 2026-06-27) | 2026-06-27 |
-| 40. GATE | 3/3 | Complete (Plans 01+02+03 shipped 2026-06-26) | 2026-06-26 |
-| 41. PREVIEW | 1/1 | Complete (Plan 01 shipped 2026-06-27) | 2026-06-27 |
-| 42. DATA | 4/4 | Complete (Plans 01+02+03+04 shipped 2026-06-27) | 2026-06-27 |
-| 43. VALIDATE | 1/1 | Complete (Plan 01 shipped 2026-06-27 — v9.0-MILESTONE-AUDIT.md authored) | 2026-06-27 |
-
----
-
-## Phase Details
-
-### Phase 38: SLICE — 平台母版切片 (Step 14)
-
-**Goal:** Users can produce 7 platform-specific variants from a single master render, each conforming to that platform's aspect-ratio / hook-position / length rigid constraints, with variant metadata persisted for downstream data tracking.
-**Depends on:** Nothing (parallel-eligible wave)
-**Requirements:** SLICE-01, SLICE-02, SLICE-03, SLICE-04
-**Success Criteria** (what must be TRUE):
-1. Given master.mp4 + 7 platform targets (抖音竖屏 9:16 / 抖音横屏 16:9 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果或快手极短 1-2min), the pipeline emits 7 variants — each with the correct `aspect_ratio` from `platform-specs.md`'s 7-row matrix.
-2. Each variant automatically repositions the opening 3s hook, adjusts mid-segment 卡点 (pinch-point) density, and adds a new closing 3s hook — all per `platform-specs.md` rigid constraints (not manual).
-3. Every variant's metadata lands in `pipeline_state.episode_id.variants[]` with fields `platform` / `aspect_ratio` / `length` / `hook_timestamps` / `cut_points`, queryable by the downstream DATA phase.
-4. New ref `references/platform-master-slicing.md` documents the 7-variant algorithm + 4 key decision points; `SKILL.md` body contains a new Step 14 section (frontmatter byte-identical to pre-v9.0).
-**Plans:** 1 plan
-- [x] 38-01-PLAN.md — SLICE: 7-variant algorithm ref + SKILL.md Step 14 body section + variants[] schema doc (4 tasks, 4 reqs) — shipped 2026-06-27 (1 new ref + 3 ref/SKILL patches, FOUND-08 byte-identical)
-**UI hint**: no
-
-### Phase 39: FORM — 配方库 v0 (new plugin)
-
-**Goal:** Users can look up proven 爆款 formulas by genre × mood × platform, getting back top-3 matches with full citation + schema, integrated as Step 0 of the pipeline so every episode starts from a verified formula instead of a blank page.
-**Depends on:** Nothing (parallel-eligible wave)
-**Requirements:** FORM-01, FORM-02, FORM-03, FORM-04
-**Success Criteria** (what must be TRUE):
-1. New plugin `plugins/formula_library/` is discoverable via existing `hermes_cli/plugins.py` registry — `plugin.yaml` + `__init__.py` + Pydantic `schema.py` + `library/` directory holding 10 seed formula JSON files. No Hermes core code changes (plugin lives in `plugins/` namespace).
-2. Each of the 10 seed formulas covers one cell of the 5-genre × 2-mood matrix (都市奇幻 / 悬疑反转 / 家庭情感 / 校园青春 / 职场商战 × 轻喜剧 / 虐心), with every required schema field populated: `formula_id` / `genre` / `mood` / `pacing` / `hook_pattern` / `characters` / `runtime_sec` / `platform_fit[]` / `citation` (fair-use source tag) / `verified_date`.
-3. Given a `formula_lookup(genre=都市奇幻, mood=轻喜剧, platform=抖音)` call, the plugin returns the top-3 matching formulas ranked by platform_fit; `kais-movie-pipeline/SKILL.md` exposes this as Step 0 (前置); `theory_critic/SKILL.md` accepts an optional `formula_reference` input. Both SKILL.md changes are body-only (FOUND-08 frontmatter preserved).
-4. All 10 formulas carry fair-use citations (Notion 创作方向 / 公开爆款公式书 / kais-movie-agent 历史 benchmark) — no formula lands without a verifiable source.
-**Plans:** 3 plans
-- [x] 39-01-PLAN.md — Plugin scaffold + Pydantic schema + lookup engine (FORM-01, FORM-02, FORM-04 lookup half) — SHIPPED 2026-06-26 (34 tests)
-- [x] 39-02-PLAN.md — 10 seed formulas (5×2 matrix) + LICENSE.md + bilingual README.md (FORM-03) — SHIPPED 2026-06-26
-- [x] 39-03-PLAN.md — SKILL.md body patches (Step 0 + formula_reference) + tests + FOUND-08 byte-diff audit (FORM-04) — SHIPPED 2026-06-27 (15 tests; 49 total in plugin)
-**UI hint**: no
-
-### Phase 40: GATE — 3 新审核门
-
-**Goal:** The V8.6 review-gate sequence automatically rejects cuts that violate the 3 cross-platform redlines from `creative-redlines.md` (R1 情绪脱敏 / R3 零背景铺垫 / R4 结尾必释放新钩子), with concrete suggested_actions that point operators at the fix.
-**Depends on:** Nothing (parallel-eligible wave) — Phase 34 review_gates state machine confirmed stable
-**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04
-**Success Criteria** (what must be TRUE):
-1. Three new gates (`redline_emotion_desensitize` / `redline_no_cold_open` / `redline_unfinished_ending`) are registered on the existing `plugins/review_gates/gate.py` state machine and load via `gates.yaml` — no replacement of the existing 8 gates (additive only).
-2. Given a cut with ≥3 consecutive frames at the same emotional valence, `redline_emotion_desensitize` returns `reject` with a `suggested_action` describing how to break it up (per `creative-redlines.md` R1). Given a cut whose first 3s contains 背景铺垫, `redline_no_cold_open` rejects with suggested_action (per R3). Given a cut whose final 3s releases no new hook, `redline_unfinished_ending` rejects with suggested_action (per R4).
-3. Gate 9 / 10 / 11 fire in the correct sequence: after the existing 8 gates pass, gates 9-11 do one final scan before final delivery — documented in `references/review-gates.md` (additive; V8.6 8-gate numbering unchanged).
-4. The `suggested_action` field on each new gate is structured so it can reference a `formula_library` entry (read-side lookup) for the operator to apply a proven fix pattern.
-**Plans:** 3/3 plans complete
-- [x] 40-01-PLAN.md — 3 pure-stdlib redline detectors (R1/R3/R4) + test suite (TDD) — shipped 2026-06-27 (54 tests, DETECTOR_REGISTRY wired)
-- [x] 40-02-PLAN.md — gates.yaml 8→11 additive + gate_config.py count bump + runner_hooks auto-detect + tools.py dispatch (TDD)
-- [x] 40-03-PLAN.md — references/review-gates.md 8→11 doc + plugin README update
-**UI hint**: no
-
-### Phase 41: PREVIEW — LTX2.3 预览闭环 (Step 6.5)
-
-**Goal:** Users can catch composition / framing / pacing problems in ~5 seconds (LTX2.3 fast-preview) right after storyboard, before committing GPU budget to the full final render — with an automatic re-storyboard fallback on miss.
-**Depends on:** Nothing (parallel-eligible wave — touches Step 6.5 only)
-**Requirements:** PREVIEW-01, PREVIEW-02, PREVIEW-03
-**Success Criteria** (what must be TRUE):
-1. New ref `references/ltx2-preview-loop.md` documents the LTX2.3 baseline: model selection (LTX2.3 / CausVid / Kling 1.6 fast), ~5s generation budget, 3-dimension check thresholds (composition / framing / pacing), and the prompt template.
-2. `kais-movie-pipeline/SKILL.md` wires a new Step 6.5: after storyboard (Step 6) passes, the pipeline automatically invokes LTX2.3 fast-preview; preview must pass before Step 7 (dreamina CLI final render) is invoked. Frontmatter byte-identical to pre-v9.0 (FOUND-08).
-3. Failure path is deterministic: pacing deviation > 15% OR framing deviation > 10% triggers automatic fallback to Step 6 (re-storyboard), max 2 retries; exhausting 2 retries routes to operator review via the existing `plugins/review_gates/` BLOCKING mode (no silent skip).
-4. **Operator-action-handoff:** live GPU generation testing is operator-side — v9.0 ships the baseline doc + adapter skeleton only. V9-FUTURE-02 (real LTX2.3 model generation validation) is explicitly deferred.
-Plans:
-- [x] 41-01-PLAN.md — Step 6.5 LTX2.3 fast-preview wiring (4 tasks: new ref + SKILL.md body patch + DAG annotation + FOUND-08 verification) — SHIPPED 2026-06-27 (3 commits + SUMMARY; FOUND-08 byte-verified; V8.6 13-step + 8-gate preserved)
-**UI hint**: no
-
-### Phase 42: DATA — 数据收敛 (Step 15)
-
-**Goal:** Users can wire platform performance metrics (完播率 / 卡点跳出率 / 互动率 / 收藏率 / 评论率) back into the v6.0 FeedbackStore, per-platform bucketed, with an automatic tuning loop that suggests formula_library improvements and a CLI dashboard for inspection.
-**Depends on:** Phase 38 (SLICE — needs `variants[]` to attach per-platform metrics) + Phase 39 (FORM — needs formula_library as tuning-loop write-back target)
-**Requirements:** DATA-01, DATA-02, DATA-03, DATA-04
-**Success Criteria** (what must be TRUE):
-1. Five platform API adapter stubs exist (抖音开放平台 / 快手开放平台 / 视频号 / 小红书薯条 / B 站创作者), each emitting a unified `PlatformMetrics` Pydantic schema; activating any adapter requires only an operator-supplied `~/.hermes/.env` key (e.g. `DOUYIN_API_KEY`) — no code change. Live ingestion itself is operator-side (V9-FUTURE-01 deferred).
-2. The v6.0 `FeedbackRecord` schema gains a `platform_metrics` field bucketed per platform with `completion_rate` / `hook_dropoff_rate` / `engagement_rate` / `save_rate` / `comment_rate`; existing v6.0 records remain backward-compatible (additive field).
-3. The `formula_tuning_loop` converts convergent metrics into suggestions: high hook-dropoff → suggest stronger hook; high completion but low engagement → suggest CTA. Suggestions land in a JSONL review queue (reusing the v6.0 EVOL-02 queue pattern); after operator approval they write back to `plugins/formula_library/`.
-4. `hermes formula stats` prints rich per-formula / per-platform tables; `--json` flag emits counts-only for scripting.
-5. New ref `references/data-convergence.md` documents the data flow + dashboard usage. **Operator-action-handoff:** 5 平台 API keys 由 operator 配置后激活; v9.0 提供 schema + adapter 骨架 only.
-**Plans:** 4 plans
-- [x] 42-01-PLAN.md — Plugin scaffold + PlatformMetrics + FeedbackRecordExtension + adapter base class + tests (DATA-01 schema + DATA-02 composition) — SHIPPED 2026-06-27
-- [x] 42-02-PLAN.md — 5 platform adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili) + adapter registry + tests (DATA-01 adapter half) — SHIPPED 2026-06-27
-- [x] 42-03-PLAN.md — tuning_loop + library_writer + JSONL review queue integration tests (DATA-03) — SHIPPED 2026-06-27 (35/35 tests; HIL invariant via SuggestionNotApprovedError + AST-walk single-caller; 4 MetricTrigger rules; atomic eval_score write-back; v6.0 EVOL-02 pattern mirrored, not imported)
-- [x] 42-04-PLAN.md — hermes formula stats CLI + data-convergence.md ref + SKILL.md Step 15 + pipeline-dag.md annotation + .env.example patch (DATA-04) — SHIPPED 2026-06-27
-**UI hint**: yes
-
-### Phase 43: VALIDATE — 集成验证 + close-out
-
-**Goal:** Cross-5-phase integration-checker passes end-to-end, FOUND-08 is verified preserved milestone-wide via byte-diff, and the canonical v9.0-MILESTONE-AUDIT.md is published as the milestone's permanent close-out record.
-**Depends on:** Phase 38, 39, 40, 41, 42 (strictly LAST)
-**Requirements:** VALIDATE-01, VALIDATE-02, VALIDATE-03
-**Success Criteria** (what must be TRUE):
-1. The cross-5-phase integration-checker all-pass: SLICE outputs `variants[]` → DATA adapter consumes them; FORM `formula_lookup` → GATE `suggested_action` references the returned formula; PREVIEW failure fallback to Step 6 does NOT break the existing 13-step I/O contract.
-2. FOUND-08 preserved milestone-wide: byte-diff of all 16 active movie-experts' `expert_id` + frontmatter against v9.0 start commit `a2a20d2be` shows zero changes. Any SKILL.md body patch is body-only.
-3. Canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md` published with: 22/22 req coverage table + 6/6 phase outcome summary + integration matrix + FOUND-08 evidence chain + operator-action-handoffs documented (Phase 41 LTX2.3 GPU testing + Phase 42 platform API keys).
-4. Operator-action-handoffs explicitly enumerated in the audit (NOT gaps, per scoped-boundary design): (a) LTX2.3 live GPU generation validation; (b) 5 平台 API key 配置 + live data ingestion.
-**Plans:** TBD
-**UI hint**: no
-
----
-
-*Last updated: 2026-06-27 — Phase 43 VALIDATE complete. v9.0 milestone 6/6 phases done, 13/13 plans done, 22/22 reqs satisfied. FOUND-08 preserved milestone-wide (30 SKILL.md frontmatter byte-identical to `a2a20d2be`). Audit: `.planning/milestones/v9.0-MILESTONE-AUDIT.md`. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0` (operator actions).*
+*Last updated: 2026-07-06 — v10.0 ROADMAP created (8 phases 44-51, 9/9 reqs mapped, design-only milestone analog to v2.0 PRFP).*

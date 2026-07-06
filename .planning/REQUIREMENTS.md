@@ -137,17 +137,19 @@
 
 ## Traceability
 
-| REQ-ID | 文档 | OQ 解决 | Pitfall 避免 | Research 引用 |
-|--------|------|--------|-------------|--------------|
-| DESIGN-01 | 00-FIRST-PRINCIPLES.md | — | — | FEATURES §10,11 + ARCHITECTURE §8 + PITFALLS 全文 |
-| DESIGN-02 | 01-AGENT-REGISTRY-SCHEMA.md + agents-schema.yaml + memory-record-schema.yaml | OQ-1,4,7,13,14,16 | P1,P2,P4,P5,P8,P10,P14 | ARCHITECTURE §1,2,3,4 + PITFALLS 全文 + STACK §3.2 |
-| DESIGN-03 | 02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml | OQ-2,5,9,11,15 | P7,P11 | STACK §3.2 + ARCHITECTURE §4,5 + FEATURES §1.3,2.3,10 + PITFALLS §P7,11 |
-| DESIGN-04 | 03-COMPARISON-VS-KIMI-MCP-SHIM.md | — | — | FEATURES §4,7.4,11 + STACK §1-5 + Kimi Notion 架构2.0 |
-| DESIGN-05 | 04-MIGRATION-PATH.md | OQ-3,10 | P14 | ARCHITECTURE §2,6 + STACK §3.2 Tool 7 |
-| DESIGN-06 | 05-POC-PLAN.md | — | P1-P14(全部 PoC 验收) | PITFALLS 全文 + STACK §7 + FEATURES §14 |
-| DESIGN-07 | 06-CROSS-REPO-IMPACT.md | OQ-6,12 | P3,P12 | ARCHITECTURE §6 + STACK §3.2 |
-| VALIDATE-01 | v10.0-MILESTONE-AUDIT.md | 全部核对 | 全部覆盖 | 全部 |
-| VALIDATE-02 | scripts/v10-consistency-check.py | — | — | 全部 |
+| REQ-ID | Phase | Status | 文档 | OQ 解决 | Pitfall 避免 | Research 引用 |
+|--------|-------|--------|------|--------|-------------|--------------|
+| DESIGN-01 | Phase 44 | Pending | 00-FIRST-PRINCIPLES.md | — | — | FEATURES §10,11 + ARCHITECTURE §8 + PITFALLS 全文 |
+| DESIGN-02 | Phase 45 | Pending | 01-AGENT-REGISTRY-SCHEMA.md + agents-schema.yaml + memory-record-schema.yaml | OQ-1,4,7,13,14,16 | P1,P2,P4,P5,P8,P10,P14 | ARCHITECTURE §1,2,3,4 + PITFALLS 全文 + STACK §3.2 |
+| DESIGN-03 | Phase 46 | Pending | 02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml | OQ-2,5,9,11,15 | P7,P11 | STACK §3.2 + ARCHITECTURE §4,5 + FEATURES §1.3,2.3,10 + PITFALLS §P7,11 |
+| DESIGN-04 | Phase 47 | Pending | 03-COMPARISON-VS-KIMI-MCP-SHIM.md | — | — | FEATURES §4,7.4,11 + STACK §1-5 + Kimi Notion 架构2.0 |
+| DESIGN-05 | Phase 49 | Pending | 04-MIGRATION-PATH.md | OQ-3,10 | P14 | ARCHITECTURE §2,6 + STACK §3.2 Tool 7 |
+| DESIGN-06 | Phase 50 | Pending | 05-POC-PLAN.md | — | P1-P14(全部 PoC 验收) | PITFALLS 全文 + STACK §7 + FEATURES §14 |
+| DESIGN-07 | Phase 48 | Pending | 06-CROSS-REPO-IMPACT.md | OQ-6,12 | P3,P12 | ARCHITECTURE §6 + STACK §3.2 |
+| VALIDATE-01 | Phase 51 | Pending | v10.0-MILESTONE-AUDIT.md | 全部核对 | 全部覆盖 | 全部 |
+| VALIDATE-02 | Phase 51 | Pending | scripts/v10-consistency-check.py | — | — | 全部 |
+
+**Coverage:** 9 / 9 mapped ✓ · Phases 44-51 · No orphans.
 
 ---
 
@@ -161,4 +163,4 @@
 
 ---
 
-*Last updated: 2026-07-06 — v10.0 REQUIREMENTS.md created (9 reqs: 7 DESIGN + 2 VALIDATE). Phase mapping will be filled by ROADMAP.md.*
+*Last updated: 2026-07-06 — Traceability table updated with Phase mapping (9/9 reqs → 8 phases 44-51). VALIDATE-01 + VALIDATE-02 merged into Phase 51 (lint script is audit's tool). ROADMAP.md created.*
