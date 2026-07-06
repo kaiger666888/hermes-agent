@@ -1203,3 +1203,203 @@ Kimi 方案在 Microsoft 三层框架下是 anti-pattern,具体违反 3 条:
 | §5.9 | Traceability matrix(本节) | 决策 5 + 6 + 7 + 3 + 1(五条汇总) | Phase 46 §1.5 + §2 + §3(整体 cross-ref) |
 
 **SC#3 验证:** Phase 51 VALIDATE lint script cross-check §5.9 traceability matrix —— 每行「§5 章节」必须存在于本 doc;每行「违反的决策号」必须出现在 §5 对应章节;每行「Cross-ref Phase 46 章节」必须出现在 Phase 46 文档。这是 SC#3 的「cross-ref Phase 46 protocol serial constraint + memory conflict arbitration」自动化验证。
+
+## §7 — Phase 44 决策 1-7 Cross-Validation Audit
+
+### §7.0 — 本节是 Phase 44 决策 1-7 的 cross-validation audit
+
+本节 audit 本 doc 的对照是否一致支持 Phase 44 锁定的 7 决策。**预期 = 7/7 一致**(本 doc 是 horizontal validation,不是 re-derivation)。若发现偏差,应在 §7.2 显式声明 + 提交 Phase 44 修订。
+
+**Audit 纪律(Phase 44 §1.1 引用 v2.0 PRFP §1.4 Contingent vs Validated-in-Invariant):** 本 doc 的对照结论是 `validated`(已 cross-validation Phase 44 决策);若某对照发现决策推导需修正,该决策标 `evolving`,在下一个设计-修订里程碑中重审。本 doc §7.1 audit table 必须显示 7/7 ✅ 一致,否则 §7.2 偏差分析需要 surface 具体偏差。
+
+### §7.1 — 7-row 决策 audit table(本 doc 论证章节 × 是否一致)
+
+| 决策 # | 决策(一句话) | T6 选型 | Kimi 选型 | 本 doc 论证章节 | 一致? |
+|--------|---------------|---------|-----------|------------------|-------|
+| **1** | T6 协议(Hermes MCP server + tmux dispatch + CC native MCP client) | **决策 1**:T6 IS 决策 1 本身(协议层选型) | Kimi 全 MCP shim 违反 Microsoft 三层(§4.3 violation 1-3) | §3.1 协议 + §4 Microsoft 三层 validation | ✅ |
+| **2** | B3a Python runner 增量迁移(delegate-only phase 迁 CC,ComfyUI-calling phase 保留 Python) | **决策 2**:T6 `run_python_phase` boundary tool(STACK §3.2 Tool 7)保留 Python runner | Kimi 无 boundary tool 概念,subagent 接管所有 phase | §3.2 dispatch(隐含 — boundary tool 是 Hermes-side dispatch 的一部分) | ✅ |
+| **3** | D2 storyboard-first-class(V8.6 编号保留,orchestrator round-based parallel) | **决策 3**:T6 round table 协议(Phase 46 §1-§3)实施 D2 round-based parallel | Kimi 不支持 round table(FEATURES §4.2 row 3 verbatim:「不是 round table」) | §3.3 callback + §3.5 多 agent | ✅ |
+| **4** | G2 通用编排框架(抽象 pipeline orchestration,kais-movie-pipeline 首个 sample) | **决策 4**:T6 复用 v6.0 curator + v7.0 mem0 + FastMCP(决策 4 工程量摊薄) | Kimi shared graph 是 project-scoped,跨 project 编排需要额外机制 | §3.6 实现成本 | ✅ |
+| **5** | α agent form(YAML + persona + tools + refs + memory_scope + lineage) | **决策 5**:T6 Hermes-side YAML 18-field schema(Phase 45)实施 α form | Kimi AgentDefinition 9-field 缺 memory_scope / persona_sha256 / evolution_log / fitness_score / lineage | §3.2 dispatch + §3.4 state + §5(subagent rejection SC#3 deep-dive) | ✅ |
+| **6** | per-agent memory + curator-driven 自进化 | **决策 6**:T6 mem0 backend + `_scoped_agent_id` filter + `_memory_evolution_phase`(Phase 45 §3.3 + §5)实施 per-agent memory + curator | Kimi source-scoped memory(`memory: 'user' / 'project' / 'local'`)+ 30-day cleanup + 无 curator | §3.4 state + §3.7 稳定性 + §5.4 + §5.5 | ✅ |
+| **7** | 分层 CC 角色(Hermes 控结构,CC 控内容) | **决策 7**:T6 Hermes 控 turn_order / max_rounds / early_stop_rule(Phase 46 §2),CC 控 question framing + synthesis | Kimi CC main agent 控 turn_order(subagent fan-out 由 CC 决定),违反分层 | §3.2 dispatch + §3.3 callback + §5.3 | ✅ |
+
+**Audit 结论:** **7/7 ✅ 一致**。本 doc 的 7-dimension contrast + Microsoft 三层 validation + subagent rejection + Kimi borrowable evaluation 全部与 Phase 44 §2.1-§2.7 锁定的 7 决策推导一致。本 doc 未发现 Phase 44 决策需修正。
+
+### §7.2 — 偏差分析
+
+**预期:** 7/7 一致(本 doc 是 horizontal validation,不是 re-derivation)。
+
+**实际:** 7/7 一致。本 doc 未发现 Phase 44 决策需修正。
+
+**声明:** 本 audit 是 horizontal validation —— 不是 re-derivation。若 v11.0 PoC 实施中发现 Kimi 方案某些 aspect 被 §6 borrowable evaluation 低估,应在 `05-POC-PLAN.md` 的 risk register 标注 + 在 Phase 51 audit 复审。本 doc 不替换 Phase 44 §2 推导链,只 cross-validate。
+
+**未来可能的偏差来源:**
+
+- **v11.0 PoC 实施时发现 OQ-12 mem0 filter latency > 500ms** —— 这可能触发 ARCHITECTURE §3.2 Option B → Option C(物理分区)切换。这不影响本 doc 的选型论据(决策 6 per-agent scoped memory 不变,只是 backend 实施细节切换),但需要在 `06-CROSS-REPO-IMPACT.md` 标注。
+- **v12+ 跨厂商协作需求出现** —— 这可能触发 §4.5 A2A 扩展位启用。这不影响本 doc 的选型论据(决策 1 T6 协议层不变,只是 A2A 在 v12+ 启用 as additional layer),但需要在 `06-CROSS-REPO-IMPACT.md` 标注。
+- **GLM 容量扩展允许 concurrency > 1** —— 这可能让 §3.5 多 agent 维度的「background 并发与 GLM concurrency==1 矛盾」cons 失效。这不影响本 doc 的选型论据(决策 3 round table 仍是协商载体),但需要 Phase 51 audit 复审 §3.5 选型论据。
+
+### §7.3 — Phase 44 §3 显式拒绝总表 与本 doc Kimi 方案否决 的一致性
+
+**Phase 44 §3 显式拒绝(≥10 条 anti-features,verbatim list):**
+
+1. subagent as agent container(Claude Agent SDK `.claude/agents/*.md`)
+2. short-lived agent(Agent-MCP「agent 完成即销毁」)
+3. handoff 作 round table 替代(OpenAI Swarm)
+4. crew task pipeline 作协商(CrewAI Crew)
+5. A2A 跨厂商协议 v10.0 使用
+6. `memory: true` boolean(CrewAI)
+7. CrewAI 30+ 字段全抄(CrewAI)
+8. subagent 30-day cleanup implicit(隐含 in row 1)
+9. shared knowledge graph(隐含 in row 2)
+10. full MCP shim for agent ↔ agent(隐含 in row 5)
+
+**本 doc Kimi 方案否决(§5 + §6.6):**
+
+- §5:subagent form(`.claude/agents/` filesystem form)
+- §6.6:short-lived agent(B7.2 Agent-MCP pattern)
+- §6.6:shared knowledge graph(§7.2 RAG-over-MCP)
+- §6.6:full MCP shim for agent ↔ agent(§7.1)
+- §6.6:`memory: true` boolean(CrewAI §3.3)
+- §6.6:handoff as round table 替代(OpenAI Swarm §5)
+- §6.6:crew task pipeline 作协商(CrewAI §3)
+- §6.6:A2A 跨厂商协议 v10.0 使用
+
+**Overlap:** 至少 6 条直接重叠(subagent / short-lived / shared graph / full MCP shim / `memory: true` / handoff / crew pipeline / A2A v10.0)。
+
+**声明:** **一致**。Phase 44 §3 是 root rejection(从 7 决策推导),本 doc 是 per-dimension contrast + steelman + Kimi-side borrowable evaluation —— 三层互补。Phase 44 §3 给「v10.0 显式拒绝什么」,本 doc §5 给「subagent 形态为什么被拒绝(SC#3 deep-dive)」,本 doc §6.6 给「Kimi 方案中哪些 ideas 被拒绝 vs 哪些被借鉴(SC#5)」。
+
+**三层互补关系图:**
+
+```
+Phase 44 §3 (root rejection, from 7 decisions)
+    ↓ cite
+本 doc §5 (subagent rejection SC#3 deep-dive)
+    ↓ cite
+本 doc §6.6 (Kimi-side 不借鉴清单 SC#5)
+    ↓ cite
+Phase 51 VALIDATE lint script (cross-doc consistency)
+```
+
+Phase 51 VALIDATE lint script cross-check 三处一致性 —— 若本 doc §5 或 §6.6 引用了 Phase 44 §3 不存在的 anti-feature,触发 ADVISORY 提醒。
+
+### §7.4 — Cross-validation 方法学反思(给 Phase 51 reviewer)
+
+**本 doc 的 cross-validation 是 strong-form 还是 weak-form?**
+
+- **Strong-form cross-validation:** 本 doc 的每个 claim 都可 trace 回 Phase 44 §2.N 推导链 + 4 research source(STACK / FEATURES / ARCHITECTURE / PITFALLS)的具体 section。这是本 doc §1.2 CITE-ONLY 纪律 + §3 每维度选型论据引用决策号 + §5 subagent rejection 引用 FEATURES §11 B4.1 + §4 Microsoft 三层引用 FEATURES §7.4 B7.1 的物理载体。
+- **Weak-form 元素:** §3.6 实现成本维度的「~2-3 人周」「~500-800 LOC Python」等估算数字是 v11.0 PoC 预估,不是实测;§3.7 稳定性维度的「字段级 mitigation for 8/14 PITFALLS」是 schema 设计层面的 mitigation,实际效果需 v11.0 PoC 验证(Phase 50 acceptance criteria)。
+
+**Phase 51 reviewer 的 cross-validation 检查清单:**
+
+1. 7 决策 audit table(§7.1)是否 7/7 ✅ 一致?(预期:是)
+2. §3 每维度选型论据是否引用决策号?(预期:每维度至少 1 条决策号)
+3. §5 subagent rejection 是否 verbatim cite FEATURES §11 B4.1 + §4.3 三个 fact?(预期:是)
+4. §4 Microsoft 三层 validation 是否 verbatim cite FEATURES §7.4 B7.1?(预期:是)
+5. §6 borrowable evaluation 是否每条 idea 标注 T6 兼容性 + 借鉴条件?(预期:是)
+6. §8 references 是否包含 Phase 44/45/46 docs + FEATURES/STACK/ARCHITECTURE/PITFALLS + user memory + industry docs URLs?(预期:是)
+7. 字段引用是否 CITE-ONLY(不重定义 Phase 45 schema 字段)?(预期:是,Phase 51 lint 用 grep 字段名 + 比对 schema YAML)
+
+**若任一项不通过,Phase 51 reviewer 应:** (a) 在 `deferred-items.md` 标注具体偏差;(b) 在下一次设计-修订里程碑中处理;(c) 不在 Phase 47 内部修订(本 doc 已 stable)。
+
+**Cross-validation 与 v2.0 PRFP §1.4 的关系(Phase 44 §1.1 引用):** v2.0 PRFP §1.4 区分 `contingent`(可能被推翻的)vs `validated-in-invariant`(在不变量内验证的)。本 doc 的 cross-validation 结论是 `validated-in-invariant` —— 7 决策是 invariant(Phase 44 §1.2 stable marker),本 doc 在这个 invariant 内 cross-validate,不推翻决策本身。若未来发现某决策需推翻,该决策从 `validated-in-invariant` 标 `contingent`,在下一次设计-修订里程碑中重审(类比 v2.0 PRFP §1.1 stability marker 修改门槛)。
+
+**本 doc 在 v10.0 设计文档依赖图中的最终位置(给 v11.0 PoC 实施者的索引):** 本 doc 是 Phase 47 deliverable,与 04-MIGRATION-PATH(Phase 49)+ 05-POC-PLAN(Phase 50)+ 06-CROSS-REPO-IMPACT(Phase 48)+ 51 VALIDATE 形成 v10.0 设计文档完整集。本 doc 是「defense brief」—— 当实施者对 T6 选型 / subagent rejection / Microsoft 三层 alignment / Kimi borrowable 有疑问时,本 doc 提供 section-and-line-precise 答案。本 doc 不替换 Phase 44/45/46 的决策推导 / schema 定义 / protocol 契约 —— 它是 horizontal validation,在不变量内 cross-validate。
+
+
+
+---
+
+## §8 — Downstream Citation Guide + Coherence + References
+
+### §8.0 — Downstream citation card table(给 04/05/06/51 的引用指南)
+
+下表给出 downstream docs(04-MIGRATION-PATH / 05-POC-PLAN / 06-CROSS-REPO-IMPACT / 51 VALIDATE)引用本 doc 时,应从哪个章节取 —— 避免重复推导,保持 cross-doc 一致性。
+
+| Downstream doc | Cite from this doc | Do NOT re-derive | Should derive |
+|----------------|--------------------|------------------|---------------|
+| **04-MIGRATION-PATH.md** | §3.2 dispatch(T6 boundary tool `run_python_phase`)+ §3.4 state(三层 state) | 7-dimension contrast, subagent rejection | 15-expert transform rules, retained-phases allowlist |
+| **05-POC-PLAN.md** | §3.7 稳定性(T6 risk + Kimi risk 对比)+ §6 borrowable evaluation(借鉴条件) | subagent rejection detail(§5) | PoC acceptance criteria, fitness battery, latency SLO |
+| **06-CROSS-REPO-IMPACT.md** | §4.5 A2A 扩展位 + §3.4 state 跨 project 一致性 | Microsoft 三层 detail(§4) | 3-location sync + Option B vs 物理分区切换条件 |
+| **51 VALIDATE lint** | §7 7 决策 audit table + §3 7-dimension table + §6.1 borrowable table | entire doc(cite-only) | cross-doc consistency lint script(决策号 + 字段名 + section 引用) |
+
+**引用纪律:**
+
+- Downstream docs 引用本 doc 时永远 cite by section number(§3.N / §4.N / §5.N / §6.N / §7.N),不引用 line number(line number 跨 commit drift)
+- 引用本 doc 的论据时标注「Cite 03-COMPARISON-VS-KIMI-MCP-SHIM §X.Y」,不重述论据
+- 若 downstream doc 发现本 doc 论据需修正,在 `deferred-items.md` 标注,在下一次设计-修订里程碑中处理(类比 Phase 44 §1.2 stability marker 修改门槛)
+
+### §8.1 — Coherence 声明(SC#1-5 完整 coverage)
+
+**SC#1-5 coverage 验证:**
+
+| SC# | 描述 | 本 doc 解决章节 | coverage 完整性 |
+|-----|------|------------------|-----------------|
+| SC#1 | File `03-COMPARISON-VS-KIMI-MCP-SHIM.md` exists | (本文件本身) | ✅(本文件 ≥1400 lines,§0-§8 完整) |
+| SC#2 | 7-dimension contrast table per-dimension T6 vs Kimi pros/cons + 选型论据引用决策号 | §1.6(TL;DR table)+ §3.1-§3.7(prose expansion) | ✅(7 维度齐全,每维度 4 段结构 + 选型论据) |
+| SC#3 | Subagent form rejection 完整,引用 FEATURES §11 B4.1 + Claude Agent SDK context-isolation unsuitable for round table panelist + cross-ref Phase 46 protocol serial constraint + memory conflict arbitration | §1.5.2(前置声明)+ §5(SC#3 deep-dive,§5.0-§5.9) | ✅(§5.1 B4.1 verbatim + §5.3 context-isolation 4 原因 + §5.9 traceability matrix) |
+| SC#4 | Microsoft three-layer protocol validation 引用 FEATURES §7.4 B7.1 verbatim,证明 v10.0 T6 与业界共识一致 | §1.5.1(前置声明)+ §4(SC#4 deep-dive,§4.0-§4.6) | ✅(§4.1 B7.1 verbatim + §4.2 mapping table + §4.3 3 violation points + §4.4 业界共识论证) |
+| SC#5 | Kimi-side borrowable parts 显式列出 + 借鉴条件 + 喂给哪个下游 doc | §6(SC#5 evaluation,§6.0-§6.7) | ✅(§6.1 7-row borrowable table + §6.6 不借鉴清单 + §6.7 总结合) |
+
+**Coherence 声明:** 7-dimension contrast(协议 / dispatch / callback / state / 多 agent / 实现成本 / 稳定性)+ Microsoft 三层 protocol validation + subagent form rejection + Kimi-side borrowable evaluation + Phase 44 7 决策 cross-validation audit = **完整 ROADMAP SC#1-5 coverage**。v11.0 PoC implementer 引用本 doc 的 §3 dimension table + §5 subagent rejection + §6.1 borrowable table 即可 defending 「why T6 not full MCP shim」「why Hermes-side YAML agent not CC subagent」「why round table 强制 serial」,不需重新推导 Phase 44 决策。
+
+### §8.2 — References
+
+**Phase 44 research docs(v10.0 milestone 设计源,HIGH 置信度):**
+
+- `.planning/research/v10-orchestrator-design/00-FIRST-PRINCIPLES.md` — 7 决策 first-principles 推导链(本 doc CITE ONLY,不重推导)
+- `.planning/research/v10-orchestrator-design/01-AGENT-REGISTRY-SCHEMA.md` — agents-schema.yaml 18-field + memory-record-schema.yaml 10-field(本 doc CITE ONLY)
+- `.planning/research/v10-orchestrator-design/02-ROUND-TABLE-PROTOCOL.md` — round table turn lifecycle + memory conflict arbitration(本 doc CITE ONLY)
+- `.planning/research/v10-orchestrator-design/STACK.md` — T6 协议层 Recommended Stack + 7 MCP tool schema(本 doc cite §1 + §3.2 + §4)
+- `.planning/research/v10-orchestrator-design/FEATURES.md` — 业界 framework 对照 + borrowable points + anti-features(本 doc cite §4 / §7.4 / §8 / §10 / §11)
+- `.planning/research/v10-orchestrator-design/ARCHITECTURE.md` — Hermes 内部设施 + 18-field schema + round table state layer(本 doc cite §4 / §5 / §8 anti-patterns)
+- `.planning/research/v10-orchestrator-design/PITFALLS.md` — per-agent memory 失败模式 14 条(本 doc cite §P5 / §P12 + 字段级 mitigation mapping)
+- `.planning/research/v10-orchestrator-design/SUMMARY.md` — 4 research cross-cutting findings + 7 决策 validated 表 + 16 OQ 决议
+
+**Phase 44/45/46 commit references:**
+
+- Phase 44 commits `e7be0f45f` + `23cb73a5a` + `314888271`(00-FIRST-PRINCIPLES.md 锁定)
+- Phase 45 commits(01-AGENT-REGISTRY-SCHEMA.md + 2 schema YAML 锁定)
+- Phase 46 commits(02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml 锁定)
+
+**Kai user memory(user-side 决策 anchor):**
+
+- `~/.claude/projects/-data-workspace-hermes-agent/memory/hermes-native-expert-agents.md`(2026-07-06)— Kai 否决 Kimi CC-Teammates + 否决 "skill 当 agent",要 Hermes-side persistent agents + per-agent memory 自进化 + CC 仅做场地
+- `~/.claude/projects/-data-workspace-hermes-agent/memory/coding-agent-vs-mcp-shim.md`(2026-07-06)— v10.0 设计 milestone 必须把已有 coding-agent tmux 模式 vs Kimi Notion 架构2.0 MCP shim 作为竞品方案对照分析
+- `~/.claude/projects/-data-workspace-hermes-agent/memory/feedback-glm-overload-reduce-concurrency.md`(2026-07-06,updated)— GLM concurrency==1 by design,round table 强制 serial 的 policy 根因
+
+**Industry docs(HIGH 置信度 source,本 doc 一手 citation):**
+
+- Microsoft multi-agent-patterns: [learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns](https://learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns) — FEATURES §7.4 B7.1 source,Microsoft 三层协议分层(SC#4 anchor)
+- Microsoft Agent Framework v1.0 GA: [learn.microsoft.com/en-us/agent-framework/overview](https://learn.microsoft.com/en-us/agent-framework/overview) — v12+ 跨厂商协作参考
+- Claude Agent SDK subagents: [code.claude.com/docs/en/agent-sdk/subagents](https://code.claude.com/docs/en/agent-sdk/subagents) — FEATURES §4.2 + §4.3 source,subagent rejection(SC#3 anchor)
+- Claude Agent SDK overview: [code.claude.com/docs/en/agent-sdk/overview](https://code.claude.com/docs/en/agent-sdk/overview) — FEATURES §4.1 source
+- A2A Protocol: [deeplearning.ai/courses/a2a-the-agent2agent-protocol](https://www.deeplearning.ai/courses/a2a-the-agent2agent-protocol) — FEATURES §8 source,v12+ 扩展位
+- Agent-MCP: [github.com/rinadelph/Agent-MCP](https://github.com/rindelph/Agent-MCP) — FEATURES §7.1-§7.2 source,Kimi 方案 close cousin
+
+**CLAUDE.md(本 repo 项目规则):**
+
+- `/data/workspace/hermes-agent/CLAUDE.md` — 双语规范(EN structure + 中文 prose)+ Skill File Conventions + GSD Workflow Enforcement
+
+**Other v10.0 design docs(siblings + downstream):**
+
+- `04-MIGRATION-PATH.md`(Phase 49)— 15-expert transform rules + retained-phases allowlist(本 doc cite-only)
+- `05-POC-PLAN.md`(Phase 50)— PoC acceptance criteria + fitness battery + latency SLO(本 doc cite-only)
+- `06-CROSS-REPO-IMPACT.md`(Phase 48)— 3-location sync + Option B vs 物理分区(本 doc cite-only)
+- Phase 51 VALIDATE — cross-doc consistency lint(本 doc 是 lint 输入之一)
+
+**v2.0 PRFP(方法论 source,Phase 44 §1.1 引用):**
+
+- `.planning/research/v2-pipeline-design/00-FIRST-PRINCIPLES.md`(v2.0 PRFP)— Musk 第一性原理 / Aristotle 根 / Steelman-the-Elimination / MADR alternatives log / contingent vs validated-in-invariant 方法学 canon
+
+**ROADMAP / PROJECT / REQUIREMENTS / STATE(v10.0 milestone 配置):**
+
+- `.planning/ROADMAP.md` — v10.0 milestone 8 phases(44-51)+ SC#1-5
+- `.planning/PROJECT.md` — v10.0 milestone 7 锁定决策源 + paradigm shift 声明
+- `.planning/REQUIREMENTS.md` — v10.0 milestone 9 requirements(7 DESIGN + 2 VALIDATE)
+- `.planning/STATE.md` — milestone 进度跟踪
+
+---
+
+*End of 03-COMPARISON-VS-KIMI-MCP-SHIM.md. Consumers: `05-POC-PLAN.md` cites §3 + §5 + §6.1 as defense brief; `06-CROSS-REPO-IMPACT.md` cites §4.5 A2A 扩展位; Phase 51 VALIDATE lint cross-checks §3 7-dimension + §5 subagent rejection + §6.1 borrowable + §7 7 决策 audit consistency.*
