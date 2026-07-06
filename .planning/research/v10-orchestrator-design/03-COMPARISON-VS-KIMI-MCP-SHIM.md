@@ -609,3 +609,292 @@ Kimi 方案的 state 是 **两层(transient + project-shared)**:
 
 ---
 
+
+### §3.5 — 维度 5:多 agent(Multi-Agent Coordination)
+
+#### T6 描述
+
+T6 的多 agent 模型是 **Round table 协议**(Phase 46):5-strategy `turn_order`(round-robin default + fixed / llm / matrix / fitness-weighted,v11.1+ deferred per Phase 46 §2.5.5)+ memory conflict arbitration(Phase 46 §3,5 子机制对齐 PITFALLS §P7 mitigation 1-5)+ **强制串行**(1 panelist 1 turn sequential `await`,Phase 46 §1.5.1 + §2.8 + §4.1 root-cause analysis)。
+
+**Round table 三原子操作(Phase 46 §2):**
+
+1. `round_table_open(roundId, panel, question, maxRounds, turnOrderStrategy, earlyStopRule, projectId)` —— atomic start,返回 roundId(立即返回,不阻塞)。
+2. turn N(`get_agent_opinion(agentId, topic, context, priorDiscussion)` per turnOrder,sequential await,append 到 state file turns 数组)。
+3. `submit_round_table_result(roundId, conclusion, citedMemories, artifacts, conflicts)` —— atomic commit,flip status=completed,seal conflict log。
+
+**Memory conflict arbitration(Phase 46 §3):** 当两个 panelist 的 `citedMemoryIds` 在语义上矛盾,comparator LLM pass + scope precedence(session > project > global)+ confidence-weighted voting + conflict log append(供 curator review)。这是 P7(round-table memory conflict)的完整 mitigation。
+
+**强制串行(Phase 46 §1.5.1 + §4.1 root-cause):** GLM 4-key rotation 在 7 panelist × N rounds 并发场景下会立刻撞 ceiling(~800K TPM)。MEMORY.md `feedback-glm-overload-reduce-concurrency.md`(2026-07-06)记录 global concurrency==1 是 **BY DESIGN**(2026-07-03 从 5→3;2026-07-06 已是 1,不再降 —— 上游模型容量本身就是瓶颈)。Round table 强制 serial 是这个 policy 的物理载体。
+
+#### Kimi 描述
+
+Kimi 方案的多 agent 模型是 **Subagent 不互发言** —— FEATURES §4.2 row 3 verbatim:「**不原生支持 multi-agent**。Claude 自己作为 main agent,可调 `Agent` tool 派生 subagent 做子任务,subagent 返回 final message;**不是 round table**(无多 subagent 互发言)」。
+
+Main agent 可以 **fan-out 多 subagent**(v2.1.198+ background 默认,可并发),但 subagent 之间不通讯。Main agent 收集所有 final messages 后做 synthesis —— 这是 hub-and-spoke,不是 round table。
+
+**无 memory conflict arbitration 概念** —— subagent return 是 final message string,不带 `citedMemoryIds`;main agent synthesis 时若发现矛盾,只能靠 LLM reasoning 自行解决,没有结构化 arbitration 机制。
+
+#### T6 pros
+
+(a) **真正的 round table 协议(决策 3 — D2 storyboard-first-class requires round-based parallel)** —— Phase 46 §2 三原子操作是 D2 的物理载体。决策 3 要求「在不破坏 V8.6 编号契约(FOUND-08)的前提下,获得真实有价值的并行加速(跨场景,不跨 step)」—— round table 让多个 panelist(screenplay / cinematographer / scene_builder etc.)就同一 scene 协商。
+(b) **Memory conflict arbitration 避免 P7(loud-memory agent wins)** —— Phase 46 §3 comparator LLM + scope precedence + confidence voting 让 conflict 不是「谁嗓门大谁赢」,而是结构化裁定。Kimi 方案无此机制。
+(c) **Serial constraint 兼容 GLM 4-key rotation(Phase 46 §4.1 + MEMORY.md feedback-glm-overload-reduce-concurrency.md)** —— v10.0 强制 serial 与 operator-level concurrency==1 policy 一致,不会撞 GLM ceiling。这是 by-design,不是限制。
+
+#### T6 cons
+
+(a) **Serial execution means 7 panelist × 3 rounds ≈ 21 sequential LLM calls** —— ~137K tokens,~10s serial latency(STACK §7 token cost ~550K/pipeline run 估算)。这是 acceptable(STACK §7.5 verbatim:顺序 `await`,不并发)。
+(b) **Conflict arbitration 是新机制,v11.0 PoC 需 bias canary** —— Phase 50 acceptance criterion:bias canary 必须跑通,确保 comparator LLM 不偏向高 confidence 但 low evidence 的 memory。
+
+#### Kimi pros
+
+(a) **Background subagent 可以并发(但 GLM 4-key rotation 会立刻撞 ceiling —— FEATURES §14 gap 6 + CC-6)** —— 表面上「并发更快」,但 v10.0 GLM 政策下并发不可行。
+
+#### Kimi cons
+
+(a) **无法表达 round table,决策 3(D2)无法实施** —— subagent 不互发言意味着没有协商,只有 fan-out + synthesis。决策 3 要求 round-based parallel,Kimi 不能表达。
+(b) **Subagent 间无通讯意味着 panelist 看不到彼此的 cited memory —— memory conflict 无法 arbitration** —— Phase 46 §3 的 5 子机制都基于「panelist 在 turn N 引用 citedMemoryIds,comparator LLM 跨 panelist 对比」,Kimi subagent return 不带 citedMemoryIds。
+(c) **Background 并发与 GLM concurrency==1 policy 矛盾** —— Kimi 方案的「background fan-out」在 v10.0 GLM 4-key rotation 政策下不可行,会撞 ceiling 触发 1305 错误。
+
+#### 选型论据
+
+**决策 3 + 7。** T6 的 round table 协议是决策 3(D2 storyboard-first-class)的物理载体 —— 真正的 round-based parallel,跨场景协商。Kimi 的 subagent fan-out 无法表达协商(subagent 不互发言)。Phase 46 §4.1 serial invariant 与 MEMORY.md `feedback-glm-overload-reduce-concurrency.md` 一致 —— Kimi 的 background 并发违反这个 policy。**T6 在多 agent 维度更好服务决策 3 + 7。**
+
+### §3.6 — 维度 6:实现成本(Implementation Cost)
+
+#### T6 描述
+
+T6 的实现成本(从 STACK §3.2 + ARCHITECTURE §3-§5 + Phase 46 §5 估算):
+
+1. **Extend `mcp_serve.py` 加 7 MCP tools(STACK §3.2)** —— Pydantic schema 已 spec'd(STACK §3.2 给完整 7 tool schema),实施量 ~500-800 LOC Python(v11.0 PoC 估算)。
+2. **Hermes agent registry(ARCHITECTURE §4 — `agent/agent_registry.py` + `agent/agent_dispatcher.py`)** —— load YAML + dispatch via tmux + tools whitelist enforcement。~400-600 LOC Python。
+3. **mem0 backend additive extension(ARCHITECTURE §3.3)** —— `_scoped_agent_id` filter via `contextvars` in ThreadPoolExecutor。~50-100 LOC Python(在现有 v7.0 mem0 plugin 375 lines 之上加 additive)。
+4. **Round table state file gc pass(defer v11.1+)** —— completed round table retention policy + crash recovery gc。~100 LOC Python,v11.1+ ship。
+5. **Curator `_memory_evolution_phase`(ARCHITECTURE §3.4 + Phase 45 §5)** —— 在 v6.0 `_feedback_scan_phase` 之后跑,独立 try/except 包裹,dry-run-by-default。~200-300 LOC Python(extend v6.0 curator)。
+
+**v10.0 设计型 milestone:** 零代码,产出文档。**v11.0 PoC 工程量估算:** ~2-3 人周(1250-1800 LOC Python,复用 v6.0 curator + v7.0 mem0 + 现有 `mcp_serve.py` FastMCP)。
+
+#### Kimi 描述
+
+Kimi 方案的实现成本:
+
+1. **写 `.claude/agents/*.md` per expert** —— markdown,~30-50 lines frontmatter + prompt each × 15 experts = 450-750 lines markdown。
+2. **共享 knowledge graph server(额外基础设施,Agent-MCP §7.2 模式)** —— RAG server + embedding cost + graph gc + sync。这是新基础设施,v10.0 没有(决策 6 用 mem0 backend)。
+3. **把 agent ↔ agent 协调塞进 MCP tools(`create_agent` / `assign_task` / `send_agent_message` etc. per Agent-MCP §7.2)** —— 设计 7+ MCP tools 的 schema + tests。工程量 ~500-800 LOC Python(与 T6 的 7 tool 工程量相当,但语义不同 —— Kimi 是 agent ↔ agent,T6 是 agent ↔ tool)。
+
+#### T6 pros
+
+(a) **复用现有 `mcp_serve.py`(907 lines 实读,extension 而非 rewrite)** —— v7.0 ship 的 FastMCP server,加 7 tool 是 decorator + Pydantic schema,无新依赖。
+(b) **复用现有 mem0 plugin(v7.0 ship,375 lines)** —— additive extension `_scoped_agent_id` 不是新 backend,是 filter routing。
+(c) **复用现有 curator(v6.0 ship,2467 lines)** —— extend `_feedback_scan_phase` 加 `_memory_evolution_phase` sibling,不是新模块。
+(d) **决策 4(G2 通用编排)means kais-movie-pipeline 是首个 sample,工程量摊薄** —— G2 抽象 pipeline orchestration pattern,kais-movie-pipeline 是 sample;后续 music video / long-form 不需要重写编排器。T6 的工程量在多个 domain 摊薄。
+
+#### T6 cons
+
+(a) **7 个新 MCP tool 的 Pydantic schema 设计 + 测试(v10.0 已 spec,v11.0 PoC 实施)** —— 工程量 ~500-800 LOC,加上 schema test / runtime test / integration test。
+(b) **mem0 backend filter 行为未实测(OQ-12)** —— v11.0 PoC week-1 latency benchmark 必跑,若 p95 > 500ms 触发物理分区切换(增加额外工程量)。
+
+#### Kimi pros
+
+(a) **markdown 文件工程量极小(15 files × 50 lines = 750 lines markdown)** —— 写 agent 就是写 markdown,无 Python 代码。
+(b) **无需 extend Hermes runtime** —— agent 就是文件,CC 原生识别 `.claude/agents/`。
+
+#### Kimi cons
+
+(a) **共享 knowledge graph 是新基础设施(RAG server,embedding cost,gc)** —— 不是「零 Hermes-side runtime」,而是「换了一个不同的 Hermes-side runtime」。Agent-MCP 模式需要 graph server + embedding + sync,工程量被低估。
+(b) **把 agent ↔ agent 塞进 MCP 意味着设计 7+ MCP tools(`create_agent` etc.)—— 工程量不比 T6 小** —— Kimi 方案的 MCP tool 工程量 ~500-800 LOC,与 T6 相当。
+(c) **决策 4(G2 通用编排)在 Kimi 方案下难以实施 —— 共享 graph 是 project-scoped,跨 project 编排需要额外机制** —— G2 要求「v12+ 扩展 music video / long-form 时不需要重写编排器」,Kimi shared graph 是 project-scoped,跨 project 编排需要每 project 部署 graph server,违反 G2 抽象。
+
+#### 选型论据
+
+**决策 4。** T6 复用现有 v6.0/v7.0 设施(curator + mem0 + FastMCP),与决策 4(G2 通用编排)一致 —— 工程量在多个 domain 摊薄。Kimi 方案需要新基础设施(shared graph)且工程量被低估(`.claude/agents/` markdown 之外还有 graph server + 7+ MCP tools),且决策 4 在 Kimi 方案下难以实施。**T6 在实现成本维度更好服务决策 4。**
+
+### §3.7 — 维度 7:稳定性(Stability / Pitfall Mitigation)
+
+#### T6 描述
+
+T6 的稳定性是 **多层 defense-in-depth**:
+
+1. **Hermes-side persistent agent(YAML 持久,跨 CC session,跨 project)** —— 决策 5 物理载体。
+2. **Per-agent scoped memory with curator-driven self-evolution(决策 6)** —— mem0 backend + `_scoped_agent_id` filter + curator `_memory_evolution_phase`(Phase 45 §5)。
+3. **Curator dry-run-by-default + bias canary(Phase 45 §5 + Phase 50 acceptance criterion)** —— curator 写 memory record 默认 dry-run,operator review 后才真写;bias canary 在每 N tick 跑,确保 curator 不偏向某 operator / 某 agent。
+4. **Memory record schema with `expires_at` / `verified_at` / `confidence` / `evidence_chain` / `supersedes_memory_id` / `half_life_days`(Phase 45 memory-record-schema)** —— 字段级 mitigation for P2(stale memory)—— `expires_at` + `verified_at` 让 memory 自动过期;`confidence` + `evidence_chain` 让低质 memory 被自然降权;`supersedes_memory_id` 让新 memory 正式替换旧 memory;`half_life_days` 让 confidence 时间衰减。
+5. **Cross-project leakage mitigated by `scope` field(Phase 45) + filter routing(Option B per ARCHITECTURE §3.2)** —— `scope: global|project|session` + `project_id` required + cross-project promotion gate(Phase 46 §3.3 scope precedence)。
+6. **Persona drift mitigated by `persona_sha256`(Phase 45 agents-schema §2.14)** —— 不变量:agent YAML 的 persona SHA-256 在 round table open-time snapshot 到 state file;若 curator 检测到 persona_sha256 drift,触发 advisory(ARCHITECTURE §8.2 anti-pattern guard:不 auto-re-transform,operator decides)。
+7. **Round table memory conflict mitigated by Phase 46 §3 5 子机制(comparator LLM + scope precedence + confidence voting + conflict log + curator review)** —— P7 完整 mitigation。
+8. **Cross-agent contamination mitigated by `agent_id` filter namespace(PITFALLS §P12)** —— per-agent namespace 隔离,screenplay agent 检索不到 cinematographer agent 的 memory。
+
+#### Kimi 描述
+
+Kimi 方案的稳定性:
+
+1. **Subagent transcripts 30-day cleanup(FEATURES §4.3 fact 3)—— agent experience 不可持久** —— operator 投入 30 天后丢失。
+2. **Shared knowledge graph single-point-of-failure(graph server down → all agents lose memory)** —— 共享 graph 是单 graph server,宕机 = 全 agent memory 不可用。
+3. **Cross-agent contamination risk(PITFALLS §P12 — shared graph + imperfect filter = bleed-through)** —— 共享 graph 意味着 RAG filter 不严时 screenplay 可能检索到 cinematographer 的 memory。
+4. **No curator self-evolution(决策 6 unavailable)** —— Kimi memory 是 CLAUDE.md 静态文件,curator 无法 read/write per-record,决策 6「curator-driven 自进化」完全 unavailable。
+
+#### T6 pros
+
+(a) **Per-agent memory isolation(决策 6)avoids P12 cross-agent contamination** —— screenplay agent 的 memory namespace 与 cinematographer agent 完全隔离。
+(b) **`confidence` + `evidence_chain` + `expires_at` avoids P2 stale memory** —— 字段级 mitigation,不需额外机制。
+(c) **`persona_sha256` avoids P1 persona drift** —— round table open-time snapshot,curator drift detection。
+(d) **Curator dry-run-first avoids P5 curator failure modes** —— dry-run-by-default 让 false-delete / hallucinate / bias amplify 在 dry-run 阶段被发现,operator review。
+(e) **Memory record schema 8 个 PITFALL 字段级 mitigation(P1/P2/P4/P5/P7/P8/P10/P12)** —— 见 §3.4 维度 4 字段级 mitigation 映射表。
+
+#### T6 cons
+
+(a) **v11.0 PoC 需 bias canary + latency benchmark(defer 到 Phase 50)** —— 字段级 mitigation 是 schema 设计,实际效果需 PoC 验证。
+(b) **18-agent × 100-project 规模下 mem0 filter 行为未实测(OQ-12,defer Phase 48)** —— Option B(filter 路由)在大规模下可能崩溃,需物理分区切换。
+
+#### Kimi pros
+
+(a) **Shared graph 节省 per-agent memory backend 复杂度** —— 一个 graph server,运维简单。
+
+#### Kimi cons
+
+(a) **30-day cleanup 直接违反决策 6 「agent 随项目越多越有经验」** —— operator 投入 30 天后归零。
+(b) **Shared graph 单点故障** —— graph server down = 全 agent memory 不可用。
+(c) **P12 cross-agent contamination 不可 mitigation(graph 是共享的)** —— 共享 graph + RAG filter 不严 = bleed-through 不可避。
+(d) **无 curator → 无 self-evolution → 决策 6 完全 unavailable** —— Kimi 方案在决策 6 维度是「完全缺失」,不是「弱实现」。
+
+#### 选型论据
+
+**决策 6 + PITFALLS §P5/§P12。** T6 的 per-agent scoped memory + curator 是决策 6 的物理载体,P1/P2/P5/P7/P8/P10/P12 都有字段级 mitigation(8 个 PITFALLS)。Kimi 方案直接违反决策 6(30-day cleanup + shared graph + 无 curator),且 P5/P12 无法 mitigation。**T6 在稳定性维度更好服务决策 6。** 这也是 7 维度中 T6 vs Kimi 差距最 stark 的维度 —— 字段级 mitigation 是 schema 设计,不是工程量问题,Kimi 方案即使工程量再大也无法达到同等等级。
+
+#### 维度 7 stability 总结(stark gap 与 dry-run-first 的角色)
+
+**为什么说稳定性是 T6 vs Kimi 差距最 stark 的维度?** 因为其他 6 个维度(协议 / dispatch / callback / state / 多 agent / 实现成本)的差距可以通过「工程量」「实施细节」「学习曲线」来衡量 —— 例如 dispatch 维度 T6 多 ~500 LOC Python,可以通过工程投入弥合。但稳定性维度的差距是 **schema-level paradigm gap**:T6 的 Phase 45 memory-record-schema(10 个字段)+ agents-schema 的 `persona_sha256` / `fitness_score` / `evolution_log` 字段是 PITFALLS 14 个失败模式的字段级 mitigation;Kimi 的 `AgentDefinition`(9 个字段,无任何 PITFALL 字段)+ source-scoped memory + shared graph 是 **结构性缺失**,不是「工程量少了」,是「schema 没有」。
+
+**dry-run-first 在稳定性维度的角色(Phase 45 §5 + Phase 50 acceptance criterion):** T6 curator `_memory_evolution_phase` 默认 dry-run-by-default —— 写 memory record 到 dry-run 目录,operator review 后才 merge 到真实 mem0 backend。这是 P5(curator failure modes: false-delete / hallucinate / bias amplify)的 mitigation 5。Kimi 方案没有 curator 也就没有 dry-run-first 这条 defense,任何 memory write 都是 immediate + irreversible(写 CLAUDE.md 或 shared graph)。
+
+**v11.0 PoC 验收条件(Phase 50):**
+
+- bias canary:每 N tick 跑,确保 curator 不偏向某 operator / 某 agent(超过阈值触发 ADVISORY)
+- latency benchmark:mem0 backend filter 在 18-agent × 100-project 规模下 p95 < 500ms(OQ-12)
+- fitness battery:agent `fitness_score` cold-start(null)→ 经过 N 次 round table 后实际数值变化与人类判断对齐
+- schema migration dry-run:从 v9.0 SKILL 形态迁到 v10.0 agent YAML 形态的 dry-run 不破坏现有 memory store
+
+**这 4 条 PoC acceptance criteria 都是 T6 的稳定性验证** —— Kimi 方案因为没有 curator / fitness_score / schema migration 概念,无法表达这些 acceptance criteria。这是 v11.0 PoC 实施者必须理解的:**选 T6 意味着接受 v11.0 PoC 的 4 条 acceptance criteria 负担,选 Kimi 意味着放弃 stability mitigation 的 schema-level 支持。**
+
+### §3-overall — 7-dimension contrast 总结(T6 7/7,Kimi 0/7)
+
+**7 维度整体审计:** 把 §3.1-§3.7 的选型论据汇总,T6 在 7/7 维度都更好服务 Phase 44 决策;Kimi 在 7/7 维度都至少违反一条决策。
+
+| 维度 | T6 选型论据(决策号) | Kimi 违反决策号 | gap 性质 |
+|------|---------------------|----------------|----------|
+| §3.1 协议 | 决策 1 | 决策 1(违反 Microsoft 三层)+ 决策 5(agent identity 在 CC filesystem,非 platform-native) | 业界共识 gap(Microsoft 三层) |
+| §3.2 dispatch | 决策 5 + 7 | 决策 5(30-day cleanup)+ 6(source-scoped 非 namespace)+ 7(tools whitelist CC-controlled) | paradigm gap(agent 拥有权归属) |
+| §3.3 callback | 决策 7 + 3 | 决策 3(无 round table)+ 7(CC 全控) | 功能 gap(无法表达协商) |
+| §3.4 state | 决策 5 + 6 | 决策 6(30-day cleanup + shared graph + 无 curator) | paradigm gap(per-agent memory 不可表达) |
+| §3.5 多 agent | 决策 3 + 7 | 决策 3(无协商)+ 7(违反 GLM concurrency policy) | 功能 gap + 政策 gap |
+| §3.6 实现成本 | 决策 4 | 决策 4(shared graph 是 project-scoped,G2 难实施) | 工程量低估 |
+| §3.7 稳定性 | 决策 6 | 决策 6(直接违反)+ 8/14 PITFALLS 字段级 mitigation 缺失 | schema-level paradigm gap(最 stark) |
+
+**关键观察:** Kimi 方案在 7 个维度都违反决策,但**违反性质不同**:
+
+- **功能 gap(§3.3 + §3.5):** Kimi 方案缺 round table / memory conflict arbitration 概念 —— 理论上可以通过工程投入补足(给 Kimi 方案加 round table MCP tools),但这样 Kimi 方案就变成 T6 了
+- **paradigm gap(§3.2 + §3.4 + §3.7):** Kimi 方案根本不支持 per-agent scoped memory / curator self-evolution / agent 拥有权在 Hermes —— 这不是「工程量不够」,是「Kimi paradigm 不同」(CC 是 agent container vs Hermes 是 agent container)
+- **业界共识 gap(§3.1):** Kimi 方案违反 Microsoft 三层 —— 这是外部权威 anchor,与 v10.0 自身决策无关
+- **政策 gap(§3.5):** Kimi 方案的 background 并发与 GLM concurrency==1 policy 矛盾 —— 这是 v10.0 特定政策约束,不是 Kimi 方案本身缺陷
+
+**这 4 种 gap 性质的 practical implication:**
+
+- **功能 gap 可补足,但补足后 Kimi 方案 = T6** —— 即 Kimi 方案不存在独立演化路径,只能向 T6 收敛
+- **paradigm gap 不可补足** —— Kimi 方案的「CC 是 agent container」与 v10.0 的「Hermes 是 agent container」根本对立,Kai user memory `hermes-native-expert-agents.md`(2026-07-06)已显式否决 Kimi paradigm
+- **业界共识 gap 给 v10.0 外部 anchor** —— SC#4 验证依赖这个 anchor,本 doc §4 是这个 anchor 的完整论证
+- **政策 gap 是 v10.0 特定约束** —— 若未来 GLM 容量扩展允许 concurrency > 1,这条 gap 可能消失(但其他 3 条不会)
+
+---
+
+---
+
+## §4 — Microsoft Three-Layer Protocol Validation(SC#4 Deep-Dive)
+
+### §4.0 — 本节是 ROADMAP SC#4 的完整论证
+
+本节是 **ROADMAP SC#4(Microsoft three-layer protocol validation citing FEATURES §7.4 B7.1 proving v10.0 T6 aligns with industry consensus)** 的完整论证。§1.5.1 已声明 citation,§4 给完整 mapping + Kimi violation analysis + 业界共识论证。
+
+**Microsoft 指引是 FEATURES §7.4 B7.1 引用的一手源(HIGH 置信度):** Microsoft multi-agent-patterns 官方指引([learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns](https://learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns)),由 Microsoft Agent Framework v1.0 GA(2026-04)+ Microsoft multi-agent-patterns 团队维护。这是业界权威指引,与 v10.0 设计的对照验证 T6 与业界共识一致。
+
+### §4.1 — Microsoft 三层引用(verbatim from FEATURES §7.4)
+
+**Citation verbatim from FEATURES §7.4 B7.1(source: Microsoft multi-agent-patterns 官方指引):**
+
+> - **Platform-native orchestration** for internal flows(平台原生,最低成本)
+> - **MCP** for tool and data access(MCP 做 agent ↔ tool)
+> - **A2A** for cross-platform agent-to-agent messaging(A2A 做 agent ↔ agent,跨厂商)
+
+**MCP vs A2A selection table(verbatim from FEATURES §7.3 source):**
+
+| 能力 | MCP | A2A |
+|------|-----|-----|
+| Multimodality | 需 host 支持 | 显式 advertisement |
+| Multi-turn interactions | host 持 context | `contextId` 跨 agent |
+| Orchestration | host orchestrate | invoked agent 自己 reason |
+| Negotiation | client 更新才支持 | 动态 negotiation |
+
+**Source authority:** Microsoft Agent Framework v1.0 GA(2026-04)+ Microsoft multi-agent-patterns 官方指引(URL: [learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns](https://learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns))。FEATURES §7 置信度 HIGH —— 主源是 Microsoft 官方文档,本 doc 引用不再降级。
+
+### §4.2 — v10.0 T6 → Microsoft 三层 mapping table
+
+| Microsoft layer | v10.0 T6 instantiation | Phase 44 决策 | Citation |
+|-----------------|------------------------|---------------|----------|
+| **Platform-native(internal flows)** | Hermes Python runtime —— agent registry YAML loader, dispatcher, curator, mem0 backend | 决策 5(agent 是 Hermes-side entity)+ 6(curator-driven)+ 7(Hermes 控结构) | ARCHITECTURE §4 dispatch path;STACK §1 Recommended Stack |
+| **MCP(tool access)** | Hermes MCP server extends `mcp_serve.py` with 7 STACK-form tools(STACK §3.2 STACK-form naming)—— CC calls these tools for agent persona / opinion / memory / round table lifecycle | 决策 1(T6 协议)+ 7(Hermes 暴露结构 via schema) | STACK §1 + §3.2;Phase 46 §5 MCP tool contract |
+| **A2A(cross-platform)** | **Deferred —— v10.0 single-vendor internal,不需要 A2A.** v12+ 跨厂商协作时 A2A 是正确协议(per B7.4)。 | 决策 1(T6 排除 A2A for v10.0) | FEATURES §8.3 + B7.4;06-CROSS-REPO-IMPACT.md will record 扩展位 |
+
+**Mapping 结论:** T6 完全 align Microsoft 三层 —— internal flow 走 Hermes Python runtime(platform-native,Microsoft 说「最低成本」)+ tool access 走 MCP(Hermes MCP server extends `mcp_serve.py`)+ cross-platform 不需要(v10.0 single-vendor)。这与 Phase 44 §2.1 决策 1 推导链一致。
+
+### §4.3 — Kimi 全 MCP shim → Microsoft 三层 violation analysis
+
+Kimi 方案在 Microsoft 三层框架下是 anti-pattern,具体违反 3 条:
+
+**Violation 1:** Kimi 把 agent ↔ agent 协调塞进 MCP tools(`create_agent` / `assign_task` / `send_agent_message` / `broadcast_message` per Agent-MCP §7.2)。Microsoft 三层明确「**MCP for tool and data access**」—— MCP 单一职责是 agent ↔ tool,不是 agent ↔ agent。Kimi 方案在 Microsoft 框架下是 anti-pattern:agent ↔ agent 协调应走 platform-native(同 host,如 Hermes Python runtime 内部 dispatch)或 A2A(跨厂商),不应走 MCP。
+
+**Violation 2:** Kimi 把 agent identity 放在 CC filesystem(`.claude/agents/*.md`),不是 platform-native。Microsoft「**Platform-native orchestration for internal flows**(平台原生,最低成本)」意味着 internal agent lifecycle 应由 platform runtime 管(Hermes Python),不是 client-side filesystem。`.claude/agents/` 是 CC 工作目录,不是 platform runtime —— Kimi 方案违反 Microsoft「platform-native」原则。
+
+**Violation 3:** Kimi 不为 A2A 留扩展位 —— 共享 knowledge graph 是 project-scoped,跨厂商协作时无法切换到 A2A。T6 把 agent identity 放在 Hermes runtime,未来可暴露 A2A Agent Card(FEATURES §8.1 B8.1)。Kimi 方案的 shared graph 是 lock-in,扩展位缺失。
+
+### §4.4 — 业界共识论证(B7.1 + B2.2 + B7.4 三条 borrowable points 一致结论)
+
+**B7.1(Microsoft 指引):** 「三层协议分层(platform / MCP / A2A)验证 T6」 —— T6 完全 align(§4.2 mapping table)。
+
+**B2.2(MAF "A2A 一等公民" 立场):** Microsoft Agent Framework 把 A2A 作为一等公民,但明确「**A2A for cross-platform**」—— v10.0 是 single-vendor(Hermes ↔ CC),所以不依赖 A2A 与 MAF 立场一致。MAF 推 A2A 是因为 MAF 面向 cross-vendor 场景,v10.0 不在 MAF target scenario 内。
+
+**B7.4(MS 指引 A2A 扩展位):** 「**A2A 是 v12+ 跨厂商扩展位**」 —— T6 留扩展位(Hermes runtime 作 A2A Agent Card publisher,06-CROSS-REPO-IMPACT.md 记录),Kimi 方案不留(shared graph lock-in)。
+
+**结论:** 三个 FEATURES borrowable points(B7.1 + B2.2 + B7.4)都指向同一结论 —— **T6 与 Microsoft / MAF 业界共识一致,Kimi 方案违反三层分层**。这不是「T6 凑巧 align Microsoft」,而是「v10.0 paradigm shift 的根本需求(决策 1 — 稳定、低故障面、可演进的通信通道)与 Microsoft 业界共识同构」—— Phase 44 §2.1 决策 1 推导从根本需求出发,Microsoft 三层从业界共识出发,两者独立得出一致结论。
+
+### §4.5 — A2A 扩展位声明
+
+**v10.0:** 不需要 A2A —— single-vendor Hermes ↔ CC,Microsoft「Platform-native + MCP」两层足够。
+
+**v12+:** 若 Kai 未来想让 hermes-agent 与外部 agent 系统协作(e.g. 另一个项目 / 另一个 LLM provider / 另一个厂商的 agent framework),A2A 是正确协议。具体扩展位:
+
+- Hermes runtime 作 A2A Agent Card publisher(暴露 `agent_card` JSON via HTTP endpoint)
+- A2A Task lifecycle 状态机(submitted / working / input-required / completed / failed)映射到 round table state(Phase 46 round-table-state-schema `status` enum)
+- A2A `contextId` 映射到 roundId
+
+**Citation:** FEATURES §8 + B7.4 + B8.3。**Defer 到 06-CROSS-REPO-IMPACT.md 记录扩展位 —— 本 doc 只声明 v10.0 不需要 A2A + 留扩展位。**
+
+### §4.6 — Microsoft 三层验证的 reviewer 角度总结
+
+**Kai(reviewer)视角的 §4 一句话总结:** v10.0 决策 1 选 T6 协议层,与 Microsoft multi-agent-patterns 官方指引(FEATURES §7.4 B7.4 引用,HIGH 置信度 source)的「Platform-native + MCP + A2A」三层分层**完全一致**;Kimi 全 MCP shim 方案违反三层分层(agent ↔ agent 不应走 MCP / agent identity 不应在 client filesystem / shared graph 不留 A2A 扩展位)。这不是 v10.0 凑巧 align 业界,而是 v10.0 paradigm shift 的根本需求(决策 1:稳定、低故障面、可演进)+ Microsoft 业界共识**独立得出同构结论** —— Phase 44 §2.1 决策 1 推导链(从「Hermes 与 CC 之间需要稳定、低故障面、可演进的通信通道」根本需求推 T6)+ Microsoft 三层(从 cross-vendor agent ecosystem 实战经验推 platform-native / MCP / A2A 分层)是两条独立路径到达同一结论。
+
+**Kimi 续聊对照视角的 §4 一句话总结:** 本 doc 不否定 Kimi 方案在「single-vendor + minimize engineering effort」目标下的合理性,但 Microsoft 业界共识给了一个**外部权威 anchor** —— 「internal flow → platform-native;tool access → MCP;cross-platform → A2A」。Kimi 方案把 agent ↔ agent 塞进 MCP 违反这个共识,不是因为 v10.0 说它违反,而是因为 **Microsoft 作为业界权威指引说它违反**。这是 SC#4 的核心论证:**v10.0 T6 与业界共识一致,不需要 v10.0 自我证明**。
+
+**v11.0 PoC 实施者视角的 §4 一句话总结:** 当实施者问「为什么我们 extend `mcp_serve.py` 而不是把 agent ↔ agent 也塞进 MCP?」,§4.1 + §4.3 violation 1 是答案 —— Microsoft 业界共识说 MCP 单一职责是 tool access,把 agent ↔ agent 塞进 MCP 是 anti-pattern。当实施者问「v12+ 我们要不要切到 A2A?」,§4.5 是答案 —— v10.0 留扩展位,v12+ 跨厂商时启用,具体扩展位记录在 06-CROSS-REPO-IMPACT.md。
+
+**Microsoft multi-agent-patterns URL citation(Phase 51 lint 用):** [learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns](https://learn.microsoft.com/en-us/agents/architecture/multi-agent-patterns) —— FEATURES §7.4 B7.1 引用的一手源,HIGH 置信度。Phase 51 VALIDATE lint script 检查本 doc 是否包含此 URL(cross-doc consistency)。
+
+**Claude Agent SDK subagents docs URL citation(§5 deep-dive 用):** [code.claude.com/docs/en/agent-sdk/subagents](https://code.claude.com/docs/en/agent-sdk/subagents) —— FEATURES §4.2 + §4.3 引用的一手源,HIGH 置信度。§5 subagent rejection deep-dive 会 verbatim 引用 §4.3 三个 fact,每个 fact 都可 trace 到此 URL。
+
+**Microsoft Agent Framework v1.0 GA URL(供 v12+ 跨厂商协作时参考):** [learn.microsoft.com/en-us/agent-framework/overview](https://learn.microsoft.com/en-us/agent-framework/overview) —— MAF v1.0 GA(2026-04),v12+ hermes-agent 与外部 agent 系统协作时参考。本 doc §4.5 A2A 扩展位声明会引用此 URL。
+
+**A2A 协议 URL(Google → Linux Foundation,供 v12+ 扩展位参考):** [deeplearning.ai/courses/a2a-the-agent2agent-protocol](https://www.deeplearning.ai/courses/a2a-the-agent2agent-protocol) —— A2A 协议由 Google Cloud 2025-04 启动,2025 年中捐给 Linux Foundation,Microsoft + Google + Salesforce 等背书(FEATURES §8.1 引用,HIGH 置信度)。v12+ 跨厂商协作时,A2A 是正确协议(不是 MCP,不是 Kimi 全 MCP shim)。
+
+**Agent-MCP 项目 URL(Kimi 方案 close cousin,§2.4 引用):** [github.com/rinadelph/Agent-MCP](https://github.com/rindelph/Agent-MCP) —— Agent-MCP 是 FEATURES §7.1-§7.2 引用的社区项目,把多个 AI agent 通过 MCP 协调,核心卖点是「persistent knowledge graph + agent fleet management + 文件级 lock」。Kimi 方案的「full MCP shim」借鉴自 Agent-MCP 模式。本 doc §2.4 + §3.1 + §3.4 + §4.3 violation 1 引用。
+
+**v11.0 PoC 实施者的 §4 总结:** §4 是 SC#4 的完整论证 —— T6 与 Microsoft 三层 100% align,v11.0 PoC 实施 `mcp_serve.py` 7 tool 扩展时不需要重新论证「为什么 MCP 是正确的协议层」,直接 cite §4.2 mapping table 即可。当 reviewer(Kai 或 Kimi 续聊)问「v10.0 协议层是否符合业界共识」,§4.4 + §4.6 是答案。
+
+
+
