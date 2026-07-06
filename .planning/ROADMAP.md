@@ -119,7 +119,7 @@ Plans:
   5. Retained-phases allowlist 显式声明(`run_python_phase` 只接受 Step 7/10/11/12/0/6.5/15,allowlist 位置在 `round-table-schema.yaml`,解决 OQ-10)+ 旧 v7.0 mem0 `agent_id=hermes` memory 遗留策略(解决 OQ-3)
 **Plans**: 1 plan
 Plans:
-- [ ] 49-01-PLAN.md — 15-expert 75-cell transform rules (5-field per-expert table + edge cases + FOUND-08 preserved) + default_invocation skill_fallback → mcp_tool switching (3-state enum + 12-cell failure matrix + transition path) + memory schema migration (v6.0 FeedbackStore → memory-record-schema, schema_version + dry-run + safe-default mitigates P14) + retained-phases allowlist (Steps 0/6.5/7/10/11/12/15 in round-table-state-schema.yaml) + legacy v7.0 mem0 agent_id=hermes policy + Phase 44 7 决策 audit + OQ-3/OQ-10/P14 resolution (5 tasks, single deliverable ~1300+ lines)
+- [x] 49-01-PLAN.md — 15-expert 75-cell transform rules (5-field per-expert table + edge cases + FOUND-08 preserved) + default_invocation skill_fallback → mcp_tool switching (3-state enum + 12-cell failure matrix + transition path) + memory schema migration (v6.0 FeedbackStore → memory-record-schema, schema_version + dry-run + safe-default mitigates P14) + retained-phases allowlist (Steps 0/6.5/7/10/11/12/15 in round-table-state-schema.yaml) + legacy v7.0 mem0 agent_id=hermes policy + Phase 44 7 决策 audit + OQ-3/OQ-10/P14 resolution (5 tasks, single deliverable ~1300+ lines)
 **UI hint**: no
 
 ### Phase 50: POC-PLAN
@@ -189,7 +189,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 46. ROUND-TABLE-PROTOCOL | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 47. KIMI-COMPARISON | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 48. CROSS-REPO-IMPACT | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 49. MIGRATION-PATH | v10.0 | 0/TBD | Not started | - |
+| 49. MIGRATION-PATH | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 50. POC-PLAN | v10.0 | 0/TBD | Not started | - |
 | 51. VALIDATE | v10.0 | 0/TBD | Not started | - |
 
