@@ -134,7 +134,7 @@ Plans:
   5. PoC 实施路径图(从 fitness battery → schema migration dry-run → bias canary 顺序,引用 STACK §7 token 成本估算 ~550K/pipeline run)
 **Plans**: 1 plan
 Plans:
-- [ ] 50-01-PLAN.md — v10.0 capstone PoC blueprint: vertical slice selection (creative=screenplay Step 3 + infra=agent registry + 1 round table) + 7-item acceptance criteria (12 person-days total) + 7-row risk register (P1/P2/P4/P5/P7/P8 must-fix + P6 PARTIAL) + implementation path (fitness battery → schema migration dry-run → bias canary sequence) + Phase 44 7 决策 audit + OQ-7/OQ-16/P14 resolution (5 tasks, single deliverable ~1300+ lines)
+- [x] 50-01-PLAN.md — v10.0 capstone PoC blueprint: vertical slice selection (creative=screenplay Step 3 + infra=agent registry + 1 round table) + 7-item acceptance criteria (12 person-days total) + 7-row risk register (P1/P2/P4/P5/P7/P8 must-fix + P6 PARTIAL) + implementation path (fitness battery → schema migration dry-run → bias canary sequence) + Phase 44 7 决策 audit + OQ-7/OQ-16/P14 resolution (5 tasks, single deliverable ~1300+ lines)
 **UI hint**: no
 
 ### Phase 51: VALIDATE
@@ -192,7 +192,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 47. KIMI-COMPARISON | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 48. CROSS-REPO-IMPACT | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 49. MIGRATION-PATH | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 50. POC-PLAN | v10.0 | 1/1 | Planned     | - |
+| 50. POC-PLAN | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 51. VALIDATE | v10.0 | 0/TBD | Not started | - |
 
 ---
