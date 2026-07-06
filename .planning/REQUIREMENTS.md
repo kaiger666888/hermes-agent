@@ -179,27 +179,34 @@ End-of-milestone audit: 15/15 reqs verified, vertical slice end-to-end smoke tes
 
 ## Traceability
 
-| REQ-ID | Phase (planned) | Category | Person-days |
-|--------|-----------------|----------|-------------|
-| INFRA-01 | 52 | INFRA | (bundled with INFRA-02) |
-| INFRA-02 | 52 | INFRA | 2 |
-| INFRA-03 | 52 | INFRA | 1 |
-| INFRA-04 | 52 | INFRA | 0.5 |
-| CREATIVE-01 | 53 | CREATIVE | 1 |
-| CREATIVE-02 | 53 | CREATIVE | 1 |
-| EVAL-01 | 54 | EVAL | 3 |
-| EVAL-02 | 54 | EVAL | 2 |
-| EVAL-03 | 54 | EVAL | 2 |
-| EVAL-04 | 55 | EVAL | 1 |
-| EVAL-05 | 55 | EVAL | 1 |
-| EVAL-06 | 55 | EVAL | 1 |
-| EVAL-07 | 55 | EVAL | 2 |
-| MIGR-01 | 53 | MIGR | 1 |
-| VALIDATE-01 | 56 | VALIDATE | 1 |
+| REQ-ID | Phase | Category | Person-days | Status |
+|--------|-------|----------|-------------|--------|
+| INFRA-01 | 52 | INFRA | (bundled with INFRA-02) | Pending |
+| INFRA-02 | 52 | INFRA | 2 | Pending |
+| INFRA-03 | 52 | INFRA | 1 | Pending |
+| INFRA-04 | 52 | INFRA | 0.5 | Pending |
+| MIGR-01 | 53 | MIGR | 1 | Pending |
+| CREATIVE-01 | 53 | CREATIVE | 1 | Pending |
+| CREATIVE-02 | 53 | CREATIVE | 1 | Pending |
+| EVAL-01 | 54 | EVAL | 3 | Pending |
+| EVAL-02 | 54 | EVAL | 2 | Pending |
+| EVAL-03 | 54 | EVAL | 2 | Pending |
+| EVAL-04 | 55 | EVAL | 1 | Pending |
+| EVAL-05 | 55 | EVAL | 1 | Pending |
+| EVAL-06 | 55 | EVAL | 1 | Pending |
+| EVAL-07 | 55 | EVAL | 2 | Pending |
+| VALIDATE-01 | 56 | VALIDATE | 1 | Pending |
 
 **Total:** 15 reqs · 19.5 person-days (slightly above 12-day PoC budget due to MIGR-01 + close-out; MIGR-01 can shrink to 0.5d if transform rules from Phase 49 §2 are sufficiently tight)
 
 **Coverage:** 15/15 mapped · Phases 52-56 (5 phases planned) · No orphans.
+
+**Phase mapping rationale:**
+- **Phase 52 (INFRA-FOUNDATION):** INFRA-01..04 — agent registry + 7 MCP tools + state machine + serial enforcement. First phase because 53-55 build on its runtime.
+- **Phase 53 (CREATIVE-SLICE):** MIGR-01 + CREATIVE-01..02 — MIGR-01 bundled here because CREATIVE-01 needs the 9 sample agent YAMLs as precondition. Splitting would force a non-value-add dependency wall.
+- **Phase 54 (EVAL-HARNESS-1):** EVAL-01..03 — fitness battery (FIRST per `05-POC-PLAN.md` §6.1) + latency SLO + bias canary (THIRD per §6.1).
+- **Phase 55 (EVAL-HARNESS-2):** EVAL-04..07 — compaction + threshold tuning + dry-run-first + schema migration dry-run (SECOND per §6.1). Phase 54 ships before 55, preserving §6.1 sequencing rationale (fitness battery = regression-detection foundation).
+- **Phase 56 (VALIDATE):** VALIDATE-01 — strictly LAST, analog to v10.0 Phase 51 / v5.0 Phase 27 close-out pattern.
 
 ---
 
@@ -216,4 +223,4 @@ End-of-milestone audit: 15/15 reqs verified, vertical slice end-to-end smoke tes
 
 ---
 
-*Last updated: 2026-07-07 — v11.0 PoC requirements defined (15 reqs across INFRA/CREATIVE/EVAL/MIGR/VALIDATE). Roadmap next: 5 phases (52-56).*
+*Last updated: 2026-07-07 — v11.0 ROADMAP created (5 phases 52-56, 15/15 reqs mapped, all status=Pending). Traceability table aligned with ROADMAP phase mapping. Next: plan Phase 52 (`/gsd:plan-phase 52`).*
