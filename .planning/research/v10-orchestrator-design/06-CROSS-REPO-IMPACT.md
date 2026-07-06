@@ -465,3 +465,212 @@ def _detect_skill_agent_drift() -> List[Dict[str, Any]]:
 - **Source:** 决策 5 (α form is operator-owned identity) + Phase 45 SC#1 + PITFALLS §P1 mitigation 4.
 - **Enforcement:** §2.4 write authority matrix row 1 + curator code path explicit field whitelist (`evolution_log` / `fitness_score` / `last_fitness_battery_run_at` —— 其他 fields rejected).
 
+---
+
+## §4 Option B vs Physical Partition Migration Trigger Conditions (SC#3 Deep-Dive, OQ-12 + CC-4 Resolution)
+
+### §4.0 Elaboration 声明 (SC#3 Framing)
+
+本节是 **ROADMAP SC#3 的完整论证** + **SUMMARY OQ-12 + CC-4 的 resolution**.
+
+§1.5.2 已声明 citation anchors. §4 给完整论证 + **net-new 的迁移触发条件 heuristics**.
+
+**Problem framing:**
+
+- **ARCHITECTURE §3.2** 推荐 Option B (mem0 单 backend + `agent_id` filter) 用于 v11.0 PoC.
+- **PITFALLS §P3 mitigation 1** 推荐 Physical Partition (每 agent 一 workspace) 用于 v12+ 规模.
+- **但两者都没给具体触发条件** —— "什么时候切换?" 是 open question.
+
+**本节的贡献 (net-new):** §4.4 给 **3 类阈值** (规模 / latency / 安全) 共 8 个 numeric triggers (A1-A3 + B1-B3 + C1-C2). 这是本 doc 唯一的 net-new 设计内容 (其余都是 cite + elaborate). **CC-4 显式要求** "这个生命周期决策要在 `06-CROSS-REPO-IMPACT.md` 显式记录, 避免 v12 实施者重新讨论一遍" —— 本节完成.
+
+### §4.1 Option B 完整定义
+
+**Cite ARCHITECTURE §3.2 verbatim:**
+
+> Option B — `agent_id` field as scoping key (RECOMMENDED). mem0 single backend, per-call `agent_id` filter routes memory. Lightest infrastructure, no per-agent collection management.
+
+**Implementation:**
+
+- Additive `_scoped_agent_id` extension to existing mem0 plugin per ARCHITECTURE §3.3 code skeleton:
+  - `initialize(session_id, **kwargs)` accepts optional `agent_scope: str | None` kwarg.
+  - `_read_filters()` returns `{"user_id": self._user_id, "agent_id": self._scoped_agent_id}` when scoped (currently only returns `{"user_id"}`).
+  - `handle_tool_call(tool_name, args, **kwargs)` accepts optional `agent_scope` from dispatcher; uses `contextvars` (per SUMMARY "Gaps to Address" + `agent/tool_executor.py` 已用 contextvars).
+- Every `mem0.add()` and `mem0.search()` call routes through `contextvars` set by dispatcher (per Phase 45 memory-record-schema `agent_id` required field).
+
+**Reuses:** v7.0 ship of `plugins/memory/mem0/__init__.py` (375 lines) —— additive, not rewrite. MEMORY.md `kais-movie-agent-v5-hermes-native-migration.md` 已确认 v7.0 ship status.
+
+**Pros:**
+
+- **Lightest infrastructure** —— 单 mem0 backend, 无 per-agent ops (monitoring / backup / gc × N).
+- **API unchanged** from existing mem0 surface —— existing v7.0 call sites 不需修改.
+- **No migration cost at v11.0 PoC kickoff** —— day-1 就可用.
+
+**Cons:**
+
+- **HNSW global-graph + post-filter strategy hits latency wall at scale** (per PITFALLS §P3 — per-agent scoping 是 post-retrieval filter, scanning 50-100× more nodes than necessary).
+- **Shared workspace means imperfect filter = bleed-through risk** (per PITFALLS §P12 — cross-agent contamination via shared mem0 workspace).
+
+### §4.2 Physical Partition 完整定义
+
+**Cite PITFALLS §P3 mitigation 1 verbatim:**
+
+> Physical partitioning over logical filtering. Don't rely on mem0's `agent_id` filter alone. Use one mem0 project/workspace per agent (mem0 supports workspace-level isolation). The filter `user_id` then narrows within the agent's workspace. This requires 18 mem0 workspaces but gives O(per-agent-records) retrieval instead of O(all-records) post-filter.
+
+**Implementation:**
+
+- Each `~/.hermes/agents/{name}.agent.yaml` mapped to one mem0 collection (or one mem0 instance —— deployment-dependent, v12+ design decision).
+- `agent_id` field becomes workspace selector instead of filter key.
+- Per-agent memory record count bounded by `memory.max_records: 500` per agent (PITFALLS §P3 mitigation 3 + Phase 45 SC#2).
+
+**Pros:**
+
+- **Stable latency under scale** —— no HNSW global-graph post-filter; O(per-agent-records) retrieval.
+- **No cross-agent bleed-through** —— PITFALLS §P12 risk 消除 at infrastructure level (workspace isolation).
+- **Per-agent backup / restore granularity** —— operational benefit at v12+ scale.
+
+**Cons:**
+
+- **N backends to operate** —— monitoring / backup / gc × N (N = agent count). v12+ 30+ agents 意味着 30+ mem0 workspaces.
+- **Heavier initial setup** —— provisioning automation, per-agent configuration management.
+- **Cross-agent queries require federated search** —— e.g. "what did screenplay and cinematographer both learn from Volvo case?" 需要 federated query across multiple workspaces (mem0 Platform API 不原生支持 federated).
+
+### §4.3 API 不变性声明 (API Surface Invariance)
+
+**Cite SUMMARY CC-4 + STACK §3.2 Tool 3 verbatim:**
+
+> STACK §3.2 Tool 3: `get_agent_memory(name, topic, ...)` —— takes `name` (agentId) as required parameter. Option B interprets `name` as **filter key on single backend**; Physical Partition interprets `name` as **workspace selector**. **API surface is identical.**
+
+**Lock-in implication:**
+
+- **v11.0 PoC implementer writes agent YAML + dispatcher + MCP tools once.**
+- **v12+ migration touches ONLY mem0 backend deployment + `_scoped_agent_id` extension internals.** Zero upstream code change.
+- **决策 6 (per-agent memory) 的 API contract 不变** —— agent YAML schema / dispatcher routing / 7 MCP tool contract / round-table protocol 都 **unaffected** by backend switch.
+
+**Test surface implication:**
+
+- v11.0 PoC integration tests (mock mem0 backend) **remain valid for v12+ Physical Partition** (mock interface unchanged).
+- v11.0 PoC 的 `agent_id` filter enforcement audit test (§4.5) 在 v12+ 变成 workspace isolation test —— 但 test 抽象层不变.
+
+**决策 7 (分层 CC 角色) reinforcement:** Hermes 控 API contract (schema / dispatch / state), CC 通过 MCP tool 间接交互 —— backend switch 在 Hermes 层完成, CC 完全无感知.
+
+### §4.4 迁移触发条件 Heuristics (Net-New Contribution — THREE THRESHOLD CLASSES)
+
+**这是本 doc 的 net-new contribution.** 三类阈值, 每类给具体数值 + 监控点 + 触发动作.
+
+#### Class A — 规模阈值 (Scale Threshold)
+
+- **A1: Agent count ≥ 30.**
+  - **Rationale:** v11.0 PoC = 15 agents (safe under Option B). v12+ projected 30+ agents (per kais-movie-pipeline + 未来 skill-to-agent transforms). HNSW global graph complexity grows superlinearly with agent count (per PITFALLS §P3 §"Mechanism").
+  - **Monitoring point:** `len(agent_registry.list_agents())` at Hermes startup.
+  - **Trigger action:** agent count crossing 30 = **advisory** (log warning + dashboard notification); crossing 50 = **mandatory migration evaluation** (open v12+ design milestone).
+
+- **A2: Project count ≥ 10.**
+  - **Rationale:** v11.0 PoC = 1-2 projects (kais-movie-pipeline vertical slice + 1 infra). v12+ projected 10+ active projects. Per-project memory namespace multiplicative with agent count.
+  - **Monitoring point:** count distinct `project_slug` in `.runtime/*/round_tables/*.json` over last 30 days.
+  - **Trigger action:** project count crossing 10 = **advisory**.
+
+- **A3: Memory record total ≥ 5000.**
+  - **Rationale:** v11.0 PoC budget = 15 agents × 500 records = 7500 max (per PITFALLS §P3 mitigation 3 + Phase 45 SC#2 `memory.max_records: 500`). HNSW graph degradation 起始 around 5K records with post-filter.
+  - **Monitoring point:** `mem0.get_all()` total count, sampled weekly.
+  - **Trigger action:** total records crossing 5000 = **advisory**; crossing 10000 = **mandatory**.
+
+#### Class B — Latency 阈值 (Latency Threshold)
+
+- **B1: p95 retrieval latency > 500ms.**
+  - **Rationale:** Per STACK §11.4 + ARCHITECTURE §3.2 + Phase 50 SC#3 PoC acceptance criterion. v11.0 PoC week-1 benchmark establishes baseline.
+  - **Monitoring point:** `_latency_ms` field on every memory retrieval log entry (per PITFALLS §P3 mitigation 4). Stats CLI exposes p50/p95/p99 per agent.
+  - **Trigger action:** rolling 7-day p95 > 500ms = **mandatory migration evaluation**.
+
+- **B2: p99 retrieval latency > 2000ms.**
+  - **Rationale:** Tail latency 指示 HNSW graph degradation under load.
+  - **Monitoring point:** same as B1.
+  - **Trigger action:** rolling 7-day p99 > 2000ms = **mandatory**.
+
+- **B3: Retrieval failure rate > 1%.**
+  - **Rationale:** mem0 timeout / OOM under scale. Circuit breaker (`_BREAKER_THRESHOLD = 5`, `_BREAKER_COOLDOWN_SECS = 120` per ARCHITECTURE §3.1 + PITFALLS §P3 §"Why it happens") trips.
+  - **Monitoring point:** failure count / total call count, 24-hour rolling window.
+  - **Trigger action:** any 24-hour window with > 1% retrieval failure = **immediate incident** + migration evaluation.
+
+#### Class C — 安全阈值 (Safety Threshold)
+
+- **C1: Cross-agent contamination detected (PITFALLS §P12).**
+  - **Rationale:** Any confirmed case of agent A's memory record appearing in agent B's retrieval results. PITFALLS §P12 mitigation 3 specifies periodic invariant test `_check_workspace_isolation(agent_A, agent_B)`.
+  - **Monitoring point:** periodic invariant test (daily) + on-demand audit.
+  - **Trigger action:** any confirmed contamination = **immediate migration to Physical Partition** (eliminates bleed at infrastructure level).
+
+- **C2: Filter bypass vulnerability.**
+  - **Rationale:** Any code path that calls `mem0.search()` without setting `agent_id` filter (per ARCHITECTURE §3.3 invariants + PITFALLS §P12 mitigation 2 "agent_id is REQUIRED on every memory write and every retrieve").
+  - **Monitoring point:** code audit (CI lint) + runtime invariant check.
+  - **Trigger action:** must fix in current release; if recurring (3+ bypass bugs in 6 months), migrate to Physical Partition (**defense in depth** —— 物理隔离 eliminates filter as dependency).
+
+- **C3: Privacy audit failure.**
+  - **Rationale:** Any external audit finding per-agent memory isolation insufficient (per PITFALLS §P10 privacy + Phase 45 `confidentiality` field).
+  - **Monitoring point:** external audit (frequency per Kai's compliance posture).
+  - **Trigger action:** case-by-case; Physical Partition 是 available mitigation option.
+
+**Trigger presentation format (Phase 51 VALIDATE lint should verify):** each trigger as `{ID, threshold, monitoring point, trigger action, source citation}`. 见上表.
+
+**Important note on trigger thresholds:** 这 8 个 numeric thresholds 是 **STARTING-POINT**, 不是 gospel. §7.2 偏差分析 explicit 声明: 这些 thresholds 是 revisable in Phase 51 audit based on v11.0 PoC 实测数据. v11.0 PoC implementer 不应该 because "agent count 已达 30" 就 panic-migrate —— 应该 run §4.5 acceptance benchmark 看 latency 是否真的 degrade.
+
+### §4.5 v11.0 PoC 验收条件 (Acceptance Criteria)
+
+**Latency benchmark (Phase 50 SC#3):**
+
+- p95 < 500ms for `get_agent_memory` calls under realistic load (15 agents × 500 records × 1 project).
+- **Run during v11.0 PoC week-1**, before any round-table execution. Establishes baseline for Class B threshold monitoring.
+
+**Filter enforcement audit:**
+
+- All `mem0.search()` call sites in hermes-agent code pass through `_scoped_agent_id` `contextvars` (per ARCHITECTURE §3.3).
+- No bypass paths (CI lint + manual code review).
+- Periodic invariant test `_check_workspace_isolation(agent_A, agent_B)` runs daily, asserts zero cross-agent results.
+
+**Pass = proceed with Option B; Fail = trigger Physical Partition migration BEFORE round-table execution.**
+
+**Cite:** STACK §11.4 (latency SLO) + ARCHITECTURE §3.2 (Option B recommendation) + Phase 50 SC#3 (PoC acceptance criterion source) as acceptance criterion source.
+
+### §4.6 迁移路径 (Option B → Physical Partition)
+
+One-way migration. 6 steps:
+
+- **Step 1 — Export:** For each agent, `mem0.get_all(agent_id=X)` → JSONL dump to `~/.hermes/agents/.runtime/_migration/{agent_name}.jsonl`. encoding="utf-8" per CLAUDE.md PLW1514.
+- **Step 2 — Provision:** Create per-agent mem0 workspace (collection or instance, v12+ deployment decision). Provision via `mem0` CLI or API.
+- **Step 3 — Import:** Per-agent JSONL → new workspace. Verify record count + spot-check content integrity (sha256 of record content pre/post migration match).
+- **Step 4 — Switch:** Update `_scoped_agent_id` extension (ARCHITECTURE §3.3) to route by **workspace selection** instead of filter. This is the only code change —— dispatcher / agent YAML / MCP tool contract 全部不变 (per §4.3 API 不变性).
+- **Step 5 — Verify:** Re-run v11.0 PoC acceptance battery (§4.5) against new backend topology. Latency benchmark + filter audit (现在叫 workspace isolation audit) + cross-agent contamination check.
+- **Step 6 — Decommission old backend:** After 30-day shadow period (read-only fallback for rollback), archive + delete single backend.
+
+**Estimated effort:** 1-2 person-weeks (per Phase 50 SC#4 budget).
+
+**Caveat (one-way):** Migration is **ONE-WAY**. Once `_scoped_agent_id` extension switches to workspace selection, downgrade back to Option B requires reverse migration (not recommended —— re-introduces P3 + P12 risk without offsetting benefit).
+
+### §4.7 P3 + P12 风险评估更新
+
+- **P3 (Pitfall 3: Scoped Retrieval Performance Collapse):**
+  - **v11.0 PoC scale** (15 agent × 1 project × ≤500 records/agent): **LOW** risk. HNSW global graph comfortably handles this scale.
+  - **v12+ scale** (30+ agent × 10+ project × ≤500 records/agent = 150K+ records): **HIGH** risk. Triggers Class A thresholds (A1/A2/A3).
+  - **Resolution:** §4.4 Class A scale triggers + §4.6 migration path.
+
+- **P12 (Pitfall 12: Cross-Agent Memory Contamination via Shared mem0 Workspace):**
+  - **v11.0 PoC:** **LOW** risk IF filter enforcement audit passes (§4.5).
+  - **v12+:** **MEDIUM** risk due to scale-induced filter complexity (more call sites, more chances of bypass). Physical Partition eliminates entirely.
+  - **Resolution:** §4.4 Class C safety triggers (C1/C2) + §4.6 migration path.
+
+**Cite:** PITFALLS §P3 + §P12 + Phase 51 VALIDATE risk register reconciliation (will verify field-level mitigation coverage).
+
+### §4.8 A2A 扩展位声明 (Expansion Position Only)
+
+**Cite 03-COMPARISON-VS-KIMI-MCP-SHIM.md §4.5 verbatim:**
+
+> v10.0 single-vendor internal, 不需要 A2A (Agent-to-Agent protocol); v12+ 跨厂商协作时 A2A 是正确协议 (FEATURES §10 B7.4 — Microsoft 三层协议分层: internal → platform-native; tool → MCP; cross-platform → A2A).
+
+**本节只声明扩展位:**
+
+- `~/.hermes/agents/*.agent.yaml` 的 `agent_card` 子段 (Phase 45 已收, per FEATURES §8 B8.1 borrowable "Agent Card exposition") 是 A2A Agent Card 的前身.
+- v12+ 跨厂商协作时 expose 为 A2A-compatible endpoint.
+- 本 doc **不展开 A2A 协议** (out of scope for v10.0).
+
+**Implication for 3-location sync:** A2A exposition 影响 Location 1 (hermes-agent repo) —— v12+ dashboard Agents tab 需要 expose agent_card over HTTP endpoint for cross-vendor discovery. Location 2 (kais-hermes-skills) + Location 3 (`~/.hermes/agents/`) 不变.
+
+
+
