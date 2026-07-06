@@ -1,5 +1,30 @@
 # Milestones
 
+## v9.0 kais-movie-pipeline 闭环深化 (Shipped: 2026-06-27)
+
+**Phases completed:** 6 phases (38-43) · **Plans:** 13 · **Requirements:** 22 / 22 ✓
+**Tag:** `v9.0` (anchored at `599ef61a8` — Phase 43 SUMMARY commit)
+**Audit:** [`milestones/v9.0-MILESTONE-AUDIT.md`](./milestones/v9.0-MILESTONE-AUDIT.md) — status: passed (22/22 reqs, 6/6 phases, 3/3 integration flows, FOUND-08 preserved milestone-wide)
+
+**One sentence:** 把 Notion "创作方向" Tier B+C 落地为 kais-movie-pipeline 的 4 个新能力 —— 平台母版切片 / 配方库 v0 / LTX2.3 预览闭环 / 数据收敛回流 —— 加 3 个跨平台红线审核门,完成「创意→生产→分发→反馈」全闭环。
+
+**Key accomplishments:**
+
+- **P38 SLICE (Step 14 平台母版切片):** 1 master.mp4 → 7 平台 variants(抖音竖屏/横屏、快手、B 站、小红书、视频号、红果);`platform-master-slicing.md` (346 行) + SKILL.md Step 14 body + `variants[]` schema in asset-bus-schema.md
+- **P39 FORM (配方库 v0):** 新 plugin `plugins/formula_library/` + 10 seed formulas + Step 0 + theory_critic formula_reference。49 tests GREEN
+- **P40 GATE (3 新审核门):** redline_emotion_desensitize / redline_no_cold_open / redline_unfinished_ending 注册到 gates.yaml (8→11 additive)。145 tests GREEN。V8.6 8-gate structure byte-for-byte preserved
+- **P41 PREVIEW (Step 6.5 LTX2.3 预览闭环):** `ltx2-preview-loop.md` (321 行) + SKILL.md Step 6.5 + pipeline-dag.md annotation。4-state fallback policy rides existing BLOCKING-mode Gate。LTX2.3 selected as default ($0.10/clip)
+- **P42 DATA (Step 15 数据收敛):** PlatformMetrics schema + 5 adapter stubs + formula_tuning_loop + JSONL queue + HIL-gated library_writer + CLI + `data-convergence.md`。107 tests GREEN
+- **P43 VALIDATE (集成验证 + close-out):** 3 integration flows verified (SLICE→DATA / FORM→GATE / PREVIEW→Step 6)。30 SKILL.md frontmatter byte-diff all match `a2a20d2be`。`v9.0-MILESTONE-AUDIT.md` (10 sections) authored。301 tests GREEN final evidence
+
+**Cross-repo migration (post-v9.0 ship, 2026-06-27):** Commit `f10495332` moved `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 4 plugins (formula_library / kais_aigc / pipeline_state / platform_metrics / review_gates) to独立 repo `/data/workspace/kais-hermes-skills/`。hermes-agent repo 现仅保留 GSD `.planning/` 工件;v9.0 实际代码产物在 kais-hermes-skills repo。
+
+**Operator-action-handoffs (NOT gaps, per scoped-boundary design):**
+- (a) Phase 41 LTX2.3 live GPU generation testing (V9-FUTURE-02)
+- (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01)
+
+---
+
 ## v7.0 openclaw → hermes-agent Primary Agent Migration (Shipped: 2026-06-25)
 
 **Phases completed:** 4 phases (34-37) · **Plans:** 7 · **Requirements:** 14 / 14 ✓
