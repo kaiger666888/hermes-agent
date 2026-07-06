@@ -1061,6 +1061,7 @@ def _format_json(
     dimension_counts: dict[str, dict[str, int]],
 ) -> str:
     """Format findings as a JSON object with summary + per-dimension counts."""
+    counts = _count_by_severity(findings)
     payload = {
         "findings": [
             {
@@ -1075,7 +1076,9 @@ def _format_json(
         ],
         "summary": {
             "total": len(findings),
-            **{k: v for k, v in _count_by_severity(findings).items()},
+            "pass": counts.get("PASS", 0),
+            "warning": counts.get("WARNING", 0),
+            "error": counts.get("ERROR", 0),
             "exit_code": exit_code,
         },
         "dimensions": dimension_counts,
@@ -1186,4 +1189,11 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except OSError as exc:
+        # Top-level guard for unexpected OS errors (permission denied,
+        # broken symlink, etc.). Per CLAUDE.md we do NOT catch generic
+        # Exception — unexpected errors should crash with a real traceback.
+        sys.stderr.write(f"FATAL: {exc}\n")
+        sys.exit(EXIT_ERROR)
