@@ -199,3 +199,573 @@
 
 
 
+
+## §2 — 18-Field Agent YAML:Per-Field Narrative(PITFALLS 字段级缓解映射)
+
+### §2.0 — 本节结构声明
+
+本节逐字段展开 §1.2 的 18-field 表,**聚焦于 PITFALLS 字段级缓解机制 + 字段间相互引用关系**。机器可读 schema 见 `agents-schema.yaml`(JSON Schema draft 2020-12,$defs 块定义 Lineage / Prerequisites / EvolutionLogEntry 三个 reusable shapes)。每个 §2.N 子节遵循 4-block scaffold:
+
+1. **Type + Constraints + Required + Default** —— 从 agents-schema.yaml 抄录
+2. **Source + Purpose** —— 从 ARCHITECTURE §1.1 抄录
+3. **PITFALLS mitigation** —— 显式字段级机制(若 applicable),否则标 "—"
+4. **Example** —— YAML 片段(从 ARCHITECTURE §1.3 screenplay YAML 或新构造)
+
+---
+
+### §2.1 — `name`
+
+**Type:** `string` · **Constraints:** regex `^[a-z0-9_-]+$` · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 1. **Purpose:** Primary identifier; MUST match filename stem of the `.agent.yaml` file. Distinct from `expert_id`(§2.10)—— 一个 SKILL 可以 transit 到一个不同 name 的 agent。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+name: screenplay
+# Resolves to ~/.hermes/agents/screenplay.agent.yaml
+```
+
+---
+
+### §2.2 — `description`
+
+**Type:** `string` · **Constraints:** `min_length: 10` · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 2(SKILL `description` copy + refine). **Purpose:** One-line summary surfaced by `agents_list` MCP tool + Hermes dashboard。15-expert transform 时直接复制 SKILL description,可适度 refine 以反映 first-person persona framing(§2.4)。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+description: "Screenplay Expert: scene-level script generation, dialogue design, emotional arc construction for AI short film production."
+```
+
+---
+
+### §2.3 — `version`
+
+**Type:** `string` · **Constraints:** semver `^[0-9]+\.[0-9]+\.[0-9]+$` · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 3. **Purpose:** Schema version of the agent YAML itself。SKILL `version` tracks SKILL-content version;agent YAML `version` 跟踪 schema-affecting edits。Transform 时初始值 `1.0.0`,后续字段新增 / 重大 persona rewrite 时 bump。
+
+**PITFALLS mitigation:** P14(schema migration)—— `version` 是 agent-YAML-side 的 schema version 跟踪器;memory-record-schema 的 `schema_version` 字段(§3.12)是 memory-record-side 的迁移 key。两者独立但 lockstep bump。
+
+**Example:**
+```yaml
+version: 1.0.0  # initial transform
+# After adding a new optional field (e.g. fitness_battery):
+# version: 1.1.0
+```
+
+---
+
+### §2.4 — `persona`(P1 load-bearing field)
+
+**Type:** `string` (multiline) · **Constraints:** 无硬性长度限制,推荐 5-15 行 · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 4(NEW — must rewrite)。**Purpose:** The agent's system-prompt fragment. **This is the load-bearing difference from SKILL.**
+
+**PITFALLS mitigation: P1(persona drift)。** Persona 是 agent 的身份 anchor;P1 风险是 agent 经 200+ memory records + 10 projects 后,additive memory mass dilute 原 persona,使 agent forget 其角色。机制:
+
+1. **persona_sha256 invariant.** Registration 时计算 persona 的 SHA-256,写入 evolution_log 的 genesis entry(§2.14)。每次 evolution_log entry 也带当时 persona 的 sha256。Cross-layer:每条 memory record 也带 persona_sha256(§3.11)。Recall-time 若 memory record 的 persona_sha256 ≠ 当前 agent YAML 的 persona sha256,该 record 被 weight × 0.3(PITFALLS §P1 mitigation 4)。
+2. **Phase 44 §3.1 row 8 rejection(YAML-not-prompt-dump)。** Persona **不是** SKILL body 的 copy-paste —— SKILL body 是 imperative-second-person user-message("You are X. Do Y.");persona 是 first-person system-prompt fragment("I am X. I do Y.")。Mixing registers 不仅混乱,且 SKILL body 的任何 edit 都会 silently 改变 effective persona —— persona 必须 hand-crafted,且 persona_sha256 锁定其内容。
+3. **Curator cannot mutate persona fragment.** `_memory_evolution_phase`(§5)只能 append evolution_log entry 和 write memory record,**禁止**修改 persona YAML field。Same gating pattern as v6.0 bundled-skill protection(`_check_persona_section_intact` from PITFALLS §P1 mitigation 1)。
+
+**Example(ARCHITECTURE §1.3 screenplay persona verbatim):**
+```yaml
+persona: |
+  You are the Screenplay Expert in a Hermes round table. You speak in first
+  person about scene structure, Snyder 15-beat adaptation, anchor-based
+  emotion curves, and dialogue subtext. You cite save-the-cat-beat-sheet,
+  mckee-scene-design, cn-shortdrama-structure, emotion-curve-academic,
+  and dialogue-craft from your refs when justifying a recommendation.
+  You defer to hook_retention on 3-second hooks and to cinematographer on
+  shot intent. You never generate full scripts unprompted — you contribute
+  your slice when the orchestrator asks.
+```
+
+---
+
+### §2.5 — `tools`(resolves OQ-13:runtime whitelist)
+
+**Type:** `list[string]` · **Constraints:** `min_items: 1` · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 5. **Purpose:** Runtime tool whitelist。
+
+**PITFALLS mitigation:** —(resolves **OQ-13**)。**OQ-13 resolution:** YES, `tools` 是 runtime whitelist enforced by dispatcher。机制(ARCHITECTURE §4.3 dispatcher pseudocode):当 agent 被 `get_agent_opinion` 调用时,dispatcher spawn 一个 AIAgent fork,传入 `tools_whitelist` arg;该 fork 的 ToolRegistry view 过滤掉不在 whitelist 内的工具。**与 §2.12 `prerequisites.tools` 区别:** `tools` 是 runtime GRANTS(运行时能调什么);`prerequisites.tools` 是 activation CONDITIONS(运行前必须满足什么)。
+
+**Example:**
+```yaml
+tools: [hermes_llm, read_file, search_files, write_file, patch]  # screenplay
+# vs visual_executor:
+# tools: [hermes_llm, dreamina_cli, read_file, write_file, patch]
+```
+
+---
+
+### §2.6 — `memory_scope`(P4 cross-project leakage mitigation)
+
+**Type:** `enum: shared | per_agent | project_scoped` · **Required:** YES · **Default:** `per_agent`
+
+**Source:** ARCHITECTURE §1.1 row 6(NEW)。**Purpose:** mem0 routing convention。
+
+**PITFALLS mitigation: P4(cross-project leakage)。** `memory_scope=per_agent` 把 records 路由到 `user_id=agent:{name}` namespace(ARCHITECTURE §3.2 Option B)。15 movie-experts 推荐 default `per_agent`。**与 §3.9 memory-record scope 字段区别:** `memory_scope` 决定 records **路由到哪个 mem0 namespace**(coarse-grained);memory-record `scope` 决定 records 在 retrieve 时的 **cross-project visibility**(fine-grained,3-tier global/project/session)。两层隔离协同:memory_scope=per_agent + scope=project = 强隔离;memory_scope=shared + scope=global = 完全共享。
+
+**Example:**
+```yaml
+memory_scope: per_agent  # default for 15 movie-experts
+# shared = v7.0 behavior (cross-agent global user_id)
+# project_scoped = user_id=project:{slug}+agent:{name} (most isolated, future use)
+```
+
+---
+
+### §2.7 — `lineage`(operator ownership,skill drift detection)
+
+**Type:** `object` ($ref `#/$defs/Lineage`) · **Required:** YES · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 7(NEW)+ §6.1 transform procedure。**Purpose:** Records provenance:`{derived_from_skill_id, derived_from_repo, transform_date, transform_notes, skill_sha256}`。Operator-owned。
+
+**PITFALLS mitigation:** —(P14 间接 —— skill_sha256 是 drift detection 的 anchor)。机制(ARCHITECTURE §6.2 drift detection):curator's `_memory_evolution_phase`(§5)在每次 pass 开始时 recomputes SKILL.md 的 sha256,与 `lineage.skill_sha256` 比对。Mismatch 触发 **advisory**(非 automatic re-transform —— ARCHITECTURE §8.2 anti-pattern)。
+
+**Example(ARCHITECTURE §1.3 screenplay lineage verbatim):**
+```yaml
+lineage:
+  derived_from_skill_id: screenplay
+  derived_from_repo: kais-hermes-skills
+  transform_date: 2026-07-15
+  transform_notes: |
+    Persona rewritten from SKILL body; SKILL preserved as fallback.
+    HOOK-09 emotion_curve marker arrays remain contract-load-bearing.
+  skill_sha256: <sha of SKILL.md at transform time>
+```
+
+---
+
+### §2.8 — `refs`
+
+**Type:** `list[string]` · **Required:** NO · **Default:** `[]`
+
+**Source:** ARCHITECTURE §1.1 row 8。**Purpose:** RAG reference docs paths。Flattened from SKILL `## References` table。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+refs:
+  - kais-hermes-skills/skills/movie-experts/screenplay/references/save-the-cat-beat-sheet.md
+  - kais-hermes-skills/skills/movie-experts/screenplay/references/mckee-scene-design.md
+```
+
+---
+
+### §2.9 — `tags`
+
+**Type:** `list[string]` (regex `^[a-z0-9-]+$` per item) · **Required:** NO · **Default:** `[]`
+
+**Source:** ARCHITECTURE §1.1 row 9(SKILL `metadata.hermes.tags` copy)。**Purpose:** Lowercase hyphenated;powers `agents_list` filtering。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+tags: [movie, screenplay, script, dialogue, narrative, emotion-curve]
+```
+
+---
+
+### §2.10 — `expert_id`(FOUND-08 backward-compat)
+
+**Type:** `string` · **Required:** NO · **Default:** —
+
+**Source:** ARCHITECTURE §1.1 row 10(SKILL `metadata.hermes.expert_id` copy)。**Purpose:** Backward-compat anchor。
+
+**PITFALLS mitigation:** —(FOUND-08 preservation rule,Phase 44 决策 1)。**Critical:** 15 个 expert_id 值 verbatim copy,**不可 mutate**。Consumer 仍可用 `expert_id: screenplay` 调用 SKILL;dispatcher 根据当前 agent 的 `default_invocation`(§2.18)决定 route 到 agent 还是 fall through 到 SKILL。
+
+**Example:**
+```yaml
+expert_id: screenplay  # FOUND-08 frozen — do NOT rename
+```
+
+---
+
+### §2.11 — `metrics`
+
+**Type:** `list[string]` · **Required:** NO · **Default:** `[]`
+
+**Source:** ARCHITECTURE §1.1 row 11(SKILL `metadata.hermes.metrics` copy)。**Purpose:** Quality dimensions for eval gate。Carried verbatim so v6.0 eval harness 在 agent outputs 上仍工作。
+
+**PITFALLS mitigation:** —(间接支持 §2.15 fitness_score + P8 mitigation)。
+
+**Example:**
+```yaml
+metrics: [narrative_tension, dialogue_naturalness, emotional_arc]
+```
+
+---
+
+### §2.12 — `prerequisites`(activation conditions)
+
+**Type:** `object` ($ref `#/$defs/Prerequisites`) · **Required:** NO · **Default:** `{}`
+
+**Source:** ARCHITECTURE §1.1 row 12(SKILL `prerequisites` copy)。**Purpose:** Activation conditions。
+
+**PITFALLS mitigation:** —(与 §2.5 `tools` 区别:`prerequisites.tools` 是 activation gate,`tools` 是 runtime whitelist)。
+
+**Example:**
+```yaml
+prerequisites:
+  tools: [hermes_llm]
+  skills: []
+  env: []
+```
+
+---
+
+### §2.13 — `related_agents`(collaboration DAG)
+
+**Type:** `list[string]` (regex `^[a-z0-9_-]+$`) · **Required:** NO · **Default:** `[]`
+
+**Source:** ARCHITECTURE §1.1 row 13(SKILL `metadata.hermes.related_skills` copy + rename)。**Purpose:** Collaboration DAG。Drives round table panel suggestions(02-ROUND-TABLE-PROTOCOL.md consumer)。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+related_agents: [style_genome, editor, audio_pipeline, compliance_gate, hook_retention, cinematographer, theory_critic]
+```
+
+---
+
+### §2.14 — `evolution_log`(P5 curator failure modes mitigation)
+
+**Type:** `list[object]` ($ref `#/$defs/EvolutionLogEntry`) · **Required:** NO · **Default:** `[]`
+
+**Source:** ARCHITECTURE §1.1 row 14(NEW)。**Purpose:** Curator-managed, append-only, sha256-chained log。**DO NOT hand-edit —— curator is the only writer。**
+
+**PITFALLS mitigation: P5(curator failure modes)。** 字段级机制:
+
+1. **Tamper-evident sha256 chain.** 每 entry 的 `sha256` = SHA-256 of (prev_entry.sha256 + canonical_json(new_entry_payload))。Genesis entry sha256 = SHA-256("")。Same pattern as v6.0 `agent/curator_audit.py`(shipped)。`hermes curator audit-log --verify` walks the chain and flags breaks。
+2. **persona_sha256 per entry.** 每条 entry 带当时的 persona hash;形成 P1 cross-layer detection network(与 §3.11 memory-record persona_sha256 协同)。
+3. **Dry-run-by-default writes(§5.2)。** Curator 默认 dry-run;mutation 需 explicit operator flag。`TestNonBypassableHumanInLoop` ast-walk invariant extends to memory writes(same pattern as v6.0 `apply_patch_transaction`)。
+4. **Evidence coverage check.** 每条 evolution_log entry 引用至少 3 个 evidence source(PITFALLS §P5 mitigation 2;实际 evidence 存在 memory record 的 evidence_chain,§3.6)。
+5. **`trigger` enum.** 5 sources(feedback / eval_gate / operator_edit / round_table / external)+ bias_canary。bias canary 触发的 entry 标记 quarantined memory。
+
+**Example(genesis entry + 1 evolution):**
+```yaml
+evolution_log:
+  - ts: 2026-07-15T10:00:00Z
+    sha256: "<sha of genesis>"
+    diff_summary: "Initial transform from SKILL.md"
+    fitness_delta: 0.0
+    trigger: operator_edit
+    persona_sha256: "<sha of v1 persona>"
+  - ts: 2026-07-22T03:14:00Z
+    sha256: "<sha chaining to prev>"
+    diff_summary: "After Volvo S1-1 case, cinematographer learned LHD declaration"
+    fitness_delta: 0.12
+    trigger: feedback
+    persona_sha256: "<sha of v1 persona — unchanged>"
+```
+
+---
+
+### §2.15 — `fitness_score`(P8 + OQ-4 cold start)
+
+**Type:** `float (0.0-1.0) | null` · **Required:** NO · **Default:** `null`
+
+**Source:** ARCHITECTURE §1.1 row 15(NEW)。**Purpose:** Curator-computed rolling quality score。**NOT operator-set。**
+
+**PITFALLS mitigation: P8(no fitness signal)+ OQ-4(cold start)。**
+
+- **P8 mitigation:** `fitness_score` 是 agent-YAML-side carrier。完整 P8 mitigation(fitness battery yaml / fitness_trend.jsonl / A/B shadow mode / model_id isolation)deferred to 05-POC-PLAN.md(§7.2 audit)。
+- **OQ-4 resolution:** `null = neutral 0.5` for ordering。Orchestrator 的 turn_order computation 把 `null` 当作 `0.5` 处理;UI 显示 "untested" badge。
+
+**Example:**
+```yaml
+fitness_score: null  # initial state — UI shows "untested"
+# After 3 curator passes:
+# fitness_score: 0.78
+```
+
+---
+
+### §2.16 — `platforms`
+
+**Type:** `list[string]` (enum `[linux, macos, windows, termux]`) · **Required:** NO · **Default:** `[linux, macos, windows]`
+
+**Source:** ARCHITECTURE §1.1 row 16(SKILL `platforms` copy)。**Purpose:** OS compatibility gate。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+platforms: [linux, macos, windows]  # default — most movie-experts
+```
+
+---
+
+### §2.17 — `round_table_eligible`
+
+**Type:** `bool` · **Required:** NO · **Default:** `true`
+
+**Source:** ARCHITECTURE §1.1 row 17(NEW)。**Purpose:** Whether this agent can be invited to a round table。Set `false` for ephemeral helpers / read-only analysts。
+
+**PITFALLS mitigation:** —
+
+**Example:**
+```yaml
+round_table_eligible: true  # default for 15 movie-experts
+```
+
+---
+
+### §2.18 — `default_invocation`
+
+**Type:** `enum: mcp_tool | skill_fallback | disabled` · **Required:** NO · **Default:** `mcp_tool`
+
+**Source:** ARCHITECTURE §1.1 row 18(NEW)。**Purpose:** Dispatcher mode。
+
+**PITFALLS mitigation:** —(FOUND-08 additive transition)。三个 enum 的使用场景:
+
+- **`mcp_tool`(default):** agent round-table-ready;通过 `get_agent_opinion` MCP tool 调用。15 movie-experts 在 v11.0 PoC 完成后全部进入此状态。
+- **`skill_fallback`:** fall through to underlying SKILL(v1-v9 behavior)。**Additive transition per FOUND-08** —— SKILL 在 migration 期间仍可被 `expert_id` 调用。15-expert migration(04-MIGRATION-PATH.md)期间使用此值,逐步切到 `mcp_tool`。
+- **`disabled`:** agent 在 registry 中存在但不可被调用。用于 transform-in-progress 状态(如 operator 正在 rewrite persona,临时禁用 dispatcher)。
+
+**Example:**
+```yaml
+default_invocation: mcp_tool  # final state for 15 movie-experts
+# During migration: default_invocation: skill_fallback
+```
+
+---
+
+## §3 — Memory-Record Schema:Layer 2 Narrative(10 mandated fields + persona_sha256 + schema_version)
+
+### §3.0 — 本节结构声明 + 2-Layer 重申(CC-2)
+
+memory-record schema 是**独立 layer 2**(CC-2 mandate)。每条记录存于 mem0 backend 的 per-agent namespace(`user_id=agent:{name}`),携带 10 个不变量字段 + `persona_sha256` cross-layer invariant + `schema_version` 迁移 key + audit fields + content。机器可读 schema 见 `memory-record-schema.yaml`(JSON Schema draft 2020-12,`additionalProperties: false`)。
+
+**为什么独立 layer?(§1.1 重申)** 生命周期不同(operator-owned vs curator+multi-src)、不变量粒度不同(sha256 chain vs time-decay + evidence + scope + confidentiality)、变更频率不同(YAML 几乎不变 vs records 高频变化)。合并会模糊 ownership boundary。
+
+每个 §3.N 子节遵循 4-block scaffold parallel to §2:
+
+1. **Type + Constraints + Default** —— 从 memory-record-schema.yaml 抄录
+2. **PITFALLS source** —— P1/P2/P4/P5/P6/P8/P10/P14
+3. **Mechanism** —— explicit 字段级缓解机制
+4. **Example value** —— YAML 片段
+
+---
+
+### §3.1 — `expires_at`(P2 hard expiry)
+
+**Type:** `string (date-time) | null` · **Default:** `null`(preference memories)/ `now + 90 days`(domain-rule memories)
+
+**PITFALLS source:** §P2 mitigation 1。
+
+**Mechanism:** Hard expiry timestamp。After this timestamp, status auto-flips to `archived` by compaction pass(§4.5 of design doc)。Retrieve-time filter:`WHERE expires_at IS NULL OR expires_at > now()`。Domain-rule memories(platform guidelines, model APIs, tool versions)由 curator 在 write path 设 `expires_at = now + 90 days`(config: `memory.default_domain_ttl_days: 90`);preference memories(operator tastes, project conventions)`expires_at = null`(never expires)。
+
+**Example:**
+```yaml
+expires_at: "2026-10-15T00:00:00Z"  # domain rule — 90 days TTL
+# vs preference:
+# expires_at: null
+```
+
+---
+
+### §3.2 — `verified_at`(P2 periodic re-verification)
+
+**Type:** `string (date-time) | null` · **Default:** `null`(never verified)
+
+**PITFALLS source:** §P2 mitigation 2(mirrors v1 ref `verified_date` convention)。
+
+**Mechanism:** Last human/curator verification timestamp。Curator's periodic re-verification pass walks memories with `verified_at > 90 days`,flags them for re-verification。External-change detection hooks(P2 mitigation 3):for memories citing upstream URL,curator fetches + hashes + compares to `source_content_sha256`;mismatch → auto-quarantine。
+
+**Example:**
+```yaml
+verified_at: "2026-07-15T10:00:00Z"
+```
+
+---
+
+### §3.3 — `supersedes_memory_id`(P2 supersession chain)
+
+**Type:** `string | null` · **Default:** `null`
+
+**PITFALLS source:** §P2 mitigation 4(extends v6.0 `_superseded_record_ids` from feedback_store.py)。
+
+**Mechanism:** Points to the `record_id` this record replaces。Forms supersession chain。Example:screenplay learns "FLUX 2 replaces FLUX 1.x" → curator writes new memory with `supersedes_memory_id=<old FLUX 1 memory's record_id>`。Retrieve-time filter excludes superseded records(mirrors `_superseded_record_ids` set in feedback_store.py)。
+
+**Example:**
+```yaml
+supersedes_memory_id: "01HXY9abcdefghijklmnopqrstuvwxyz012345"  # old FLUX 1 memory
+```
+
+---
+
+### §3.4 — `confidence`(P2 time-decay + OQ-4 neutral 0.5)
+
+**Type:** `number (0.0-1.0)` · **Default:** `0.5`
+
+**PITFALLS source:** §P2 mitigation 5(time-decay applied to confidence)。**OQ-4 resolution:** 0.5 = neutral;mirrors fitness_score `null → 0.5` mapping in agents-schema.yaml。
+
+**Mechanism:** Curator-assigned base confidence。**Retrieve-time time-decay formula:**
+```
+confidence(now) = base_confidence * exp(-age_days / half_life_days)
+```
+Below `confidence = 0.1` → auto-archived by compaction pass(§4.5 of design doc)。v6.0 `compute_weight(ts)` decays retrieval weight;THIS field decays **correctness**, not just retrieval weight。两个 decay 是 independent。
+
+**Example:**
+```yaml
+confidence: 0.85  # base — will decay per half_life_days
+```
+
+---
+
+### §3.5 — `half_life_days`(P2 time-decay rate)
+
+**Type:** `integer (≥1)` · **Default:** `90`(domain-rule)/ `3650`(preference)
+
+**PITFALLS source:** §P2 mitigation 5。
+
+**Mechanism:** Days for confidence to halve。Domain-rule memories(platform guidelines, model APIs, tool versions):`half_life_days = 90`(short,fast decay)。Preference memories(operator tastes, project conventions):`half_life_days = 3650`(long,slow decay)。Curator's memory-write path infers `half_life_days` from the LLM aggregation step's classification(domain-rule vs preference)。
+
+**Example:**
+```yaml
+half_life_days: 90  # domain rule — fast decay
+# vs preference:
+# half_life_days: 3650  # ~10 years — slow decay
+```
+
+---
+
+### §3.6 — `evidence_chain`(P5 curator hallucination guard)
+
+**Type:** `list[object]` · **Constraints:** `minItems: 3` · **Default:** —
+
+**PITFALLS source:** §P5 mitigation 2(hallucination guard: citation coverage ≥ 3)。
+
+**Mechanism:** ≥3 independent sources required before curator promotes a memory。Each item is `{source_type, source_id, timestamp, excerpt?}`。`source_type` enum:`feedback | eval_gate | operator_edit | round_table | external`。Curator's LLM is prompted to cite;post-hoc `_check_evidence_coverage(new_memory, evidence_chain) -> bool` verifies each cited record's text actually overlaps the new memory semantically(embedding cosine ≥ 0.7)。Failures rejected(record not written)。
+
+**Example:**
+```yaml
+evidence_chain:
+  - source_type: feedback
+    source_id: "<sha of FeedbackRecord>"
+    timestamp: "2026-07-22T03:14:00Z"
+    excerpt: "Volvo S1-1 case: LHD declaration missing in initial draft"
+  - source_type: round_table
+    source_id: "rt_20260722_153000_a1b2c3"
+    timestamp: "2026-07-22T04:00:00Z"
+    excerpt: "Cinematographer + Continuity agreed on LHD rule"
+  - source_type: operator_edit
+    source_id: "kai@2026-07-22"
+    timestamp: "2026-07-22T05:00:00Z"
+    excerpt: "Confirmed: all car-interior shots need LHD declaration"
+```
+
+---
+
+### §3.7 — `evidence_operator_ids`(P5 bias amplification guard)
+
+**Type:** `list[string]` · **Constraints:** `minItems: 1`(recommended ≥ 2 for auto-promotion)
+
+**PITFALLS source:** §P5 mitigation 3(operator diversity score)。
+
+**Mechanism:** Operators who contributed evidence。Curator's pre-write check:`_check_operator_diversity(evidence_chain, 2)` requires ≥2 distinct operators before generating an insight。Single-operator feedback cannot drive automated memory writes。Bias audit log:every memory write records `evidence_operator_ids + count`;`hermes curator stats --bias-audit` surfaces over-represented operators。
+
+**Example:**
+```yaml
+evidence_operator_ids: [kai, kim]  # 2 distinct — eligible for auto-promotion
+```
+
+---
+
+### §3.8 — `status`(P5/P6 curator failure + memory poisoning)
+
+**Type:** `enum: active | archived | quarantined | superseded` · **Default:** `active`
+
+**PITFALLS source:** §P5 mitigation 1(never hard-delete)+ §P6 mitigation 6(quarantine on poisoning)。
+
+**Mechanism:** Lifecycle status。`active` = eligible for retrieval。`archived` = excluded from default retrieval,kept for audit。`quarantined` = under review(bias canary / poisoning suspected / operator disputed);excluded until operator resolves。`superseded` = replaced by supersedes_memory_id chain;excluded,kept for audit(P2 mitigation 4)。**Curator can only archive,never hard-delete**(P5 mitigation 1 invariant)。
+
+**Example:**
+```yaml
+status: active
+# After compaction pass demotes this record:
+# status: archived
+```
+
+---
+
+### §3.9 — `scope`(P4 cross-project leakage,finer than memory_scope)
+
+**Type:** `enum: global | project | session` · **Default:** `project`(conservative default per P4 mitigation 2)
+
+**PITFALLS source:** §P4 mitigation 1(three-tier scoping)。**FINER than agents-schema memory_scope**(shared | per_agent | project_scoped)—— memory_scope routes records by agent_id;THIS field governs cross-project VISIBILITY at retrieve time。
+
+**Mechanism:** `global` = eligible for cross-project retrieval(e.g. "FLUX 2 generates better faces than FLUX 1")。`project` = retrieve ONLY when `project_id` matches current context(e.g. "this project's protagonist is introspective, prefers muted palette")。`session` = ephemeral, single-conversation(mirrors current mem0 run_id semantics)。**Default = project**(P4 mitigation 2:conservative prevents inappropriate cross-project transfer)。Cross-project promotion from `project` → `global` requires curator review + operator approval(P4 mitigation 5,mirrors v6.0 `apply_patch_transaction` gating)。
+
+**Example:**
+```yaml
+scope: project  # default — conservative
+project_id: "hermes-agent:a1b2c3d4"  # required when scope=project
+```
+
+---
+
+### §3.10 — `confidentiality`(P10 privacy / data leakage)
+
+**Type:** `enum: public | internal | confidential | restricted` · **Default:** `internal`
+
+**PITFALLS source:** §P10 mitigation 2。
+
+**Mechanism:** Propagation rule across projects/sessions。`public` = any context。`internal` = default;only within operator's Hermes deployment。`confidential` = project-specific sensitive;excluded from cross-project retrieval even if scope=global。`restricted` = NDA / PII / secrets;excluded from all automated retrieval;only surfaced via explicit operator command。Round-table coordinator broadcasts project's confidentiality level;participants filter retrieval(`retrieve(query, project_id, confidentiality_filter="≤ current project's level")`)。
+
+**PoC must-fix status:** v11.0 PoC ships with `public/internal/confidential`;`restricted` tier + PII vault deferred to v11.1(see §7.2 P10 row)。
+
+**Example:**
+```yaml
+confidentiality: internal  # default
+# vs sensitive project data:
+# confidentiality: confidential
+```
+
+---
+
+### §3.11 — `persona_sha256`(OQ-1 resolution + P1 cross-layer drift detection)
+
+**Type:** `string` (regex `^[a-f0-9]{64}$`) · **Required:** YES · **Default:** —
+
+**PITFALLS source:** §P1 mitigation 4(persona-versioned memory records)+ **OQ-1 resolution**(Phase 44 SUMMARY)。
+
+**Mechanism:** SHA-256 of the agent's persona fragment AT THE TIME this record was written。**Cross-layer invariant for P1 persona drift detection:**
+
+- At recall time,if this record's `persona_sha256` ≠ current agent YAML persona sha256 → flag for re-verification(operator may have hand-edited persona;record may no longer apply)
+- Retrieve-time weight:`persona_version_match ? 1.0 : 0.3`(memory written under persona v1 doesn't dominate behavior under persona v2)
+- 与 §2.4 persona_sha256 invariant + §2.14 evolution_log entry persona_sha256 协同 —— 三处 sha256 形成 cross-layer detection network
+
+**Example:**
+```yaml
+persona_sha256: "a1b2c3d4e5f6...<64 chars total>"  # hex sha256 of v1 persona
+```
+
+---
+
+### §3.12 — `schema_version`(P14 schema migration)
+
+**Type:** `string` (semver) · **Default:** `"1.0.0"`
+
+**PITFALLS source:** §P14 mitigation 1。
+
+**Mechanism:** Version of memory-record schema this record conforms to。**Migration job backfills unknown fields with safe defaults**(P14 mitigation 2:"default unknown fields to the safest value,not the most permissive" —— e.g. unknown `confidentiality` → `confidential`,NOT `public`)。**Migration dry-run:** `hermes agent memory migrate --dry-run`(P14 mitigation 3,see 04-MIGRATION-PATH.md)。v11.0 PoC ships with `schema_version="1.0.0"`;subsequent field additions bump this in lockstep with agents-schema.yaml `version`。
+
+**Example:**
+```yaml
+schema_version: "1.0.0"  # v11.0 PoC initial schema
+```
+
+---
