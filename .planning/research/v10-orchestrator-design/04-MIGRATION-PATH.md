@@ -852,3 +852,302 @@ If an agent's `default_invocation` flips mid-round (operator edits YAML while ro
 VALIDATE lint will verify that every agent YAML with `round_table_eligible: true` also has `default_invocation: mcp_tool`. The combination `round_table_eligible: true` + `default_invocation: skill_fallback|disabled` is a configuration error (round-table-ineligible state flagged as eligible) — lint rejects it.
 
 ---
+
+## §4 — Memory Schema 迁移计划 (SC#4 Deep-Dive + PITFALLS §P14 Mitigation)
+
+### §4.0 Why This Section — P14 Risk + Resolution Declaration
+
+本节是 **ROADMAP SC#4 的完整论证 + PITFALLS §P14 的 mitigation 落实**. v6.0 ship 的 `FeedbackStore` (`agent/feedback_store.py`) 是 **source schema**; Phase 45 `memory-record-schema.yaml` 是 **target schema**. 本节给出:
+
+- 字段映射 (17-row source → target table, §4.3)
+- `schema_version` forward-compat 语义 (cite memory-record-schema.yaml line 353, §4.4)
+- dry-run migration mode (`hermes agent memory migrate --dry-run`, P14 mitigation 3, §4.5)
+- safe-default-on-unknown-field (P14 mitigation 2, §4.6)
+- 6-step migration 执行计划 (§4.7)
+- rollback path (§4.8)
+- P14 RESOLVED declaration (§4.9)
+
+全部是为了防止 P14 (Schema Migration Breaks Memory Store — silent drop 或 unsafe default 污染 memory store). P14 是 v11.0 PoC 硬风险 (per PITFALLS risk register: severity MEDIUM, mitigation cost MEDIUM, PoC-acceptable deferral = NO — must ship with v11).
+
+### §4.1 迁移 Source Schema 引用 (v6.0 FeedbackStore Ground Truth)
+
+**Cite `agent/feedback_store.py` ground truth** (do NOT redefine — read the module directly for verification):
+
+**Persistence layout (filesystem):**
+
+```
+~/.hermes/feedback/
+├── buckets/
+│   └── <skill_id>/
+│       └── <source>.jsonl       # append-only, one FeedbackRecord per line, encoding="utf-8"
+├── dedup/
+│   └── sha256-registry.jsonl    # audit log of supersession events
+└── index.json                    # versioned via _INDEX_VERSION = 1
+```
+
+**FeedbackRecord fields (per v6.0 ship):**
+
+| Field | Type | Example | Purpose |
+|-------|------|---------|---------|
+| `skill_id` | string | `"screenplay"` | Identifies which skill received the feedback |
+| `source` | string | `"operator"` / `"auto_eval"` | Provenance — human operator vs automated eval |
+| `skill_sha256` | string | `<sha256 of SKILL.md at feedback time>` | Content hash of source SKILL when feedback was given |
+| `feedback_text` | string | `"Volvo S1-1 scene 3 needs more tension..."` | The feedback content |
+| `verdict` | enum: `positive` / `negative` / `neutral` | `positive` | Operator's qualitative judgment |
+| `operator_id` | string | `"kai"` | Who gave the feedback |
+| `created_at` | ISO-8601 timestamp | `"2026-06-28T14:32:00Z"` | When feedback was recorded |
+
+**`_INDEX_VERSION = 1` is for `index.json` ONLY**, NOT for record schema. This is the migration gap P14 warns about — the index has versioning, but individual FeedbackRecord lines do not carry a schema version. When target schema adds `confidentiality`, existing FeedbackRecord lines have no way to declare their confidentiality, forcing the migration to default it.
+
+### §4.2 迁移 Target Schema 引用 (Phase 45 memory-record-schema.yaml)
+
+**Cite Phase 45 `memory-record-schema.yaml` verbatim** (do NOT redefine — see `memory-record-schema.yaml` lines 1-380 for authoritative definition):
+
+- **Layer 2 schema** (independent of `agents-schema.yaml` per SUMMARY CC-2 mandate — see memory-record-schema.yaml header lines 1-32).
+- **10 mandated fields** (PITFALLS §P1/§P2/§P4/§P5/§P6/§P10/§P14 mitigations encoded as fields):
+
+| # | Target field | Type | Required | Pitfall mitigated |
+|---|--------------|------|----------|-------------------|
+| 1 | `record_id` | string (UUID v4) | YES | P5 (curator audit) |
+| 2 | `agent_id` | string `^[a-z0-9_-]+$` | YES | P4 (cross-project leakage routing) |
+| 3 | `scope` | enum: `global` / `project` / `session` | YES | P4 (cross-project visibility) |
+| 4 | `status` | enum: `active` / `archived` / `quarantined` | YES | P5/P6 (lifecycle + incident response) |
+| 5 | `confidence` | float 0.0-1.0 | YES | P2 (time-decay) + OQ-4 default 0.5 |
+| 6 | `evidence_chain` | list | YES | P5 (evidence coverage ≥3) |
+| 7 | `created_at` | ISO-8601 | YES | P2 (time-decay start point) |
+| 8 | `persona_sha256` | string `^[a-f0-9]{64}$` | YES | P1 (persona drift detection) |
+| 9 | `schema_version` | string `^[0-9]+\.[0-9]+\.[0-9]+$` | YES (default `"1.0.0"`) | P14 (schema migration) — cite line 353 |
+| 10 | `content` | string | (mandated by usage) | The memory fact itself |
+
+**Optional / defaultable fields** (memory-record-schema.yaml additionalProperties: false, but several fields have defaults):
+
+`project_id`, `session_id`, `expires_at`, `verified_at`, `supersedes_memory_id`, `evidence_operator_ids`, `half_life_days`, `last_recalled_at`, `recall_count`, `confidentiality`.
+
+**Target schema is richer than source** — many fields have no source-side equivalent and must be filled with safe defaults (§4.6).
+
+### §4.3 字段映射表 (Source → Target)
+
+17-row mapping table. Source FeedbackRecord → Target memory-record:
+
+| Source FeedbackRecord field | Target memory-record field | Mapping rule |
+|-----------------------------|----------------------------|--------------|
+| `skill_id` | `agent_id` (namespace component) | `agent_id = "{skill_id}"` per ARCHITECTURE §3.2 Option B convention (e.g. `screenplay` → `agent_id: screenplay`). NOT prefixed — mem0 routes via `agent_id` filter directly. |
+| `source` | `evidence_chain[0].source_type` | Preserve as evidence provenance ("operator" / "auto_eval"). |
+| `skill_sha256` | `evidence_chain[0].evidence_sha256` | Content hash of source evidence (the SKILL.md content at feedback time). |
+| `feedback_text` | `content` | **Verbatim copy** — feedback_text becomes the memory fact content. |
+| `verdict` | `status` | `positive` → `active`; `negative` → `quarantined` (P14 mitigation — never auto-activate negative-feedback records); `neutral` → `active` (neutral is informational, not blocking). |
+| `operator_id` | `evidence_operator_ids[0]` | Single-element list. (If multiple operators gave same feedback, expand list.) |
+| `created_at` | `created_at` | **Verbatim copy** — ISO-8601 timestamp preserved. |
+| *(no source)* | `record_id` | Generated UUID v4 at migration time. |
+| *(no source)* | `scope` | Default `"project"` (P14 mitigation 2 — tightest scope; can promote to `global` later via curator). |
+| *(no source)* | `project_id` | From bucket path if encoded; else default `"unknown"` (P14 mitigation — never null, always trackable). |
+| *(no source)* | `session_id` | Default `null` (legacy records have no session context). |
+| *(no source)* | `confidence` | Default `0.5` (OQ-4 neutral — until curator evaluates). |
+| *(no source)* | `half_life_days` | Default `180` (conservative — expire sooner rather than later; PITFALLS §P2 mitigation). |
+| *(no source)* | `expires_at` | Default `created_at + 180 days` (matches half_life_days). |
+| *(no source)* | `verified_at` | Default `created_at` (legacy records treated as verified at creation; curator may downgrade). |
+| *(no source)* | `supersedes_memory_id` | Default `null` (no prior record to supersede at migration time). |
+| *(no source)* | `confidentiality` | Default `"confidential"` (P14 mitigation 2 — **safest not most permissive**; never `public` by default). |
+| *(no source)* | `persona_sha256` | Computed from agent YAML persona at migration time (cross-layer invariant per PITFALLS §P1 mitigation 4). |
+| *(no source)* | `schema_version` | Default `"1.0.0"` (v10.0 baseline per memory-record-schema.yaml line 356). |
+
+**Mapping edge cases:**
+
+- **Multiple sources for same feedback:** If `feedback_text` and `skill_sha256` match across multiple FeedbackRecord lines (same evidence, different `source`), they collapse into ONE memory-record with `evidence_chain[N]` (N entries, not 1).
+- **Negative verdict aggregation:** Multiple `verdict: negative` records for same `skill_id` aggregate into ONE memory-record with `status: quarantined` + `evidence_chain[N]` + `confidence: 0.5 + 0.1 * N` (each additional negative evidence boosts confidence slightly, capped at 0.9).
+- **Missing `skill_id` (rare, malformed record):** Skip the record + log to migration audit. Do NOT default — `agent_id` is required field, can't fabricate.
+
+### §4.4 `schema_version` 字段引用 + Forward-Compat 语义
+
+**Cite `memory-record-schema.yaml` line 353 verbatim (do NOT redefine):**
+
+```yaml
+schema_version:
+  type: string
+  pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+  default: "1.0.0"
+  description: |
+    Version of the memory-record schema this record conforms to.
+    Source: PITFALLS §P14 mitigation 1.
+```
+
+**Forward-compat semantics (P14 mitigation 1):**
+
+1. **Read path tolerates older versions:** v1.x records are readable by v2.x reader with fallback logic (reader detects `schema_version < current`, applies forward-compat shims for missing fields).
+2. **Migration job backfills:** v1.x → v2.x transform with audit log (every backfill record logged to `dedup/sha256-registry.jsonl` per v6.0 pattern).
+3. **v10.0 baseline:** `schema_version = "1.0.0"` (matches FeedbackStore `_INDEX_VERSION = 1` for alignment — humans can intuit the correspondence).
+
+**Future bumps (post-v10.0):**
+
+- **v11.0 PoC:** `schema_version = "1.0.0"` (baseline — migration target as specified here).
+- **v11.1+:** If `model_id` field is added (per PITFALLS §P8 model isolation), bump to `schema_version = "1.1.0"` + migration job backfills `model_id: null` for existing records.
+- **v12.0+:** If `round_table_id` field is added (per Phase 46 cross-round memory tracking), bump to `schema_version = "2.0.0"` + migration job.
+
+**Bump policy:** Semver — patch/minor for backward-compatible field additions; major for breaking changes (field renames, enum value removals). All bumps require a new migration job + dry-run per §4.5 discipline.
+
+### §4.5 Dry-Run Migration Mode (P14 Mitigation 3)
+
+**Cite PITFALLS §P14 mitigation 3 verbatim:** "Migration script with dry-run: `hermes agent memory migrate --dry-run` shows what would change before applying."
+
+**Command (v11.0 PoC target — NOT implemented in v10.0):**
+
+```bash
+hermes agent memory migrate --dry-run
+# Optional flags (v11.1+):
+#   --source ~/.hermes/feedback/  (default: HERMES_HOME/feedback)
+#   --target mem0                  (default: mem0 backend configured in cli-config.yaml)
+#   --agent-id-namespace "agent:"  (default: no prefix per §4.3)
+```
+
+**Dry-run output plan (5 metrics):**
+
+```
+Memory Migration Dry-Run Report
+================================
+Source: ~/.hermes/feedback/ (v6.0 FeedbackStore, _INDEX_VERSION=1)
+Target: mem0 backend (memory-record-schema v1.0.0)
+
+(a) Total source records: 1,247 FeedbackRecord lines across 15 buckets/
+    Breakdown by skill_id:
+      screenplay:    312 records (25.0%)
+      cinematographer: 248 (19.9%)
+      hook_retention: 156 (12.5%)
+      ... (12 more)
+
+(b) Per-target-field default fill rate:
+      content:           100% source-derived (from feedback_text)
+      agent_id:          100% source-derived (from skill_id)
+      status:            96.2% source-derived (verdict→status), 3.8% quarantined (verdict=negative)
+      evidence_chain:    100% constructed (source + skill_sha256)
+      confidence:        100% default 0.5 (OQ-4 neutral — no source equivalent)
+      half_life_days:    100% default 180
+      expires_at:        100% default (created_at + 180d)
+      confidentiality:   100% default "confidential" (P14 mitigation 2)
+      schema_version:    100% default "1.0.0" (v10.0 baseline)
+      scope:             100% default "project" (tightest scope)
+      persona_sha256:    100% computed from agent YAML at migration time
+
+(c) Conflict count: 47 records (3.8%) → status=quarantined
+    Reason: source verdict=negative
+    Action: P14 mitigation 2 — never auto-activate negative records
+
+(d) Estimated target storage: ~2.4MB after migration
+    Source size: 1.3MB (1,247 lines × ~1KB avg)
+    Target size: ~2.4MB (1.8x source — added fields account for 80% of growth)
+    mem0 backend may compress; actual footprint TBD.
+
+(e) Mapping warnings:
+    WARNING: 12 records have bucket path without project_id — defaulting to "unknown"
+    WARNING: 3 records have verdict=neutral but feedback_text contains "block" —
+             manual review recommended (may need verdict=negative)
+    OK: No agent_id collisions detected (all 15 skill_ids map uniquely)
+
+NO WRITE OCCURRED. To apply: hermes agent memory migrate (without --dry-run)
+```
+
+**NO write occurs in dry-run.** Output is human-readable (above) + machine-parseable (JSON summary to stdout for CI integration).
+
+### §4.6 Safe-Default-on-Unknown-Field (P14 Mitigation 2)
+
+**Cite PITFALLS §P14 mitigation 2 verbatim:** "default unknown fields to the SAFEST value, not the most permissive."
+
+**Safe-default rules (6 fields with no source equivalent):**
+
+| Unknown field | Safe default | Rationale |
+|---------------|--------------|-----------|
+| `confidentiality` | `"confidential"` | P14 mitigation 2 — never leak via default-`public`. Records can be promoted to `public` later via operator review, but never auto-leaked. |
+| `scope` | `"project"` | Tightest scope among enum (`global` / `project` / `session`). Can be promoted to `global` later via curator cross-project promotion gate. |
+| `status` (when `verdict` ambiguous) | `"quarantined"` | P14 mitigation 2 — never auto-activate unverified records. Quarantined records exist but aren't retrieved by default queries; curator can promote to `active` after review. |
+| `confidence` | `0.5` (neutral) | OQ-4 resolution — neutral until curator evaluates with evidence. Half-decayed after 180 days regardless. |
+| `half_life_days` | `180` | Conservative — expire sooner rather than later. Aggressive half-life (`90`) would lose memory too fast; lax (`365`) would let stale memory pollute. 180 = 6 months = operator review cadence alignment. |
+| `expires_at` | `created_at + 180 days` | Matches `half_life_days`. After expiry, record is eligible for archival (per memory-record-schema `status: archived`). |
+
+**Why "safest not most permissive":**
+
+The risk of permissive defaults (e.g. `confidentiality: public`) is **silent data leakage** — operator doesn't know records are public until an incident. The risk of safe defaults (e.g. `confidentiality: confidential`) is **false-positive access denial** — operator sees "record exists but restricted" and can manually promote. The former is unrecoverable (data already leaked); the latter is recoverable (operator promotes). P14 mitigation 2 mandates the recoverable failure mode.
+
+### §4.7 Migration 执行步骤 (6 Steps)
+
+**Estimated effort:** ~2-3 person-days (dry-run script + migration script + shadow-run comparator).
+
+**Step 1 — Backup source (filesystem snapshot):**
+```bash
+cp -r ~/.hermes/feedback/ ~/.hermes/feedback.pre-migration.bak/
+# Verify backup integrity
+diff -r ~/.hermes/feedback/ ~/.hermes/feedback.pre-migration.bak/ && echo "Backup OK"
+```
+Source FeedbackStore is **append-only** — backup is a point-in-time snapshot. Operator can always restore from backup if migration goes wrong.
+
+**Step 2 — Dry-run migration:**
+```bash
+hermes agent memory migrate --dry-run > migration-dryrun-report.txt
+# Review the 5-metric output plan (§4.5)
+# Verify mapping warnings are acceptable
+```
+
+**Step 3 — Operator approval gate (human checkpoint):**
+Operator reviews `migration-dryrun-report.txt`. Approval criteria:
+- (a) Total source records count matches expectations (no surprise gaps)
+- (b) Quarantine count (verdict=negative) is reasonable (<10% of total)
+- (c) Mapping warnings have been investigated
+- (d) Estimated target storage is acceptable
+
+**Step 4 — Live migration (write target + retain source):**
+```bash
+hermes agent memory migrate
+# Writes ~2.4MB to mem0 backend per memory-record-schema v1.0.0
+# Source FeedbackStore (~/.hermes/feedback/) is RETAINED unchanged
+# Migration audit log appended to ~/.hermes/feedback/dedup/sha256-registry.jsonl
+```
+
+**Step 5 — Shadow run (30-day dual-read):**
+- Curator + dispatcher read from BOTH source (FeedbackStore) AND target (mem0) for 30 days
+- Compare query results: same agent_id, same question → same top-K memory records?
+- Log discrepancies to `~/.hermes/logs/memory-migration-shadow.log`
+- **Acceptance threshold:** <1% retrieval discrepancy (per §4.9 P14 acceptance)
+
+**Step 6 — Decommission source (after shadow passes):**
+```bash
+# Mark source as read-only (chmod -w) — do NOT delete
+chmod -R a-w ~/.hermes/feedback/
+# Mark v1 schema deprecated in index.json
+echo '{"_INDEX_VERSION": 1, "deprecated_at": "2026-08-07T00:00:00Z", "superseded_by": "memory-record-schema v1.0.0"}' > ~/.hermes/feedback/index.json
+```
+Source is **never deleted** — only marked deprecated. Rollback is always possible by reverting Step 6 + restoring from backup.
+
+### §4.8 Rollback Path
+
+**If shadow run reveals >1% retrieval discrepancy:**
+
+Operator rolls back. **Rollback steps:**
+
+1. **Delete v2 target records from mem0** — `hermes agent memory purge --agent-namespace migrated` (or scoped purge per agent_id)
+2. **Retain v1 source** (NEVER deleted during migration — Step 1 backup + Step 4 retain + Step 6 chmod -w all preserve it)
+3. **Investigate mapping error** — most likely candidates:
+   - `verdict → status` mapping edge case (e.g. `verdict: neutral` should have been `quarantined` not `active`)
+   - `skill_id → agent_id` namespace collision (rare — skill_ids are unique among 15 experts)
+   - `confidence: 0.5` default too neutral (curator post-migration may need different starting confidence)
+4. **Re-run dry-run with corrected mapping** — fix the mapping rule in §4.3, re-run §4.7 Step 2 (dry-run), verify the fix, then re-run §4.7 Step 4 (live migration)
+
+**Rollback safety:** Source FeedbackStore is append-only and never mutated by migration — rollback is always safe. The only state lost on rollback is the v2 target records (intentionally deleted in step 1).
+
+### §4.9 P14 风险评估 + RESOLVED Declaration
+
+**P14 (Schema Migration Breaks Memory Store) — risk assessment:**
+
+| Mitigation | This doc section | Implementation status |
+|------------|------------------|----------------------|
+| Mitigation 1: `schema_version` on every record | §4.4 | CITE memory-record-schema.yaml line 353 — field spec locked, v10.0 baseline `"1.0.0"` |
+| Mitigation 2: Safe-default-on-unknown-field | §4.6 | 6 safe-default rules documented (confidentiality/scope/status/confidence/half_life_days/expires_at) |
+| Mitigation 3: Migration script with dry-run | §4.5 | 5-metric dry-run output plan documented; v11.0 PoC implements actual `hermes agent memory migrate --dry-run` CLI |
+
+**v11.0 PoC acceptance criterion (Phase 50 consumer):**
+
+- Dry-run migration must run **clean** on existing FeedbackStore (no mapping errors, no unresolvable conflicts)
+- 30-day shadow-run window must show **<1% retrieval discrepancy** before source decommission (§4.7 Step 5 → Step 6 gate)
+
+**Resolution declaration:**
+
+> **P14 RESOLVED in §4.** Three-layer mitigation (`schema_version` §4.4 + dry-run §4.5 + safe-default §4.6) + 6-step backup-first migration (§4.7) + always-safe rollback path (§4.8) collectively prevent P14 (silent drop / unsafe default pollution of memory store). Cite PITFALLS §P14 risk register entry (severity MEDIUM, PoC-acceptable deferral = NO) — this doc satisfies the "must ship with v11" requirement. Phase 50 POC-PLAN consumes §4.5 dry-run + §4.9 acceptance criteria as PoC week-1 work items.
+
+---
