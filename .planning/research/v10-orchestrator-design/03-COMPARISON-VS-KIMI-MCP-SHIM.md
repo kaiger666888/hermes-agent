@@ -898,3 +898,308 @@ Kimi 方案在 Microsoft 三层框架下是 anti-pattern,具体违反 3 条:
 
 
 
+
+## §5 — Subagent Form Rejection(SC#3 Deep-Dive)
+
+### §5.0 — 本节是 ROADMAP SC#3 的完整论证
+
+本节是 **ROADMAP SC#3(Subagent form rejection argument complete citing FEATURES §11 B4.1 + Claude Agent SDK default context-isolation unsuitable for round table panelist)** 的完整论证。§1.5.2 已声明 citation,§5 给完整 7-子节论证。
+
+**Subagent 形态(Claude Agent SDK filesystem form `.claude/agents/<name>.md`)** 是 Kimi 方案的 agent 容器 —— FEATURES §4.2 row 1 verbatim 把它列为「v10.0 关注 filesystem 形态,因为这是 Kimi 方案用的形态」。v10.0 决策 5(α form:Hermes-side YAML agent `~/.hermes/agents/{name}.agent.yaml`)显式否决 subagent 形态 —— Phase 44 §3 row 1 + FEATURES §11 anti-feature row 1 + 本 doc §5 三处印证。
+
+**本节 7 子节结构:**
+
+- §5.1 — FEATURES §11 B4.1 anti-feature row verbatim citation + 解读
+- §5.2 — FEATURES §4.3 三个 fact 逐条展开(fact 1 context-isolated / fact 2 source-scoped / fact 3 30-day cleanup)
+- §5.3 — 为什么 context-isolated subagent 不适合做 round table panelist(4 个具体原因,cross-ref Phase 46 §2 + §3)
+- §5.4 — 为什么 source-scoped memory 不能做 per-agent 自进化(与决策 6 矛盾的机制分析)
+- §5.5 — 为什么 30-day cleanup 违反决策 6 长生命周期 agent(operator 投入 + 经验累积不可接受丢失)
+- §5.6 — Hermes-side YAML agent 形态(决策 5 α)的对照优势(per Phase 45 18-field schema)
+- §5.7 — user memory hermes-native-expert-agents.md + coding-agent-vs-mcp-shim.md 的 explicit rejection 引用(Kai 否决 CC-Teammates + 否决 "skill 当 agent")
+
+### §5.1 — FEATURES §11 B4.1 verbatim citation + 解读
+
+**Citation verbatim from FEATURES §11 anti-feature row 1(source: Claude Agent SDK `.claude/agents/*.md`):**
+
+> 业界模式:**Subagent 作为 agent 容器**
+> 出处:Claude Agent SDK `.claude/agents/*.md`
+> v10.0 拒绝理由:subagent context-isolated,memory 弱,30 天清理
+> v10.0 替代:Hermes-side YAML agent(`~/.hermes/agents/`)
+
+**解读:** 三个拒绝理由(context-isolated / memory 弱 / 30 天清理)在 §5.3-§5.5 逐条展开。每个理由都 traceable to FEATURES §4.3 三个 fact + Phase 44 决策 5/6/7 的某一条。
+
+**三个拒绝理由与决策的 traceability:**
+
+| FEATURES §11 B4.1 拒绝理由 | FEATURES §4.3 fact | 违反的 Phase 44 决策 | 本 doc 论证章节 |
+|----------------------------|--------------------|--------------------|----------------|
+| subagent context-isolated | fact 1:「The only channel from parent to subagent is the Agent tool's prompt string」 | 决策 7(Hermes 控结构)+ 决策 3(D2 round table) | §5.3 |
+| memory 弱 | fact 2:「'user' / 'project' / 'local', 不是 namespace scoped memory」 | 决策 6(per-agent scoped memory + curator) | §5.4 |
+| 30 天清理 | fact 3:「Subagent transcripts 30 天后自动清理」 | 决策 6(agent 随项目越多越有经验) | §5.5 |
+
+### §5.2 — FEATURES §4.3 三个 fact 逐条展开
+
+**Fact 1(§4.3 verbatim):** 「**Subagent 默认 context-isolated**:'The only channel from parent to subagent is the Agent tool's prompt string'。这意味着 **subagent 不天然适合做 round table panelist**(panelist 需要看完整历史)。」
+
+**Fact 2(§4.3 verbatim):** 「**`memory` 字段限定 source**:`'user'` / `'project'` / `'local'`,**不是 namespace scoped memory**(对比 LangGraph Store 的 namespace 元组,这弱很多)。」
+
+**Fact 3(§4.3 verbatim):** 「**Subagent transcripts 持久化在独立文件**,main conversation compaction 不影响 subagent;**30 天后自动清理**。」
+
+**Source authority:** 三个 fact 都 traceable to Claude Agent SDK 官方文档 [code.claude.com/docs/en/agent-sdk/subagents](https://code.claude.com/docs/en/agent-sdk/subagents)(FEATURES §4 主源,HIGH 置信度)。
+
+### §5.3 — 为什么 context-isolated subagent 不适合做 round table panelist
+
+**Round table panelist 的 context 需求(Phase 46 §2):**
+
+- **完整历史可见:** panelist 调 `get_agent_opinion(agentId, topic, context, priorDiscussion)` 时,`priorDiscussion` 参数包含所有先前 turns 的 content + cited memories + conflict resolutions。panelist 需要看到完整历史才能做出 informed opinion。
+- **跨 panelist cited memory 检索:** Phase 46 §3.1 memory annotation enrichment —— panelist 在 turn N 引用 `citedMemoryIds`,comparator LLM 在跨 panelist conflict arbitration 时需要 fetch + compare。panelist 需要能检索其他 panelist 引用的 memory(在 `confidentiality` 允许范围内)。
+- **Turn lifecycle atomicity:** 每个 turn 是一次 `get_agent_opinion` MCP call,sequential await。panelist 在自己的 turn 内做完整 reasoning(including 看完 prior turns + citing memories + forming opinion),然后 append 到 state file。
+
+**为什么 context-isolated subagent 不能满足这 3 个需求:**
+
+**原因 1 —— Prior discussion 序列化进 prompt string 的高 token cost:** Subagent 默认 context-isolated 意味着 parent(main agent)必须把 prior turns 全序列化进 `Agent` tool 的 prompt string。Round 5 × 7 panelist × 6.5K tokens per prior turn ≈ 230K tokens **just for prior context**(还不算 panelist 自己的 persona + memory + cited memories)。这是 v10.0 GLM 4-key rotation ceiling(~800K TPM / 4 keys × 200K TPM)的 28%。Phase 46 §1.5.1 强制 serial invariant 是为了节省并发,但 subagent fan-out 即使 serial,每个 subagent invocation 都需要 re-pass prior context(token cost 不省)。
+
+**原因 2 —— Memory conflict arbitration 不可实施:** Phase 46 §3 — `Turn.citedMemoryIds` + `ConflictRecord` 要求 panelist 能检索其他 panelist 引用的 memory。Subagent context-isolated 意味着 panelist 无法跨 subagent session 检索 —— subagent A 看不到 subagent B 的 memory namespace(每个 subagent 是独立 session,mem0 backend filter `agent_id` 不能跨 session)。comparator LLM 的 conflict arbitration 需要 fetch + compare,但 subagent 之间无通讯 —— conflict arbitration 不可实施。
+
+**原因 3 —— Turn lifecycle atomicity 与 subagent fan-out 不兼容:** Phase 46 §2 — `round_table_open` → turn N → `submit_round_table_result` 是原子 lifecycle,每个 turn 是一次 MCP tool 调用(append 到 state file)。Subagent fan-out 是 fire-and-forget —— main agent 调 `Agent` tool 派生 subagent,subagent 跑完返回 final message,main agent 读 —— **无 turn 概念,无法表达「panelist A 等 panelist B 发言完再发言」(serial invariant)**。Phase 46 §1.5.1 强制 serial 是通过 `get_agent_opinion` 的 sequential await 实现的,subagent fan-out 没有这个机制。
+
+**原因 4 —— Decision 7 分层违反:** 决策 7 —— Hermes 控 turn_order / max_rounds / early_stop_rule。Subagent fan-out 由 CC main agent 控制 turn_order —— main agent 决定何时调哪个 subagent,顺序由 CC reasoning 决定,不是 Hermes-side schema-controlled。这违反决策 7 分层(Hermes 控结构 / CC 控内容)。
+
+**Cross-ref Phase 46 §2 + §3:** 这 4 个原因 verbatim 对应 Phase 46 §2 turn lifecycle atomicity + §3 memory conflict arbitration 的根本前提 —— subagent 形态破坏这两个前提,因此 subagent 不适合做 round table panelist。
+
+### §5.4 — 为什么 source-scoped memory 不能做 per-agent 自进化
+
+**决策 6 要求 per-agent scoped memory(Phase 44 §2.6 + Phase 45 memory-record-schema):**
+
+- **Namespace 元组:** `agent_id` + `scope: global|project|session`(Phase 45 memory-record-schema §3.0 + §3.9)
+- **Curator-driven self-evolution:** curator 跑 `_memory_evolution_phase` per agent —— aggregate feedback → 写 memory record(`confidence` / `evidence_chain` / `evidence_operator_ids`)→ 更新 agent YAML `fitness_score` + `evolution_log`
+- **Cross-project memory accumulation:** agent 在 project A 积累的经验,通过 `scope: global` records 自然带到 project B
+
+**Subagent memory 字段是 source-scoped(FEATURES §4.3 fact 2 verbatim):**
+
+- **`'user' / 'project' / 'local'`** 决定 agent 从哪个 CLAUDE.md / 设置源加载 memory。这是 **source-file-scoping**(哪个 markdown 文件作 memory 源),不是 **agent-scoping**(哪个 agent 的经验积累)。
+- **不是 namespace 元组** —— FEATURES §4.3 fact 2 verbatim:「对比 LangGraph Store 的 namespace 元组,这弱很多」。
+
+**为什么 source-scoping 不能做 per-agent 自进化(4 条机制矛盾):**
+
+**矛盾 1 —— Curator-driven self-evolution 不可能:** 决策 6 curator 跑 `_memory_evolution_phase` per agent —— 聚合 feedback → 写 memory record → 更新 `fitness_score`。Subagent memory 是 CLAUDE.md file(静态 markdown),curator 无法 read/write per-record —— 一个 CLAUDE.md 是「project memory」,不是「screenplay agent 在 project X 的 memory」。curator 写 memory record 需要 record-level granularity(`record_id` / `agent_id` / `confidence` etc.),CLAUDE.md 是 file-level,granularity 错。
+
+**矛盾 2 —— Cross-project memory accumulation 不可能:** 决策 6 要求 agent 在 project A 积累的经验带到 project B(`scope: global`)。Subagent `memory: 'project'` 是当前 project 的 CLAUDE.md,跨 project 时 memory 不带(每个 project 有自己的 CLAUDE.md)。`memory: 'user'` 是 user-level CLAUDE.md,跨 project 带但不是 per-agent(所有 agent 共享同一个 user-level memory)。
+
+**矛盾 3 —— Confidence / evidence / expires_at 字段缺失:** 决策 6 + Phase 45 memory-record-schema 要求 `confidence` / `evidence_chain` / `evidence_operator_ids` / `expires_at` / `verified_at` 字段。Subagent memory(CLAUDE.md)是 plaintext,这些字段都没有 —— 无法做 confidence-weighted voting / evidence diversity check / staleness detection。
+
+**矛盾 4 —— Persona drift detection 缺失:** 决策 5 + Phase 45 agents-schema `persona_sha256` 是 P1 persona drift mitigation。Subagent 没有 `persona_sha256` 概念(`AgentDefinition` 9 字段无此字段),curator 无法检测 persona drift。
+
+### §5.5 — 为什么 30-day cleanup 违反决策 6 长生命周期 agent
+
+**决策 6 要求长生命周期 agent(SUMMARY.md §Executive Summary verbatim):**
+
+> 「v10.0 不写一行业码,而是把 **'agent 随项目越多越有经验'** 推导成 7 份设计文档。」
+
+**这句话的字面含义:**
+
+- agent identity 持久(跨 CC session,跨 project,跨 CC version 升级)
+- agent memory 持久(per-agent memory record 跨 project 积累)
+- agent 协商历史持久(round_tables/{id}.json 持久,供 curator review + bias canary)
+- agent fitness 持久(`fitness_score` 跨 project 累积,供 turn_order fitness-weighted 策略)
+- operator 投入持久(persona 调整 / feedback 喂养 / fitness battery 跨年累积)
+
+**Subagent transcripts 30 天自动清理(FEATURES §4.3 fact 3 verbatim):** 这意味着 operator 投入(persona 调整 / feedback 喂养 / fitness battery 跑)在 30 天后**全部丢失**。这是 v10.0 paradigm 不可接受的 —— 决策 6 是 v10.0 paradigm shift 最核心的载体(Phase 44 §Executive Summary + Phase 44 §2.6),30-day cleanup 直接违反它。
+
+**Operator 投入的具体形态(为什么 30-day 不可接受):**
+
+- **Persona tuning:** operator 反复调整 persona YAML(`screenplay` agent 的 persona 经过 v1-v9 五 milestone 调整,operator 投入数十小时)。30-day cleanup 意味着 persona tuning 在 30 天后重头来过。
+- **Feedback feeding:** operator 跑 v6.0 `_feedback_scan_phase` 喂 feedback,curator aggregate 后写 memory record。30-day cleanup 意味着 feedback 投入在 30 天后归零。
+- **Fitness battery:** operator 跑 fitness battery 测试 agent 在 N 个场景的表现,记录 `fitness_score` 变化。30-day cleanup 意味着 fitness 投入在 30 天后归零。
+
+**Comparison:** T6 三层持久(agent YAML + mem0 backend memory records + curator evolution_log)—— 无 30-day cleanup,跨年持久。这是决策 6 物理可行 —— 「agent 随项目越多越有经验」不是 marketing copy,是物理实现。
+
+**Operator 投入角度的总结:** 在 v10.0 paradigm 下,operator(Kai)的投入是 long-term investment(类比 real-world expert 的多年经验积累)。Kimi 方案的 30-day cleanup 意味着 operator 投入每月归零 —— 这是 v10.0 paradigm 不可接受的。即使 Kimi 方案在其他维度有优势(如工程量小),稳定性维度的 30-day cleanup 是 deal-breaker。
+
+### §5.6 — Hermes-side YAML agent 形态(决策 5 α)的对照优势
+
+**Phase 45 18-field agents-schema.yaml(本 doc CITE ONLY):**
+
+`name` / `persona` / `persona_sha256` / `tools` / `memory_scope` / `default_invocation` / `fitness_score` / `evolution_log` / `lineage` / `agent_card` / `reasoning_effort` / `execution_limits` / `round_table_eligible` / `skill_fallback` / `skill_sha256` / `created_at` / `last_modified_at` / `schema_version`。
+
+**对照 subagent AgentDefinition(FEATURES §4.2 row 1 + §4.4 B4.1,9-field subset):**
+
+`description` / `prompt` / `tools` / `model` / `memory` / `mcpServers` / `maxTurns` / `background` / `effort`。
+
+**AgentDefinition 是 subset —— 缺 v10.0 必需的字段:**
+
+| Phase 45 字段 | AgentDefinition 有? | 缺失的影响 |
+|---------------|--------------------|-----------|
+| `memory_scope`(namespace 元组) | ❌(`memory` 是 source-scoped) | per-agent scoped memory 不可表达 |
+| `persona_sha256`(P1 mitigation) | ❌ | persona drift detection 不可实施 |
+| `evolution_log`(curator) | ❌ | curator self-evolution audit 不可实施 |
+| `fitness_score`(P8 mitigation) | ❌ | fitness battery / fitness-weighted turn_order 不可实施 |
+| `lineage`(溯源审计) | ❌ | 从 SKILL.md 转化的 agent 无法溯源 |
+| `default_invocation`(skill_fallback → mcp_tool) | ❌ | 15-expert transform 期间的 fallback 不可表达 |
+| `agent_card`(capabilities JSON) | ❌ | round table panelist 自动匹配不可实施 |
+| `round_table_eligible` | ❌ | 哪些 agent 可参与 round table 不可声明 |
+| `skill_fallback`(SKILL.md SHA-256) | ❌ | 从 SKILL 形态 fallback 不可实施 |
+
+**决策 5(α form)是 FEATURES §12.2 Differentiators 表的物理载体:** v10.0 独创组合(memory_scope + lineage + curator-driven + panelist_role + turn_order 三态 + subpanel)在 subagent AgentDefinition 中**无表达位** —— 不是字段不够,是 schema paradigm 不同(AgentDefinition 是「main agent 调用 subagent 完成 task」的 schema,Phase 45 是「Hermes-side persistent agent 自进化」的 schema)。
+
+### §5.7 — User memory explicit rejection(Kai 已显式否决)
+
+**Citation verbatim from `~/.claude/projects/-data-workspace-hermes-agent/memory/hermes-native-expert-agents.md`(2026-07-06):**
+
+> 「**2026-07-06 v10.0 milestone 设计时,Kai 明确否决了 Kimi Notion 架构2.0 的 CC-Team Lead-Teammates 范式 + 我提的 (a) 仅 Hermes skills 范式,提出第三种设计:**
+>
+> agent 不再以 SKILL 形式存在,而是以**独立的 Hermes-side agent 形态**存在:
+>
+> 1. **Agent 定义在 Hermes**(物理位置:`~/.hermes/agents/{name}.agent.yaml`,YAML + persona prompt + tools + refs + memory_scope + lineage)
+> 2. **由 movie-experts 转化而来**,但与 SKILL 形态分离 — SKILL 保留作为 fallback / 单 agent 任务,agent 是 multi-agent 协作的主力
+> 3. **Hermes 总调度器**决定每个创作环节需要哪些 agent 参与 round table
+> 4. **Claude Code 不是 agent 容器**,仅提供场地供 agent 讨论 + 辅助结构化输出
+> 5. **Per-agent memory**:每个 agent 跨项目累积记忆 → **自进化**(随项目越多越强)
+> 6. **CC 角色**(候选 (vi) 分层模式):Hermes 控结构(turn_order / max_rounds / schema),CC 控内容(question framing + synthesis)
+>
+> ...
+>
+> **How to apply:** 任何涉及 kais-movie-pipeline 改造 / Hermes 多 agent 协作 / Claude Code 集成的讨论,默认假设走这套范式;**不要重新提 Kimi CC-Teammates 或 "skill 当 agent 用" 的方案**。」
+
+**Citation verbatim from `~/.claude/projects/-data-workspace-hermes-agent/memory/coding-agent-vs-mcp-shim.md`(2026-07-06):**
+
+> 「`skills/autonomous-ai-agents/coding-agent/` 是 v7.0 从 openclaw 迁过来的 `claude-code-via-openclaw` 等价物,已是 Hermes→Claude Code 的生产级集成模式。...
+>
+> **v10.0 设计 milestone 必须:**(1) 把两者作为竞品方案对照分析;(2) **推荐增量演进而非重写**;(3) 不照搬 Kimi 方案,而是吸收其 storyboard-first-class / 平行 Expert / 状态机思想叠加到 coding-agent 之上。」
+
+**结论:** Kai 在 2026-07-06(同一日 v10.0 milestone 启动)已**显式否决** subagent 形态(`.claude/agents/*.md` CC-Teammates)。本节 §5 是 user-side 决策的 **design-side 论证** —— 论据相互印证。Kai 不是「不知道 Kimi 方案」,而是「否决了 Kimi 方案,要求 v10.0 设计走 Hermes-side persistent agents 范式」。本 doc §5.1-§5.6 的 6 段论证是 user-side 决策的 design-side 物理载体 —— 当未来 v11.0 PoC 实施者或 Kimi 续聊过程中再次提出「为什么不用 CC subagent」,§5 + §5.7 user memory 是答案。
+
+---
+
+## §6 — Kimi-Side Borrowable Parts Evaluation(SC#5)
+
+### §6.0 — 本节是 ROADMAP SC#5 — Kimi 方案中可借鉴的部分评估
+
+本节是 **ROADMAP SC#5(Kimi-side borrowable parts explicitly listed + evaluation conditions)** 的完整评估。**借鉴不等于照抄** —— 每条 Kimi-side idea 都标注「T6 兼容性」+「借鉴条件」+「喂给哪个下游 doc」。
+
+**借鉴纪律(Phase 44 §1.1 引用 v2.0 PRFP §1.5 Steelman-the-Elimination):** 本节评估 Kimi-side ideas 时严守 steelman 纪律 —— 不因 Kimi 方案在 §3-§5 被否决就否定其所有 ideas。每条 idea 独立评估:(a) 是否与 Phase 44 决策一致?(b) 是否与 T6 协议层兼容?(c) 借鉴成本 / 收益比?(d) 喂给哪个下游 doc(避免重复评估)?
+
+### §6.1 — Borrowable evaluation table(7-row)
+
+| Kimi-side idea | FEATURES borrowable ID | T6 兼容性 | 借鉴条件 | 喂给 doc |
+|----------------|------------------------|-----------|----------|----------|
+| **Agent Card concept**(capabilities/inputs/outputs JSON) | B8.1 | ✅ 兼容 | 作为 agents-schema `agent_card` 子段(Phase 45 已收) | 01-AGENT-REGISTRY-SCHEMA.md |
+| **Hooks lifecycle**(PreTurn/PostTurn audit) | B4.2 | ✅ 兼容 | round table panelist 前后事件,v11.1+ opt-in | 02-ROUND-TABLE-PROTOCOL.md §6.2 |
+| **`effort: low\|medium\|high\|xhigh\|max`** agent 级 reasoning | B4.3 | ✅ 兼容 | reasoning_effort 字段(Phase 45 已收) | 01-AGENT-REGISTRY-SCHEMA.md |
+| **File-level lock**(parallel multi-agent editing) | B7.3 | ⚠️ v11.1+ only | v11.0 serial 不需要;v11.1+ subpanel 时启用 | 02-ROUND-TABLE-PROTOCOL.md §6.4 |
+| **Agent-MCP short-lived agent pattern** | B7.2 | ❌ 拒绝 | 违反决策 6 长生命周期 | 00-FIRST-PRINCIPLES.md §3 |
+| **Shared knowledge graph** | §7.2 | ❌ 拒绝 | 违反决策 6 per-agent scoped memory + P12 risk | 00-FIRST-PRINCIPLES.md §3 |
+| **`.claude/agents/` filesystem form** | §4.2 | ❌ 拒绝 | 违反决策 5(Hermes-side entity) | 00-FIRST-PRINCIPLES.md §3 + 本 doc §5 |
+
+**借鉴 / 拒绝分布:**
+
+- **3 条 ✅ 兼容(B8.1 / B4.2 / B4.3)** —— T6 已收或 v11.1+ opt-in 可收。Phase 45 schema + Phase 46 protocol 是物理载体。
+- **1 条 ⚠️ v11.1+ only(B7.3)** —— v11.0 serial 不需要(subpanel 不存在),v11.1+ subpanel 启用时借鉴。
+- **3 条 ❌ 拒绝(B7.2 / shared graph / `.claude/agents/`)** —— 直接违反决策 5/6,不可协商。
+
+### §6.2 — Agent Card concept(B8.1)
+
+**Citation verbatim from FEATURES §8.3 B8.1:** 「**Agent Card 概念可借鉴,但 v10.0 不需要 A2A 协议层。** v10.0 的 agent YAML 应有 `agent_card` 子段(类比 A2A Agent Card),描述 capabilities / inputs / outputs,用于 round table panelist 自动匹配。**但传输层用 MCP(决策 #1),不用 A2A** —— 因为 v10.0 是单厂商内部。」
+
+**借鉴评估:**
+
+- **T6 兼容性:** ✅ —— Phase 45 agents-schema.yaml 已收 `agent_card` 子段(per Phase 45 §2.10)。
+- **借鉴条件:** 无 —— 已是 v10.0 schema 的一部分。
+- **价值:** round table panelist 自动匹配(CC 根据 `agent_card.capabilities` 选 panelist,不需 manual panel specification)。
+- **喂给 doc:** 01-AGENT-REGISTRY-SCHEMA.md(Phase 45 已 ship)。
+
+### §6.3 — Hooks lifecycle(B4.2)
+
+**Citation verbatim from FEATURES §4.4 B4.2:** 「**`hooks` 模式可借鉴用于 v10.0 的"审计钩子"。** Claude Agent SDK 的 hooks(`PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`, `SessionEnd`)是**生命周期拦截器**模式。v10.0 round table 协议可在每个回合前后插入 hook(类比 `PreTurn` / `PostTurn`),用于:审计日志、token cost 累计、early-stop-rule 检查、redline 检查。」
+
+**借鉴评估:**
+
+- **T6 兼容性:** ✅(v11.1+ opt-in)—— Phase 46 §6.2 已 evaluation:v11.0 PoC 用 Turn schema 隐式捕获 PreTurn/PostTurn(`turn.startedAt` / `turn.completedAt` 字段);v11.1+ 显式事件流供 curator 实时监控。
+- **借鉴条件:** v11.1+ opt-in —— 不是 v11.0 PoC 默认(避免增加 complexity)。
+- **价值:** curator 实时监控 round table 进展(bias canary / token cost tracking / redline detection)。
+- **喂给 doc:** 02-ROUND-TABLE-PROTOCOL.md §6.2(已 deferred,本 doc cite-only)。
+
+### §6.4 — effort 字段(B4.3)
+
+**Citation verbatim from FEATURES §4.4 B4.3:** 「**`effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max'` 是好的 agent 级 reasoning 控制。** v10.0 agent YAML 应有 `reasoning_effort` 字段,让重要 agent(如 screenplay / cinematographer)用 `high` / `xhigh`,辅助 agent(如 glossary checker)用 `low`。这是与 GLM/Claude 的 reasoning_effort 参数对齐的低成本设计。」
+
+**借鉴评估:**
+
+- **T6 兼容性:** ✅ —— Phase 45 agents-schema.yaml 已收 `reasoning_effort` 字段(per Phase 45 §2.11)。
+- **借鉴条件:** 无 —— 已是 v10.0 schema 的一部分。
+- **价值:** 重要 agent(screenplay / cinematographer)用 `high` / `xhigh` 推理深度;辅助 agent(glossary checker)用 `low` 节省 token cost。
+- **喂给 doc:** 01-AGENT-REGISTRY-SCHEMA.md(Phase 45 已 ship)。
+
+### §6.5 — File-level lock(B7.3)
+
+**Citation verbatim from FEATURES §7.4 B7.3:** 「**Agent-MCP 的"文件级 lock"机制可借鉴用于 v10.0 多 agent 并行编辑场景。** v10.0 决策 #3 (D2)支持"跨场景并行"(多 agent 同时处理不同 scene)。Agent-MCP 的文件级 lock(`Agent requests file access → check lock → if locked, wait or pick other task`)是成熟的并发控制模式。v10.0 `02-ROUND-TABLE-PROTOCOL.md` 应有 `asset_locks` 子模式:同一时间只有一个 agent 能改 `scene_05/storyboard.json`。」
+
+**借鉴评估:**
+
+- **T6 兼容性:** ⚠️ v11.1+ only —— Phase 46 §6.4 已 evaluation:v11.0 serial 不需要(1 panelist 1 turn sequential await,无并行编辑冲突);v11.1+ subpanel 启用时,Hermes-side lock manager(in-memory map of assetPath → lockHolder)。
+- **借鉴条件:** v11.1+ subpanel 启用 —— 当 D2 storyboard-first-class 实施跨场景并行时,多个 subpanel 可能同时编辑不同 scene 的 storyboard.json,需要 lock 防冲突。
+- **价值:** 跨场景并行时防 asset 编辑冲突。
+- **喂给 doc:** 02-ROUND-TABLE-PROTOCOL.md §6.4(已 deferred,本 doc cite-only)。
+
+### §6.6 — 不借鉴清单(Kimi 方案中 v10.0 显式拒绝的部分)
+
+以下 Kimi-side ideas 被 v10.0 显式拒绝,引用 Phase 44 §3 显式拒绝总表 + FEATURES §11 anti-features:
+
+- **Subagent as agent container(§4.2 filesystem form `.claude/agents/*.md`):** 违反决策 5(agent 是 Hermes-side entity,不是 CC subagent)。Phase 44 §3 显式拒绝总表 row 1 + FEATURES §11 anti-feature row 1 + 本 doc §5 完整 7 子节论证。
+- **Short-lived agent(B7.2 Agent-MCP pattern):** 违反决策 6「agent 随项目越多越有经验」。Agent-MCP 主张 agent 完成任务即销毁,context 集中在项目级 graph —— 与决策 6 per-agent scoped memory + curator self-evolution 直接对立。Phase 44 §3 显式拒绝总表 row 2。
+- **Shared knowledge graph(§7.2 RAG-over-MCP):** 违反决策 6 per-agent scoped memory + PITFALLS §P12 cross-agent contamination risk。Phase 44 §3 显式拒绝总表 row 3。
+- **Full MCP shim for agent ↔ agent(§7.1):** 违反 Microsoft 三层(本 doc §4.3 violation 1)+ 决策 1(T6 协议层)。Phase 44 §3 显式拒绝总表 row 4。
+- **`memory: true` boolean(CrewAI §3.3):** 不够细,无 per-agent namespace。Phase 44 §3 显式拒绝总表 row 5(FEATURES §11 anti-feature row 6)+ FEATURES §9.2 memory 模式速查 row 3。
+- **Handoff as round table 替代(OpenAI Swarm §5):** handoff 是控制权移交,不是协商。Phase 44 §3 显式拒绝总表 row 6 + FEATURES §11 anti-feature row 3 + FEATURES §5.3 B5.1 反面教材。
+- **Crew task pipeline 作协商(CrewAI §3):** crew 是顺序任务,无多 agent 同回合协商。Phase 44 §3 显式拒绝总表 row 7 + FEATURES §11 anti-feature row 4 + FEATURES §3.3 B3.5 反面教材。
+- **A2A 跨厂商协议 v10.0 使用:** v10.0 是 single-vendor internal,无需跨厂商。Phase 44 §3 显式拒绝总表 row 8 + FEATURES §11 anti-feature row 5 + 本 doc §4.5 A2A 扩展位声明(v12+ 启用)。
+
+**Phase 44 §3 显式拒绝总表与本 doc §5 + §6.6 一致性:** Phase 44 §3 是 root rejection(从 7 决策推导),本 doc §5 是 subagent rejection deep-dive(SC#3),本 doc §6.6 是 Kimi-side 不借鉴清单(SC#5)—— 三层互补,共同构成 v10.0 显式拒绝体系。Phase 51 VALIDATE lint script cross-check 三处一致性。
+
+
+### §6.7 — Borrowable evaluation 总结合(给 v12+ 设计者)
+
+**3 条 ✅ 兼容借鉴的共通特征:** 都是「field-level schema 设计」而非「paradigm-level 形态」—— `agent_card` / hooks / `reasoning_effort` 是字段,可以 plug-in 到 Phase 45 agents-schema 或 Phase 46 protocol 中,不破坏 v10.0 paradigm。这与「Kimi 方案整体 paradigm 不同」无关 —— 借鉴 Kimi-side ideas 不等于借鉴 Kimi paradigm。
+
+**1 条 ⚠️ v11.1+ only 的特征:** file-level lock 是「并发控制机制」,v11.0 serial 不需要,v11.1+ subpanel 启用时启用。借鉴条件是 D2 storyboard-first-class 真实并行编辑场景的出现。
+
+**3 条 ❌ 拒绝的共通特征:** 都是「paradigm-level 形态」—— subagent container / short-lived agent / shared knowledge graph 是 Kimi 方案的根本组件,不是字段。借鉴任何一个等于借鉴 Kimi paradigm,违反决策 5/6。
+
+**v12+ 设计者的 §6 总结:** 当 v12+ 设计者考虑「是否借鉴 Kimi-side 某 idea」时,§6.1 table 是首查表。判断标准:(a) idea 是 field-level 还是 paradigm-level?(b) 与决策 5/6/7 是否冲突?(c) 借鉴成本是否小于收益?field-level + 不冲突 + 收益 > 成本 = 借鉴;paradigm-level 或 冲突 = 拒绝。
+
+**Kimi 续聊对照视角的 §6 总结:** 本 doc 不否定 Kimi 方案的所有 ideas —— 4 条 ideas 被借鉴(B8.1 + B4.2 + B4.3 + B7.3),3 条 ideas 被拒绝(B7.2 + shared graph + subagent form)。Kimi 方案不是「全错」,是「整体 paradigm 与 v10.0 不同,但局部 ideas 有借鉴价值」。这与 §2 steelman reconstruction 一致 —— 本 doc 把 Kimi 方案最强形态摆出,然后 per-idea 评估借鉴条件。
+
+**v11.0 PoC 实施者视角的 §6 总结:** §6 是 v11.0 PoC 之外的 v11.1+ / v12+ 借鉴路线图。v11.0 PoC 实施者只需关注 §6.2 + §6.4(B8.1 + B4.3 已收 Phase 45 schema)+ §6.3 + §6.5(B4.2 + B7.3 v11.1+ deferred)。v11.0 PoC 不需要实施任何 v11.1+ deferred features,但需要保留 schema 扩展位(`agent_card` / `reasoning_effort` 字段已存在;hooks lifecycle + asset_locks 留 schema placeholder)。
+
+### §5.8 — Subagent rejection 的 cross-validation 与 counter-argument
+
+**Counter-argument(Kimi 续聊可能的反驳):** Kimi 方案可能反驳:「v2.1.198+ subagent background + `Workflow` tool 已经支持大规模编排,context isolation 可以通过 main agent 在 `Agent` tool prompt 里 pass 完整 prior context 解决;30-day cleanup 是 default,可以 disable;memory `source` 字段可以扩展加 namespace metadata」。
+
+**Response(本 doc 反驳):**
+
+**对 context isolation 反驳:** v2.1.198+ background 是并发,违反 Phase 46 §1.5.1 强制 serial invariant + MEMORY.md `feedback-glm-overload-reduce-concurrency.md`(concurrency==1 by design)。Workflow tool 是「几十到几百个 agent」超大规模编排(FEATURES §4.4 B4.4),v10.0 round table 是 5-7 panelist,规模不匹配。Main agent 在 `Agent` tool prompt 里 pass 完整 prior context 的高 token cost 在 §5.3 原因 1 已论证(~230K tokens just for prior context),不可接受。
+
+**对 30-day cleanup 反驳:** FEATURES §4.3 fact 3 verbatim:「**30 天后自动清理**」—— 这是 Claude Agent SDK 的 default behavior,不能 disable(disable 等于无限累积 transcripts,违反 SDK 设计)。即使能 disable,subagent transcripts 不是 per-agent memory records(缺 `confidence` / `evidence_chain` / `scope` / `agent_id` 字段),不能直接用作决策 6 的 memory backend。
+
+**对 memory source 字段扩展反驳:** `memory: 'user' / 'project' / 'local'` 是 source-scoping(CLAUDE.md 选),扩展加 namespace metadata 等于把它变成 LangGraph Store namespace 元组 —— 但那时它就不再是 Claude Agent SDK 的 `memory` 字段了,而是 v10.0 自己的 memory backend —— 等于回到 T6 mem0 backend 路径,subagent 形态没意义了。
+
+**Counter-argument 总结:** Kimi 方案的每个反驳点要么依赖 v10.0 政策不允许的特性(background 并发违反 GLM concurrency==1),要么依赖 Claude Agent SDK 不支持的扩展(disable 30-day cleanup / 扩展 memory 字段),要么逻辑上 collapse 回 T6(扩展 memory source 字段 = 回到 mem0 backend)。**Subagent 形态在 v10.0 paradigm 下没有独立 viable path** —— 这是 §5 的根本结论。
+
+**Cross-validation:** §5.1-§5.7 的 7 段论证 + §5.8 counter-argument 共同构成 SC#3 的完整论证。Phase 44 §3 row 1(subagent rejection)+ FEATURES §11 anti-feature row 1 + FEATURES §4.3 三个 fact + Phase 46 §2/§3 + Kai user memory hermes-native-expert-agents.md + coding-agent-vs-mcp-shim.md —— 6 处印证,subagent 形态被显式否决,无可协商空间。
+
+### §5.9 — Subagent rejection 与 7 决策的 traceability matrix
+
+下表把 §5.1-§5.8 的论证 trace 回 Phase 44 决策号 —— 每条 subagent 拒绝理由都 traceable 到至少一条决策,这是 SC#3 的「cross-ref Phase 46 protocol serial constraint + memory conflict arbitration」要求的具体物理载体。
+
+| §5 章节 | 论证核心 | 违反的 Phase 44 决策 | Cross-ref Phase 46 章节 |
+|---------|---------|---------------------|-------------------------|
+| §5.1 | FEATURES §11 B4.1 verbatim(subagent context-isolated, memory 弱, 30 天清理) | 决策 5 + 6 + 7(三条) | Phase 46 §1.5(3 hard constraints) |
+| §5.2 | FEATURES §4.3 三个 fact(context-isolated / source-scoped / 30-day cleanup) | 决策 5 + 6(两条) | Phase 46 §2(turn lifecycle)+ §3(memory conflict arbitration) |
+| §5.3 | context-isolated subagent 不适合 round table panelist(4 个原因) | 决策 3 + 7(两条) | Phase 46 §2.2(`get_agent_opinion` priorDiscussion)+ §3.1(`citedMemoryIds` enrichment) |
+| §5.4 | source-scoped memory 不能做 per-agent 自进化(4 条机制矛盾) | 决策 6(一条,但 4 个 mechanism) | Phase 46 §3.5(conflict log curator review) |
+| §5.5 | 30-day cleanup 违反决策 6 长生命周期 agent | 决策 6(一条) | Phase 46 §2.4(state file persistence,无 cleanup) |
+| §5.6 | Hermes-side YAML agent 18-field schema 对照优势 | 决策 5(一条,9 字段对照) | Phase 46 §2.1(panelist snapshot uses `persona_sha256` + `fitness_score`) |
+| §5.7 | Kai user memory explicit rejection(hermes-native-expert-agents + coding-agent-vs-mcp-shim) | 决策 5 + 6 + 7(三条,user-level 决策) | Phase 46 整体(round table 协议是 user-level 决策的物理载体) |
+| §5.8 | Counter-argument 反驳(Kimi 续聊可能的 3 个反驳点) | 决策 1 + 5 + 6 + 7(四条) | Phase 46 §1.5.1(serial)+ §2.4(persistence)+ §3(conflict arbitration) |
+| §5.9 | Traceability matrix(本节) | 决策 5 + 6 + 7 + 3 + 1(五条汇总) | Phase 46 §1.5 + §2 + §3(整体 cross-ref) |
+
+**SC#3 验证:** Phase 51 VALIDATE lint script cross-check §5.9 traceability matrix —— 每行「§5 章节」必须存在于本 doc;每行「违反的决策号」必须出现在 §5 对应章节;每行「Cross-ref Phase 46 章节」必须出现在 Phase 46 文档。这是 SC#3 的「cross-ref Phase 46 protocol serial constraint + memory conflict arbitration」自动化验证。
