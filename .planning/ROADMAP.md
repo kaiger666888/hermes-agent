@@ -72,7 +72,9 @@ Plans:
   3. Memory conflict arbitration 规则文档化:comparator LLM pass + scope precedence(session > project > global)+ confidence-weighted voting + conflict log(解决 OQ-15,避免 P7)
   4. 强制串行约束显式声明(1 panelist 1 turn 顺序 `await`,引用 MEMORY.md `feedback-glm-overload-reduce-concurrency.md` 全局 concurrency==1 policy,解决 OQ-8)
   5. MCP tool 命名统一采用 STACK §3.2 形态(无前缀,与现有 9 个 messaging tool 风格一致,解决 OQ-9),涵盖 FEATURES borrowable points B1.4 / B2.1 / B2.3 / B4.2 / B6.1 / B7.3 / B8.2
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 46-01-PLAN.md — round table turn lifecycle + memory conflict arbitration (P7 mitigation) + 强制串行约束 (OQ-8) + 7 MCP tool STACK-form 契约 + 6 OQ + 7 borrowable points audit (5 tasks, 2 deliverable files)
 **UI hint**: no
 
 ### Phase 47: KIMI-COMPARISON
