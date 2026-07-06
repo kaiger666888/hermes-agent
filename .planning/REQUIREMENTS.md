@@ -1,135 +1,164 @@
-# Requirements: Hermes Agent — Kai's Personal Agent Platform
+# Milestone v10.0 Requirements — Hermes-Agent 编排架构第一性原理推导(设计型)
 
-**Defined:** 2026-06-26 (v9.0 milestone start)
-**Core Value:** 让 hermes-agent 成为 Kai 的主 agent — 既承载 movie-experts 这样的领域专家子系统,也具备通用 agent 必备的能力。v9.0 聚焦 kais-movie-pipeline 闭环深化(创意→生产→分发→反馈全闭环 Tier B+C)。
+**Goal:** 借鉴 Kimi Notion 架构2.0,结合本 repo 已 ship 的 coding-agent / GSD / curator / mem0,从第一性原理推导 Hermes-Agent 总调度器 + Hermes-native expert agents + Claude Code 执行场的三层架构 —— 产出可指导 v11.0 PoC 的设计套件,**不动任何代码**。
 
----
+**Scope:** 仅设计文档(`.planning/research/v10-orchestrator-design/`),零代码改动,单 repo(hermes-agent)。
 
-## v9.0 Requirements — kais-movie-pipeline 闭环深化
-
-**Source artifact:** Notion page "心流♥ → aigc开发 → 创作方向" (page_id 32811082-af8e-8009-b097-d19a5027b46f); Tier A 已落地为 quick task 260626-vzl refs(platform-specs / creative-redlines / genre-anchor-urban-fantasy)。
-
-**Scope约束:** 仅 `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 新 plugin `plugins/formula_library/`,**不碰 Hermes 核心 Python/JS**;新 gate 注册到现有 `plugins/review_gates/`(Phase 34 已交付 state machine)。
-
-### SLICE — Phase 38 平台母版切片 (Step 14)
-
-- [x] **SLICE-01**: Pipeline 能从 1 个 master.mp4 产出 7 平台 variants —— 抖音竖屏 9:16 / 抖音横屏 16:9 / 快手竖屏 / B 站横屏 5-10min / 小红书竖屏 3min / 视频号横屏 / 红果/快手极短 1-2min(对应 platform-specs.md 7-row 矩阵)
-- [x] **SLICE-02**: 每个 variant 自动调整 aspect ratio + length + hook position —— 开头 3s 钩子位置 / 中段卡点密度 / 结尾 3s 新钩子按 platform-specs.md 刚性约束
-- [x] **SLICE-03**: 切片元数据持久化到 `pipeline_state.episode_id.variants[]` —— schema 包含 platform / aspect_ratio / length / hook_timestamps / cut_points,供下游 DATA phase 平台 API 接入
-- [x] **SLICE-04**: 新 ref `skills/kais-movie-pipeline/references/platform-master-slicing.md` 文档化 7-variant 切片算法 + 4 关键决策点;SKILL.md body 新增 Step 14 section(不动 frontmatter)
-
-### FORM — Phase 39 配方库 v0 (新 plugin)
-
-- [ ] **FORM-01**: 新 plugin `plugins/formula_library/` scaffold —— `plugin.yaml` + `__init__.py` + `schema.py` (Pydantic) + `library/` 目录持 10 条种子公式 JSON;plugin discovery 通过现有 `hermes_cli/plugins.py` registry
-- [ ] **FORM-02**: Schema 字段定义 —— `formula_id` / `genre` / `mood` / `pacing` / `hook_pattern` / `characters` / `runtime_sec` / `platform_fit[]` / `citation` (来源标注,fair-use) / `verified_date` / `eval_score`(可选,从 v6.0 eval gate 回填)
-- [ ] **FORM-03**: 10 条种子公式覆盖 5 genre × 2 mood —— 都市奇幻/悬疑反转/家庭情感/校园青春/职场商战 × 轻喜剧/虐心;每条带 source citation(Notion 创作方向 / 公开爆款公式书 / kais-movie-agent 历史 benchmark)
-- [ ] **FORM-04**: `kais-movie-pipeline/SKILL.md` 新增 `formula_lookup` 前置 step(Step 0) —— 接受 genre + mood + platform 输入,返回 top-3 匹配公式;`theory_critic/SKILL.md` 增 `formula_reference` 可选输入
-
-### GATE — Phase 40 3 新审核门
-
-- [x] **GATE-01**: 在现有 `plugins/review_gates/gate.py` state machine 上注册 `redline_emotion_desensitize` gate —— 检测连续 ≥3 帧相同情绪效价(per `creative-redlines.md` R1:情绪脱敏 ≤2 次连续),违规时返回 reject + suggested_action(打散/插入反差)
-- [x] **GATE-02**: 注册 `redline_no_cold_open` gate —— 检测首 3s 是否含背景铺垫(per R3:零背景铺垫切入即冲突);违规时 reject + suggested_action(删铺垫 / 重排首帧)
-- [x] **GATE-03**: 注册 `redline_unfinished_ending` gate —— 检测结尾 3s 是否释放新钩子(per R4:结尾必释放新钩子);违规时 reject + suggested_action(加悬念 / 加新角色登场)
-- [x] **GATE-04**: 3 gates 接入 V8.6 8-gate review sequence(现有 `references/review-gates.md`) —— additive 加入为 gate 9 / 10 / 11,**不替换**现有 8;门序:gate 1-8 通过后,gate 9-11 在最终成片前再扫一次
-
-### PREVIEW — Phase 41 LTX2.3 预览闭环 (Step 6.5)
-
-- [x] **PREVIEW-01**: 新 ref `skills/kais-movie-pipeline/references/ltx2-preview-loop.md` 文档化 LTX2.3 baseline —— 模型选型(LTX2.3 / CausVid / Kling 1.6 fast)、~5s 生成预算、composition / framing / pacing 3 维校验阈值、prompt 模板
-- [x] **PREVIEW-02**: `kais-movie-pipeline/SKILL.md` 新增 Step 6.5 wiring —— storyboard (Step 6) 通过后,自动调用 LTX2.3 fast-preview,preview 通过才进 Step 7 (dreamina CLI 最终渲染)
-- [x] **PREVIEW-03**: 失败回退策略 —— preview 不达标(pacing 偏差 > 15% / framing 偏差 > 10%)自动回退到 Step 6 重新分镜,max 2 retries;超过 2 次走 operator review gate(现有 `plugins/review_gates/` BLOCKING mode)
-
-### DATA — Phase 42 数据收敛 (Step 15)
-
-- [ ] **DATA-01**: 平台 API adapter 骨架 —— 抖音开放平台 / 快手开放平台 / 视频号 / 小红书薯条 / B 站创作者 5 个 adapter stub;operator 配 API key 后激活(`~/.hermes/.env` 新增 `DOUYIN_API_KEY` 等 5 个);adapter 输出统一 `PlatformMetrics` Pydantic schema
-- [ ] **DATA-02**: Schema 扩展 v6.0 FeedbackStore —— `FeedbackRecord` 新增 `platform_metrics` 字段:`completion_rate` / `hook_dropoff_rate` / `engagement_rate` / `save_rate` / `comment_rate`,按 platform 分桶存储
-- [x] **DATA-03**: `formula_tuning_loop` —— 收敛的 metrics 触发自动建议:卡点跳出率高 → 建议加 hook 强度;完播率高但互动低 → 建议加 CTA;建议生成 JSONL review queue(沿用 v6.0 EVOL-02 queue 模式),operator approve 后回写 formula_library — SHIPPED Plan 42-03 (2026-06-27): 4 MetricTrigger rules + TuningThresholds + JSONL queue (queue/applied/rejected) + HIL-gated library_writer.apply_suggestion (atomic eval_score write-back via temp+os.replace; SuggestionNotApprovedError + AST-walk single-caller invariant); 35/35 tests GREEN
-- [ ] **DATA-04**: 新 ref `skills/kais-movie-pipeline/references/data-convergence.md` + dashboard —— `hermes formula stats` rich tables(per-formula / per-platform metrics);`--json` counts-only flag
-
-### VALIDATE — Phase 43 集成验证 + close-out
-
-- [ ] **VALIDATE-01**: 跨 5 phase integration-checker 全 pass —— Phase 38 SLICE 输出 variants[] → Phase 42 DATA adapter 消费;Phase 39 FORM formula_lookup → Phase 40 GATE suggested_action 引用;Phase 41 PREVIEW 回退到 Step 6 → 不破坏现有 13 step I/O 契约
-- [ ] **VALIDATE-02**: FOUND-08 preserved milestone-wide —— zero expert_id changes / zero frontmatter changes across all 16 active movie-experts, byte-diff 验证(对照 v9.0 start commit `a2a20d2be`)
-- [ ] **VALIDATE-03**: Canonical `.planning/milestones/v9.0-MILESTONE-AUDIT.md` —— 22/22 req coverage + 6/6 phase outcomes + integration matrix + FOUND-08 evidence chain + operator-action-handoffs 文档化
+**Predecessors:**
+- PROJECT.md §Current Milestone v10.0(7 锁定决策 + paradigm shift 声明)
+- `.planning/research/v10-orchestrator-design/SUMMARY.md`(synthesis of STACK/FEATURES/ARCHITECTURE/PITFALLS research)
+- Notion "架构2.0" page_id `39511082-af8e-80d7-83b6-e5df50d3f07c`(Kimi 2026-07-06 设计)
 
 ---
 
-## Future Requirements (v10+ candidates)
+## Design Documents(7 reqs)
 
-Acknowledged but deferred — NOT in v9.0 roadmap.
+### DESIGN-01: First Principles Derivation
 
-### FEISHU (from v7.0 deferred)
+产 `00-FIRST-PRINCIPLES.md`,从 7 锁定决策推导 + 合并 FEATURES §11 / ARCHITECTURE §8 / PITFALLS 行业案例为「v10.0 显式拒绝」总表(每条引用 3 source 章节号)。
 
-- **FEISHU-01**: feishu-doc / feishu-drive / feishu-perm / feishu-wiki migration
-- **FEISHU-02**: merge-vs-keep-4 设计决策
+**Deliverables:**
+- 7 决策的 first-principles 推导链(每决策从根本需求 → 推到选型)
+- 「v10.0 显式拒绝」总表(≥10 条 anti-features / anti-patterns,每条引用 FEATURES §X + ARCHITECTURE §Y + PITFALLS §Z)
+- 至少覆盖 FEATURES borrowable design points:B1.3 / B3.5 / B4.1 / B7.2 / B5.1
 
-### AGENT (from v7.0 deferred)
+### DESIGN-02: Agent Registry Schema
 
-- **AGT-01**: Multi hermes profile mechanism
-- **AGT-02**: acp-router alternative form in hermes
+产 `01-AGENT-REGISTRY-SCHEMA.md` + `agents-schema.yaml` + `memory-record-schema.yaml`。
 
-### V9-FUTURE (acknowledged at v9.0 planning)
+**Deliverables:**
+- 18-field agent YAML schema(完整 JSON Schema 定义,`agents-schema.yaml`)
+- Memory record schema(`memory-record-schema.yaml`,独立于 agent schema,包含 `expires_at` / `verified_at` / `supersedes_memory_id` / `confidence` / `half_life_days` / `evidence_chain` / `evidence_operator_ids` / `status` / `confidentiality` / `scope`)
+- Per-agent memory tier 规范(core / working / archival 三层)
+- Curator `_memory_evolution_phase` 字段契约(类比 v6.0 `_feedback_scan_phase`)
+- 15 expert 转化映射(从 ARCHITECTURE §2 拷贝)
 
-- **V9-FUTURE-01**: Live platform API data ingestion(live smoke-test,operator 配 key 后激活)
-- **V9-FUTURE-02**: LTX2.3 真实模型生成验证(目前仅 baseline 文档 + adapter 骨架)
-- **V9-FUTURE-03**: formula_library 扩展到 50+ 公式(目前 10 seed)
-- **V9-FUTURE-04**: A/B 测试框架(per-variant metrics 对比 + 显著性检验)
-- **V9-FUTURE-05**: 跨 milestone: kais-movie-pipeline v10 + 视觉系升级(TRELLIS 2 → Blender 3D 资产管线)
+**必须解决 Open Questions:** OQ-1(persona 版本控制)/ OQ-4(fitness_score 冷启动)/ OQ-7(memory.max_records 上限)/ OQ-13(tools 字段枚举)/ OQ-14(JSON Schema 正式定义)/ OQ-16(curator evolution phase 边界)
+
+**必须涵盖字段级缓解(7 load-bearing pitfalls):** P1 persona drift / P2 stale memory / P4 cross-project leakage / P5 curator failure modes / P8 no fitness signal / P10 privacy(部分)/ P14 schema migration
+
+### DESIGN-03: Round Table Protocol
+
+产 `02-ROUND-TABLE-PROTOCOL.md` + `round-table-state-schema.yaml`。
+
+**Deliverables:**
+- Turn lifecycle(`round_table_open` → turn N → `submit_round_table_result`)
+- Memory conflict arbitration 规则(comparator LLM pass + scope precedence(session > project > global)+ confidence-weighted voting + conflict log)
+- Confidentiality propagation(public / internal / confidential / nda)
+- `project_id` 必传规则
+- 强制串行约束(GLM 4-key rotation 兼容,引用 MEMORY.md `feedback-glm-overload-reduce-concurrency.md`)
+- MCP tool 命名统一(采用 STACK 形态,无前缀)
+
+**必须解决 Open Questions:** OQ-2(turn_order 策略)/ OQ-5(agent 删除 orphan)/ OQ-9(MCP tool 命名)/ OQ-11(round_id 生成)/ OQ-15(conflict 仲裁)
+
+**必须避免:** P7 round-table memory conflict / P11 recall-vs-use
+
+**必须 addresses FEATURES borrowable points:** B1.4 / B2.1 / B2.3 / B4.2 / B6.1 / B7.3 / B8.2
+
+### DESIGN-04: Comparison vs Kimi MCP Shim
+
+产 `03-COMPARISON-VS-KIMI-MCP-SHIM.md`,T6 vs Kimi 全 MCP shim 方案逐维度对照表。
+
+**Deliverables:**
+- 7 维度对照表(协议 / dispatch / callback / state / 多 agent / 实现成本 / 稳定性)
+- Subagent 形态否决论据(引用 FEATURES §11 B4.1)
+- Microsoft 三层协议分层验证(引用 FEATURES §7.4 B7.1:internal → platform-native;tool → MCP;cross-platform → A2A)
+- Kimi 方案中可借鉴的部分(列出 + 评估)
+
+### DESIGN-05: Migration Path
+
+产 `04-MIGRATION-PATH.md`,Python runner 增量迁移计划。
+
+**Deliverables:**
+- 15 expert × 5-field transform 规则(从 SKILL frontmatter 到 agent YAML)
+- `default_invocation: skill_fallback → mcp_tool` 切换机制
+- Memory schema 迁移(从 v6.0 FeedbackStore 到新 memory-record-schema)
+- Retained-phases allowlist(`run_python_phase` 只接受 Step 7/10/11/12/0/6.5/15)
+- `schema_version` 字段 + dry-run migration
+
+**必须解决 Open Questions:** OQ-3(v7.0 mem0 `agent_id=hermes` 旧 memory 遗留)/ OQ-10(retained-phases allowlist 位置)
+
+**必须避免:** P14 schema migration breaks memory store
+
+### DESIGN-06: PoC Plan
+
+产 `05-POC-PLAN.md`,v11.0 PoC 验收条件 + 实施计划。
+
+**Deliverables:**
+- PoC 目标(vertical slice 选 1 个 creative phase + 1 个 infra phase)
+- 验收条件清单:
+  - Fitness battery 设计(引用 PITFALLS §P8)
+  - Latency SLO(p95 < 500ms,mem0 scoped retrieval)
+  - Bias canary(curator `_memory_evolution_phase` hallucination 检测)
+  - Compaction pass(`memory.max_records` 触发)
+  - Threshold tuning(初始默认值 + 调优路径)
+  - Dry-run-first invariant(curator 默认 dry-run)
+  - Schema migration dry-run
+- 工作量估算(每验收条件 1-3 天)
+- Risk register(7 load-bearing pitfalls × PoC deferral 评估)
+
+### DESIGN-07: Cross-Repo Impact
+
+产 `06-CROSS-REPO-IMPACT.md`,3-location 同步策略。
+
+**Deliverables:**
+- 3-location 表(hermes-agent repo / kais-hermes-skills repo / `~/.hermes/`)
+- Option B(v11.0 PoC:filter 路由)vs 物理分区(v12+:每 agent 一 workspace)迁移触发条件
+- Agent YAML 跨 repo 同步策略(lineage追溯到 kais-hermes-skills SKILL)
+- Round table state per-project(`.runtime/{slug}/round_tables/`)
+- Project slug 稳定性(`.hermes/project.id` long-term fix)
+
+**必须解决 Open Questions:** OQ-6(project slug 重命名) / OQ-12(mem0 backend 物理分区时机)
 
 ---
 
-## Out of Scope
+## Validation & Close-out(2 reqs)
 
-Explicit exclusions for v9.0 — to prevent scope creep.
+### VALIDATE-01: Milestone Audit
 
-| Feature | Reason |
-|---------|--------|
-| **Hermes 核心 Python/JS 代码改动** | 用户明确选择「纯 skill + refs + plugin」交付,避免 PR 风险,聚焦闭环逻辑;新 plugin `plugins/formula_library/` 是 hermes-agent 内 plugin 不是核心代码 |
-| **kais-movie-agent repo 改动** | per v5.0 cross-repo migration decision,kais-movie-agent repo 保持 read-only;所有 v9.0 deliverable 在 hermes-agent 内 |
-| **LTX2.3 真实生成测试** | Live GPU 测试 operator-side,v9.0 只产出 baseline 文档 + adapter 骨架;V9-FUTURE-02 deferred |
-| **Live 平台 API 数据接入** | 5 平台 API key 由 operator 配置,v9.0 提供 adapter 骨架 + schema,operator 配 key 后激活;V9-FUTURE-01 deferred |
-| **新增 movie-experts expert_id** | FOUND-08 frozen rule 继续生效;v9.0 不新增 expert_id,只在现有 16 active experts 上 patch SKILL.md body |
-| **重构 V8.6 13-step 编号** | 新增 Step 6.5 / 14 / 15 是 additive,不重排现有 13 step;V8.6 编号稳定性优先 |
-| **Multi-profile / agent 切换** | v7.0 deferred,v9.0 不触及 |
-| **Feishu / ACP skills** | v7.0 deferred,v9.0 不触及 |
-| **现有 14 active movie-experts 内容重写** | v9.0 只在 `theory_critic` + `compliance_gate` + `editor` 3 个 expert 上 patch SKILL.md body 加 formula/reference,其他 13 个不动 |
+产 `.planning/milestones/v10.0-MILESTONE-AUDIT.md`,核对:
+- 9/9 reqs 满足(逐 req 核对 deliverables)
+- 7 design docs cross-reference 一致(术语 / schema / 决策 across docs 不矛盾)
+- 16 Open Questions(SUMMARY.md OQ-1..OQ-16)全部解决或显式 defer 到 v11.0
+- 7 load-bearing pitfalls 全部有字段级缓解(在 DESIGN-02 / DESIGN-03 / DESIGN-06 中)
+- 4 research 引用链完整(每个 design doc 引用的 STACK/FEATURES/ARCHITECTURE/PITFALLS 章节可追溯)
+
+### VALIDATE-02: Cross-Doc Consistency Check
+
+产 `scripts/v10-consistency-check.py`(lint 脚本),自动检查 7 design docs 的:
+- 术语一致(`agent` / `skill` / `round table` / `panel` / `turn` 等)
+- Schema 引用一致(`agents-schema.yaml` 字段名 == design docs 中提及的字段名)
+- 决策号引用一致(决策 1-7 在每个 doc 中描述一致)
+- MCP tool 命名一致(统一 STACK 形态)
+
+**Note:** 若 v10.0 后期发现 lint 脚本过度工程,可在 plan-phase 时降级为 manual check。
 
 ---
 
 ## Traceability
 
-Updated during roadmap creation. v9.0 phases 38-43.
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| SLICE-01 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
-| SLICE-02 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
-| SLICE-03 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
-| SLICE-04 | Phase 38 | ✅ Complete (Plan 38-01, 2026-06-27) |
-| FORM-01 | Phase 39 | ✅ Complete (Plan 39-01, 2026-06-26) — plugin scaffold |
-| FORM-02 | Phase 39 | ✅ Complete (Plan 39-01, 2026-06-26) — Pydantic schema |
-| FORM-03 | Phase 39 | ✅ Complete (Plan 39-02, 2026-06-26) — 10 seed formulas |
-| FORM-04 | Phase 39 | ✅ Complete (Plan 39-03, 2026-06-27) — Step 0 + formula_reference |
-| GATE-01 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_emotion_desensitize gate 9 |
-| GATE-02 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_no_cold_open gate 10 |
-| GATE-03 | Phase 40 | ✅ Complete (Plan 40-01/02, 2026-06-26) — redline_unfinished_ending gate 11 |
-| GATE-04 | Phase 40 | ✅ Complete (Plan 40-02/03, 2026-06-26) — 8→11 additive; V8.6 preserved |
-| PREVIEW-01 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
-| PREVIEW-02 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
-| PREVIEW-03 | Phase 41 | ✅ Complete (Plan 41-01, 2026-06-27) |
-| DATA-01 | Phase 42 | ✅ Complete (Plan 42-01/02, 2026-06-27) — schema + 5 adapter stubs |
-| DATA-02 | Phase 42 | ✅ Complete (Plan 42-01, 2026-06-27) — FeedbackRecordExtension (Option A) |
-| DATA-03 | Phase 42 | ✅ Complete (Plan 42-03, 2026-06-27) — tuning_loop + JSONL queue + HIL writer |
-| DATA-04 | Phase 42 | ✅ Complete (Plan 42-04, 2026-06-27) — CLI + data-convergence.md + Step 15 |
-| VALIDATE-01 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — 3 integration flows verified |
-| VALIDATE-02 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — FOUND-08 byte-diff: 30 SKILL.md all match |
-| VALIDATE-03 | Phase 43 | ✅ Complete (Plan 43-01, 2026-06-27) — v9.0-MILESTONE-AUDIT.md (10 sections) |
-
-**Coverage:**
-- v9.0 requirements: 22 total (SLICE×4 + FORM×4 + GATE×4 + PREVIEW×3 + DATA×4 + VALIDATE×3)
-- Mapped to phases: 22 / 22 ✓
-- Unmapped: 0
+| REQ-ID | 文档 | OQ 解决 | Pitfall 避免 | Research 引用 |
+|--------|------|--------|-------------|--------------|
+| DESIGN-01 | 00-FIRST-PRINCIPLES.md | — | — | FEATURES §10,11 + ARCHITECTURE §8 + PITFALLS 全文 |
+| DESIGN-02 | 01-AGENT-REGISTRY-SCHEMA.md + agents-schema.yaml + memory-record-schema.yaml | OQ-1,4,7,13,14,16 | P1,P2,P4,P5,P8,P10,P14 | ARCHITECTURE §1,2,3,4 + PITFALLS 全文 + STACK §3.2 |
+| DESIGN-03 | 02-ROUND-TABLE-PROTOCOL.md + round-table-state-schema.yaml | OQ-2,5,9,11,15 | P7,P11 | STACK §3.2 + ARCHITECTURE §4,5 + FEATURES §1.3,2.3,10 + PITFALLS §P7,11 |
+| DESIGN-04 | 03-COMPARISON-VS-KIMI-MCP-SHIM.md | — | — | FEATURES §4,7.4,11 + STACK §1-5 + Kimi Notion 架构2.0 |
+| DESIGN-05 | 04-MIGRATION-PATH.md | OQ-3,10 | P14 | ARCHITECTURE §2,6 + STACK §3.2 Tool 7 |
+| DESIGN-06 | 05-POC-PLAN.md | — | P1-P14(全部 PoC 验收) | PITFALLS 全文 + STACK §7 + FEATURES §14 |
+| DESIGN-07 | 06-CROSS-REPO-IMPACT.md | OQ-6,12 | P3,P12 | ARCHITECTURE §6 + STACK §3.2 |
+| VALIDATE-01 | v10.0-MILESTONE-AUDIT.md | 全部核对 | 全部覆盖 | 全部 |
+| VALIDATE-02 | scripts/v10-consistency-check.py | — | — | 全部 |
 
 ---
 
-*Requirements defined: 2026-06-26 — v9.0 milestone start (6 phases 38-43, 22 reqs).*
-*Last updated: 2026-06-27 — Phase 43 VALIDATE complete; v9.0 milestone 22/22 reqs satisfied. Traceability: all 22 reqs marked ✅ Complete. Ready for `git tag v9.0` + `/gsd:complete-milestone v9.0`.*
+## Out of Scope
+
+- **任何代码改动** —— 不动 SKILL.md / Python / plugin manifest / `mcp_serve.py` / `agent/curator.py` / `plugins/memory/mem0/`。所有代码工作 deferred 到 v11.0 PoC
+- **kais-hermes-skills repo 改动** —— 设计文档仅引用其 SKILL.md 作 lineage 源,不改 SKILL
+- **新建独立 repo(如 kais-orchestrator)** —— 单 repo 收敛(hermes-agent),设计完成后 v11.0 PoC 再决定是否拆 repo
+- **live round table 执行** —— v10.0 仅设计协议,v11.0 PoC 才真跑
+- **per-agent memory 实测** —— v10.0 仅设计 schema + 字段,v11.0 PoC 跑 latency benchmark
+
+---
+
+*Last updated: 2026-07-06 — v10.0 REQUIREMENTS.md created (9 reqs: 7 DESIGN + 2 VALIDATE). Phase mapping will be filled by ROADMAP.md.*
