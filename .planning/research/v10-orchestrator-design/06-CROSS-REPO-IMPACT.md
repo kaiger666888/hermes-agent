@@ -672,5 +672,294 @@ One-way migration. 6 steps:
 
 **Implication for 3-location sync:** A2A exposition 影响 Location 1 (hermes-agent repo) —— v12+ dashboard Agents tab 需要 expose agent_card over HTTP endpoint for cross-vendor discovery. Location 2 (kais-hermes-skills) + Location 3 (`~/.hermes/agents/`) 不变.
 
+---
+
+## §5 Project Slug Stability Policy (SC#5 Deep-Dive, OQ-6 Resolution)
+
+### §5.0 Elaboration 声明
+
+本节是 **ROADMAP SC#5 的完整论证** + **SUMMARY OQ-6 的 resolution**.
+
+ARCHITECTURE §5.1 + §7.4 定义了 `project_slug` 的 derivation (`{repo_basename}:{git_toplevel_abspath_sha8}`). ARCHITECTURE §10.6 把 slug 稳定性列为 open question:
+
+> **OQ-6:** project slug 重命名稳定性. 倾向性结论: 接受 breakage (已知限制), long-term 用 `.hermes/project.id` stable ID. 在 `06-CROSS-REPO-IMPACT.md` 解决.
+
+本节给出 **短期 (接受 breakage + manual recovery) + 长期 (`.hermes/project.id` stable ID)** 双轨策略 + adoption roadmap, 解决 OQ-6.
+
+### §5.1 project_slug 当前 Derivation 引用
+
+**Cite ARCHITECTURE §5.1 + §7.4 verbatim:**
+
+> `project_slug` derivation: `{repo_basename}:{git_toplevel_abspath_sha8}` (e.g. `hermes-agent:a1b2c3d4` for `/data/workspace/hermes-agent/`). Disambiguates two repos with same name on different machines.
+
+**Pattern (ARCHITECTURE §7.4):** Project Slug for State Isolation. project_slug derived from `repo_basename` + `git_toplevel_abspath_sha8`. Disambiguates two repos with same name on different machines.
+
+**Design intent:**
+
+- Disambiguate same-name repos on different machines (e.g. Kai's laptop vs desktop both have `/data/workspace/hermes-agent/` clones — different abspath → different sha8 → different slug).
+- Deterministic —— no operator action required to compute slug.
+- Collision-resistant —— sha8 给 16M namespace.
+- Recoverable from filesystem inspection.
+
+**示例 derivation:**
+
+```
+repo_basename = "hermes-agent"
+git_toplevel_abspath = "/data/workspace/hermes-agent/"
+git_toplevel_abspath_sha8 = sha8("/data/workspace/hermes-agent/") = "a1b2c3d4"  # 取 sha256 abspath 的前 8 chars
+project_slug = "hermes-agent:a1b2c3d4"
+```
+
+### §5.2 短期 Breakage 接受 (Short-Term Policy — LOCKED for v11.0 PoC)
+
+**Cite SUMMARY OQ-6 verbatim:**
+
+> 接受 breakage (已知限制), long-term 用 `.hermes/project.id` stable ID.
+
+**3 个 breakage 场景:**
+
+#### Scenario 1 — Repo rename
+
+Operator renames `hermes-agent` to `hermes-agent-v11`. `repo_basename` changes (`hermes-agent` → `hermes-agent-v11`) → slug changes (`hermes-agent:a1b2c3d4` → `hermes-agent-v11:a1b2c3d4`) → 已有的 `~/.hermes/agents/.runtime/hermes-agent:a1b2c3d4/round_tables/*.json` orphaned.
+
+**Recovery (v11.0 PoC manual):**
+
+```bash
+mv ~/.hermes/agents/.runtime/hermes-agent:a1b2c3d4/ \
+   ~/.hermes/agents/.runtime/hermes-agent-v11:a1b2c3d4/
+```
+
+One-line shell command. Safe because round-table state is append-only, no concurrent writes during rename (Hermes 必须停止 round table 才能 rename).
+
+#### Scenario 2 — Checkout move
+
+Operator moves checkout from `/data/workspace/hermes-agent/` to `/home/kai/repos/hermes-agent/`. `git_toplevel_abspath_sha8` changes → slug changes → orphaned.
+
+**Recovery (v11.0 PoC manual):**
+
+```bash
+# Compute new slug
+new_slug=$(hermes project slug --path /home/kai/repos/hermes-agent/)
+# Move state
+mv ~/.hermes/agents/.runtime/hermes-agent:a1b2c3d4/ \
+   ~/.hermes/agents/.runtime/${new_slug}/
+```
+
+#### Scenario 3 — Clone to second machine
+
+Operator clones repo to laptop. `git_toplevel_abspath_sha8` likely differs (different absolute path on different machine) → different slug → laptop creates fresh `~/.hermes/agents/.runtime/{laptop_slug}/round_tables/` (no inheritance from desktop).
+
+**Recovery:** None needed. Each machine maintains independent round-table history by design. Round-table state is per-machine-per-project —— this is correct behavior, not breakage.
+
+#### 短期 breakage acceptance rationale
+
+- **v11.0 PoC scope is single-machine** (Kai's primary workstation —— per MEMORY.md `hermes-gateway-systemd.md` context).
+- Renames + moves 是 infrequent (months apart, 通常 around major version milestones).
+- Manual recovery cost is low (one `mv` per event).
+- v12+ stable ID mechanism (§5.3) eliminates breakage entirely 但 adds adoption cost —— **not justified for v11.0 PoC scale** (1-2 projects).
+
+### §5.3 长期 Stable ID 机制 (Long-Term Fix — DESIGN for v12+)
+
+**Design:** `.hermes/project.id` file at hermes-agent repo root (gitignored, operator-created).
+
+**Content:** Single line = uuid4 string. e.g. `550e8400-e29b-41d4-a716-446655440000`.
+
+**Lifecycle:**
+
+- Operator runs `hermes project init` (v12+ CLI command) → generates uuid4 → writes `.hermes/project.id`.
+- **Two adoption modes (operator's choice):**
+  - **Mode A — Machine-local ID (default):** `.hermes/project.id` is gitignored (added to `.gitignore`). ID is per-clone. Each machine maintains independent round-table history. Simple, no shared state.
+  - **Mode B — Team-shared ID (opt-in):** Operator commits `.hermes/project.id` to repo. All clones inherit same ID. Round-table history is shareable across machines (requires operator to manually `rsync` `.runtime/{id}/round_tables/` directories, OR a future sync mechanism). **Trade-off:** ID is now public (in git history) —— acceptable for non-adversarial context (kais-hermes-skills + hermes-agent are public-open per MEMORY.md context).
+
+**Routing:**
+
+- Hermes resolves `project_id` from `.hermes/project.id` (if present) at startup.
+- Falls back to `project_slug` derivation (§5.1) if `.hermes/project.id` absent.
+- Round-table state path uses ID when available: `~/.hermes/agents/.runtime/projects/{project_id}/round_tables/*.json` (new path structure, see §5.4).
+
+### §5.4 Stable ID 落盘路径设计
+
+**New path structure (v12+):**
+
+```
+~/.hermes/agents/.runtime/
+└── projects/
+    └── {project_id}/                      # uuid4, e.g. 550e8400-e29b-41d4-a716-446655440000
+        └── round_tables/
+            ├── {round_table_id}.json
+            └── ...
+```
+
+**Backward compatibility (slug → ID symlink bridge):**
+
+Existing `.runtime/{slug}/round_tables/` paths preserved via symlink:
+
+```
+~/.hermes/agents/.runtime/{slug}  →  symlink →  ~/.hermes/agents/.runtime/projects/{resolved_project_id}
+```
+
+v11.0 PoC code writing to slug path automatically lands in ID path via symlink. No v11.0 PoC code change required.
+
+**Migration (v12+ adoption via `hermes project adopt` CLI):**
+
+- `hermes project adopt` CLI scans `.runtime/{slug}/` directories.
+- Prompts operator to confirm project_id mapping (or auto-creates new uuid4 if no `.hermes/project.id` exists yet).
+- Creates symlinks.
+- One-time, idempotent.
+
+### §5.5 Stable ID Adoption Roadmap
+
+- **v11.0 PoC:** **NOT implemented.** Uses slug-based path directly (ARCHITECTURE §5.1). v11.0 PoC scope (single-machine, single-project) does not justify adoption cost.
+- **v12+:** **Implemented when either of:**
+  - (a) Operator renames/moves repo for first time AND expresses pain (manual `mv` recovery is annoying), OR
+  - (b) Second project is added to round-table workflow (multi-project state isolation becomes load-bearing).
+  - Whichever comes first.
+- **Migration effort:** ~2-3 person-days (CLI implementation + symlink bridge + migration test).
+
+### §5.6 Dual-Path 兼容性 (Hermes Routing Rules)
+
+- Hermes reads `project_id` **FIRST** (if `.hermes/project.id` exists), falls back to slug derivation.
+- **Write path:** Hermes writes to ID-based path when ID present, slug-based path otherwise.
+- **Read path:** Hermes reads from whichever path exists (ID preferred, slug fallback for legacy state).
+- **Invariant:** Within a single Hermes process lifetime, routing decision is **stable** (no mid-flight switching). Operator must restart Hermes after creating `.hermes/project.id` to adopt ID routing.
+- **Symlink bridge ensures v11.0 PoC + v12+ paths converge** to same physical state directory —— no migration of state JSON content required, only directory rename / symlink creation.
+
+---
+
+## §6 Round Table State Per-Project Path (SC#4 Deep-Dive, ARCHITECTURE §5.1 + §5.2 Reference)
+
+### §6.0 Elaboration 声明
+
+本节是 **ROADMAP SC#4 的完整论证**.
+
+ARCHITECTURE §5.1 已给完整 state file layout + `project_slug` derivation. ARCHITECTURE §5.2 已给 cross-project sharing rules (round-table state per-project rationale). Phase 46 已给 round-table-state-schema.yaml `project_slug` required field + atomic / append-only / crash-recoverable invariants.
+
+本节 **引用 + 解释 + 补充 crash recovery 设计** (ARCHITECTURE §5.3 lifecycle sketch 的细节, defer 实施到 v11.0 PoC).
+
+### §6.1 State File 路径规范
+
+**Cite ARCHITECTURE §5.1 verbatim:**
+
+> Layout: `~/.hermes/agents/.runtime/{project_slug}/round_tables/{round_table_id}.json`
+
+**完整路径 example:**
+
+```
+~/.hermes/agents/.runtime/hermes-agent:a1b2c3d4/round_tables/rt_20260715_153000_a1b2c3.json
+```
+
+**Properties (cite Phase 46 §4 invariants — LOCKED):**
+
+- **Atomic:** Single-file JSON, written via `write_temp + rename` pattern. Rename atomicity guarantees previous state intact on partial write.
+- **Append-only turn records:** Existing turns immutable; new turns appended. Mirrors event-sourcing pattern —— transcript is append-only log.
+- **Crash-recoverable:** Worst-case partial write leaves previous state intact via rename atomicity. See §6.4 for full failure-mode analysis.
+
+**Schema reference:** Phase 46 `round-table-state-schema.yaml` — fields:
+
+- `round_table_id` (string, required, format `rt_{YYYYMMDD}_{HHMMSS}_{sha6}`)
+- `project_slug` (string, required — see §6.2)
+- `opened_at` (ISO 8601 timestamp, required)
+- `closed_at` (ISO 8601 timestamp, nullable)
+- `panel` (list of agent names, required)
+- `question` (string, required)
+- `turn_order` (list of agent names, required — defines speaking order)
+- `max_rounds` (int, required)
+- `early_stop_rule` (string, required)
+- `current_round` (int, required)
+- `current_speaker_index` (int, required)
+- `turns[]` (list of turn records, append-only)
+- `state` (enum: `in_progress` / `closed` / `abandoned`)
+- `final_synthesis` (string, nullable)
+- `synthesizer` (string, nullable)
+- `early_stop_triggered` (bool)
+- `early_stop_reason` (string, nullable)
+
+### §6.2 project_slug 必传规则
+
+**Cite Phase 46 §2 round-table-state-schema.yaml:** `project_slug` is **required** field in `round_table_open` MCP tool call.
+
+**Enforcement:**
+
+- Dispatcher (Hermes runtime) rejects `round_table_open` calls without `project_slug` (Phase 46 §4 invariant — schema validation).
+- CC cannot open round table without identifying the project.
+
+**Rationale (cite ARCHITECTURE §5.1):** Round-table state MUST be per-project —— without slug, state file has no path. The `~/.hermes/agents/.runtime/{slug}/round_tables/{round_table_id}.json` path requires slug as directory component.
+
+**Interaction with §5 stable ID:** When `.hermes/project.id` exists (v12+), `project_slug` field in schema can carry either slug (v11.0 PoC) or project_id (v12+) —— schema field is opaque string, routing logic in dispatcher. 见 §5.6 dual-path compatibility.
+
+### §6.3 Per-Project 隔离根因
+
+**Cite ARCHITECTURE §5.2 verbatim:**
+
+> Round table state — **Per-project**. Rationale: each project has its own questions, panel configs, and synthesis outcomes.
+
+**Concrete example:**
+
+kais-movie-pipeline project asks "Should Volvo S1-1 use empty-car establish or grandson reveal?" —— this question + its 4-panelist synthesis (cinematographer / screenplay / hook_retention / theory_critic opinions + final synthesis decision) 是 **meaningless in any other project's context**. Per-project isolation prevents cross-project question contamination.
+
+**Contrast with agent YAML (cross-project):**
+
+- Agent YAML 是 cross-project (operator-owned identity) —— cinematographer 是 cinematographer regardless of project. Persona + tools + memory_scope 都是 stable identity.
+- But cinematographer's opinion on a **specific question** in a **specific project's round table** 是 per-project. This is exactly the round-table state isolation boundary.
+
+**Round-table turn snapshots capture agent `fitness_score` at turn time** (per ARCHITECTURE §5.2 closing paragraph), so transcript is reproducible even if agent's current score drifts mid-round-table. Dispatcher writes snapshot, not reference.
+
+### §6.4 Crash Recovery 设计
+
+**Cite ARCHITECTURE §5.3 lifecycle sketch + Phase 46 §4 invariants.**
+
+**3 个 failure modes:**
+
+#### (a) CC crash mid-turn
+
+- Round-table state JSON has `state: "in_progress"`, `current_round: N`, `current_speaker_index: K`.
+- Hermes dispatcher detects CC process exit via tmux session end (per 决策 1 T6 协议: tmux dispatch).
+- State file remains on disk —— atomic write guarantees no corruption.
+- **Recovery:** Next `round_table_open` for same `project_slug` + same `round_table_id` resumes from last committed turn (turn at `current_speaker_index - 1`). Operator can also manually inspect state file via `hermes round-table show --id {round_table_id}`.
+
+#### (b) Hermes crash mid-turn
+
+- Same recovery as (a) —— state file on disk is authoritative.
+- Hermes restart reads state file, resumes round table from last committed turn.
+- Dispatcher's startup routine scans `.runtime/{slug}/round_tables/*.json` for `state: "in_progress"` entries, surfaces them in dashboard (v12+ dashboard Agents tab) or CLI (`hermes round-table list --state in_progress`).
+
+#### (c) Disk full / write failure
+
+- `write_temp + rename` atomicity ensures previous state intact.
+- Dispatcher returns error to CC (via MCP tool response); CC decides retry or abort.
+- If CC retries, dispatcher re-attempts write; if disk space freed, write succeeds, state advances normally.
+- If CC aborts, dispatcher marks state as `state: "abandoned"` in next gc pass (§6.4 GC pass below).
+
+**GC pass (deferred to v11.0 PoC — NOT implemented in v10.0):**
+
+- Periodic scan of `.runtime/{slug}/round_tables/*.json` for state files with `state: "in_progress"` + `opened_at` older than threshold (e.g. 24h).
+- Mark as `state: "abandoned"`, archive to `.runtime/{slug}/round_tables/_archived/`.
+- Threshold configurable via `cli-config.yaml` (default 24h).
+- **Not implemented in v10.0** (design only). v11.0 PoC implementation.
+
+### §6.5 跨 Project 引用 Forbidden 声明
+
+**Invariant (cite ARCHITECTURE §5.2):** Round-table state JSON for project A **MUST NOT** reference project B's round-table state, agent fitness snapshots, or memory records directly.
+
+**Indirect reference allowed:**
+
+- Round-table state JSON references **agent names** (e.g. `panel: ["screenplay", "cinematographer"]`).
+- Agent YAMLs 是 cross-project (operator-owned) —— so the **same agent** participates in multiple projects' round tables.
+- But the state JSON itself contains only **that project's** turn records + cited memory snapshot at turn time.
+
+**Enforcement:**
+
+- Phase 46 `round-table-state-schema.yaml` does NOT have a `cross_project_references` field.
+- Dispatcher validates on every `submit_round_table_result` call —— rejects any state JSON with cross-project reference fields.
+- lint script in Phase 51 VALIDATE will cross-check schema invariants.
+
+**Rationale (cite PITFALLS §P4 — Pitfall 4: Cross-Project Memory Leakage):**
+
+> Direct cross-project references would violate per-project scope invariant and risk P4 cross-project memory leakage. "Isolation into a memory system designed as single-tenant is painful. Per-tenant storage is cheap. Cross-tenant data leaks are not." (PITFALLS §P4 mitigation 3 reference).
+
+Round-table state follows the same isolation principle. Cross-project leakage in round-table context would be: project A's round-table transcript citing project B's question / synthesis —— meaningless AND potentially contaminating.
+
+
+
 
 
