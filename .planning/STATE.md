@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v10.0
-milestone_name: Hermes-Agent 编排架构第一性原理推导(设计型)
-status: milestone_complete
-last_updated: 2026-07-06T19:26:47.298Z
-last_activity: 2026-07-06 -- Phase 51 execution started
+milestone: v11.0
+milestone_name: Hermes-Native Expert Agents PoC Implementation
+status: planning
+last_updated: "2026-07-06T23:39:44.130Z"
+last_activity: 2026-07-06
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 8
-  completed_plans: 9
-  percent: 88
-stopped_at: Milestone complete (Phase 51 was final phase)
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -29,10 +28,10 @@ stopped_at: Milestone complete (Phase 51 was final phase)
 
 ## Current Position
 
-Phase: 51
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-06
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-06 — Milestone v11.0 started
 
 ### Progress
 

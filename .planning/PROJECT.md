@@ -24,7 +24,7 @@ v10.0 SHIPPED + closed 2026-07-07(tag `v10.0`,phases 归档至 `.planning/milest
 - 数据收敛 (Step 15 平台 API → FeedbackStore → formula tuning)
 - 集成验证 + close-out
 
-## Current Milestone: v11.0 PoC — Hermes-Native Expert Agents Implementation (next)
+## Current Milestone: v11.0 — Hermes-Native Expert Agents PoC Implementation
 
 **Goal:** 按 v10.0 设计套件实施 vertical slice(1 creative phase + 1 infra phase),验证三层架构 runtime 可行性。**v11.0 是 v10.0 设计的实施 milestone** —— 不再产出设计文档,而是把 `00-FIRST-PRINCIPLES` 到 `06-CROSS-REPO-IMPACT` 的设计落地为 Python 代码 + agent YAML + mem0 extensions。
 
@@ -41,7 +41,12 @@ v10.0 SHIPPED + closed 2026-07-07(tag `v10.0`,phases 归档至 `.planning/milest
 6. Dry-run-first invariant (1d)
 7. Schema migration dry-run (2d)
 
-**Start:** `/gsd:new-milestone v11.0`
+**Key constraints:**
+- 复用 v10.0 设计,不重新推导 7 决策(cite `00-FIRST-PRINCIPLES.md` §2)
+- 强制串行(1 panelist 1 turn `await`)兼容 GLM 4-key rotation
+- dry-run-first invariant(curator 默认 dry-run,所有 schema 迁移默认 dry-run)
+
+**Start:** Phase 52(继续 v10.0 Phase 51 后的编号)
 
 ---
 
