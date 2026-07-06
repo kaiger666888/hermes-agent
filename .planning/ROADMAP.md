@@ -44,7 +44,7 @@ v10.0 is a **design-only milestone** (zero code changes, analog to v2.0 PRFP). I
   4. 后续 6 份设计文档可在不重新推导决策的前提下引用本文档作为字段/协议/迁移决策的根论据
 **Plans**: 1 plan
 Plans:
-- [ ] 44-01-PLAN.md — 7 决策 first-principles 推导 + 显式拒绝总表 + borrowable points 评估 + 后续 6 docs 引用指南 (4 tasks, single-file deliverable)
+- [x] 44-01-PLAN.md — 7 决策 first-principles 推导 + 显式拒绝总表 + borrowable points 评估 + 后续 6 docs 引用指南 (4 tasks, single-file deliverable)
 **UI hint**: no
 
 ### Phase 45: AGENT-SCHEMA
@@ -174,7 +174,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 44. FIRST-PRINCIPLES | v10.0 | 0/1 | Planned (ready to execute) | - |
+| 44. FIRST-PRINCIPLES | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 45. AGENT-SCHEMA | v10.0 | 0/TBD | Not started | - |
 | 46. ROUND-TABLE-PROTOCOL | v10.0 | 0/TBD | Not started | - |
 | 47. KIMI-COMPARISON | v10.0 | 0/TBD | Not started | - |
