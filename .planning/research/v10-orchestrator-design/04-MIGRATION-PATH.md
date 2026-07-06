@@ -1151,3 +1151,358 @@ Operator rolls back. **Rollback steps:**
 > **P14 RESOLVED in §4.** Three-layer mitigation (`schema_version` §4.4 + dry-run §4.5 + safe-default §4.6) + 6-step backup-first migration (§4.7) + always-safe rollback path (§4.8) collectively prevent P14 (silent drop / unsafe default pollution of memory store). Cite PITFALLS §P14 risk register entry (severity MEDIUM, PoC-acceptable deferral = NO) — this doc satisfies the "must ship with v11" requirement. Phase 50 POC-PLAN consumes §4.5 dry-run + §4.9 acceptance criteria as PoC week-1 work items.
 
 ---
+
+## §5 — Retained-Phases Allowlist + Legacy mem0 Policy (SC#5 Deep-Dive, OQ-3 + OQ-10 Resolution)
+
+### §5.0 Why This Section — SC#5 + OQ-3 + OQ-10 Three-Resolution
+
+本节是 **ROADMAP SC#5 的完整论证 + SUMMARY OQ-3 + OQ-10 的 resolution**. STACK §3.2 Tool 7 已给 `run_python_phase` boundary tool 签名 (`async def run_python_phase(phase, ...)`); §11.2 已给 allowlist location (`round-table-schema.yaml` = `round-table-state-schema.yaml`). 本节给出:
+
+- 7 个 retained step 的显式声明 + per-step rationale (§5.2)
+- allowlist location resolution + `retained_python_phases` schema field spec (§5.3)
+- enforcement mechanism (dispatcher-layer validation, no silent fallback, §5.4)
+- 旧 v7.0 mem0 `agent_id=hermes` memory 遗留策略 (§5.5)
+- 30-day sunset window (§5.6)
+
+### §5.1 `run_python_phase` Boundary Tool 引用 (CITE STACK §3.2 Tool 7)
+
+**Cite STACK §3.2 Tool 7 verbatim:**
+
+- **Signature:** `async def run_python_phase(phase: str, ...) -> PhaseResult`
+- **Purpose:** B3a Python runner 增量迁移的 boundary tool (Phase 44 决策 2 直接落实). Allow CC to invoke specific Python pipeline phases (ComfyUI generation / script audit / continuity audit / etc.) during round-table turns **without leaving the MCP tool boundary**.
+- **Boundary semantics:** `openWorldHint=True` per STACK §3.2 — ComfyUI / dreamina_cli call is open-world (may fail, may produce unexpected output). CC must treat results as best-effort, not authoritative.
+- **Hermes-side tool:** `run_python_phase` is a Hermes-side MCP tool (per Phase 44 决策 1 T6 协议 layer + 决策 7 Hermes-owns-structure). CC invokes via MCP call; Hermes validates + executes Python pipeline phase.
+
+### §5.2 Retained-Phases Allowlist — 7 个 Step 显式声明 + Rationale
+
+**Allowlist (Steps eligible for `run_python_phase`):**
+
+| Step | Phase name | Why retained (delegate-only) | Why CC needs it |
+|------|------------|------------------------------|-----------------|
+| **Step 0** | `project_init` / `setup` | Pure project initialization (mkdir, copy templates, write initial config). No creative decisions. | CC asks Hermes to scaffold a new project structure; CC cannot mkdir in `~/.hermes/projects/` directly (filesystem-locked). |
+| **Step 6.5** | `storyboard_assembly` (pre-generation) | Mechanical assembly of storyboard frames from prior decisions (script_auditor pass + character_designer L1-L4 + cinematographer shot list). No creative decisions — just composition. | CC asks Hermes to assemble the storyboard from round-table outputs; assembly requires reading 4-5 JSON artifacts CC doesn't have direct access to. |
+| **Step 7** | `visual_generation` (ComfyUI / dreamina) | Long-running exec task (text2image / image2image / multimodal2video). dreamina CLI execution. CC cannot run dreamina directly (Hermes-side exec tool). | CC asks Hermes to generate visuals from prompt_injector's prompts; takes 30s-5min per frame; CC's MCP tool boundary cannot hold long exec calls without `run_python_phase` indirection. |
+| **Step 10** | `script_audit_gate` | Deterministic gate (script_auditor 5-dim check + completion % prediction). No creative decisions — output is pass/fail + 5 dimension scores. | CC asks Hermes to run the audit gate; gate result drives round-table decision (pass → proceed; fail <65% → re-screenplay). |
+| **Step 11** | `continuity_audit` | Deterministic gate (continuity_auditor 4-dim check + axis compliance). No creative decisions — output is pass/fail per dimension. | CC asks Hermes to run continuity audit; gate result drives visual re-generation if any dimension fails. |
+| **Step 12** | `color_grading` | Deterministic transform (apply LUT plan from colorist to visual renders). No creative decisions — input is LUT plan, output is graded frames. | CC asks Hermes to apply LUT; transform is a function call, not a generative act. |
+| **Step 15** | `final_render_export` | Long-running exec task (final render pipeline: stitch frames + audio + color + spatial audio). CC cannot run final render directly. | CC asks Hermes to render final output; takes 5-30min; CC's MCP tool boundary cannot hold this without `run_python_phase`. |
+
+**Why OTHER steps NOT in allowlist:**
+
+| Step | Phase name | Why NOT retained (CC cannot delegate) |
+|------|------------|---------------------------------------|
+| **Step 1** | `creative_ideation` | Creative decision — must be round-table consensus (creative_source + screenplay + theory_critic), not delegated. Per Phase 44 决策 7 (CC owns content). |
+| **Step 2** | `story_kernel_expansion` | Creative decision — Snowflake Method expansion is creative_source's job in round table, not delegated. |
+| **Step 3** | `screenplay_first_draft` | Creative decision — screenplay's job in round table, not delegated. |
+| **Step 4** | `character_design` | Creative decision — character_designer's job in round table, not delegated. |
+| **Step 5** | `cinematography_plan` | Creative decision — cinematographer's job in round table, not delegated. |
+| **Step 6** | `prompt_translation` | Creative-technical decision — prompt_injector's job in round table, not delegated. |
+| **Step 8** | `audio_pipeline` | Hermes internal sub_step orchestration (6 sub-steps per §2.12), not single-phase delegate. Audio is invoked via `audio_pipeline` agent in round table, not `run_python_phase`. |
+| **Step 9** | `editor_cut` | Creative decision — editor's job in round table, not delegated. |
+| **Step 13** | `compliance_gate` | Operator policy — hard-gate authority requires operator unlock (per §3.6), not CC-dispatchable. |
+| **Step 14** | `theory_critic` | Creative advisory — theory_critic's job in round table (soft-gate advisory), not delegated. |
+
+**Cite `v86-pipeline-mapping.md` step semantics** — the 15-step pipeline maps each step to its owning expert + creative/delegate classification.
+
+### §5.3 Allowlist Location Resolution (OQ-10 + 02-ROUND-TABLE-PROTOCOL.md §5.7 Ambiguity)
+
+**Cite STACK §11.2 line 1120 verbatim:**
+
+> "run_python_phase 的 retained-phases allowlist 在哪定义? —— `round-table-schema.yaml` (= `round-table-state-schema.yaml`)."
+
+**Resolve 02-ROUND-TABLE-PROTOCOL.md §5.7 ambiguity:**
+
+Phase 46 §5.7 line 1145 mentions `~/.hermes/agents/{slug}/retained_phases.yaml` (a per-project file). This doc **clarifies the canonical location** is the **schema-level field** `retained_python_phases` in `round-table-state-schema.yaml` (because it's a schema-level constraint valid across all projects, not per-project config).
+
+**Decision:** Schema field first; per-project override (v12+ optional) second.
+
+**Schema field spec (NEW field added by this doc):**
+
+```yaml
+# round-table-state-schema.yaml — additive field
+retained_python_phases:
+  type: array
+  description: |
+    Allowlist of step IDs eligible for run_python_phase boundary tool invocation.
+    Source: 04-MIGRATION-PATH.md §5.3 (OQ-10 resolution).
+    Enforcement: dispatcher-layer validation in mcp_serve.py run_python_phase handler
+      (04-MIGRATION-PATH.md §5.4).
+    v10.0 baseline: Steps 0/6.5/7/10/11/12/15 (7 steps per §5.2 rationale).
+    Future bumps may add steps (e.g. Step 8 audio if sub-step orchestration is simplified).
+  items:
+    type: string
+    enum:
+      - "step_0"        # project_init
+      - "step_6_5"      # storyboard_assembly
+      - "step_7"        # visual_generation
+      - "step_10"       # script_audit_gate
+      - "step_11"       # continuity_audit
+      - "step_12"       # color_grading
+      - "step_15"       # final_render_export
+  default:
+    - "step_0"
+    - "step_6_5"
+    - "step_7"
+    - "step_10"
+    - "step_11"
+    - "step_12"
+    - "step_15"
+  required: true  # v10.0 baseline; future bumps may add steps
+```
+
+**Per-project override (v12+ optional):**
+
+`~/.hermes/agents/.runtime/{slug}/retained_phases_overrides.yaml` may add project-specific steps (e.g. experimental Step 8 audio for a specific project). But base allowlist always comes from the schema field — projects can only ADD to allowlist, never REMOVE (security invariant).
+
+### §5.4 Enforcement Mechanism (Dispatcher-Layer Validation)
+
+**`run_python_phase` MCP tool handler validation:**
+
+```python
+# pseudo-code — actual implementation in v11.0 PoC mcp_serve.py
+@mcp.tool()
+async def run_python_phase(phase: str, round_table_id: str | None = None, ...) -> str:
+    # Load allowlist from round-table-state-schema.yaml retained_python_phases field
+    allowlist = _load_retained_python_phases()  # cached at startup
+    if phase not in allowlist:
+        return tool_error(
+            f"phase '{phase}' not in retained_python_phases allowlist; "
+            f"allowed: {allowlist}. "
+            f"See 04-MIGRATION-PATH.md §5.2 for rationale."
+        )
+    # ... proceed with Python pipeline phase execution
+```
+
+**Key enforcement properties:**
+
+1. **Dispatcher-layer validation BEFORE invocation:** Allowlist check happens before any Python code runs. CC cannot bypass via argument tricks — the check is on the `phase` parameter value, validated against an enum.
+2. **No silent fallback:** Rejected calls return **explicit error** listing allowed steps — never auto-fall to "execute anyway". This preserves Phase 44 决策 7 (Hermes-owns-structure invariant).
+3. **CC cannot bypass:** `run_python_phase` is a Hermes-side MCP tool (per Phase 44 决策 1 T6 协议 layer). CC only invokes via MCP call; Hermes validates before executing.
+4. **Error message is actionable:** Error includes allowed steps + doc reference (§5.2). CC can re-try with valid phase value.
+
+### §5.5 旧 v7.0 mem0 `agent_id=hermes` Memory 遗留策略 (OQ-3 Resolution)
+
+**Cite SUMMARY OQ-3 verbatim:**
+
+> "mem0 agent_id 冲突. v7.0 默认 agent_id=hermes 的旧 memory 怎么处理? 倾向性结论: 遗留 (不迁移), 新 agent invocation 从 agent_id=screenplay 等开始."
+
+**Resolution (this section):**
+
+v7.0 ship 默认 `agent_id=hermes` 的旧 memory **不迁移, 不删除**. 新 agent invocation 从 `agent_id=screenplay` / `agent_id=cinematographer` 等 per-agent namespace 开始.
+
+**Rationale (why not migrate):**
+
+1. **v7.0 memory is cross-agent global** (no per-agent isolation — single `agent_id=hermes` namespace)
+2. **v10.0+ requires per-agent isolation** (Phase 44 决策 6 — `agent_id` per agent for scoped recall)
+3. **Migration would require partitioning global memory by `skill_id`** — but v7.0 records lack `skill_id` field reliably (v7.0 mem0 plugin didn't enforce per-skill tagging)
+4. **Cleaner to start fresh per-agent** — v10.0+ agents build their own memory from scratch via curator `_memory_evolution_phase`; legacy global memory has unknown provenance
+
+**Legacy read-only fallback:**
+
+Curator can read `agent_id=hermes` records as **fallback context** (e.g. "what did the system learn pre-v10.0?") but **never writes new records** to this namespace. The `agent_id=hermes` namespace becomes a frozen historical snapshot.
+
+**Operator can manually bridge (optional):**
+
+If operator wants specific legacy memory promoted to a v10.0+ agent's namespace, they can run:
+
+```bash
+hermes memory promote --from agent_id=hermes --to agent_id=screenplay --record-id <uuid>
+# Curator evaluates the record + writes a new v1.0.0 record in screenplay namespace
+# Original agent_id=hermes record remains as provenance
+```
+
+This is manual, opt-in, per-record — NOT a bulk migration.
+
+### §5.6 Legacy Memory 30-Day Sunset Window
+
+**Sunset timeline:**
+
+- **Day 0:** v11.0 PoC launch — per-agent namespace (`agent_id=screenplay` etc.) becomes default for new writes
+- **Day 0-30:** Transition window — curator + dispatcher read from BOTH `agent_id=hermes` (legacy) + `agent_id={per-agent}` (new) for queries that span the transition
+- **Day 30:** Sunset date — read-path removes legacy fallback. `agent_id=hermes` records remain in mem0 (never deleted) but are no longer queried by default.
+
+**During transition window (Day 0-30):**
+
+- **Read preference:** Prefer new namespace (`agent_id={per-agent}`); fall back to legacy (`agent_id=hermes`) if new is empty for this query
+- **Write destination:** Always new namespace (`agent_id={per-agent}`). Never write to `agent_id=hermes`.
+- **Logging:** All legacy fallback reads logged to `~/.hermes/logs/legacy-memory-fallback.log` for sunset audit
+
+**After sunset (Day 30+):**
+
+- **Read path:** Per-agent namespace only. Legacy namespace ignored by default.
+- **Operator override:** `~/.hermes/config.yaml` can extend sunset:
+  ```yaml
+  legacy_memory_sunset_days: 60  # default 30; extend if transition needs more time
+  ```
+- **Manual legacy access:** Operator can still query `agent_id=hermes` via explicit `hermes memory search --agent-id hermes ...` command (read-only).
+
+**Sunset audit criteria (Day 30 review):**
+
+Before removing legacy fallback, operator verifies:
+- (a) Per-agent namespace coverage: each of 15 agents has at least 10 records (curator has been running for 30 days)
+- (b) Legacy fallback hit rate <5% of total queries (most queries hit per-agent namespace, not legacy)
+- (c) No critical knowledge loss reported (operator spot-checks legacy records for facts not yet in per-agent namespace)
+
+If criteria fail, extend sunset via config (above).
+
+---
+
+## §6 — Phase 44 7 决策 Cross-Validation Audit + OQ/P14 Resolution
+
+### §6.0 Audit Purpose
+
+本节 audit 本 doc 的 75-cell transform + skill_fallback + memory migration + allowlist 是否**一致支持 Phase 44 锁定的 7 决策**. 预期 = **7/7 一致** (本 doc 是迁移路径落实, 不是 re-derivation — should not contradict any locked decision). 同时声明 OQ-3 + OQ-10 + P14 三条 open question 的 resolution 位置.
+
+### §6.1 7-Row 决策 Audit Table
+
+| 决策 # | 决策 (一句话) | 本 doc 实现位置 | 一致? | Citation |
+|--------|---------------|------------------|-------|----------|
+| **决策 1** | T6 协议 (Hermes MCP server + tmux dispatch + CC native MCP client) | §3 `default_invocation` 路由 (`mcp_tool` mode uses MCP tool); §5.4 `run_python_phase` enforcement (Hermes-side MCP tool, validates allowlist before execution) | ✅ | STACK §3.2 + Phase 44 §2.1 (`00-FIRST-PRINCIPLES.md`) |
+| **决策 2** | B3a Python runner 增量迁移 (delegate-only phase 迁 CC via `run_python_phase`) | §5.1-§5.4 `run_python_phase` boundary tool + retained-phases allowlist (7 steps: 0/6.5/7/10/11/12/15) — **直接落实** | ✅ | STACK §3.2 Tool 7 + Phase 44 §2.2 |
+| **决策 3** | D2 storyboard-first-class | §5.2 Step 6.5 storyboard assembly in retained-phases allowlist (D2 storyboard is delegate-eligible: mechanical assembly, not creative) | ✅ | ARCHITECTURE §6 + Phase 44 §2.3 |
+| **决策 4** | G2 通用编排框架 | §2 15-expert transform table is G2 runtime's agent registry basis; §3 `default_invocation` is G2 dispatch path (mcp_tool / skill_fallback / disabled tri-state) | ✅ | ARCHITECTURE §6 + Phase 44 §2.4 |
+| **决策 5** | α agent form (YAML + persona + tools + refs + memory_scope + lineage) | §2 75-cell transform is α form's 15-expert instantiation (each cell follows 5-field mapping); §3 `default_invocation` is α form's invocation semantics | ✅ | Phase 45 `agents-schema.yaml` 18 fields + ARCHITECTURE §1 (`§1.1` + `§1.2` + `§1.3`) |
+| **决策 6** | per-agent memory + curator-driven 自进化 | §4 memory schema migration (v6.0 FeedbackStore → per-agent memory-record-schema); §5.5 legacy mem0 policy (`agent_id=hermes` 不迁移, new `agent_id={per-agent}` namespace) | ✅ | Phase 45 `memory-record-schema.yaml` + ARCHITECTURE §3 (`§3.1` + `§3.2` + `§3.4`) + Phase 44 §2.6 |
+| **决策 7** | 分层 CC 角色 (Hermes 控结构, CC 控内容) | §3.4 `default_invocation` transition (operator owns the switch, step 2 smoke test before mcp_tool); §5.4 `run_python_phase` enforcement (Hermes validates allowlist, CC only invokes) | ✅ | STACK §3.2 + Phase 44 §2.7 |
+
+### §6.2 偏差分析 (Deviation Analysis)
+
+**预期:** 7/7 一致 (本 doc 是迁移路径落实, 不是 re-derivation).
+
+**实际:** 7/7 一致. 本 doc 未发现 Phase 44 决策需修正.
+
+**特别声明 — 决策 2 (B3a Python runner) 是本 doc 的直接 root argument:**
+
+§5 retained-phases allowlist 是 决策 2 的**可执行落实**. STACK §3.2 Tool 7 给签名, §11.2 给 location, 本 doc §5.2 给 7 个 step value + rationale, §5.3 给 schema field spec, §5.4 给 enforcement. 决策 2 → STACK Tool 7 → §5 allowlist 的引用链完整.
+
+**Allowlist revisability:**
+
+若 v11.0 PoC 实施中发现 allowlist 需调整 (例如加 Step 8 audio pipeline, 或去掉 Step 12 color grading):
+
+1. **Add a step:** Update §5.2 table + `retained_python_phases` enum in `round-table-state-schema.yaml` + bump schema version. Document in `05-POC-PLAN.md` risk register.
+2. **Remove a step:** More conservative — require Phase 51 audit + operator approval. Update §5.2 + schema + bump version.
+
+Allowlist is a **starting point**, not immutable. Phase 51 VALIDATE audits real PoC usage + may propose adjustments.
+
+### §6.3 OQ-3 + OQ-10 + P14 Resolution Declaration
+
+**Three open questions/pitfalls resolved in this doc:**
+
+| ID | Question/Pitfall | Resolution location | Resolution summary |
+|----|------------------|---------------------|--------------------|
+| **OQ-3** | mem0 `agent_id` 冲突 — v7.0 默认 `agent_id=hermes` 的旧 memory 怎么处理? | **§5.5-§5.6** | **Legacy memory 不迁移 + 30-day sunset window + read-only fallback during transition.** New agent invocation starts from `agent_id=screenplay` etc. Source never deleted. |
+| **OQ-10** | `run_python_phase` 的 retained-phases allowlist 在哪定义? | **§5.3** | **Location = `round-table-state-schema.yaml` `retained_python_phases` field** (per STACK §11.2 + SUMMARY OQ-10). Schema-level constraint, not per-project config. |
+| **P14** | Schema Migration Breaks Memory Store — v11.0 PoC adds `confidentiality` field; existing records have no value; read path fails or defaults to `public`. | **§4** (§4.4 + §4.5 + §4.6 + §4.7 + §4.8 + §4.9) | **Three-layer mitigation:** `schema_version` (§4.4) + dry-run mode (§4.5) + safe-default-on-unknown (§4.6). 6-step backup-first migration (§4.7). Rollback path (§4.8). P14 RESOLVED in §4.9. |
+
+**Cite SUMMARY.md OQ table + PITFALLS §P14 as resolution audit source.**
+
+---
+
+## §7 — Downstream Citation Guide + Coherence 声明 + References
+
+### §7.0 Downstream Citation Card Table
+
+| Downstream doc | Cite from this doc | Do NOT re-derive | Should derive |
+|----------------|---------------------|-------------------|---------------|
+| **`05-POC-PLAN.md`** | §2 75-cell transform table (PoC 实施 15 `*.agent.yaml` must follow this) + §3.4 transition path (PoC per-agent switch sequence — screenplay first, compliance_gate last) + §4.5 dry-run (PoC acceptance: dry-run must run clean) + §4.7 6-step migration (PoC week-1 work) + §5.2 allowlist (PoC `run_python_phase` test scope = 7 steps) | 18-field schema, 5-field mapping framework, OQ-3/OQ-10/P14 resolutions | PoC fitness battery, vertical slice selection, acceptance timeline |
+| **Phase 50 POC-PLAN** | §5.2 retained-phases 7 steps (PoC `run_python_phase` test scope) + §4.9 P14 PoC acceptance (<1% shadow discrepancy) + §3.6 compliance_gate special handling (PoC switch order — disabled initially) | entire doc | PoC implementation sequence + budget + resource allocation |
+| **51 VALIDATE lint** | §6.1 7 决策 audit table + §6.3 OQ-3/OQ-10/P14 resolution declarations + §2.18 FOUND-08 invariant + §5.3 `retained_python_phases` schema field | entire doc | cross-doc consistency lint script (term/schema/decision/citation checks). Specific lint rules: (a) every `decision 决策 N` citation in 04 must resolve in `00-FIRST-PRINCIPLES.md §2.N`; (b) every `ARCHITECTURE §X` citation must resolve in `ARCHITECTURE.md`; (c) §2 15-expert table must match `ARCHITECTURE §2` row-by-row (FOUND-08 preservation); (d) `retained_python_phases` enum values must match §5.2 step list |
+
+### §7.1 Coherence 声明 (Complete SC#1-5 Coverage)
+
+**SC#1-5 coverage:**
+
+- §2 15-expert 75-cell transform 规则表 → **SC#2**
+- §3 `default_invocation: skill_fallback → mcp_tool` 切换机制 → **SC#3**
+- §4 memory schema 迁移计划 → **SC#4**
+- §5 retained-phases allowlist + legacy mem0 policy → **SC#5**
+- (§1.3 SC mapping table → **SC#1** file existence + 1300+ lines + all required terms)
+
+**+ Cross-validation:**
+
+- §6 Phase 44 7 决策 cross-validation audit (7/7 一致)
+- §6.3 OQ-3/OQ-10/P14 resolution declarations
+
+**= 完整 ROADMAP SC#1-5 coverage.**
+
+**v11.0 PoC implementer 一站式引用:**
+
+v11.0 PoC implementer 引用本 doc 的 §2 75-cell + §3.4 transition path + §4.5 dry-run + §5.2 allowlist 即可 defending:
+
+- "how do I transform this SKILL?" → §2 per-expert 5-field table
+- "when do I switch to `mcp_tool`?" → §3.4 5-step transition + §3.6 compliance_gate special
+- "how do I migrate memory safely?" → §4.5 dry-run + §4.7 6-step + §4.9 P14 acceptance
+- "which Python phases can `run_python_phase` execute?" → §5.2 7 retained steps
+
+不需重新推导 Phase 44 决策或 re-litigate P14.
+
+### §7.2 References
+
+**Phase 44 root-argument source:**
+- `00-FIRST-PRINCIPLES.md §2.1` (决策 1 — T6 协议)
+- `00-FIRST-PRINCIPLES.md §2.2` (决策 2 — B3a Python runner, LOAD-BEARING for SC#5)
+- `00-FIRST-PRINCIPLES.md §2.3` (决策 3 — D2 storyboard-first-class)
+- `00-FIRST-PRINCIPLES.md §2.4` (决策 4 — G2 通用编排框架)
+- `00-FIRST-PRINCIPLES.md §2.5` (决策 5 — α agent form)
+- `00-FIRST-PRINCIPLES.md §2.6` (决策 6 — per-agent memory + curator-driven 自进化)
+- `00-FIRST-PRINCIPLES.md §2.7` (决策 7 — 分层 CC 角色)
+
+**Phase 45 schema sources (CITE-ONLY):**
+- `01-AGENT-REGISTRY-SCHEMA.md` (18-field schema narrative)
+- `agents-schema.yaml` (18 fields authoritative definition — esp `default_invocation` enum field 18 + `lineage` field 7 + `memory_scope` field 6 + `round_table_eligible` field 17 + `expert_id` field 10)
+- `memory-record-schema.yaml` (10 mandated fields + `schema_version` line 353 + `persona_sha256` + `agent_id` + `scope`)
+
+**Phase 46 protocol source (CITE-ONLY + ADD `retained_python_phases` field):**
+- `02-ROUND-TABLE-PROTOCOL.md §5.7` (`run_python_phase` round-table consumer — Phase 46 says "retained_phases.yaml"; this doc resolves location to `round-table-state-schema.yaml` `retained_python_phases` field per STACK §11.2)
+- `round-table-state-schema.yaml` (existing required fields: `roundId` / `projectId` / `panelists` / `turnOrder` / `status` / `turns` / `roundTableOpen` / `createdAt`. NEW field added by this doc: `retained_python_phases` per §5.3)
+
+**ARCHITECTURE sources (CITE-ONLY):**
+- `ARCHITECTURE.md §1.1` (18-field schema source table)
+- `ARCHITECTURE.md §1.2` (SKILL→YAML disposition — 5-field mapping skeleton)
+- `ARCHITECTURE.md §1.3` (screenplay minimal example — concrete transform output reference)
+- `ARCHITECTURE.md §2` (15-expert table — verbatim source for §2 75-cell elaboration, FOUND-08 preserved)
+- `ARCHITECTURE.md §3.1` (Current Mem0 Backend Surface — `_read_filters()` returns `user_id` only; v7.0 default `agent_id=hermes` context)
+- `ARCHITECTURE.md §3.4` (Curator-Driven Memory Evolution — `_memory_evolution_phase` writes records conforming to memory-record-schema)
+- `ARCHITECTURE.md §6.1` (Transform Procedure 5 steps)
+- `ARCHITECTURE.md §6.4` (Repo Impact Summary — Phase 49 v11.0 PoC deliverable = 15 `*.agent.yaml` via manual transform)
+
+**STACK sources (CITE-ONLY):**
+- `STACK.md §3.2 Tool 7` (`run_python_phase` signature + retained_phases allowlist pointer to round-table-schema.yaml)
+- `STACK.md §11.2 line 1120` (OQ-10 resolution verbatim)
+
+**PITFALLS source (CITE-ONLY):**
+- `PITFALLS.md §P14` (Schema Migration Breaks Memory Store — 3 mitigations: `schema_version` + safe-default + dry-run)
+
+**SUMMARY source (OQ resolutions):**
+- `SUMMARY.md OQ-3` (line 69 — v7.0 mem0 `agent_id=hermes` legacy policy)
+- `SUMMARY.md OQ-10` (line 76 — `run_python_phase` retained-phases allowlist location)
+
+**Code-level source (v6.0 ground truth):**
+- `agent/feedback_store.py` (v6.0 FeedbackStore: `buckets/<skill_id>/<source>.jsonl` + `dedup/sha256-registry.jsonl` + `index.json` versioned via `_INDEX_VERSION = 1`. FeedbackRecord fields: `skill_id` / `source` / `skill_sha256` / `feedback_text` / `verdict` / `operator_id` / `created_at`)
+
+**Cross-repo complement:**
+- `06-CROSS-REPO-IMPACT.md §3` (lineage chain — complement, do NOT re-derive; this doc focuses on per-expert transform rules, lineage is Phase 48's domain)
+
+**MEMORY.md milestone context:**
+- `v6-self-evolution-milestone.md` (v6.0 SHIPPED feedback-driven self-learning — FeedbackStore is the migration source)
+- `kais-movie-agent-v5-hermes-native-migration.md` (2026-07-02 cross-repo migration moved skills/movie-experts + 4 plugins to kais-hermes-skills repo — SKILL.md there is transform source)
+- `coding-agent-vs-mcp-shim.md` (v10.0 must contrast coding-agent vs Kimi MCP shim)
+- `hermes-native-expert-agents.md` (Kai denies Kimi CC-Teammates, wants Hermes-side persistent agents — v10.0 design fulfills this)
+
+**CLAUDE.md conventions:**
+- HERMES_HOME (`~/.hermes/`) canonical state root
+- Skill file conventions (`SKILL.md` uppercase, frontmatter parsed by `agent/skill_utils.parse_frontmatter`)
+- Bilingual doc structure (EN headers + 中文 prose)
+- Markdown tables for dimension comparison
+
+**Phase commit references:**
+- Phase 44 commit `314888271` (mark phase planned — 1 plan in 1 wave ready to execute)
+- Phase 45 commit (agents-schema.yaml + memory-record-schema.yaml — see Phase 45 SUMMARY)
+- Phase 46 commit (round-table-state-schema.yaml — see Phase 46 SUMMARY)
+- Phase 48 commit (06-CROSS-REPO-IMPACT.md lineage chain)
+- Phase 49 commit (this doc — 04-MIGRATION-PATH.md)
+
+---
+
+*End of 04-MIGRATION-PATH.md. Consumers: `05-POC-PLAN.md` consumes §2 + §3.4 + §4.5 + §4.7 + §5.2; Phase 50 POC-PLAN consumes §5.2 + §4.9 + §3.6; 51 VALIDATE consumes §6.1 + §6.3 + §2.18 + §5.3.*
+
