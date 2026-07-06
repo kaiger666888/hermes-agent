@@ -899,3 +899,389 @@ Output JSON:
 
 ---
 
+## §5 — MCP Tool Contract(7 tools,STACK §3.2 form)
+
+### §5.0 — 本节是 7 个 MCP tool 的 narrative contract
+
+本节描述 7 个 MCP tool 的 input/output 语义。**Authoritative Pydantic schema 在 STACK §3.2** —— 本节仅 narrative。所有命名采用 **STACK form(无 `agent_` 前缀,见 §4.2)** —— 与现有 `mcp_serve.py` 9 个 messaging tool 风格一致。
+
+本节 7 个 tool 是 STACK §3.2 锁定的 canonical toolset;加上 lifecycle controller(`round_table_open` / `round_table_resume` / `round_table_abort` deferred to v11.1+),构成 v10.0 round table 的 MCP 表面。
+
+每个 tool 子节包含:signature + inputs + outputs + side effects + which §2/§3 step uses it + STACK §3.2 source citation。
+
+### §5.1 — get_agent_persona(STACK §3.2 Tool 1)
+
+**Signature:** `get_agent_persona(agentId: str) -> AgentPersonaResult`
+
+**Inputs:**
+
+- `agentId`(string,regex `^[a-z0-9_-]+$`)—— references agents-schema.yaml `name` field(cite Phase 45 §2.1)。
+
+**Outputs:** `AgentPersonaResult`:
+
+- `agent_id`: str(echo back)
+- `persona_yaml`: str(raw YAML content,utf-8)
+- `version`: str(agent YAML `version` field)
+- `found`: bool(False if agentId not registered)
+
+**Side effects:** None —— `readOnlyHint=True`(cite STACK §3.2 Tool 1)。
+
+**Used in:** §2.1 `round_table_open` snapshots all panelists via batched `get_agent_persona` calls(open-time snapshot 详见 §2.6);§2.6 fallback if agent deleted mid-round。
+
+**STACK §3.2 citation:** Tool 1 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False))`。
+
+### §5.2 — get_agent_opinion(STACK §3.2 Tool 2)
+
+**Signature:**
+
+```python
+async def get_agent_opinion(
+    agentId: str,
+    topic: str,
+    context: str,
+    priorDiscussion: str | None = None,
+    roundId: str | None = None,
+) -> AgentOpinionResult
+```
+
+**Inputs:**
+
+- `agentId`: str(panelist agent_id)
+- `topic`: str(one-sentence topic / question)
+- `context`: str(multi-paragraph context — question + project metadata,up to ~8KB)
+- `priorDiscussion`: str | None(concatenated prior turns,up to ~16KB)
+- `roundId`: str | None(若提供,opinion 被标记该 roundId for later reconciliation)
+
+**Outputs:** `AgentOpinionResult`:
+
+- `agent_id`: str(echo)
+- `topic`: str(echo for audit)
+- `opinion`: str(free-form markdown opinion)
+- `confidence`: float 0.0-1.0(LLM self-reported)
+- `cited_refs`: list[str](ref filenames cited)
+- `memory_hits`: list[str](memory IDs recalled,即 citedMemoryIds for state file)
+- `cost_usd`: float | None(optional cost tracking)
+- `round_id`: str | None(echo)
+
+**Side effects:**
+
+- Reads mem0 backend(via `agent_id` filter);
+- **Updates** memory `recall_count` + `last_recalled_at` on cited records(cite Phase 45 memory-record-schema `recall_count` + `last_recalled_at` audit fields);
+- Persists opinion to agent's memory scope(opinion is "remembered" for future recall)。
+
+**Serial invariant(load-bearing,OQ-8):** Hermes dispatcher **MUST reject** concurrent calls for same `roundId`(return 429 Too Many Requests)。v11.0 PoC enforces via per-`roundId` lock(per `agent/tool_executor.py` ThreadPoolExecutor serial invariant)。
+
+**Used in:** §2.2 each turn N。这是 round table lifecycle 中**最高频**的 MCP call(每个 turn 一次)。
+
+**STACK §3.2 citation:** Tool 2 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True))`。
+
+### §5.3 — get_agent_memory(STACK §3.2 Tool 3)
+
+**Signature:**
+
+```python
+def get_agent_memory(
+    agentId: str,
+    scope: Literal["agent", "lineage", "global"] = "agent",
+    query: str,
+    limit: int = 10,
+) -> AgentMemoryResult
+```
+
+**Inputs:**
+
+- `agentId`: str
+- `scope`: "agent" / "lineage" / "global"(default "agent";cite STACK §3.2 Tool 3 scope tri-state)
+- `query`: str(natural-language query)
+- `limit`: int(default 10,max 50)
+
+**Outputs:** `AgentMemoryResult`:
+
+- `agent_id`: str(echo)
+- `query`: str(echo)
+- `hits`: list[MemoryHit] —— each `{memory_id, content, score, created_at, scope}`
+- `truncated`: bool(True if hits exceeded limit)
+
+**Side effects:** Updates `recall_count` + `last_recalled_at` on hit records。
+
+**Used in:** §3.1 conflict detection —— CC fetches full memory records to compare via `get_agent_memory`。也用于 §3.5 curator review pass(query high-frequency conflict pairs)。
+
+**STACK §3.2 citation:** Tool 3 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))`。
+
+### §5.4 — submit_round_table_result(STACK §3.2 Tool 4)
+
+**Signature:**
+
+```python
+def submit_round_table_result(
+    roundId: str,
+    conclusion: str,
+    citedMemories: list[str],
+    artifacts: list[Artifact] | None = None,
+    conflicts: list[str] | None = None,
+) -> RoundTableReceipt
+```
+
+**Inputs:**
+
+- `roundId`: UUID v4
+- `conclusion`: str(CC's synthesis)
+- `citedMemories`: list of record_id
+- `artifacts`: list of `{artifactId, artifactType, content, provenance}` (optional)
+- `conflicts`: list of conflictId(from state file `conflicts` array)
+
+**Outputs:** `RoundTableReceipt`:
+
+- `receipt_id`: UUID v4(for audit chain)
+- `round_id`: str(echo)
+- `status`: "ok" / "warn" / "error"
+- `accepted_at`: iso8601
+- `final_conflict_count`: int
+- `warnings`: list[str](default empty)
+
+**Side effects(load-bearing):**
+
+- Flips state `status: open → completed`;
+- Seals conflict log(`conflicts` array becomes immutable);
+- Persists `submitRoundTableResult` block to state file;
+- Emits "round-table-sealed" event for curator periodic review(§3.5)。
+
+**Idempotency:** Second call returns 409 Conflict(cite §2.3)。
+
+**Used in:** §2.3 atomic close —— round table lifecycle 的 terminal operation。
+
+**STACK §3.2 citation:** Tool 4 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))`。
+
+### §5.5 — submit_artifact(STACK §3.2 Tool 5)
+
+**Signature:**
+
+```python
+def submit_artifact(
+    roundId: str,
+    artifactType: str,
+    content: str,
+    provenance: str,
+) -> ArtifactReceipt
+```
+
+**Inputs:**
+
+- `roundId`: UUID v4
+- `artifactType`: str(e.g. "screenplay-draft", "storyboard-sketch", "decision-md")
+- `content`: str(artifact content or path)
+- `provenance`: str(which agent(s)/turns produced this)
+
+**Outputs:** `ArtifactReceipt`:
+
+- `receipt_id`: str
+- `file_path`: str(artifact persisted path)
+- `status`: "ok" / "warn" / "error"
+- `sha256`: str(content hash for audit)
+- `size_bytes`: int
+- `accepted_at`: iso8601
+- `metadata_echo`: dict[str, str]
+
+**Used in:** Optional mid-round artifact submission(e.g. `screenplay` submits draft mid-round for other panelists to react to)。Distinct from `submit_round_table_result.artifacts` —— that's the final artifact list;this is mid-round。
+
+**STACK §3.2 citation:** Tool 5 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True))`。
+
+### §5.6 — query_memory(STACK §3.2 Tool 6)
+
+**Signature:**
+
+```python
+def query_memory(
+    query: str,
+    agentId: str | None = None,
+    scope: Literal["global", "project", "session"] | None = None,
+    projectId: str | None = None,
+    limit: int = 10,
+) -> list[MemoryHit]
+```
+
+**Inputs:**
+
+- `query`: str
+- `agentId`: str | None(if provided, scope to one agent;else cross-agent)
+- `scope`: str | None(filter by scope level)
+- `projectId`: str | None(filter by project)
+- `limit`: int
+
+**Outputs:** `list[MemoryHit]` —— each `{memory_id, content, score, created_at, scope}`。
+
+**Generic,non-agent-scoped** —— CC uses it for cross-agent memory exploration(e.g. "what does every agent remember about horror pacing?")。
+
+**Used in:** Optional —— CC may use during round table for cross-panelist memory lookups;curator uses it in `_memory_evolution_phase` for cross-agent insight aggregation。
+
+**STACK §3.2 citation:** Tool 6 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))`。
+
+### §5.7 — run_python_phase(STACK §3.2 Tool 7)
+
+**Signature:**
+
+```python
+def run_python_phase(
+    phaseName: str,
+    inputs: dict,
+) -> PhaseResult
+```
+
+**Inputs:**
+
+- `phaseName`: str(name of Python runner phase,e.g. "comfyui_generation", "video_encoding", "asset_bus_persist")
+- `inputs`: dict(phase-specific inputs)
+
+**Outputs:** `PhaseResult`:
+
+- `phase_name`: str(echo)
+- `status`: "ok" / "warn" / "error"
+- `outputs`: dict(phase-specific outputs)
+- `duration_ms`: int
+- `cost_usd`: float | None
+
+**B3a boundary tool** —— invokes Python runner phases(详 Phase 44 决策 2:B3a Python runner 增量迁移)。`openWorldHint=True`(ComfyUI 调用、外部 asset bus 等)。
+
+**Used in:** Optional mid-round execution —— e.g. `cinematographer` invokes `run_python_phase("comfyui_generation", ...)` to test a visual idea during its turn。Phase allowlist defined in `~/.hermes/agents/{slug}/retained_phases.yaml`(详 04-MIGRATION-PATH.md)。
+
+**STACK §3.2 citation:** Tool 7 — `@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True))`。
+
+---
+
+## §6 — Advanced Features(v11.1+ evaluation only)
+
+### §6.0 — 本节评估 FEATURES §10 borrowable points 的深度
+
+本节评估 FEATURES §10 中需要深度评估的 borrowable points。已在 §4.4 audit 过 —— 这里给 v11.1+ 候选 feature 的实施评估。所有 feature **deferred to v11.1+**;v11.0 PoC scope 严格限 backend protocol layer。
+
+### §6.1 — Subpanel / Nested Round Table(B1.4 + B2.3)
+
+**Idea:** A panelist with `can_convene_subpanel=true` flag(agents-schema additive field,deferred)can spawn a sub-round-table within their turn。
+
+**Use case:** Complex multi-expert negotiations —— e.g. `visual_executor` convenes `prompt_injector` + `colorist` as subpanel for color grading decisions within its main turn。
+
+**v11.0 PoC scope:** NOT supported。v11.0 is single-level round table only。
+
+**v11.1+ evaluation:**
+
+- **Pros:** Enables hierarchical decomposition(B1.4 LangGraph hierarchical supervisor inspiration);mirrors human team workflows(senior convenes junior experts)。
+- **Cons:** Token cost multiplies(subpanel round is full round table cost inside parent turn);serial invariant gets complex(subpanel must complete before parent turn ends —— nested serial wait)。
+- **Implementation estimate:** Additive `PanelistSnapshot.can_convene_subpanel` boolean field + recursive `round_table_open` call within a turn。`turns[]` schema 需扩展支持 nested roundId reference。
+- **Citation:** FEATURES §10 **B1.4**(LangGraph hierarchical supervisor → round table nesting)+ **B2.3**(AutoGen nested chat → panelist convenes sub-round table)。
+
+### §6.2 — PreTurn / PostTurn Audit Hooks(B4.2)
+
+**Idea:** Hermes emits PreTurn / PostTurn events to state file —— PreTurn captures panelist + topic + citedMemoryIds at turn-start;PostTurn captures opinion + conflictsDetected at turn-end。
+
+**v11.0 PoC scope:** Implicit via Turn schema(`turnIndex` / `panelistId` / `opinion` / `citedMemoryIds` / `submittedAt` / `conflictsDetected` already capture this —— 详见 round-table-state-schema.yaml $defs.Turn)。
+
+**v11.1+ evaluation:**
+
+- **Pros:** Explicit event stream(separate from state file)for real-time curator monitoring;useful for `fitness_trend.jsonl` correlation(turn-level cost / latency / quality signals)。
+- **Cons:** Adds event bus infrastructure(v11.0 PoC 限最小 backend);Phase 51 lint complexity(event schema 与 Turn schema 保持一致)。
+- **Implementation estimate:** Add `events: list[Event]` to state file,`Event = {ts, type: "PreTurn"|"PostTurn", turnIndex, payload}`。
+- **Citation:** FEATURES §10 **B4.2**(Claude Agent SDK hooks lifecycle → round table PreTurn/PostTurn)。
+
+### §6.3 — panelist_role Field(B6.1)
+
+**Idea:** `PanelistSnapshot.role` enum: `generator` / `critic` / `synthesizer` / `reviewer`。Influences:
+
+- `turn_order`(reviewer speaks last as final approval);
+- `opinion synthesis`(synthesizer integrates others' opinions);
+- `conflict detection`(critic 的 disagreement 优先 trigger comparator)。
+
+**v11.0 PoC scope:** NOT in agents-schema v1.0。`PanelistSnapshot` 当前只有 identity + runtime knobs,无 role 字段。
+
+**v11.1+ evaluation:**
+
+- **Pros:** Adds role-aware coordination(B6.1 Camel-AI generator+critics inspiration);enables turn_order strategy = "role-based"(reviewer last,synthesizer mid,critic early)。
+- **Cons:** Additive field requires agents-schema v1.1(15-expert migration 需 re-transform);role semantics 与 persona 字段有部分重叠(persona 已含 role description)。
+- **Implementation estimate:** Add `role: enum` to PanelistSnapshot + agents-schema additive field。
+- **Citation:** FEATURES §10 **B6.1**(Camel-AI generator+critics → panelist_role field)。
+
+### §6.4 — asset_locks(B7.3)
+
+**Idea:** Multi-agent parallel asset editing needs file-level locks —— e.g. two agents editing the same `storyboard.json`。
+
+**v11.0 PoC scope:** NOT needed —— serial invariant(§1.5.1)means only one agent acts at a time,no concurrent edits。Locks are trivially satisfied.
+
+**v11.1+ evaluation:**
+
+- **Pros:** Required if subpanels(§6.1)are added —— subpanel agents may edit assets in parallel with parent turn。
+- **Cons:** Adds in-memory lock manager complexity;deadlock potential;PoC serial invariant means locks have zero benefit。
+- **Implementation estimate:** Hermes-side in-memory map `assetPath → lockHolder(agentId + roundId + turnIndex)`;`run_python_phase` and `submit_artifact` honor lock。
+- **Citation:** FEATURES §10 **B7.3**(Agent-MCP file-level lock → multi-agent parallel asset_locks)。
+
+---
+
+## §7 — Downstream Citation Guide + Summary + References
+
+### §7.0 — Downstream Citation Card Table
+
+下表列出后续设计文档 / Phase 51 VALIDATE 引用本 doc 时应从哪个章节取:
+
+| Downstream doc | Cite from this doc | Do NOT re-derive | Should derive |
+|---|---|---|---|
+| **04-MIGRATION-PATH.md** | §2 lifecycle(15-expert 的 round_table_eligible flag 切换语义)+ §4.2 MCP naming(15-expert 从 skill_fallback 切换到 mcp_tool 使用 STACK-form tool 名)+ §2.4 state file path(为已存在 round table 提供迁移规则) | turn_order strategies / conflict rules / OQ decisions | 15-expert transform mapping(详 Phase 45 §6)+ retained-phases allowlist + schema_version migration semantics |
+| **05-POC-PLAN.md** | §3 conflict arbitration(PoC acceptance criterion:comparator LLM 必须正确 resolve 至少 1 个 conflict)+ §4.1 serial(PoC 性能 SLO:p95 < N 秒 per turn,serial await 是基线)+ §4.3 OQ audit + §4.4 BP audit + §5 MCP tool contract(7 tool signature 是 PoC 实施起点) | entire protocol layer | PoC acceptance criteria + fitness battery + latency SLO + comparator LLM bias canary + schema migration dry-run |
+| **03-COMPARISON-VS-KIMI-MCP-SHIM.md** | §4.2 MCP naming + §5 tool list | protocol detail | Kimi MCP shim comparison dimensions(逐维度对照,不依赖本 doc 的协议细节) |
+| **06-CROSS-REPO-IMPACT.md** | §2.4 state file path(`.runtime/{slug}/round_tables/`)+ §3.5 conflict log cross-project visibility rules | protocol detail | 3-location sync(`~/.hermes/agents/` + kais-hermes-skills + project repo)+ Option B vs 物理分区 migration trigger |
+| **51 VALIDATE** | round-table-state-schema.yaml + 02-ROUND-TABLE-PROTOCOL.md(本 doc) | entire protocol | Cross-doc consistency lint script(grep anchor strings per §1.3 SC mapping) |
+
+### §7.1 — Coherence 声明
+
+本 doc 完整定义 v10.0 round table protocol contract:
+
+**Turn lifecycle**(round_table_open → turn N → submit_round_table_result,atomic per turn)—— §1.2 + §2(8 subsections)
+
+\+ **Memory conflict arbitration**(comparator LLM + scope precedence session > project > global + confidence-weighted voting + conflict log for curator review)—— §3(8 subsections aligned with PITFALLS §P7 mitigation 1-5)
+
+\+ **7 MCP tool contract**(STACK §3.2 form,no `agent_` prefix)—— §5(7 tool subsections)
+
+\+ **3 hard constraints**(serial execution / STACK-form naming / atomic lifecycle)—— §1.5 + §4.1-§4.2
+
+\+ **6 OQ resolutions**(OQ-2/5/8/9/11/15)—— §4.3 audit table
+
+\+ **7 borrowable points coverage**(B1.4/B2.1/B2.3/B4.2/B6.1/B7.3/B8.2)—— §4.4 audit table
+
+= **完整 round table protocol contract for v10.0**。
+
+v11.0 PoC implementer 引用本 doc 字段名 + lifecycle 步骤即可实施,**不需重新推导**决策 5/6/7(Phase 44 LOCKED)或重定义 Phase 45 schema fields。本 doc 是协议层物理载体,Phase 44 是决策层物理载体,Phase 45 是 schema 层物理载体 —— 三层清晰分层。
+
+### §7.2 — References
+
+**Phase 44 / 45 anchors(LOCKED,do NOT re-derive):**
+
+- `.planning/research/v10-orchestrator-design/00-FIRST-PRINCIPLES.md` —— Phase 44 根论据(7 决策 first-principles 推导链;§2.5/§2.6/§2.7 是本 doc 的 root-arg-决策-5/6/7 source)
+- `.planning/research/v10-orchestrator-design/01-AGENT-REGISTRY-SCHEMA.md` —— Phase 45 schema narrative(§2 18-field agent schema + §3 memory-record schema;CITE-ONLY field source)
+- `.planning/research/v10-orchestrator-design/agents-schema.yaml` —— Phase 45 JSON Schema Layer 1(18-field agent YAML)
+- `.planning/research/v10-orchestrator-design/memory-record-schema.yaml` —— Phase 45 JSON Schema Layer 2(10-field memory record)
+
+**Phase 44 research sources(本 doc cross-cite):**
+
+- `.planning/research/v10-orchestrator-design/ARCHITECTURE.md` —— §5.1 round table state file layout(verbatim cited in §2.4)+ §5.3 lifecycle sketch + §8.3 anti-pattern("round table as pipeline step") + §4.2 deprecated MCP naming
+- `.planning/research/v10-orchestrator-design/PITFALLS.md` —— §Pitfall 7 memory conflict(5 mitigations aligned with §3.1-§3.5)+ §P1 persona drift(personaSnapshots field)+ §P14 schema migration(schemaVersion field)
+- `.planning/research/v10-orchestrator-design/STACK.md` —— §3.2 7 tool authoritative Pydantic schema(canonical naming source)+ §7 token cost math(serial estimate)
+- `.planning/research/v10-orchestrator-design/FEATURES.md` —— §10 27 borrowable design points(B1.4/B2.1/B2.3/B4.2/B6.1/B7.3/B8.2 explicitly cited in §4.4 + §6)
+- `.planning/research/v10-orchestrator-design/SUMMARY.md` —— CC-1(MCP naming conflict resolution:STACK form wins)+ CC-6(serial constraint root cause)+ 6 OQ resolutions(OQ-2/5/8/9/11/15)
+
+**Operator-level discipline(本 doc verbatim cited):**
+
+- `~/.claude/projects/-data-workspace-hermes-agent/memory/feedback-glm-overload-reduce-concurrency.md` —— GLM concurrency==1 BY DESIGN policy(serial invariant root cause,verbatim cited in §4.1)
+
+**Project context:**
+
+- `CLAUDE.md` —— bilingual doc structure convention(EN headers + 中文 prose)+ JSON Schema with description/type/enum/required per industry standard + camelCase JSON Schema keywords(Phase 45 verification lesson)
+- `.planning/PROJECT.md` —— v10.0 milestone scope(7 locked design decisions)
+- `.planning/ROADMAP.md` —— §Phase 46 SC#1-5(load-bearing success criteria)
+- `.planning/REQUIREMENTS.md` —— DESIGN-03 requirement traceability
+
+**Commit references:**
+
+- Phase 44 design doc ship commit(`00-FIRST-PRINCIPLES.md` v1)
+- Phase 45 schema ship commit(`agents-schema.yaml` + `memory-record-schema.yaml` + `01-AGENT-REGISTRY-SCHEMA.md`)
+- Phase 46 plan commit(`46-01-PLAN.md` + `46-CONTEXT.md`)
+- This doc ship commit(本 doc + `round-table-state-schema.yaml`)
+
+---
+
