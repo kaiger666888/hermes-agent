@@ -27,7 +27,7 @@ v10.0 is a **design-only milestone** (zero code changes, analog to v2.0 PRFP). I
 - [ ] **Phase 46: ROUND-TABLE-PROTOCOL** - Turn lifecycle + memory conflict arbitration + 强制串行约束 + 7 MCP tool 契约
 - [ ] **Phase 47: KIMI-COMPARISON** - T6 vs Kimi 全 MCP shim 7 维度对照 + subagent 形态否决论据 + Microsoft 三层协议验证(parallel-eligible)
 - [ ] **Phase 48: CROSS-REPO-IMPACT** - 3-location 同步策略 + Option B → 物理分区迁移触发条件 + project slug 稳定性(parallel-eligible)
-- [ ] **Phase 49: MIGRATION-PATH** - 15 expert × 5-field transform + memory schema 迁移 + retained-phases allowlist
+- [x] **Phase 49: MIGRATION-PATH** - 15 expert × 5-field transform + memory schema 迁移 + retained-phases allowlist (PLANNED)
 - [ ] **Phase 50: POC-PLAN** - v11.0 PoC 验收条件清单(fitness battery / latency SLO / bias canary / compaction / dry-run-first)
 - [ ] **Phase 51: VALIDATE** - Cross-doc consistency lint script + milestone audit(严格 LAST,类比 v9.0 Phase 43)
 
@@ -117,7 +117,9 @@ Plans:
   3. `default_invocation: skill_fallback → mcp_tool` 切换机制文档化(agent 优先用 MCP tool,失败回退 SKILL form)
   4. Memory schema 迁移计划(从 v6.0 FeedbackStore JSONL 到新 memory-record-schema),包括 `schema_version` 字段 + dry-run migration 模式(避免 P14)
   5. Retained-phases allowlist 显式声明(`run_python_phase` 只接受 Step 7/10/11/12/0/6.5/15,allowlist 位置在 `round-table-schema.yaml`,解决 OQ-10)+ 旧 v7.0 mem0 `agent_id=hermes` memory 遗留策略(解决 OQ-3)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 49-01-PLAN.md — 15-expert 75-cell transform rules (5-field per-expert table + edge cases + FOUND-08 preserved) + default_invocation skill_fallback → mcp_tool switching (3-state enum + 12-cell failure matrix + transition path) + memory schema migration (v6.0 FeedbackStore → memory-record-schema, schema_version + dry-run + safe-default mitigates P14) + retained-phases allowlist (Steps 0/6.5/7/10/11/12/15 in round-table-state-schema.yaml) + legacy v7.0 mem0 agent_id=hermes policy + Phase 44 7 决策 audit + OQ-3/OQ-10/P14 resolution (5 tasks, single deliverable ~1300+ lines)
 **UI hint**: no
 
 ### Phase 50: POC-PLAN
