@@ -737,17 +737,25 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
     ) -> str:
         """Send a message to a platform conversation.
 
-        The target format is "platform:chat_id" — same format used by the
-        channels_list tool. You can also use human-friendly channel names
-        that will be resolved automatically.
+        The target format is ``platform:chat_id`` — or, for platforms that
+        support threaded delivery, ``platform:chat_id:thread_id``.
 
-        Examples:
-            target="telegram:6308981865"
-            target="discord:#general"
-            target="slack:#engineering"
+        Threaded targets:
+            - **Telegram forum topics / supergroups**:
+              ``telegram:-1001234567890:17585`` (chat_id:topic_id)
+            - **Telegram private-topic DMs**: same format; the gateway will
+              resolve the private topic and attach a reply anchor.
+            - **Discord threads**: ``discord:999888777:555444333``
+              (channel_id:thread_id)
+
+        Other supported formats:
+            - ``telegram`` (uses home channel)
+            - ``telegram:6308981865``
+            - ``discord:#general``
+            - ``slack:#engineering``
 
         Args:
-            target: Platform target in "platform:identifier" format
+            target: Platform target in ``platform:identifier[:thread_id]`` format
             message: The message text to send
         """
         if not target or not message:

@@ -1385,47 +1385,76 @@ class TelegramAdapter(BasePlatformAdapter):
             return False
 
     async def _drain_polling_connections(self) -> None:
-        """Reset the httpx connection pool used for getUpdates polling.
+        """Reset the httpx connection pools used by the PTB bot.
+
+        .. deprecated::
+            Renamed to :meth:`_drain_bot_request_pools` to reflect that both
+            the polling pool and the general request pool are now drained.
+            This alias is kept for backward-compatibility with existing call
+            sites.
 
         Network errors (especially through proxies like sing-box) can leave
         httpx connections in a half-closed state that still occupy pool slots.
         After enough reconnect cycles the pool fills up entirely, causing
         ``Pool timeout: All connections in the connection pool are occupied.``
 
-        We reset ONLY ``_request[0]`` (the getUpdates request) — the general
-        request (``_request[1]``) is left untouched so concurrent
-        ``send_message`` / ``edit_message`` calls are never interrupted.
+        Historically only ``_request[0]`` (the getUpdates request) was reset,
+        leaving the general request (``_request[1]``) untouched.  In practice
+        the general pool also wedges under the same proxy conditions —
+        ``send_message`` / ``edit_message`` calls then hit the same pool
+        timeout.  Both pools are now drained together.
+        """
+        await self._drain_bot_request_pools()
 
-        Implementation note: accesses ``Bot._request[0]`` which is the
-        get-updates ``BaseRequest`` in the PTB 22.x internal tuple
-        ``(get_updates_request, general_request)``.  There is no public
-        accessor for the polling request; review if upgrading to PTB 23+.
+    async def _drain_bot_request_pools(self) -> None:
+        """Reset both httpx connection pools used by the PTB bot.
+
+        PTB 22.x stores requests as a ``(get_updates_request, general_request)``
+        tuple in ``Bot._request``.  ``[0]`` serves ``getUpdates`` long-polls;
+        ``[1]`` serves all other API calls (``send_message``,
+        ``edit_message``, etc.).  Through flaky proxies (sing-box, mihomo)
+        both pools can accumulate half-closed connections that occupy slots
+        and eventually trigger
+        ``Pool timeout: All connections in the connection pool are occupied.``
+
+        This method shuts down + re-initializes **both** pools.  The general
+        pool drain is safe because this is only called from the polling
+        reconnect ladder, which has already stopped the updater — no
+        concurrent ``send_message`` can be in flight at this point (the
+        gateway's send path is also degraded-flagged).
+
+        Implementation note: accesses ``Bot._request[0/1]`` — there is no
+        public accessor for these; review if upgrading to PTB 23+.
         """
         if not (self._app and self._app.bot):
             return
         try:
             # PTB 22.x: _request is a (get_updates, general) tuple;
-            # no public accessor exists for the polling request.
+            # no public accessor exists for either request object.
             polling_req = self._app.bot._request[0]  # noqa: SLF001
+            general_req = self._app.bot._request[1]  # noqa: SLF001
         except Exception:
             return
-        try:
-            await polling_req.shutdown()
-        except Exception:
-            logger.debug(
-                "[%s] Polling request shutdown failed (non-fatal)",
-                self.name, exc_info=True,
-            )
-        try:
-            await polling_req.initialize()
-            logger.debug(
-                "[%s] Polling request pool drained before reconnect", self.name
-            )
-        except Exception:
-            logger.debug(
-                "[%s] Polling request re-initialize failed (non-fatal)",
-                self.name, exc_info=True,
-            )
+
+        for label, req in (("polling", polling_req), ("general", general_req)):
+            try:
+                await req.shutdown()
+            except Exception:
+                logger.debug(
+                    "[%s] %s request shutdown failed (non-fatal)",
+                    self.name, label, exc_info=True,
+                )
+            try:
+                await req.initialize()
+                logger.debug(
+                    "[%s] %s request pool drained before reconnect",
+                    self.name, label,
+                )
+            except Exception:
+                logger.debug(
+                    "[%s] %s request re-initialize failed (non-fatal)",
+                    self.name, label, exc_info=True,
+                )
 
     async def _handle_polling_network_error(self, error: Exception) -> None:
         """Reconnect polling after a transient network interruption.
