@@ -949,3 +949,220 @@ Acceptance criteria 不按 §4.1-§4.7 顺序跑, 而是按 §6 implementation p
 - They are tuning-style criteria (operators can adjust thresholds + compaction cadence iteratively even after PoC exit).
 
 ---
+
+## §5 7-Row Risk Register (SC#4 Deep-Dive, P1/P2/P4/P5/P6/P7/P8 × PoC Verdict)
+
+> 本节是 ROADMAP SC#4 的完整论证. 7 load-bearing pitfalls × PoC deferral verdict. Verdicts 与 **PITFALLS §Risk Register Summary (line 470-488)** + **SUMMARY §Risk Register (line 145-160)** 对齐 (no divergent verdicts). 每 pitfall: one-line risk + full mitigation citation + PoC verdict + §4 acceptance criterion gating it + failure-if-deferred.
+
+### §5.0 Risk Register Strategy
+
+SC#4 scope 是 **P1/P2/P4/P5/P6/P7/P8** 这 7 个 load-bearing pitfalls (per ROADMAP §Phase 50). 其他 pitfalls (P3/P9/P10/P11/P12/P13/P14) 不在 SC#4 7-row scope, 但相关 context 在 §5.10 列出 (P3 latency SLO 在 §4.2 cover, P9 compaction 在 §4.4 cover, P14 schema migration 在 §4.7 cover, P10/P11/P12 在 Phase 51 VALIDATE + v11.1+ scope).
+
+每 pitfall 在本 doc 的 verdict 必须与两个 canonical source 对齐:
+
+| Source | Location | Used for |
+|--------|----------|----------|
+| PITFALLS §Risk Register Summary | line 470-488 | 7-pitfall verdict canonical (PoC-acceptable deferral? YES/PARTIAL/NO) + mitigation cost (H/M/L) |
+| SUMMARY §Risk Register | line 145-160 | 7-pitfall 必须字段/机制 + 在哪文档解决 |
+
+### §5.1 P1 — Persona Drift (must-fix-in-PoC)
+
+**Risk one-liner**: Agent forgets its role after accumulating memory — screenplay agent stops behaving like screenplay expert, becomes generic creative writing helper. (PITFALLS §P1 opening)
+
+**Mitigation citations**:
+- PITFALLS §P1 mitigation 1: `persona_sha256` frozen at registration; curator-driven patches MUST NOT alter lines inside `## Role & Philosophy` / `## Core Capabilities` sections
+- PITFALLS §P1 mitigation 2: periodic persona-drift probe (every 50 runs, 3 benchmark prompts + 4-dim MT-Bench position-swap against persona baseline)
+- PITFALLS §P1 mitigation 3: tiered memory mirroring MemGPT core/archival split (`core_memory` manually curated, `archival_memory` auto-curated)
+- PITFALLS §P1 mitigation 4: persona-versioned memory records (every record carries `persona_version` at write time; retrieve-time weights 1.0 if match, 0.3 if mismatch)
+- Phase 45 agents-schema.yaml field: `persona_sha256` (frozen hash)
+- Phase 45 memory-record-schema.yaml field: persona_version reference
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P1 row + SUMMARY §Risk Register P1 row — both mark NO for deferral).
+
+**PoC-week acceptance**: §4.1 fitness battery gates this — regression auto-quarantine triggers on persona drift detected via mean_score drop > 0.5 across 3 consecutive runs.
+
+**Failure-if-deferred**: agent silently becomes generic helper, HOOK-09 emotion_curve marker contract lost, all downstream screenplay outputs wrong format, Step 6.5 storyboard assembly + Step 7 visual_executor cannot consume screenplay output. Entire creative pipeline downstream of screenplay breaks.
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 474). PoC implementation cost: 3d (§4.1).
+
+### §5.2 P2 — Stale Memory (must-fix-in-PoC)
+
+**Risk one-liner**: Agent cites platform rules / API quirks that no longer apply — compliance_gate agent cites obsolete 抖音 rule from 2026-Q2 in 2026-Q4, outputs rejected by platform. (PITFALLS §P2 opening)
+
+**Mitigation citations**:
+- PITFALLS §P2 mitigation 1: `expires_at: datetime | None` field; domain-rule memories default 90d TTL
+- PITFALLS §P2 mitigation 2: `verified_at: datetime` + `verification_source: str` stamps mirroring v1 ref convention
+- PITFALLS §P2 mitigation 3: external-change detection hooks (URL fetch + hash compare + auto-quarantine on change)
+- PITFALLS §P2 mitigation 4: `supersedes_memory_id` field (extends v6.0 `_mark_superseded` pattern)
+- PITFALLS §P2 mitigation 5: time-decay applied to `confidence` (independent of weight decay): `confidence(now) = base * exp(-age / half_life_days)`
+- Phase 45 memory-record-schema.yaml fields: `expires_at` + `verified_at` + `supersedes_memory_id` + `confidence` + `half_life_days`
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P2 row + SUMMARY §Risk Register P2 row).
+
+**PoC-week acceptance**: §4.4 compaction pass exercises archival/quarantine of stale records (implicitly validates TTL filter in retrieve path: `WHERE expires_at IS NULL OR expires_at > now()`). The 600-record synthetic input includes 50 records with `expires_at < now` — verify compaction auto-archives them.
+
+**Failure-if-deferred**: agent cites obsolete platform rules, operator loses trust in agent's expertise, platform rejection rate rises after policy change. Specifically for compliance_gate agent (即使 PoC 不 exercise compliance_gate, memory schema 字段必须 ship).
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 475). PoC implementation cost: in §4.4 (1d, includes TTL filter validation).
+
+### §5.3 P4 — Cross-Project Leakage (must-fix-in-PoC)
+
+**Risk one-liner**: Agent applies project-A learning inappropriately to project B — style_genome agent learns Project P1 (art-house) "muted palette" preference, then applies it to Project P2 (TikTok high-energy) wrong-context. (PITFALLS §P4 opening)
+
+**Mitigation citations**:
+- PITFALLS §P4 mitigation 1: three-tier scoping in agent schema (`scope: "global" | "project" | "session"`)
+- PITFALLS §P4 mitigation 2: default scope = `project` (conservative)
+- PITFALLS §P4 mitigation 3: per-project override layer (retrieve global + project-P2 only; project-P1 invisible unless `global`)
+- PITFALLS §P4 mitigation 4: `project_id` required in retrieve call (not optional)
+- PITFALLS §P4 mitigation 5: cross-project memory promotion gate (3+ distinct projects + curator confidence ≥ 0.8)
+- Phase 45 memory-record-schema.yaml fields: `scope` + `project_id`
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P4 row + SUMMARY §Risk Register P4 row).
+
+**PoC-week acceptance**: §4.7 schema migration dry-run populates `scope=project` + `project_id` default per Phase 49 §4.3 mapping table. §4.2 latency benchmark uses `agent_id+project_id` filter (validates filter path works at scale).
+
+**Failure-if-deferred**: PoC single-project won't surface this (single project = no leak possible), but production rollout immediately leaks Project A learning into Project B (as SUMMARY §Gaps line 176 implicitly warns). P4 是 production rollout blocker, must-fix-in-PoC 防止 v11.1+ re-litigate.
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 477). PoC implementation cost: in §4.7 + §4.2 (no standalone, just field population + filter validation).
+
+### §5.4 P5 — Curator Failure Modes (must-fix-in-PoC)
+
+**Risk one-liner**: Curator's automated memory-update pass makes three classes of error: false-deletion (deletes valuable memory), hallucinated-write (confabulates rules from noisy feedback), bias-amplification (single-operator preference over-represented). (PITFALLS §P5 opening)
+
+**Mitigation citations**:
+- PITFALLS §P5 mitigation 1: never hard-delete (only `status="archived"`, mirroring v6.0 invariant)
+- PITFALLS §P5 mitigation 2: `evidence_chain` ≥3 coverage check (embedding cosine ≥ 0.7 via `_check_evidence_coverage`)
+- PITFALLS §P5 mitigation 3: operator diversity (`_check_operator_diversity(feedback_records, min_distinct_operators=2)`)
+- PITFALLS §P5 mitigation 4: bias canary in eval gate (5 prompts surface single-operator preferences)
+- PITFALLS §P5 mitigation 5: dry-run-first invariant (mirrors v6.0 `CURATOR_DRY_RUN_BANNER` AST-walk)
+- PITFALLS §P5 mitigation 6: bias audit log entry (`evidence_operator_ids` + `evidence_record_count`)
+- Phase 45 memory-record-schema.yaml fields: `evidence_chain` + `evidence_operator_ids` + `status="archived"`
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P5 row + SUMMARY §Risk Register P5 row).
+
+**PoC-week acceptance**: §4.3 bias canary + §4.6 dry-run-first invariant both gate this. Joint acceptance: curator dry-run rejects single-operator-derived insight + dry-run-first AST-walk test passes.
+
+**Failure-if-deferred**: curator silently writes hallucinated rules, agent behavior degrades over time with no signal (PITFALLS §P5 industry case: Letta/MemGPT documented curator LLM rewriting core memory with hallucinated facts; AutoGen shared-state discussion amplifies single-agent biases).
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 478). PoC implementation cost: §4.3 (2d) + §4.6 (1d) = 3d.
+
+### §5.5 P6 — Memory Poisoning (PARTIAL: signed feedback PoC must, outlier detection defer)
+
+**Risk one-liner**: Malicious or wrong feedback permanently corrupts agent behavior — MINJA-style persistent attack via query-only injection. (PITFALLS §P6 opening)
+
+**Mitigation citations**:
+- PITFALLS §P6 mitigation 1: `operator_signature: str` (HMAC over record fields, anonymous rejected by default)
+- PITFALLS §P6 mitigation 2: outlier detection on feedback patterns (per-operator stats, >2σ deviation flagged for review)
+- PITFALLS §P6 mitigation 3: memory-write rate-limit per operator (`feedback.daily_memory_write_cap: 20`)
+- PITFALLS §P6 mitigation 4: two-operator approval for high-impact memory
+- PITFALLS §P6 mitigation 5: tamper-evidence extends to memory (audit log covers `action="memory_write"`)
+- PITFALLS §P6 mitigation 6: quarantine on detected poisoning (`status="quarantined"` excluded from retrieval)
+- Phase 45 memory-record-schema.yaml fields: `operator_signature` + `status="quarantined"`
+
+**PoC verdict**: **PARTIAL** (aligned with PITFALLS §Risk Register Summary P6 row: "PARTIAL — signed feedback is PoC must; outlier detection can defer" + SUMMARY §Risk Register P6 row).
+
+**PoC-week acceptance (signed feedback — MUST implement)**:
+- §4.6 dry-run-first invariant gates the `operator_signature` schema field validation. In `--apply-memory` mode, `FeedbackRecord` validates HMAC signature; anonymous feedback rejected by default (`feedback.require_signed: true` config).
+- Acceptance: FeedbackRecord without valid `operator_signature` is rejected with explicit error "anonymous feedback rejected; feedback.require_signed=true".
+
+**PoC-week acceptance (outlier detection — DEFER with monitoring)**:
+- Outlier detection (>2σ deviation from population mean) needs >10 operators to be statistically meaningful. PoC has 1-2 trusted operators, outlier risk is theoretical.
+- Monitoring: audit log captures `operator_id` distribution on every memory write. If any operator's `operator_id` shows >50% of evidence chains (manual review trigger), surface warning.
+- Defer to v11.1+: full outlier detection job (curator stats phase per PITFALLS §P6 mitigation 2).
+
+**Failure-if-deferred (outlier)**: PoC trusted operators (Kai + maybe 1 collaborator), poisoning risk is theoretical. If a malicious operator compromised the feedback channel, audit log + signed-feedback trail provides forensic evidence (detection, not prevention). Production rollout with public feedback channel would re-litigate this in v11.1+.
+
+**Mitigation cost**: H for full (per PITFALLS §Risk Register Summary line 479); M for PARTIAL (PoC only signed feedback). PoC implementation cost: §4.6 includes operator_signature validation (~0.3d).
+
+### §5.6 P7 — Round-Table Memory Conflict (must-fix-in-PoC)
+
+**Risk one-liner**: Agents disagree because their memories disagree — screenplay agent (memory: "test audiences in this project respond well to bittersweet endings") vs theory_critic agent (memory: "tragedy endings test 23% better across all projects") reach contradictory conclusions; round table deadlocks or loudest-memory agent wins by citation volume. (PITFALLS §P7 opening)
+
+**Mitigation citations**:
+- PITFALLS §P7 mitigation 1: memory annotation in round-table turns (`memory_id`, `confidence`, `scope`, `evidence_record_count` cited per turn)
+- PITFALLS §P7 mitigation 2: coordinator (Hermes) arbitrates conflicts (comparator LLM pass: "which is more applicable in this project context?")
+- PITFALLS §P7 mitigation 3: scope precedence rules (`session` > `project` > `global`)
+- PITFALLS §P7 mitigation 4: confidence-weighted voting (when N agents disagree, vote weighted by memory `confidence`)
+- PITFALLS §P7 mitigation 5: conflict log for curator review (same memory pair conflicting >3 times → curator promotion or quarantine)
+- Phase 46 round-table-state-schema.yaml: turn lifecycle + memory citation schema
+- Phase 46 §3 conflict arbitration rules
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P7 row: "NO — round-table is v10.0 core feature" + SUMMARY §Risk Register P7 row).
+
+**PoC-week acceptance**: §3.2 creative slice screenplay Step 3 round table with 9 related_agents naturally exercises P7 conflict (9 agents with different project-scoped memory will disagree on screenplay decisions like pacing vs emotion_curve priority). Acceptance: at least 1 conflict arbitration event in the round table transcript (Phase 46 §3 scope precedence or confidence-weighted voting applied).
+
+**Failure-if-deferred**: round table deadlocks, PoC creative slice cannot complete. P7 是 v10.0 core feature (round table is the new collaboration primitive), defer is not acceptable.
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 480). PoC implementation cost: Phase 46 已 ship coordinator arbitration + scope precedence + confidence voting; PoC 仅验证 ~0.5d in §3.2 creative slice setup.
+
+### §5.7 P8 — No Fitness Signal (must-fix-in-PoC)
+
+**Risk one-liner**: Agent might be getting worse, not better, and you can't tell — after 3 months of curator-driven evolution, no baseline measurement answers "is screenplay agent actually better than 3 months ago?" (PITFALLS §P8 opening)
+
+**Mitigation citations**:
+- PITFALLS §P8 mitigation 1: frozen fitness battery per agent (`fitness_battery: path/to/battery.yaml`, 10-20 prompts, FROZEN at registration)
+- PITFALLS §P8 mitigation 2: longitudinal `fitness_trend.jsonl` (schema: `{ts, battery_version, mean_score, per_prompt_scores, persona_sha256, model_id}`)
+- PITFALLS §P8 mitigation 3: A/B shadow mode before applying memory change
+- PITFALLS §P8 mitigation 4: distinguishing agent-drift from model-drift (every fitness run records `model_id` + `provider`)
+- PITFALLS §P8 mitigation 5: fitness battery review cadence (quarterly operator review)
+- Phase 45 agents-schema.yaml fields: `fitness_battery` + `persona_sha256`
+
+**PoC verdict**: **must-fix-in-PoC** (aligned with PITFALLS §Risk Register Summary P8 row: "NO — load-bearing" + SUMMARY §Risk Register P8 row).
+
+**PoC-week acceptance**: §4.1 fitness battery gates this — this is THE acceptance criterion for P8. `fitness_trend.jsonl` baseline + regression auto-quarantine logic.
+
+**Failure-if-deferred**: no regression signal, operator cannot tell if PoC changes are improvements or regressions, all subsequent v11.x work operates blind. v11.1+ has no way to detect silent regressions introduced by curator changes.
+
+**Mitigation cost**: M (per PITFALLS §Risk Register Summary line 481). PoC implementation cost: §4.1 (3d).
+
+### §5.8 Risk Register Summary Table (7 rows, aligned with PITFALLS §Risk Register Summary + SUMMARY §Risk Register)
+
+| P# | Pitfall | Severity | Verdict | PoC §4 acceptance | Failure-if-deferred | Cost |
+|----|---------|----------|---------|--------------------|----------------------|------|
+| P1 | Persona drift | HIGH | **must-fix** | §4.1 fitness battery (drift probe via mean_score trend) | HOOK-09 contract lost, screenplay 输出 wrong format | M |
+| P2 | Stale memory | HIGH | **must-fix** | §4.4 compaction (TTL filter on 50 expired records) | Obsolete platform rules cited, operator 失去信任 | M |
+| P4 | Cross-project leakage | HIGH | **must-fix** | §4.7 + §4.2 (scope=project + project_id filter) | Production rollout leaks P1→P2 memory | M |
+| P5 | Curator failure modes | HIGH | **must-fix** | §4.3 + §4.6 (bias canary + dry-run-first) | Hallucinated rules silently degrade agent | M |
+| P6 | Memory poisoning | HIGH | **PARTIAL** | §4.6 (signed feedback must); outlier defer per §5.10 | Trusted operators; theoretical risk in PoC | M (PARTIAL) |
+| P7 | Round-table conflict | MEDIUM | **must-fix** | §3.2 creative slice (9-agent screenplay round table) | Round table deadlocks, PoC creative slice cannot complete | M |
+| P8 | No fitness signal | HIGH | **must-fix** | §4.1 fitness battery (fitness_trend.jsonl baseline) | No regression signal, all v11.x work blind | M |
+
+**Verdict counts**:
+- **must-fix**: 6 (P1/P2/P4/P5/P7/P8)
+- **PARTIAL**: 1 (P6 — signed feedback must, outlier defer)
+- **defer-with-monitoring**: 0 (in SC#4 7-pitfall scope; P3 + P9 + P14 是 SC#3 acceptance criteria scope, not SC#4)
+
+### §5.9 Verdict 对齐 Declaration
+
+本 doc 7 verdicts 与 **PITFALLS §Risk Register Summary (line 470-488)** + **SUMMARY §Risk Register (line 145-160)** 一致:
+
+| P# | 本 doc verdict | PITFALLS verdict (line 470-488) | SUMMARY verdict (line 145-160) | Aligned? |
+|----|----------------|----------------------------------|--------------------------------|----------|
+| P1 | must-fix | NO (load-bearing) | NO (load-bearing) | ✅ |
+| P2 | must-fix | NO (load-bearing) | NO (load-bearing) | ✅ |
+| P4 | must-fix | NO (load-bearing) | NO (load-bearing) | ✅ |
+| P5 | must-fix | NO (load-bearing) | NO (load-bearing) | ✅ |
+| P6 | PARTIAL (signed must, outlier defer) | PARTIAL (signed feedback is PoC must; outlier detection can defer) | PARTIAL (signed feedback PoC must; outlier detection defer) | ✅ |
+| P7 | must-fix | NO (round-table is v10.0 core feature) | NO (round-table is v10.0 core) | ✅ |
+| P8 | must-fix | NO (load-bearing) | NO (load-bearing) | ✅ |
+
+**No divergent verdicts.** Phase 51 VALIDATE lint 脚本可 cross-check此 table.
+
+### §5.10 Defer-with-Monitoring Plan (P6 outlier detection + P3 latency context)
+
+**P6 outlier detection defer plan** (per §5.5 PARTIAL verdict):
+- **Monitoring**: audit log captures `operator_id` distribution on every memory write. Stats CLI `hermes curator stats --bias-audit` surfaces over-represented operators.
+- **Trigger for review**: any operator's `operator_id` shows >50% of evidence chains in a rolling 30-day window → manual review trigger.
+- **Threshold for v11.1+ implementation**: when operator count >10 (statistically meaningful for outlier detection per §5.5 rationale).
+- **Recoverability**: if outlier detection is implemented in v11.1+ and detects malicious operator after the fact, `evidence_operator_ids` in audit log enables retroactive quarantine of all memory records citing that operator.
+
+**P3 latency SLO context** (not in SC#4 7-pitfall scope, but related context):
+- P3 是 SC#3 acceptance criterion §4.2 scope (latency SLO p95<500ms), 不是 SC#4 risk register scope.
+- Defer-with-monitoring per PITFALLS §Risk Register Summary line 476: "YES — can ship with single workspace, scale later".
+- Monitoring: §4.2 latency benchmark runs weekly during PoC (per §6.3 calendar Week 1 + Week 6 re-run). If p95 trends upward across weeks, trigger Phase 48 物理分区 evaluation.
+
+**Other pitfalls (P9/P10/P11/P12/P13/P14) context**:
+- P9 (memory size growth) + P13 (curator runaway) + P14 (schema migration): SC#3 acceptance criteria scope (§4.4 + §4.5 + §4.7), not SC#4 risk register scope.
+- P10 (privacy/leakage) + P11 (recall-vs-use) + P12 (cross-agent contamination): Phase 51 VALIDATE + v11.1+ scope, not in PoC must-pass.
+
+---
