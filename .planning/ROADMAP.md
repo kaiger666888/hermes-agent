@@ -57,7 +57,9 @@ Plans:
   3. curator `_memory_evolution_phase` 字段契约文档化(类比 v6.0 `_feedback_scan_phase`,执行顺序 + dry-run-by-default + try/except 隔离边界,解决 OQ-16)
   4. 15 expert 转化映射表(从 ARCHITECTURE §2 拷贝,SKILL frontmatter → agent YAML)
   5. 6 个 Open Questions(OQ-1 / OQ-4 / OQ-7 / OQ-13 / OQ-14 / OQ-16)显式解决或显式 defer 到 v11.0;7 个 load-bearing pitfalls(P1/P2/P4/P5/P8/P10/P14)每个有对应 schema 字段级缓解
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 45-01-PLAN.md — 18-field agent YAML schema + memory-record-schema (2-layer) + per-agent memory tier + curator _memory_evolution_phase contract + 15-expert transform + OQ/pitfall audit (5 tasks, 3 deliverable files)
 **UI hint**: no
 
 ### Phase 46: ROUND-TABLE-PROTOCOL
