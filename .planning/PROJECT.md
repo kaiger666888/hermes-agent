@@ -8,11 +8,13 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current State (v10.0 started 2026-07-06)
+## Current State (v10.0 SHIPPED 2026-07-07)
 
-v9.0 SHIPPED + closed 2026-07-06(tag `v9.0` @ `599ef61a8`,phases 归档至 `.planning/milestones/v9.0-phases/`)。v10.0 现为 active milestone —— **设计型**,不动代码,产出 v11.0 PoC 的设计套件。借鉴 Kimi Notion 架构2.0 + 本 repo 已 ship 的 coding-agent/GSD/curator,推导 Hermes 总调度器 + Hermes-native expert agents + CC 执行场的三层架构。
+v10.0 SHIPPED + closed 2026-07-07(tag `v10.0`,phases 归档至 `.planning/milestones/v10.0-ROADMAP.md` + `.planning/milestones/v10.0-REQUIREMENTS.md`)。v10.0 是**设计型** milestone,零代码改动,产出 7 design docs + 3 schemas + 1 lint script + 1 audit report,作为 v11.0 PoC 的实施蓝本。9/9 reqs satisfied, 8/8 phases verified `passed`,audit status `passed`。
 
-**v10.0 paradigm shift:** 与 v1-v9 把 movie-experts 当 SKILL 用法不同,v10.0 设计**新的 agent 形态**(YAML + persona + memory_scope + lineage),per-agent 跨项目自进化,CC 仅做场地+协调员+结构化助手。SKILL 形态作 fallback 保留。
+**Next:** v11.0 PoC —— 按 `.planning/research/v10-orchestrator-design/05-POC-PLAN.md` §3 vertical slice 选 1 creative phase + 1 infra phase 实施,验收条件 12 person-days 估算。
+
+**v10.0 paradigm shift:** 与 v1-v9 把 movie-experts 当 SKILL 用法不同,v10.0 设计**新的 agent 形态**(YAML + persona + memory_scope + lineage),per-agent 跨项目自进化,CC 仅做场地+协调员+结构化助手。SKILL 形态作 fallback 保留。v11.0 PoC 把这套设计落地为运行时代码。
 
 **v9.0 scope (6 phases 38-43):**
 - 平台母版切片 (Step 14)
@@ -22,9 +24,32 @@ v9.0 SHIPPED + closed 2026-07-06(tag `v9.0` @ `599ef61a8`,phases 归档至 `.pla
 - 数据收敛 (Step 15 平台 API → FeedbackStore → formula tuning)
 - 集成验证 + close-out
 
-## Current Milestone: v10.0 — Hermes-Agent 编排架构第一性原理推导(设计型)
+## Current Milestone: v11.0 PoC — Hermes-Native Expert Agents Implementation (next)
+
+**Goal:** 按 v10.0 设计套件实施 vertical slice(1 creative phase + 1 infra phase),验证三层架构 runtime 可行性。**v11.0 是 v10.0 设计的实施 milestone** —— 不再产出设计文档,而是把 `00-FIRST-PRINCIPLES` 到 `06-CROSS-REPO-IMPACT` 的设计落地为 Python 代码 + agent YAML + mem0 extensions。
+
+**Vertical slice (per `05-POC-PLAN.md` §3):**
+- **Creative slice:** screenplay Step 3 round table(9-agent HOOK-09 edge case)
+- **Infra slice:** agent registry + 1 round table invocation(7 MCP tool wire-up)
+
+**Acceptance criteria (12 person-days total per `05-POC-PLAN.md` §4):**
+1. Fitness battery design (3d)
+2. Latency SLO p95 < 500ms (2d)
+3. Bias canary (2d)
+4. Compaction pass (1d)
+5. Threshold tuning (1d)
+6. Dry-run-first invariant (1d)
+7. Schema migration dry-run (2d)
+
+**Start:** `/gsd:new-milestone v11.0`
+
+---
+
+## Previous Milestone: v10.0 — Hermes-Agent 编排架构第一性原理推导(设计型)✅ SHIPPED 2026-07-07
 
 **Goal:** 借鉴 Kimi 2026-07-06 Notion 架构2.0,结合本 repo 已 ship 的 coding-agent / GSD / curator / mem0,从第一性原理推导 **Hermes-Agent 总调度器 + Hermes-native expert agents + Claude Code 执行场**的三层架构 —— 产出可指导 v11.0 PoC 的设计套件,**不动任何代码**。范式类比 v2.0 PRFP(纯设计 milestone)。
+
+**Stats:** 8 phases (44-51) · 8 plans · 9/9 reqs ✓ · Tag `v10.0` · Design-only (zero code changes) · Audit `passed`
 
 **Target features(7 个设计文档,均放在 `.planning/research/v10-orchestrator-design/`):**
 
