@@ -1166,3 +1166,255 @@ SC#4 scope 是 **P1/P2/P4/P5/P6/P7/P8** 这 7 个 load-bearing pitfalls (per ROA
 - P10 (privacy/leakage) + P11 (recall-vs-use) + P12 (cross-agent contamination): Phase 51 VALIDATE + v11.1+ scope, not in PoC must-pass.
 
 ---
+
+## §6 PoC Implementation Path (SC#5 Deep-Dive, fitness battery → schema migration dry-run → bias canary)
+
+> 本节是 ROADMAP SC#5 的完整论证. **STACK §7.3 已给 ~550K tokens/pipeline run 估算**. 本节给出 PoC 实施路径 (fitness battery → schema migration dry-run → bias canary sequence) + per-vertical-slice token cost scoping + 6-week calendar timeline.
+
+### §6.0 Implementation Path Strategy
+
+SC#5 要求 "PoC 实施路径图 (fitness battery → schema migration dry-run → bias canary sequence, cite STACK §7 token cost estimate ~550K/pipeline run)". 本节给:
+
+1. **Sequence rationale** (§6.1): why fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD (硬 precondition, not arbitrary order)
+2. **Per-vertical-slice token cost scoping** (§6.2): cite STACK §7.3 ~550K/13 ≈ 42K average per single round table, with screenplay-density up-adjustment to ~148K
+3. **6-week calendar timeline** (§6.3): Week 1-6 breakdown with criteria run order (per §4.10)
+4. **GLM 4-key rotation 实测点** (§6.4): Week 2 first multi-round creative slice exposes real concurrency cost
+5. **PoC exit criteria** (§6.5): 5 conditions for PoC done
+6. **PoC risks beyond risk register** (§6.6): 5 risks not in SC#4 7-pitfall scope (GLM ceiling / mem0 latency / curator hallucination / CC-crash gc / contextvars)
+
+### §6.1 Sequence Rationale (fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD)
+
+每 step 都有 **硬 precondition** (not arbitrary order). 这个 sequencing 是 §4.10 PoC run order 的 rationale 来源.
+
+#### Step 1: Fitness battery FIRST (~Week 2)
+
+**Why first**: Fitness battery 是 **regression-detection foundation**. Must exist before any curator tick. Without it, later changes (memory migration §4.7 / bias canary gating §4.3 / dry-run-first §4.6) have **no signal to detect regression** from. Builds on v6.0 `_eval/gate.py:decide_verdict` pattern + adds longitudinal trend (`fitness_trend.jsonl`).
+
+**Preconditions**: §3.2 creative slice setup 完成 (need screenplay agent + battery prompts designed). So fitness battery actually runs in Week 2 (after Week 1 infra slice + §4.2 latency SLO).
+
+**Failure-if-not-first**: schema migration (§4.7) breaks something → no fitness signal → operator can't tell if migration is the cause. Bias canary (§4.3) accepts bad memory → no fitness signal → operator can't tell if agent is regressing.
+
+#### Step 2: Schema migration dry-run SECOND (~Week 3)
+
+**Why second**: Schema migration validates **memory layer data integrity** before live writes. P14 mitigation. Needs fitness battery as **regression-detection backstop** during the migration — if migration introduces silent corruption, fitness battery detects it within 3 runs (auto-quarantine trigger per §4.1).
+
+**Preconditions**: §4.1 fitness battery baseline committed (Week 2).
+
+**Failure-if-not-second**: bias canary (§4.3) runs before schema migration → memory layer has bad data → bias canary results are noise (false positives / false negatives driven by corrupted memory, not by bias).
+
+#### Step 3: Bias canary THIRD (~Week 4)
+
+**Why third**: Bias canary gates curator `_memory_evolution_phase` **transition from dry-run to live**. Needs fitness battery (regression detection for post-bias-canary changes) + clean memory layer (P14-migrated data, no noise) as preconditions.
+
+**Preconditions**: §4.7 schema migration verified (Week 3) + §4.1 fitness battery baseline (Week 2). §4.6 dry-run-first invariant runs in parallel with §4.3 bias canary in Week 4 (sister criteria both gating P5).
+
+**Failure-if-not-third**: Without preconditions, bias canary may reject valid insights (false positive) due to corrupted memory data, or accept biased insights (false negative) due to no regression-detection backstop.
+
+### §6.2 Per-Vertical-Slice Token Cost Scoping
+
+**Cite STACK §7.3** (line 1017-1027):
+- ~550K tokens / pipeline run (full 13-step pipeline)
+- Of which ~520K is LLM-level (80 opinion call × 5000+1500 tokens)
+- ~34K is MCP-level protocol overhead (~340 MCP call × 50+50 tokens)
+- Per single round table average: 550K/13 ≈ **42K tokens**
+
+**Per-vertical-slice estimate** (this PoC):
+
+| Slice | MCP call estimate | Token estimate | Rationale |
+|-------|-------------------|----------------|-----------|
+| Creative slice screenplay Step 3 round table | ~30-50 call | **~148K tokens** | 9 related_agents × ~2.5 turns × 2 call/expert/turn ≈ 45 MCP call × 100 overhead + ~22 LLM opinion call × 6500 token = ~4.5K + ~143K. Higher than average 42K because screenplay has 9 related_agents vs 4 average (per STACK §7.1 Step 3 row: 5 experts × 3 turns × 2 call = 30 MCP) |
+| Infra slice 1 round table invocation | ~6 call | **~10K tokens** | 3 agents × 1 turn × 2 call = 6 MCP × 100 overhead + ~3 LLM opinion call × 3000 token (no prior_discussion, simpler) = ~0.6K + ~9K |
+
+**Total per PoC iteration** (vertical slice + acceptance criteria verification): ~148K + ~10K + ~26K (per §4.9 acceptance criteria) = **~184K tokens**.
+
+**Within GLM ceiling**: GLM 4-key × 200K TPM ≈ **800K TPM ceiling for serial execution** (per §6.4 + MEMORY.md `feedback-glm-overload-reduce-concurrency.md`). 184K tokens << 800K TPM — PoC iteration 在 serial execution 下不会 trigger GLM 4-key ceiling.
+
+**PoC iteration count**: ~3-5 iterations (debugging + retry) = **~550K-920K tokens total PoC budget**.
+
+### §6.3 PoC Calendar Timeline (6 weeks + 30-day shadow-run)
+
+| Week | Work items | Acceptance criteria | Output |
+|------|------------|---------------------|--------|
+| **Week 1** | Infra slice setup (~3d): 7 MCP tools wire-up per STACK §3.2 + `test-coordinator.agent.yaml` transform per Phase 49 §2 + 1 round_table cycle | §4.2 latency SLO benchmark (P3 mitigation validation) | Infra slice 3 artifacts (§3.6) + latency benchmark report. **May trigger Phase 48 物理分区 evaluation if p95 > 500ms** |
+| **Week 2** | Creative slice setup (~2d): 9-agent subset YAMLs transform per Phase 49 §2.4 + Step 3 round table wiring on synthetic StoryKernel | §4.1 fitness battery baseline (P1/P8 mitigation) | Creative slice 3 artifacts (§3.6) + `fitness_trend.jsonl` baseline entry for screenplay. **First multi-round creative slice exposes real GLM 4-key concurrency cost (per §6.4)** |
+| **Week 3** | §4.7 schema migration dry-run (2d): dry-run script + 5-metric output plan + 100-record synthetic test + live migration with backup-first + 30-day shadow-run window opens | §4.7 schema migration dry-run (P14 mitigation) | Migration dry-run report + 5-metric output plan + live migration log. Shadow-run window opens (per Phase 49 §4.7 Step 5) |
+| **Week 4** | §4.3 bias canary (2d) + §4.6 dry-run-first invariant (1d) → curator `_memory_evolution_phase` transitions from dry-run to gated-live | §4.3 bias canary (P5 mitigation) + §4.6 dry-run-first (P5 mitigation) | Bias canary report (5 prompts + curator dry-run rejection test) + dry-run-first AST-walk test passes. **Curator can now write memory in `--apply-memory` mode** |
+| **Week 5** | §4.4 compaction pass (1d) + §4.5 threshold tuning (1d) | §4.4 compaction (P9 mitigation) + §4.5 threshold tuning (P13 mitigation) | Compaction pass output on 600-record synthetic input (3-tier) + threshold tuning report (runaway warning + rate-limit verification) |
+| **Week 6** | Shadow-run window closes (30-day per Phase 49 §4.7 Step 5), all 7 acceptance criteria re-run on final state, PoC report committed | All 7 acceptance criteria re-run for final verification | **`.planning/milestones/v11.0-POC-REPORT.md`** committed (PoC exit deliverable per §6.5) |
+
+**Critical path**: Week 1 (infra + §4.2) → Week 2 (creative + §4.1) → Week 3 (§4.7) → Week 4 (§4.3 + §4.6) → Week 5 (§4.4 + §4.5) → Week 6 (re-run + report).
+
+**Slack**: Each week has ~2-3 days slack for debugging + iteration. Week 3 schema migration dry-run may take longer if synthetic input reveals mapping table bugs.
+
+### §6.4 GLM 4-Key Rotation 实测点 (Week 2)
+
+**First multi-round creative slice round table** (Week 2) exposes real GLM 4-key concurrency cost. STACK §7.5 建议串行 no-batch (1 panelist 1 turn 顺序 await per Phase 46 §4 强制串行约束).
+
+**Current policy in force** (per MEMORY.md):
+- `feedback-glm-overload-reduce-concurrency.md`: global concurrency==1 (从 5→3→1 降下来)
+- 4-key rotation + 3-strike early-abort policy 已 deploy
+- Telegram 用户会收到 by-design 暂停消息 (concurrency==1 后不再重启)
+
+**PoC assumption**:
+- Creative slice screenplay Step 3 是 9 agents × 2-3 turns × 2 call = ~40-50 sequential LLM calls
+- 串行 execution 下, single round table ≈ ~143K tokens (per §6.2)
+- GLM 4-key × 200K TPM = 800K TPM ceiling; 143K << 800K → serial execution within ceiling
+- If creative slice round table triggers 4-key ceiling → early-abort per existing 3-strike policy (Telegram users receive by-design pause message)
+
+**Contingency if ceiling hit**: reduce screenplay subset from 9 agents to 5 (drop 4 secondary peers) → ~80K tokens per round table, well within ceiling. Document in PoC report.
+
+### §6.5 PoC Exit Criteria
+
+PoC "done" (exit) requires all 5 conditions:
+
+1. **All 7 acceptance criteria pass** (per §4.1-§4.7 + §4.8 summary table). Each criterion's acceptance check must explicitly PASS (no partial credit).
+2. **All 6 must-fix risk register items (P1/P2/P4/P5/P7/P8) mitigations verified** in PoC (per §5.1, §5.2, §5.3, §5.4, §5.6, §5.7).
+3. **P6 PARTIAL**: `operator_signature` schema field implemented (FeedbackRecord validates signature); outlier detection deferred with audit-log monitoring per §5.10.
+4. **30-day shadow-run <1% retrieval discrepancy** (per Phase 49 §4.7 Step 5 dual-read between v6.0 FeedbackStore + v10.0 memory layer).
+5. **PoC report committed** to `.planning/milestones/v11.0-POC-REPORT.md` — contains (a) 7 acceptance criteria pass/fail per item, (b) 7 risk register verdicts 执行状态, (c) token cost 实测 vs STACK §7 estimate 对比表, (d) 30-day shadow-run discrepancy data, (e) 下一步 (v11.1+) recommended scope.
+
+**Note**: PoC report goes to `.planning/milestones/v11.0-POC-REPORT.md`, **not v10.0** — because v11.0 is the PoC milestone (v10.0 is the design milestone ending with this doc).
+
+### §6.6 PoC Risks Beyond Risk Register
+
+5 risks not in SC#4 7-pitfall scope, but load-bearing for PoC timeline:
+
+| Risk | Monitoring | Mitigation pointer |
+|------|------------|---------------------|
+| **GLM 4-key ceiling may block creative slice multi-round** | Week 2 first multi-round exposes real cost | §6.4 contingency (reduce 9 agents → 5 if ceiling hit) |
+| **mem0 Platform API latency may exceed SLO** | §4.2 benchmark runs weekly | Phase 48 物理分区 evaluation trigger (SUMMARY §Gaps line 174) |
+| **Curator LLM aggregation hallucination rate higher than expected** | §4.3 bias canary + §4.6 dry-run-first | Bias canary may reject most proposals, blocking evolution; if >50% rejection rate, document in PoC report + defer curator `_memory_evolution_phase` live mode to v11.1+ |
+| **Round table state CC-crash recovery gc pass not yet designed** | SUMMARY §Gaps line 177 | v11.0 PoC 需补 gc pass (detection of unfinished round table state files + cleanup); if not designed by Week 4, defer to Week 6 or v11.1+ |
+| **contextvars vs threading.local must pick contextvars** | SUMMARY §Gaps line 178 | §4.9 specifies contextvars (not threading.local) for `_scoped_agent_id` propagation in ThreadPoolExecutor; if threading.local accidentally used, cross-agent memory contamination (P12) surfaces in PoC |
+
+Each risk has monitoring + mitigation pointer. None of these are SC#4 scope (they're infrastructure / implementation risks, not pitfall-mitigation risks).
+
+---
+
+## §7 Phase 44 7 决策 Cross-Validation Audit + OQ/Pitfall Resolution
+
+> 本节 audit 本 doc 的 vertical slice + acceptance + risk register + implementation path 是否一致支持 Phase 44 锁定的 7 决策. **预期 = 7/7 一致** (本 doc 是 PoC 蓝图, 不是 re-derivation). 同时声明 OQ-7 + OQ-16 + 7 pitfall PoC verdicts 的 resolution 位置.
+
+### §7.0 Audit Strategy
+
+本 doc 是 capstone PoC blueprint, **不 re-derive Phase 44 决策** —— 仅 aggregate + sequence. 因此 audit 是 cross-validation (本 doc 是否一致支持 7 决策), 不是 re-derivation (重新推导 决策).
+
+Mirror Phase 49 §6 audit table pattern.
+
+### §7.1 7 决策 Audit Table
+
+| 决策 # | 决策 (一句话) | 本 doc 实现位置 | 一致? | Citation |
+|--------|---------------|------------------|-------|----------|
+| **决策 1** | T6 协议 (Hermes MCP server + tmux dispatch + CC native MCP client) | §3.3 infra slice (7 MCP tool wire-up + round_table lifecycle) + §4.2 latency SLO (measures MCP tool round-trip + mem0 retrieval) + §3.6 deliverable (3 infra artifacts) | ✅ | STACK §3.2 + Phase 44 §2.1 |
+| **决策 2** | B3a Python runner 增量迁移 (delegate-only phase 迁 CC) | §3.3 infra slice edge case (run_python_phase Step 6.5 invocation) + Phase 49 §5.2 retained-phases allowlist (cite-only) + §3.3 negative-test scenario (dispatcher rejects non-allowlist step) | ✅ | STACK §3.2 Tool 7 + Phase 44 §2.2 + Phase 49 §5.2 |
+| **决策 3** | D2 storyboard-first-class | §3.2 creative slice (screenplay Step 3 is D2-compatible, exercises HOOK-09 emotion_curve marker contract) + §3.2 edge case (HOOK-09 smoke test) | ✅ | ARCHITECTURE §2 + Phase 44 §2.3 |
+| **决策 4** | G2 通用编排框架 | §3 vertical slice selection (screenplay is one sample of G2 runtime; infra slice sets up G2 dispatch path) + §6 implementation path (G2 sequencing rationale) | ✅ | ARCHITECTURE §6 + Phase 44 §2.4 |
+| **决策 5** | α agent form (YAML + persona + tools + refs + memory_scope + lineage) | §3.3 infra slice (test-coordinator.agent.yaml is α form entry with all 18 fields) + §3.2 creative slice (9-agent subset YAMLs all α form) + §3.6 deliverables | ✅ | Phase 45 agents-schema.yaml 18 fields + Phase 44 §2.5 |
+| **决策 6** | per-agent memory + curator-driven 自进化 | §4 entire (7 acceptance criteria all test per-agent memory facet) + §5 entire (7-row risk register all per-agent memory pitfalls) + §6.1 fitness battery first sequence (regression-detection for curator evolution) | ✅ | Phase 45 memory-record-schema.yaml + ARCHITECTURE §3 + Phase 44 §2.6 |
+| **决策 7** | 分层 CC 角色 (Hermes 控 structure, CC 控 内容) | §4.1 fitness battery (Hermes-side enforcement, regression auto-quarantine) + §4.3 bias canary (Hermes-side curator gating) + §4.6 dry-run-first (Hermes-side non-bypassable invariant) + §6.1 sequence (fitness battery = Hermes-side regression-detection backstop) | ✅ | STACK §3.2 + Phase 44 §2.7 |
+
+### §7.2 偏差分析 (Deviation Analysis)
+
+**7/7 一致**. 无偏差.
+
+特别声明:
+- **决策 6** (per-agent memory + curator-driven 自进化) 是本 doc 的 **root argument** —— 整个 PoC scope 都是验证决策 6 的可行性. §4 所有 7 项 acceptance criteria + §5 所有 7 行 risk register 都围绕 per-agent memory 展开. 决策 6 是 v10.0 的差异化设计 (per SUMMARY "9.2 memory 模式速查表显示没有一个主流框架把 per-agent scoped memory + curator-driven 自进化作为原生组合"), PoC must validate it.
+- **决策 7** (Hermes 控 structure, CC 控 内容) 是 §4.1 / §4.3 / §4.6 acceptance criteria 的 **enforcement 方向** (Hermes-side, not CC-side). Fitness battery regression auto-quarantine 是 Hermes-side enforcement. Bias canary curator gating 是 Hermes-side enforcement. Dry-run-first AST-walk invariant 是 Hermes-side non-bypassable enforcement. CC 仅控 question framing + synthesis (per Phase 44 §2.7).
+
+### §7.3 OQ + Pitfall Resolution Declaration
+
+#### Open Questions resolved
+
+- **OQ-7 (memory.max_records 上限 500 够不够? compaction 何时触发?): RESOLVED in §4.4.**
+  - Default `memory.max_records: 500` (per SUMMARY OQ-7 + Phase 45 agents-schema.yaml field).
+  - Compaction trigger: curator 每 `N=10` tick 跑 compaction pass (per SUMMARY OQ-7).
+  - PoC acceptance: compaction on 600-record synthetic input produces valid 3-tier output (core ≤10 / working ≤100 / archival ≤10000).
+
+- **OQ-16 (curator `_memory_evolution_phase` dry-run-by-default?): RESOLVED in §4.6.**
+  - Default dry-run, requires explicit `--apply-memory` flag for live writes.
+  - Non-bypassable AST-walk test (mirrors v6.0 `TestNonBypassableHumanInLoop` pattern).
+  - PoC acceptance: default mode zero writes; `--apply-memory` mode writes with audit log.
+
+#### Pitfalls PoC verdicts resolved
+
+- **P1 (persona drift): PoC verdict RESOLVED in §5.1.** must-fix-in-PoC. §4.1 fitness battery gates (drift probe via mean_score trend).
+- **P2 (stale memory): PoC verdict RESOLVED in §5.2.** must-fix-in-PoC. §4.4 compaction gates (TTL filter on expired records).
+- **P4 (cross-project leakage): PoC verdict RESOLVED in §5.3.** must-fix-in-PoC. §4.7 + §4.2 gate (scope=project + project_id filter).
+- **P5 (curator failure modes): PoC verdict RESOLVED in §5.4.** must-fix-in-PoC. §4.3 + §4.6 gate (bias canary + dry-run-first).
+- **P6 (memory poisoning): PoC verdict PARTIAL RESOLVED in §5.5.** operator_signature implemented; outlier detection deferred with audit-log monitoring per §5.10.
+- **P7 (round-table conflict): PoC verdict RESOLVED in §5.6.** must-fix-in-PoC. §3.2 creative slice screenplay 9-agent round table gates (Phase 46 conflict arbitration exercised).
+- **P8 (no fitness signal): PoC verdict RESOLVED in §5.7.** must-fix-in-PoC. §4.1 fitness battery gates (this is THE acceptance criterion for P8).
+- **P14 (schema migration): PoC verdict RESOLVED in §4.7.** (acceptance criterion #7). must-fix-in-PoC. Dry-run + live migration + <1% shadow discrepancy.
+
+**Cite SUMMARY.md OQ table + PITFALLS §Risk Register Summary as resolution audit source**. All OQs + SC#4 7 pitfalls + P14 are RESOLVED in this doc with section pointer.
+
+---
+
+## §8 Downstream Citation Guide + Coherence + References
+
+### §8.0 Downstream Citation Card (for Phase 51 VALIDATE + v11.0 PoC implementer + operator Kai)
+
+| Downstream consumer | Cite from this doc | Do NOT re-derive | Should derive |
+|---------------------|---------------------|-------------------|---------------|
+| **v11.0 PoC implementer** | §3 vertical slice + §4 acceptance criteria + §5 risk register + §6 implementation path (entire doc is the blueprint) | Phase 44 决策 1-7, Phase 45/46/49 schema/protocol, PITFALLS mitigations | Live implementation code, real test data, production deployment topology |
+| **Phase 51 VALIDATE** | §5.8 risk register summary (pitfall coverage check vs PITFALLS §Risk Register Summary line 470-488 + SUMMARY §Risk Register line 145-160) + §7.1 7 决策 audit (decision consistency vs Phase 44 §2.1-§2.7) + §4.8 acceptance criteria summary (DESIGN-06 deliverable check vs ROADMAP SC#3) + §7.3 OQ/pitfall resolution declarations | entire doc | cross-doc lint extensions for PoC-acceptance-criterion references |
+| **Operator (Kai)** | §1.6 capstone-at-a-glance (30-second answer) + §2.4 budget (~15-17 person-days + ~6 calendar weeks) + §5.8 risk register (which pitfalls must fix) + §6.5 PoC exit criteria | — | Operator approval to proceed to v11.0 PoC milestone |
+
+### §8.1 Coherence Declaration
+
+**Vertical slice selection** (§3) + **7-item acceptance criteria checklist with 12-person-day estimate** (§4) + **7-row risk register** (§5) + **PoC implementation path** (§6) + **Phase 44 7 决策 cross-validation audit** (§7) + **OQ-7/OQ-16/P1-P8/P14 resolution declarations** (§7.3) = **完整 ROADMAP SC#1-5 coverage**.
+
+v11.0 PoC implementer 引用本 doc 即可 defending:
+
+- **"What do I build first?"** → §3.3 infra slice first (~3 days setup), then §3.2 creative slice on top (~2 days)
+- **"What does 'done' look like?"** → §2.1 PoC done 定义 + §4.8 acceptance criteria summary + §6.5 PoC exit criteria
+- **"Which pitfalls can I defer?"** → §5.8 risk register summary (6 must-fix + P6 PARTIAL; P3/P9/P10/P11/P12/P13/P14 不在 SC#4 7-pitfall scope, 见 §5.10)
+
+不需重新推导 Phase 44 决策或 re-litigate pitfall mitigations.
+
+### §8.2 References
+
+#### v10.0 design suite (Phase 44-50, this doc's predecessors)
+
+- **00-FIRST-PRINCIPLES.md** (Phase 44, 1181 lines) §2.1-§2.7 — 7 决策 root (esp §2.6 决策 6 per-agent memory + §2.7 决策 7 Hermes控 structure)
+- **01-AGENT-REGISTRY-SCHEMA.md** (Phase 45, 1289 lines) — agents-schema.yaml 18 fields + memory-record-schema.yaml 10+ fields (PoC field-level mitigation verification consumes these)
+- **02-ROUND-TABLE-PROTOCOL.md** (Phase 46, 1287 lines) — turn lifecycle + §3 conflict arbitration + round-table-state-schema.yaml (PoC vertical slice #1 screenplay round table exercises this)
+- **03-COMPARISON-VS-KIMI-MCP-SHIM.md** (Phase 47, 1405 lines) — T6 vs Kimi MCP shim defense (T6 决策 论据)
+- **04-MIGRATION-PATH.md** (Phase 49, 1508 lines) §4 (memory schema migration — PoC acceptance #7 input) + §5 (retained-phases allowlist — PoC run_python_phase test scope)
+- **06-CROSS-REPO-IMPACT.md** (Phase 48, 1308 lines) §3 — Option B vs 物理分区 migration trigger (PoC §4.2 latency benchmark may trigger 物理分区)
+
+#### Reference research (predecessors of Phase 44)
+
+- **ARCHITECTURE.md** §1-§6 — 18-field schema + 15-expert transform mapping + per-agent memory + round table dispatch + state schema
+- **FEATURES.md** §10-§11 — 27 borrowable design points + anti-features
+- **STACK.md** §3.2 (7 MCP tool surface) + §7 (~550K tokens/pipeline run, ~340 MCP call) + §7.4 (latency breakdown) + §7.5 (串行 no-batch recommendation)
+- **PITFALLS.md** §P1/§P2/§P4/§P5/§P6/§P7/§P8 + §P14 + §Risk Register Summary (line 470-488) — 7 load-bearing pitfalls + schema migration pitfall (PoC risk register canonical source)
+- **SUMMARY.md** §Risk Register (line 145-160) + §Gaps to Address (line 172-178) — risk register alignment + PoC measurable gaps
+
+#### Hermes codebase (in-repo, HIGH confidence)
+
+- `agent/curator.py` — v6.0 `_feedback_scan_phase` + `_run_llm_review` (curator pattern)
+- `agent/feedback_store.py` — `FeedbackStore` with sha256 dedup + time-decay + supersession (P2 mitigation 4 extends this)
+- `agent/evolution/*` — insights / diff_generator / apply / queue (curator pipeline)
+- `agent/curator_audit.py` — sha256-chained JSONL audit log (P6 mitigation 5 extends to memory writes)
+- `plugins/memory/mem0/__init__.py` — `Mem0MemoryProvider` with circuit breaker (P3 mitigation 4 latency logging extends this)
+- `_eval/gate.py` — MT-Bench position-swap eval gate (§4.1 fitness battery leverages this pattern)
+
+#### Operator memory (cross-project context)
+
+- **MEMORY.md `v6-self-evolution-milestone.md`** — v6.0 fitness battery precedent (PoC §4.1 leverages v6.0 patterns + adds longitudinal trend + per-agent-cross-patch baseline)
+- **MEMORY.md `feedback-glm-overload-reduce-concurrency.md`** — global concurrency==1 policy (§6.4 GLM 4-key ceiling)
+- **MEMORY.md `coding-agent-vs-mcp-shim.md`** — v10.0 design 必须把已有 coding-agent vs Kimi MCP shim 作为竞品对照 (Phase 47 covered this)
+- **MEMORY.md `hermes-native-expert-agents.md`** — Kai 否决 Kimi CC-Teammates + 否决 "skill 当 agent", 要 Hermes-side persistent agents (Phase 44 决策 5/6/7 都 grounded in this)
+- **MEMORY.md `feedback-language-chinese.md`** — reply in Chinese (本 doc 双语 EN structure + 中文 prose per CLAUDE.md)
+
+#### Project canon
+
+- **CLAUDE.md** — deliverable form canon (双语 EN YAML structure + 中文 prose; SKILL.md conventions; Ruff PLW1514)
+- **.planning/PROJECT.md** — v10.0 7 locked design decisions
+- **.planning/ROADMAP.md** §Phase 50 — SC#1-5 (本 doc 解决)
+- **.planning/REQUIREMENTS.md** — DESIGN-06 (本 doc satisfies)
+
+---
+
+*Owned by v10.0 design milestone phase 50. Capstone of Phase 44-50 design suite. Phase 51 VALIDATE cross-checks this doc's risk register + acceptance criteria + decision audit against canonical sources (PITFALLS §Risk Register Summary line 470-488 + SUMMARY §Risk Register line 145-160 + Phase 44 §2.1-§2.7). No parallel phase touches this file.*
