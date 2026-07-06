@@ -104,7 +104,7 @@ Plans:
   5. Project slug 稳定性策略文档化(短期接受 breakage,long-term 用 `.hermes/project.id` stable ID,解决 OQ-6)
 **Plans**: 1 plan
 Plans:
-- [ ] 48-01-PLAN.md — 3-location sync strategy (per-artifact write authority matrix) + lineage chain (forward/backward/drift/L1-L5 invariants) + Option B vs Physical Partition migration triggers (3 threshold classes) + project slug stability (short-term breakage + long-term .hermes/project.id) + round-table state path + Phase 44 7 决策 audit + OQ-6/OQ-12/CC-4 resolution (5 tasks, single deliverable ~1300+ lines)
+- [x] 48-01-PLAN.md — 3-location sync strategy (per-artifact write authority matrix) + lineage chain (forward/backward/drift/L1-L5 invariants) + Option B vs Physical Partition migration triggers (3 threshold classes) + project slug stability (short-term breakage + long-term .hermes/project.id) + round-table state path + Phase 44 7 决策 audit + OQ-6/OQ-12/CC-4 resolution (5 tasks, single deliverable ~1300+ lines)
 **UI hint**: no
 
 ### Phase 49: MIGRATION-PATH
@@ -186,7 +186,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 45. AGENT-SCHEMA | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 46. ROUND-TABLE-PROTOCOL | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 47. KIMI-COMPARISON | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 48. CROSS-REPO-IMPACT | v10.0 | 0/1 | Not started | - |
+| 48. CROSS-REPO-IMPACT | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 49. MIGRATION-PATH | v10.0 | 0/TBD | Not started | - |
 | 50. POC-PLAN | v10.0 | 0/TBD | Not started | - |
 | 51. VALIDATE | v10.0 | 0/TBD | Not started | - |

@@ -145,7 +145,7 @@
 | DESIGN-04 | Phase 47 | Complete | 03-COMPARISON-VS-KIMI-MCP-SHIM.md | — | — | FEATURES §4,7.4,11 + STACK §1-5 + Kimi Notion 架构2.0 |
 | DESIGN-05 | Phase 49 | Pending | 04-MIGRATION-PATH.md | OQ-3,10 | P14 | ARCHITECTURE §2,6 + STACK §3.2 Tool 7 |
 | DESIGN-06 | Phase 50 | Pending | 05-POC-PLAN.md | — | P1-P14(全部 PoC 验收) | PITFALLS 全文 + STACK §7 + FEATURES §14 |
-| DESIGN-07 | Phase 48 | Pending | 06-CROSS-REPO-IMPACT.md | OQ-6,12 | P3,P12 | ARCHITECTURE §6 + STACK §3.2 |
+| DESIGN-07 | Phase 48 | Complete | 06-CROSS-REPO-IMPACT.md | OQ-6,12 | P3,P12 | ARCHITECTURE §6 + STACK §3.2 |
 | VALIDATE-01 | Phase 51 | Pending | v10.0-MILESTONE-AUDIT.md | 全部核对 | 全部覆盖 | 全部 |
 | VALIDATE-02 | Phase 51 | Pending | scripts/v10-consistency-check.py | — | — | 全部 |
 
