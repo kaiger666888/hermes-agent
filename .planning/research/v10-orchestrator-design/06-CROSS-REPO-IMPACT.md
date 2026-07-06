@@ -465,6 +465,73 @@ def _detect_skill_agent_drift() -> List[Dict[str, Any]]:
 - **Source:** 决策 5 (α form is operator-owned identity) + Phase 45 SC#1 + PITFALLS §P1 mitigation 4.
 - **Enforcement:** §2.4 write authority matrix row 1 + curator code path explicit field whitelist (`evolution_log` / `fitness_score` / `last_fitness_battery_run_at` —— 其他 fields rejected).
 
+#### L6: Two-anchor lineage verification (path + content sha256)
+
+- **Rationale:** Single path anchor (e.g. `derived_from_skill_id` only) 可被 typo 或 malicious actor spoof. Single content anchor (`skill_sha256` only) breaks on legitimate SKILL.md edit. **Two anchors together** provide robust traceability —— path 给 resolution 起点, sha256 给 cryptographic verification.
+- **Source:** §3.3 two-anchor design + Phase 45 lineage block sub-fields.
+- **Enforcement:** §3.3 backward chain step 5 (compute current sha256, compare to `lineage.skill_sha256`).
+- **Audit check (Phase 51 VALIDATE lint):** For each `~/.hermes/agents/*.agent.yaml`, run backward chain; report any drift.
+
+### §3.6 Lineage Worked Example (kais-movie-pipeline Cinematographer)
+
+To make the traceability chain concrete, here is a worked example using the cinematographer agent (one of the 15 movie-experts transformed in v11.0 PoC):
+
+**Source (Location 2 — kais-hermes-skills repo):**
+
+```
+/data/workspace/kais-hermes-skills/skills/movie-experts/cinematographer/SKILL.md
+```
+
+Content (excerpt, ~250 lines total):
+
+```yaml
+---
+name: cinematographer
+description: 电影摄影指导专家...
+metadata:
+  hermes:
+    tags: [movie, cinematography, ...]
+    related_skills: [screenplay, drawer, ...]
+    expert_id: cinematographer
+    metrics: [shot_grammar, vertical_screen_framing, ...]
+---
+# Cinematographer Expert (摄影指导)
+## When to use this skill
+...
+```
+
+**Forward chain (transform procedure, ARCHITECTURE §6.1, §3.2 above):**
+
+1. Operator reads SKILL.md → 250 lines content.
+2. `skill_sha256 = hashlib.sha256(content.encode("utf-8")).hexdigest()` → e.g. `"f3a2b1c8..."` (64 hex chars).
+3. Generate `~/.hermes/agents/cinematographer.agent.yaml` (5-field transform per 04-MIGRATION-PATH).
+4. Record lineage:
+
+```yaml
+lineage:
+  derived_from_skill_id: kais-hermes-skills/skills/movie-experts/cinematographer
+  derived_from_repo: kais-hermes-skills
+  transform_date: "2026-07-15"
+  skill_sha256: "f3a2b1c8e9d7b6a5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1"
+```
+
+**Backward chain (audit, §3.3 above):**
+
+1. Auditor reads `lineage.derived_from_skill_id` → `kais-hermes-skills/skills/movie-experts/cinematographer`.
+2. Resolves source path: `/data/workspace/kais-hermes-skills/skills/movie-experts/cinematographer/SKILL.md`.
+3. Reads current SKILL.md content.
+4. Computes current sha256 → e.g. `"f3a2b1c8..."` (matches L3 invariant).
+5. **Result:** No drift. agent YAML reflects current SKILL.
+
+**Drift scenario:**
+
+- Operator pushes kais-hermes-skills PR adding new refs to cinematographer SKILL.md.
+- SKILL.md content changes → current sha256 = `"e5d4c3b2..."` (differs from `lineage.skill_sha256` = `"f3a2b1c8..."`).
+- Curator's next `_memory_evolution_phase` pass runs `_detect_skill_agent_drift()` → detects mismatch → appends to drift report.
+- **Drift advisory** logged (§3.4) — operator decides whether to re-run transform with fresh persona rewrite (preserve hand-tuned additions to persona).
+
+
+
 ---
 
 ## §4 Option B vs Physical Partition Migration Trigger Conditions (SC#3 Deep-Dive, OQ-12 + CC-4 Resolution)
@@ -611,6 +678,32 @@ def _detect_skill_agent_drift() -> List[Dict[str, Any]]:
 **Trigger presentation format (Phase 51 VALIDATE lint should verify):** each trigger as `{ID, threshold, monitoring point, trigger action, source citation}`. 见上表.
 
 **Important note on trigger thresholds:** 这 8 个 numeric thresholds 是 **STARTING-POINT**, 不是 gospel. §7.2 偏差分析 explicit 声明: 这些 thresholds 是 revisable in Phase 51 audit based on v11.0 PoC 实测数据. v11.0 PoC implementer 不应该 because "agent count 已达 30" 就 panic-migrate —— 应该 run §4.5 acceptance benchmark 看 latency 是否真的 degrade.
+
+#### §4.4.1 Threshold Rationale Deep-Dive (Why these specific numbers?)
+
+Each numeric threshold in §4.4 has a derivation rationale grounded in industry data + Hermes-specific scaling projections:
+
+**A1 (agent count ≥30):** PITFALLS §P3 §"Mechanism" cites HNSW graph degradation as superlinear in scoped-subset count. mem0 reference deployments are per-user (chatbot memory: 1 user × thousands of records). The 18-agent × 100-project matrix from PITFALLS §P3 is the documented failure case (post-filter scans 50-100× more nodes than necessary). v11.0 PoC's 15 agents is comfortably below; v12+ projects 30+ agents (kais-movie-pipeline + future skill-to-agent transforms + cross-domain agents like research/coding). 30 is the inflection point where superlinear degradation becomes measurable; 50 is where it becomes user-perceptible (p95 doubling).
+
+**A2 (project count ≥10):** Memory namespace matrix = agents × projects. v11.0 PoC = 15 × 1 = 15 namespaces; v12+ projects 30 × 10 = 300 namespaces. mem0's `agent_id` + `user_id` filter combinations grow quadratically with cross-product. 10 projects is conservative — advisory only.
+
+**A3 (memory records ≥5000):** PITFALLS §P3 mitigation 3 + Phase 45 SC#2 set per-agent cap at `memory.max_records: 500`. 15 agents × 500 records = 7500 max in v11.0 PoC. HNSW global graph index size scales with total records; post-filter scans degrade at ~5K records. The 5000 advisory fires before the 7500 ceiling — gives operator time to plan migration.
+
+**B1 (p95 >500ms):** STACK §11.4 + Phase 50 SC#3 PoC acceptance criterion. 500ms is the upper bound for "interactive" latency (per Nielsen Norman Group UX research). Above 500ms, the round-table turn cadence feels sluggish to operators monitoring in dashboard.
+
+**B2 (p99 >2000ms):** Tail latency. Even if p95 is healthy, p99 spikes indicate HNSW graph traversal worst-case (e.g. cold cache + filter mismatch + re-rank). 2 seconds is "user thinks something is broken" threshold.
+
+**B3 (failure rate >1%):** mem0 timeout / circuit breaker trip. `_BREAKER_THRESHOLD = 5` (5 failures trigger cooldown) per ARCHITECTURE §3.1. At 1% failure rate over 24h with normal round-table cadence, circuit breaker fires multiple times per day → "memory unavailable" silent fallback → agents degrade to static refs only.
+
+**C1 (any cross-agent contamination):** Zero-tolerance. PITFALLS §P12 mitigation 3 specifies periodic invariant test `_check_workspace_isolation(agent_A, agent_B)`. Any failure means filter routing has a bug; Physical Partition eliminates the dependency entirely.
+
+**C2 (filter bypass):** Defense in depth. If filter enforcement fails repeatedly (3+ bypass bugs in 6 months), the filter-based approach is showing systemic fragility — Physical Partition's hardware-level isolation is more robust.
+
+**C3 (privacy audit):** External compliance trigger. Phase 45 `confidentiality` field + PITFALLS §P10 privacy. If an external audit (e.g. GDPR, SOC 2) finds per-agent memory isolation insufficient, Physical Partition is the available mitigation.
+
+**Cross-threshold interaction:** Class A thresholds are predictive (scale projection); Class B thresholds are measured (actual performance); Class C thresholds are reactive (confirmed incidents). An advisory Class A trigger (e.g. agent count ≥30) without corresponding Class B degradation (p95 still <500ms) suggests the system has more headroom than projected — proceed with monitoring, no migration needed. A mandatory Class B trigger (p95 >500ms sustained) at low Class A scale (only 20 agents) suggests either (a) the thresholds were too optimistic or (b) mem0 backend has a pathological workload — investigate root cause before migration.
+
+
 
 ### §4.5 v11.0 PoC 验收条件 (Acceptance Criteria)
 
@@ -958,6 +1051,256 @@ kais-movie-pipeline project asks "Should Volvo S1-1 use empty-car establish or g
 > Direct cross-project references would violate per-project scope invariant and risk P4 cross-project memory leakage. "Isolation into a memory system designed as single-tenant is painful. Per-tenant storage is cheap. Cross-tenant data leaks are not." (PITFALLS §P4 mitigation 3 reference).
 
 Round-table state follows the same isolation principle. Cross-project leakage in round-table context would be: project A's round-table transcript citing project B's question / synthesis —— meaningless AND potentially contaminating.
+
+### §6.6 Round-Table State Worked Example (kais-movie-pipeline Volvo S1-1)
+
+To make the per-project isolation concrete, here is a worked example using a kais-movie-pipeline round table.
+
+**Project context:**
+
+- Repo: `/data/workspace/kais-movie-pipeline/` (separate from hermes-agent repo)
+- `project_slug`: `kais-movie-pipeline:e7f8a9b2` (repo_basename + git_toplevel_abspath_sha8)
+- Round table ID: `rt_20260715_153000_a1b2c3` (CC-generated uuid per OQ-11)
+
+**State file path:**
+
+```
+~/.hermes/agents/.runtime/kais-movie-pipeline:e7f8a9b2/round_tables/rt_20260715_153000_a1b2c3.json
+```
+
+**State JSON content (excerpt):**
+
+```json
+{
+  "round_table_id": "rt_20260715_153000_a1b2c3",
+  "project_slug": "kais-movie-pipeline:e7f8a9b2",
+  "opened_at": "2026-07-15T15:30:00Z",
+  "closed_at": null,
+  "panel": ["screenplay", "cinematographer", "hook_retention", "theory_critic"],
+  "question": "Should Volvo S1-1 opening use empty-car establish or grandson reveal?",
+  "turn_order": ["cinematographer", "screenplay", "hook_retention", "theory_critic"],
+  "max_rounds": 3,
+  "early_stop_rule": "consensus_3_of_4 OR round_2_no_change",
+  "current_round": 2,
+  "current_speaker_index": 1,
+  "state": "in_progress",
+  "turns": [
+    {
+      "round": 1,
+      "speaker": "cinematographer",
+      "ts": "2026-07-15T15:30:42Z",
+      "opinion_text": "Empty-car establish better suits the introspective mood...",
+      "cited_refs": ["shot-grammar.md", "vertical-screen-framing.md"],
+      "fitness_score": 0.87,
+      "evolution_log_tail": [...]
+    }
+  ],
+  "final_synthesis": null,
+  "synthesizer": null,
+  "early_stop_triggered": false,
+  "early_stop_reason": null
+}
+```
+
+**Per-project isolation verification:**
+
+- This state file lives **only** under `kais-movie-pipeline:e7f8a9b2/` —— NOT under `hermes-agent:a1b2c3d4/` (a different project).
+- The same 4 agents (screenplay / cinematographer / hook_retention / theory_critic) participate in multiple projects' round tables, but each project's transcript is independent.
+- The `fitness_score: 0.87` snapshot is captured **at turn time** (per ARCHITECTURE §5.2 closing paragraph) —— if cinematographer's score later updates to 0.91 via curator pass, this transcript remains reproducible.
+
+**Crash recovery scenario (§6.4 (a)):**
+
+- CC crashes mid-round-2 after cinematographer speaks (index 0) but before screenplay (index 1).
+- State file shows `current_round: 2`, `current_speaker_index: 1` (screenplay's turn).
+- Hermes detects tmux session end → logs warning.
+- Operator restarts CC, opens same round_table_id: `round_table_open(round_table_id="rt_20260715_153000_a1b2c3", ...)` → Hermes reads state file, resumes from screenplay turn.
+
+
+
+---
+
+## §7 Phase 44 7 决策 Cross-Validation Audit + OQ/CC Resolution
+
+### §7.0 Audit 声明
+
+本节 audit 本 doc 的 **3-location + Option B + slug 策略 是否一致支持 Phase 44 锁定的 7 决策** (cite by 决策号 from `00-FIRST-PRINCIPLES.md` §2.1-§2.7).
+
+**预期 = 7/7 一致** (本 doc 是 deployment-topology 落实, 不是 re-derivation).
+
+同时声明 **OQ-6 + OQ-12 + CC-4 三条 open question 的 resolution 位置**.
+
+### §7.1 7-Row 决策 Audit Table
+
+| 决策 # | 决策 (一句话) | 本 doc 实现位置 | 一致? | Citation |
+|--------|---------------|------------------|-------|----------|
+| **决策 1** | T6 协议 (Hermes MCP server + tmux dispatch + CC native MCP client) | §2.1 Location 1 hermes-agent repo 是 runtime owner; §6.1 round-table state 路径 Hermes 拥有 (`~/.hermes/agents/.runtime/{slug}/round_tables/*.json` 由 dispatcher 写); §6.4 CC crash 检测依赖 tmux session end | ✅ | ARCHITECTURE §6 + Phase 44 §2.1 + 决策 1 |
+| **决策 2** | B3a Python runner 增量迁移 (delegate-only phase 迁 CC) | §2.1 v11.0 PoC deliverable list 包括 `mcp_serve.py` extensions + `agent/agent_dispatcher.py` + `agent/curator.py` `_memory_evolution_phase` (all additive Python); v12+ `hermes agent transform` CLI 也 Python | ✅ | ARCHITECTURE §6.4 row 1 + Phase 44 §2.2 + 决策 2 |
+| **决策 3** | D2 storyboard-first-class (orchestrator round-based parallel) | §6.3 round-table state per-project 隔离 支持 D2 round-based parallel (每个 project 独立 round table); §6.5 cross-project reference forbidden 保证 parallel 不会 cross-contaminate | ✅ | ARCHITECTURE §5.2 + Phase 44 §2.3 + 决策 3 |
+| **决策 4** | G2 通用编排框架 (kais-movie-pipeline 首个 sample) | §2.1 + §2.3 hermes-agent repo + `~/.hermes/agents/` 共同 host G2 runtime; kais-hermes-skills repo 作 lineage source; §3 lineage chain 是 G2 transform 的 traceability 基础 | ✅ | ARCHITECTURE §6 + Phase 44 §2.4 + 决策 4 |
+| **决策 5** | α agent form (YAML + persona + tools + refs + memory_scope + lineage) | §3 完整 lineage chain 规范 (forward SKILL.md→YAML + backward YAML→SKILL.md + drift detection + 5 invariants L1-L5); §2.4 write authority matrix 明确 persona operator-owned (L5) | ✅ | Phase 45 agents-schema.yaml `lineage` + ARCHITECTURE §6.1/§6.2 + Phase 44 §2.5 + 决策 5 |
+| **决策 6** | per-agent memory + curator-driven 自进化 | §4 Option B vs Physical Partition migration triggers —— 完整 lifecycle 决策 (v11.0 PoC Option B, v12+ 物理分区 when Class A/B/C thresholds fire); §2.4 row 2 curator mutates evolution_log; §2.4 row 4/5 curator-owned | ✅ | ARCHITECTURE §3.2 + PITFALLS §P3 + SUMMARY CC-4 + Phase 44 §2.6 + 决策 6 |
+| **决策 7** | 分层 CC 角色 (Hermes 控结构 / turn_order / max_rounds / early_stop_rule / state schema; CC 控 question framing + synthesis) | §2.3 write authority split (curator 只改 evolution_log + fitness_score, 不改 persona); §2.4 row 3 dispatcher writes state JSON, CC 通过 MCP tool 间接; §6.4 Hermes owns `.runtime/` state files, CC never touches directly; §4.3 backend switch 在 Hermes 层完成, CC 完全无感知 | ✅ | ARCHITECTURE §5.1 + §6 + Phase 44 §2.7 + 决策 7 |
+
+**结果:** 7/7 ✅ 一致.
+
+### §7.2 偏差分析 (Deviation Analysis)
+
+- **预期:** 7/7 一致 (本 doc 是 deployment-topology 落实, 不是 re-derivation).
+- **实际:** 7/7 一致. 本 doc 未发现 Phase 44 决策需修正.
+- **声明:** "本 audit 是 horizontal validation —— 不是 re-derivation. 若 v11.0 PoC 实施中发现 3-location 表或 Option B 触发条件需调整, 应在 `05-POC-PLAN.md` 的 risk register 标注 + 在 Phase 51 audit 复审."
+- **§4.4 trigger thresholds 特别声明:** 这些 numeric constants (30 agent / 10 project / 5000 records / p95 500ms / p99 2000ms / failure 1% 等) 是 **STARTING-POINT**, revisable in Phase 51 audit based on v11.0 PoC 实测数据. 7/7 audit 不包含 trigger thresholds 的 numeric 准确性 —— 那个是 revisable parameter, 不是 决策一致性.
+
+### §7.3 OQ-6 + OQ-12 + CC-4 Resolution 声明
+
+**OQ-6 (project slug 重命名稳定性): RESOLVED in §5.**
+
+- Short-term (v11.0 PoC): accepts breakage with 3 documented scenarios (rename / move / clone) + manual `mv` recovery (§5.2).
+- Long-term (v12+): fix via `.hermes/project.id` stable ID with adoption roadmap (§5.3-§5.6). Adoption triggered by rename pain OR 2nd project addition.
+- **Stability marker:** short-term LOCKED; long-term DESIGN.
+
+**OQ-12 (mem0 backend partition timing): RESOLVED in §4.**
+
+- v11.0 PoC uses Option B (mem0 single backend + `agent_id` filter) per ARCHITECTURE §3.2 recommendation.
+- v12+ migrates to Physical Partition (per PITFALLS §P3 mitigation 1) when trigger conditions fire (§4.4 Class A scale / Class B latency / Class C safety thresholds).
+- API surface unchanged across transition (§4.3 — `get_agent_memory` `agent_id` parameter supports both modes).
+- **Stability marker:** Option B + Physical Partition definitions LOCKED; §4.4 trigger thresholds STARTING-POINT (revisable).
+
+**CC-4 (Option B lifecycle decision): RESOLVED in §4 + recorded here.**
+
+- ARCHITECTURE §3.2 Option B ↔ PITFALLS §P3 mitigation 1 Physical Partition ↔ STACK §3.2 Tool 3 `get_agent_memory` agent_id parameter — 这条 cross-cutting finding 现在有 explicit migration triggers.
+- **v12+ implementers do NOT need to re-discuss** Option B vs Physical Partition decision. CC-4 closed.
+- **Migration is ONE-WAY** (§4.6 caveat): Option B → Physical Partition; reverse migration not recommended.
+
+**Cite:** SUMMARY.md OQ table (rows OQ-6, OQ-12) + CC findings (CC-4) as resolution audit source.
+
+### §7.4 P3 + P12 风险评估更新
+
+**P3 (Pitfall 3: Scoped Retrieval Performance Collapse):**
+
+- **v11.0 PoC scale** (15 agent × 1 project × ≤500 records/agent): **LOW** risk. HNSW global graph comfortably handles this scale.
+- **v12+ scale** (30+ agent × 10+ project × ≤500 records/agent = 150K+ records): **HIGH** risk. Triggers Class A migration thresholds (§4.4 A1/A2/A3).
+- **Resolution:** §4.4 Class A scale triggers + §4.6 migration path.
+
+**P12 (Pitfall 12: Cross-Agent Memory Contamination via Shared mem0 Workspace):**
+
+- **v11.0 PoC:** **LOW** risk IF filter enforcement audit passes (§4.5 — all `mem0.search()` call sites use `_scoped_agent_id`).
+- **v12+:** **MEDIUM** risk due to scale-induced filter complexity (more call sites → more bypass chances). Physical Partition eliminates entirely at infrastructure level.
+- **Resolution:** §4.4 Class C safety triggers (C1 contamination / C2 bypass) + §4.6 migration path.
+
+**Cite:** PITFALLS §P3 + §P12 + Phase 51 VALIDATE risk register reconciliation (will verify field-level mitigation coverage in v11.0 PoC implementation).
+
+---
+
+## §8 Downstream Citation Guide + Coherence 声明 + References
+
+### §8.0 Downstream Citation Card Table
+
+| Downstream doc | Cite from this doc | Do NOT re-derive | Should derive (own contribution) |
+|----------------|---------------------|-------------------|-----------------------------------|
+| **`04-MIGRATION-PATH.md`** (Phase 49) | §2.4 write authority matrix (who can create agent YAML); §3.2 forward chain (transform source/target/sha256 recording); §2.1 v11.0 PoC deliverable list (where transform CLI lives); §3.5 L1-L5 invariants (transform must satisfy) | 3-location frame itself (cite §2 + ARCHITECTURE §6); Option B triggers (cite §4.4) | 15-expert 5-field transform rules; `default_invocation: skill_fallback → mcp_tool` switching logic; retained-phases allowlist location; memory schema migration |
+| **`05-POC-PLAN.md`** (Phase 50) | §4.4 migration triggers (initial thresholds for PoC monitoring); §4.5 v11.0 PoC acceptance criteria (latency benchmark p95 <500ms + filter audit + workspace isolation test); §4.7 P3/P12 risk levels at PoC scale (LOW); §6.4 crash recovery test cases | Lineage chain detail (cite §3); slug long-term fix (cite §5.3-§5.6) | PoC fitness battery; latency SLO operationalization; bias canary; threshold tuning methodology; dry-run-first invariant test |
+| **Phase 51 VALIDATE lint** | §7.1 7 决策 audit table (cross-check 7/7 一致 holds); §7.3 OQ-6/OQ-12/CC-4 resolution declarations (verify each has section pointer); §3.5 lineage invariants L1-L5 (verify each in agent YAML lint); §4.4 trigger thresholds as numeric constants (cross-check v11.0 PoC monitoring catches these) | Entire doc (it's the source of truth) | Cross-doc consistency lint script (term/schema/decision/citation checks across all 7 design docs) |
+
+### §8.1 Coherence 声明
+
+**ROADMAP SC#1-5 coverage:**
+
+- **SC#1 (file exists):** §0 + §1.
+- **SC#2 (3-location sync strategy):** §1.6 quick-glance + §2 full deep-dive + §3 lineage chain.
+- **SC#3 (Option B vs Physical Partition triggers):** §4 full deep-dive (resolves OQ-12 + CC-4).
+- **SC#4 (round-table state path):** §6 full deep-dive (references ARCHITECTURE §5.1).
+- **SC#5 (project slug stability):** §5 full deep-dive (resolves OQ-6).
+
+**完整性 声明:**
+
+> 3-location sync strategy (§2) + lineage chain (§3) + Option B vs Physical Partition migration triggers (§4) + project slug stability (§5) + round-table state path (§6) + Phase 44 7 决策 cross-validation audit (§7) + OQ-6/OQ-12/CC-4 resolution declarations = **完整 ROADMAP SC#1-5 coverage**.
+
+**v11.0 PoC implementer 使用 声明:**
+
+> v11.0 PoC implementer 引用本 doc 的 §2.4 write authority matrix + §3 lineage chain + §4.4 trigger thresholds + §4.5 acceptance criteria + §5.1 slug derivation 即可 defending "where does this artifact live? who can write it? when do I migrate mem0?", **不需重新推导 Phase 44 决策或 re-literate Option B vs 物理分区**.
+
+### §8.2 References
+
+#### Phase 44 root arguments (00-FIRST-PRINCIPLES.md)
+
+- `00-FIRST-PRINCIPLES.md` §2.1 (决策 1: T6 协议) + §2.5 (决策 5: α agent form) + §2.6 (决策 6: per-agent memory) + §2.7 (决策 7: 分层 CC 角色) —— cited throughout §1.1, §2, §3, §4, §7.
+
+#### Phase 45 schema contracts (01-AGENT-REGISTRY-SCHEMA.md)
+
+- `01-AGENT-REGISTRY-SCHEMA.md` `lineage` field spec (sub-fields: `derived_from_skill_id`, `derived_from_repo`, `transform_date`, `skill_sha256`) —— cited §3.1, §3.2, §3.5 (L1-L4).
+- `memory-record-schema.yaml` `agent_id` required field + `scope` (global|project|session) + `memory_scope` —— cited §4.1, §4.3.
+
+#### Phase 46 protocol contracts (02-ROUND-TABLE-PROTOCOL.md)
+
+- `02-ROUND-TABLE-PROTOCOL.md` §2 round-table-state-schema.yaml `project_slug` required —— cited §6.2.
+- §4 state file path `~/.hermes/agents/.runtime/{slug}/round_tables/{round_table_id}.json` + atomic/append-only/crash-recoverable invariants —— cited §6.1, §6.4.
+
+#### Phase 47 sibling (03-COMPARISON-VS-KIMI-MCP-SHIM.md)
+
+- `03-COMPARISON-VS-KIMI-MCP-SHIM.md` §4.5 A2A expansion position —— cited §4.8.
+
+#### ARCHITECTURE.md
+
+- §3.1 (Current Mem0 Backend Surface — `_read_filters()` returns only `user_id`) —— cited §4.1.
+- §3.2 (Three Implementation Options — Option B RECOMMENDED) —— cited §1.5.2, §4.0, §4.1.
+- §3.3 (Mem0 Backend Extension Points — additive `_scoped_agent_id`) —— cited §4.1.
+- §3.4 (Curator-Driven Memory Evolution — `_memory_evolution_phase`) —— cited §2.3.
+- §5.1 (Round table state file layout + project_slug derivation `{repo_basename}:{git_toplevel_abspath_sha8}`) —— cited §1.1, §5.1, §6.0, §6.1.
+- §5.2 (Cross-project sharing rules — 5 artifact classes) —— cited §1.5.1, §2.5, §6.3, §6.5.
+- §5.3 (Round Table Lifecycle sketch) —— cited §6.4.
+- §6 (Cross-Repo Coordination — 3-location skeleton) —— cited throughout (frame).
+- §6.1 (Transform Procedure 5 steps) —— cited §2.2, §3.2.
+- §6.2 (Drift Detection — `_detect_skill_agent_drift()`) —— cited §3.4.
+- §6.3 (Synchronization Strategy — 4 sync directions) —— cited §2.1, §2.2.
+- §6.4 (Repo Impact Summary — v10.0/v11.0/v12+ deliverable matrix) —— cited §1.5.1, §2.1, §2.2.
+- §7.4 (Project Slug Pattern — disambiguates same-name repos) —— cited §5.1.
+- §8 (Anti-Patterns: §8.1 YAML as Prompt Dump / §8.2 Auto-Re-Transform on Drift) —— cited §2.3, §3.4.
+- §10.6 (OQ-6 slug stability) —— cited §5.0.
+
+#### FEATURES.md
+
+- §8 B8.1 (Agent Card exposition borrowable) —— cited §4.8.
+- §10 B7.4 (A2A Microsoft 三层协议分层) —— cited §1.7, §4.8.
+
+#### STACK.md
+
+- §3.2 Tool 3 `get_agent_memory` (`agent_id` parameter — supports both Option B and Physical Partition) —— cited §1.5.2, §4.3.
+- §11.4 (OQ-12 deferral + latency SLO p95 <500ms) —— cited §4.0, §4.5.
+
+#### PITFALLS.md
+
+- §P3 (Pitfall 3: Scoped Retrieval Performance Collapse — Option B ceiling, mitigation 1 Physical Partition) —— cited §1.5.2, §4.0, §4.2, §4.4, §4.7, §7.4.
+- §P4 (Pitfall 4: Cross-Project Memory Leakage) —— cited §6.5.
+- §P12 (Pitfall 12: Cross-Agent Memory Contamination — Option B bleed risk, filter enforcement requirement) —— cited §1.5.2, §4.0, §4.7, §7.4.
+
+#### SUMMARY.md
+
+- CC-4 (Option B lifecycle decision: ARCHITECTURE §3.2 ↔ PITFALLS §P3 mitigation 1 ↔ STACK §3.2 Tool 3) —— cited §1.5.2, §4.0, §4.3, §7.3.
+- OQ-6 (project slug 重命名稳定性 — 接受 breakage short-term, `.hermes/project.id` long-term) —— cited §5.0, §5.2, §7.3.
+- OQ-12 (mem0 backend partition timing — Option B v11.0 PoC, 物理分区 v12+) —— cited §4.0, §7.3.
+
+#### MEMORY.md (in-repo operator context)
+
+- `kais-movie-agent-v5-hermes-native-migration.md` (2026-07-02): v5.0 ship moved `skills/movie-experts` + 4 plugins to kais-hermes-skills repo. hermes-agent repo 现仅保留 GSD `.planning/` 工件. —— cited §1.1 (3-location frame), §2.2, §4.1.
+- `hermes-gateway-systemd.md` (2026-07-01): hermes-agent runtime runs under systemd supervision. `~/.hermes/` 是 canonical state root per CLAUDE.md + `hermes_constants.get_hermes_home()`. —— cited §1.1, §2.3.
+
+#### CLAUDE.md
+
+- HERMES_HOME (`~/.hermes/` canonical state root via `hermes_constants.get_hermes_home()`) —— cited §1.1, §2.3.
+- Skill File Conventions (SKILL.md discovery rules) —— informs §3 lineage chain.
+- PLW1514 (unspecified-encoding Ruff rule) —— cited §3.2 (`hashlib.sha256(... .encode("utf-8"))`).
+
+#### Phase 44/45/46/47 commit references
+
+- Phase 44 (`00-FIRST-PRINCIPLES.md`): commit `e7be0f45f` (2026-07-06) —— 7 决策 LOCKED.
+- Phase 45 (`01-AGENT-REGISTRY-SCHEMA.md`): schema LOCKED in `agents-schema.yaml` + `memory-record-schema.yaml` —— citation throughout §3 + §4.
+- Phase 46 (`02-ROUND-TABLE-PROTOCOL.md`): protocol LOCKED in `round-table-state-schema.yaml` —— citation throughout §6.
+- Phase 47 (`03-COMPARISON-VS-KIMI-MCP-SHIM.md`): A2A expansion position LOCKED —— citation §4.8.
+
+---
+
+*End of v10.0 Design Doc #06 — Cross-Repo Impact. Synthesized 2026-07-07 in Phase 48-cross-repo-impact plan 48-01. Resolves SUMMARY OQ-6 + OQ-12 + CC-4. Phase 44 决策 1-7 cross-validation: 7/7 ✅ consistent.*
+
 
 
 
