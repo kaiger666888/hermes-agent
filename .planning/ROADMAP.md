@@ -132,7 +132,9 @@ Plans:
   3. 验收条件清单完整,涵盖:fitness battery 设计(引用 PITFALLS §P8)+ latency SLO(p95 < 500ms,mem0 scoped retrieval)+ bias canary(curator `_memory_evolution_phase` hallucination 检测)+ compaction pass(`memory.max_records` 触发)+ threshold tuning(初始默认值 + 调优路径)+ dry-run-first invariant(curator 默认 dry-run)+ schema migration dry-run —— 每项 1-3 天工作量估算
   4. Risk register(7 load-bearing pitfalls P1/P2/P4/P5/P6/P7/P8 × PoC deferral 评估)完整,每 pitfall 标注 must-fix-in-PoC vs defer-with-monitoring
   5. PoC 实施路径图(从 fitness battery → schema migration dry-run → bias canary 顺序,引用 STACK §7 token 成本估算 ~550K/pipeline run)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 50-01-PLAN.md — v10.0 capstone PoC blueprint: vertical slice selection (creative=screenplay Step 3 + infra=agent registry + 1 round table) + 7-item acceptance criteria (12 person-days total) + 7-row risk register (P1/P2/P4/P5/P7/P8 must-fix + P6 PARTIAL) + implementation path (fitness battery → schema migration dry-run → bias canary sequence) + Phase 44 7 决策 audit + OQ-7/OQ-16/P14 resolution (5 tasks, single deliverable ~1300+ lines)
 **UI hint**: no
 
 ### Phase 51: VALIDATE
@@ -190,7 +192,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | 47. KIMI-COMPARISON | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 48. CROSS-REPO-IMPACT | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 49. MIGRATION-PATH | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 50. POC-PLAN | v10.0 | 0/TBD | Not started | - |
+| 50. POC-PLAN | v10.0 | 1/1 | Planned     | - |
 | 51. VALIDATE | v10.0 | 0/TBD | Not started | - |
 
 ---
