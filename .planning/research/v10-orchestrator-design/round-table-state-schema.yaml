@@ -1,0 +1,572 @@
+# Hermes Round Table State Schema (v10.0)
+#
+# Independent JSON Schema (draft 2020-12) for round-table state files persisted at
+# ~/.hermes/agents/.runtime/{project_slug}/round_tables/{round_id}.json
+#
+# Sources:
+#   - ARCHITECTURE.md §5.1 (state file layout + per-project .runtime/{slug}/ path)
+#   - ARCHITECTURE.md §5.3 (round table lifecycle sketch — Hermes controls structure)
+#   - ARCHITECTURE.md §8.3 (anti-pattern: round_table_open must NOT block)
+#   - Phase 44 决策 5 (α agent form — agents are Hermes-side persistent entities — root-arg-决策-5)
+#   - Phase 44 决策 6 (per-agent scoped memory + scope/confidence/evidence_chain fields — root-arg-决策-6)
+#   - Phase 44 决策 7 (Hermes controls turn_order/max_rounds/early_stop_rule; CC controls content — root-arg-决策-7)
+#   - SUMMARY.md CC-6 (serial constraint — global concurrency==1 BY DESIGN, no parallel panelist calls)
+#   - SUMMARY.md OQ-2 (turn_order strategy default round-robin, pluggable)
+#   - SUMMARY.md OQ-5 (agent deletion → open-time snapshot for transcript integrity)
+#   - SUMMARY.md OQ-11 (round_id is CC-self-generated UUID v4, passed in round_table_open call)
+#   - SUMMARY.md OQ-15 (memory conflict arbitration mechanism)
+#   - PITFALLS.md §P1 mitigation 4 (persona drift — persona_sha256 cross-layer detection)
+#   - PITFALLS.md §P7 mitigation 1-5 (memory conflict — 5 sub-mechanisms)
+#   - PITFALLS.md §P14 mitigation 1 (schema migration — schema_version + safe defaults)
+#   - FEATURES.md §10 B2.1 (AutoGen/MAF turn_order three-state inspiration)
+#   - FEATURES.md §10 B8.2 (A2A Task lifecycle FSM inspiration for turn state machine)
+#   - MEMORY.md feedback-glm-overload-reduce-concurrency.md (serial invariant root cause)
+#
+# Consumers:
+#   - v11.0 PoC Python dataclass generator (consumes this as input)
+#   - Phase 51 VALIDATE-02 lint script (machine-checkable cross-doc consistency)
+#   - 02-ROUND-TABLE-PROTOCOL.md §2 (narrative cross-reference)
+#   - curator periodic pass (conflict-log review per §P7 mitigation 5)
+#
+# Stability: §2 of design doc locks lifecycle; all field names below are camelCase
+# (Phase 45 verification lesson — never snake_case in JSON Schema property names).
+# Field add/remove requires opening a new design-revision milestone (P14 schema_version bump).
+#
+# This schema CONSUMES Phase 45 field names — it does NOT redefine them.
+# When this schema references agent_id / scope / confidence / evidence_chain /
+# persona_sha256 / confidentiality / status / record_id, those are CITE-ONLY
+# references to memory-record-schema.yaml + agents-schema.yaml authoritative definitions.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://hermes-agent.local/v10/round-table-state-schema.yaml"
+title: "Hermes Round Table State Schema (v10.0)"
+description: |
+  State file schema for ~/.hermes/agents/.runtime/{slug}/round_tables/{round_id}.json.
+  One file per round table invocation; persists turn-by-turn state for crash recovery,
+  conflict-log audit, and curator review.
+  Source: ARCHITECTURE §5.1 + Phase 44 决策 7 (Hermes controls structure).
+  Consumes Phase 45 agents-schema.yaml + memory-record-schema.yaml field names —
+  does NOT redefine them. See 02-ROUND-TABLE-PROTOCOL.md §2-§3 for narrative.
+
+type: object
+required:
+  - roundId
+  - projectId
+  - question
+  - panelists
+  - turnOrder
+  - status
+  - turns
+  - roundTableOpen
+  - createdAt
+additionalProperties: false  # T-46-01 mitigation — reject undeclared fields
+
+properties:
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Identity & routing
+  # ──────────────────────────────────────────────────────────────────────
+
+  roundId:
+    type: string
+    format: uuid
+    description: |
+      CC self-generated UUID v4.
+      # OQ-11 resolution: CC generates round_id (not Hermes-injected) so CC retains
+      #   orchestration authority over the round lifecycle.
+      # Used as the state filename: {roundId}.json
+      # Phase 51 VALIDATE: uniqueness validated at round_table_open (return 409 on collision).
+
+  projectId:
+    type: string
+    description: |
+      Project slug for the .runtime/{slug}/ path. Required because round table state
+      is per-project (ARCHITECTURE §5.1 + §5.2 cross-project sharing rules).
+      Format: "{repo_basename}:{git_toplevel_sha8}" (mirrors ARCHITECTURE §5.1).
+
+  question:
+    type: string
+    description: |
+      The question/topic being debated.
+      # Phase 44 决策 7: CC frames the question (CC controls content); Hermes persists
+      #   it but does not modify it.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Panelists — open-time identity snapshot (OQ-5)
+  # ──────────────────────────────────────────────────────────────────────
+
+  panelists:
+    type: array
+    minItems: 2
+    items:
+      $ref: "#/$defs/PanelistSnapshot"
+    description: |
+      Snapshot of each panelist at round-open time. Captures identity + persona +
+      fitness + tools + memory_scope so that mid-round agent edits or deletions
+      don't corrupt transcript integrity.
+      # OQ-5 resolution: deleted agents appear in transcript with their open-time snapshot.
+      # Cite Phase 45 agents-schema.yaml fields: name / persona / tools / memory_scope /
+      #   fitness_score / persona_sha256 — these are referenced by PanelistSnapshot,
+      #   NOT redefined here.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Turn order — strategy + seed + currentIndex (OQ-2)
+  # ──────────────────────────────────────────────────────────────────────
+
+  turnOrder:
+    $ref: "#/$defs/TurnOrder"
+    description: |
+      Pre-computed or progressively-filled turn order.
+      # OQ-2 resolution: strategy defaults to round-robin; pluggable via round_table_open arg.
+      # Phase 44 决策 7: Hermes owns turn_order via schema; CC owns detection of when to stop.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Status — A2A Task lifecycle FSM inspiration (B8.2)
+  # ──────────────────────────────────────────────────────────────────────
+
+  status:
+    type: string
+    enum: [open, completed, aborted, stalled]
+    default: open
+    description: |
+      Round-table lifecycle state.
+      Values:
+        - open: round in progress; CC is dispatching get_agent_opinion calls sequentially
+        - completed: submit_round_table_result received and validated; state sealed
+        - aborted: operator or CC explicitly cancelled; conflict log still sealed for audit
+        - stalled: no turn activity for > stall_threshold minutes (PoC tunable, default 30)
+      # B8.2 borrowable point: A2A Task lifecycle FSM inspires this state machine.
+      # Transitions: open → completed | aborted | stalled. stalled → open (resume, v11.1+)
+      #   or stalled → aborted (operator action). completed is terminal.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Turns — append-only turn log (OQ-8 serial invariant)
+  # ──────────────────────────────────────────────────────────────────────
+
+  turns:
+    type: array
+    default: []
+    items:
+      $ref: "#/$defs/Turn"
+    description: |
+      Append-only turn log. Each turn is one atomic opinion submission.
+      # Serial invariant (OQ-8): turns are submitted sequentially, never concurrently.
+      #   Hermes dispatcher MUST reject concurrent get_agent_opinion calls for same roundId
+      #   (return 429 Too Many Requests). See 02-ROUND-TABLE-PROTOCOL.md §2.2 + §4.1.
+      # Existing turns are immutable — only append new turns; no in-place edit.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Conflicts — P7 mitigation 5 (curator review)
+  # ──────────────────────────────────────────────────────────────────────
+
+  conflicts:
+    type: array
+    default: []
+    items:
+      $ref: "#/$defs/ConflictRecord"
+    description: |
+      Conflict log: one entry per comparator-arbitrated conflict.
+      # PITFALLS §P7 mitigation 5: curator reviews high-frequency conflicts for
+      #   promotion/quarantine decisions.
+      # Sealed at submit_round_table_result time — no new conflicts appended after
+      #   status=completed. Conflicts detected mid-round are added here in real-time.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Early-stop rule + max rounds (Phase 44 决策 7 Hermes owns structure)
+  # ──────────────────────────────────────────────────────────────────────
+
+  earlyStopRule:
+    $ref: "#/$defs/EarlyStopRule"
+    description: |
+      Optional early-stop condition. If met, CC calls submit_round_table_result early.
+      # Phase 44 决策 7: Hermes owns early_stop_rule via schema; CC owns detection
+      #   (Hermes doesn't monitor turns in real-time — CC polls state file).
+
+  maxRounds:
+    type: integer
+    minimum: 1
+    default: 5
+    description: |
+      Hard cap on turn count. Default 5 (ReConcile paper's typical convergence point).
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Atomic events — open + close
+  # ──────────────────────────────────────────────────────────────────────
+
+  roundTableOpen:
+    $ref: "#/$defs/RoundTableOpen"
+    description: |
+      Atomic open event. Captured at round_table_open time.
+      # ARCHITECTURE §8.3 anti-pattern: round_table_open returns immediately; this event
+      #   marks the open; CC drives subsequent turns.
+
+  submitRoundTableResult:
+    $ref: "#/$defs/SubmitRoundTableResult"
+    description: |
+      Atomic close event. Present only when status=completed.
+      Carries conclusion / citedMemories / artifacts / closedAt / closedBy.
+      # Idempotent: second submit for same roundId returns 409 Conflict.
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Cross-layer invariants — persona snapshots + schema version
+  # ──────────────────────────────────────────────────────────────────────
+
+  personaSnapshots:
+    type: object
+    additionalProperties:
+      type: string
+      pattern: "^[a-f0-9]{64}$"
+    description: |
+      Map of agentId → persona_sha256 at round-open time.
+      # PITFALLS §P1 mitigation 4: if any agent's persona hash changes mid-round
+      #   (operator edit), the round is flagged for re-verification on next
+      #   comparator pass. Memory records written under old persona may not apply.
+      # Cite Phase 45 agents-schema $defs.EvolutionLogEntry.personaSha256 + memory-record
+      #   §3.11 persona_sha256 — these are CITE-ONLY field name references.
+
+  schemaVersion:
+    type: string
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    default: "1.0.0"
+    description: |
+      Version of the round-table-state schema this file conforms to.
+      # PITFALLS §P14 mitigation 1: schema migration — dry-run mode keyed off this version.
+      # Migration job backfills unknown fields with safe defaults (default unknown fields
+      #   to safest value, not most permissive).
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Timestamps
+  # ──────────────────────────────────────────────────────────────────────
+
+  createdAt:
+    type: string
+    format: date-time
+    description: "ISO-8601 UTC timestamp when round_table_open was received."
+
+  lastUpdatedAt:
+    type: [string, "null"]
+    format: date-time
+    description: |
+      ISO-8601 UTC timestamp of the most recent write (turn append, conflict add,
+      status flip). NULL until first turn is appended.
+      # Crash recovery: if status=open AND now - lastUpdatedAt > stall_threshold,
+      #   flip status=stalled on next read (02-ROUND-TABLE-PROTOCOL.md §2.4).
+
+# ════════════════════════════════════════════════════════════════════════
+# $defs — Reusable shapes referenced via $ref
+# All property names camelCase (Phase 45 verification lesson — never snake_case)
+# ════════════════════════════════════════════════════════════════════════
+
+$defs:
+
+  # ─── PanelistSnapshot (OQ-5 open-time identity freeze) ───
+  PanelistSnapshot:
+    type: object
+    required: [agentId, personaSha256, fitnessScore, tools, memoryScope]
+    additionalProperties: false
+    description: |
+      Snapshot of an agent's identity + runtime knobs at round_table_open time.
+      # OQ-5 resolution: if the agent is later edited or deleted, this snapshot
+      #   remains the authoritative record for THIS round.
+    properties:
+      agentId:
+        type: string
+        pattern: "^[a-z0-9_-]+$"
+        description: |
+          References agents-schema.yaml name field — CITE-ONLY, do NOT redefine.
+      personaSha256:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
+        description: |
+          Snapshot of agent persona hash at round-open time.
+          # Cite Phase 45 agents-schema $defs.EvolutionLogEntry.personaSha256.
+          # PITFALLS §P1 mitigation 4: drift detection network anchor.
+      fitnessScore:
+        type: [number, "null"]
+        minimum: 0.0
+        maximum: 1.0
+        description: |
+          Open-time snapshot. Cite agents-schema §2.15 fitness_score.
+          # OQ-4 resolution: null = neutral 0.5 for ordering purposes.
+      tools:
+        type: array
+        items:
+          type: string
+        description: "Runtime whitelist snapshot (cite agents-schema §2.5 tools)."
+      memoryScope:
+        type: string
+        enum: [shared, per_agent, project_scoped]
+        description: |
+          Cite agents-schema §2.6 memory_scope. Determines mem0 routing at recall time.
+      deleted:
+        type: boolean
+        default: false
+        description: |
+          True if the agent was deleted AFTER round open (detected on next state-file read).
+          # OQ-5 resolution: deleted agent stays in transcript with this flag set.
+          #   Subsequent turns for that panelistId are skipped; transcript shows "[deleted]" badge.
+
+  # ─── TurnOrder (OQ-2 + B2.1) ───
+  TurnOrder:
+    type: object
+    required: [strategy, currentIndex]
+    additionalProperties: false
+    description: |
+      Turn ordering state.
+      # OQ-2 resolution: strategy defaults to round-robin; pluggable via round_table_open arg.
+      # B2.1 borrowable point: AutoGen/MAF three-state inspiration (llm/fixed/matrix).
+    properties:
+      strategy:
+        type: string
+        enum: [round-robin, fixed, llm, matrix, fitness-weighted]
+        default: round-robin
+        description: |
+          Strategy for selecting next panelist.
+          # (camelCase alias fitnessWeighted used in narrative — see 02-ROUND-TABLE-PROTOCOL.md §2.5.)
+          Values:
+            - round-robin (default): pre-computed shuffled order, cycles until stop
+            - fixed: operator-supplied seed order (e.g. compliance_gate speaks last)
+            - llm: progressive — CC asks an LLM "who speaks next?" each turn (high cost)
+            - matrix: FSM transition matrix — (currentSpeaker, opinion) → next speaker
+            - fitness-weighted: higher-fitness panelists speak first (deferred to v11.1+)
+          # fitness-weighted deferred: needs ≥10 fitness data points per agent, won't exist at PoC start.
+      seed:
+        type: array
+        items:
+          type: string
+          pattern: "^[a-z0-9_-]+$"
+        description: |
+          Pre-computed panelist order (for round-robin / fixed strategies).
+          For llm / fitness-weighted / matrix strategies, this may be partial or empty —
+          the next panelist is determined progressively.
+          # round-robin seed: shuffled panel list (shuffle seed = roundId for reproducibility).
+      currentIndex:
+        type: integer
+        minimum: 0
+        description: |
+          Index into seed[] for the next panelist to speak.
+          Incremented after each successful turn append.
+
+  # ─── Turn (atomic per-turn record) ───
+  Turn:
+    type: object
+    required: [turnIndex, panelistId, opinion, citedMemoryIds, submittedAt]
+    additionalProperties: false
+    description: |
+      Single atomic turn entry. Append-only.
+      # B8.2 borrowable point: A2A Task lifecycle FSM inspires the turn state transitions
+      #   (pending → speaking → submitted → optionally challenged).
+    properties:
+      turnIndex:
+        type: integer
+        minimum: 1
+        description: "1-indexed turn number within this round table."
+      panelistId:
+        type: string
+        pattern: "^[a-z0-9_-]+$"
+        description: |
+          agentId of the panelist who gave this turn's opinion.
+          MUST match a PanelistSnapshot.agentId in this state file's panelists[].
+      opinion:
+        type: string
+        description: |
+          Free-text opinion submitted by CC on behalf of the panelist.
+          # Phase 44 决策 7: CC owns opinion synthesis (calls get_agent_opinion MCP tool);
+          #   Hermes stores verbatim.
+      citedMemoryIds:
+        type: array
+        default: []
+        items:
+          type: string
+          format: uuid
+        description: |
+          List of memory record_ids cited in this opinion.
+          # PITFALLS §P7 mitigation 1: every memory citation in a turn carries record_id,
+          #   so other panelists can challenge with their own conflicting record_ids.
+          # Cite Phase 45 memory-record-schema.yaml record_id field — CITE-ONLY.
+      conflictsDetected:
+        type: array
+        default: []
+        items:
+          type: string
+          format: uuid
+        description: |
+          List of conflictIds raised against this turn's citations.
+          Cross-references ConflictRecord.conflictId in this state file's conflicts[].
+      submittedAt:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when this turn was appended to the state file."
+
+  # ─── ConflictRecord (P7 mitigation 2/3/4/5) ───
+  ConflictRecord:
+    type: object
+    required: [conflictId, memoryIdA, memoryIdB, scopeA, scopeB, confidenceA, confidenceB, resolution, resolvedAt]
+    additionalProperties: false
+    description: |
+      Single arbitrated conflict between two cited memories.
+      # PITFALLS §P7 mitigation 2 + 3 + 4 + 5: comparator LLM pass produces this record
+      #   by combining scope precedence + confidence-weighted voting + curator log.
+    properties:
+      conflictId:
+        type: string
+        format: uuid
+        description: "UUID v4 identifying this conflict resolution record."
+      memoryIdA:
+        type: string
+        format: uuid
+        description: |
+          record_id of the first cited memory (Phase 45 memory-record-schema field).
+      memoryIdB:
+        type: string
+        format: uuid
+        description: "record_id of the second cited memory (the contradicting one)."
+      scopeA:
+        type: string
+        enum: [global, project, session]
+        description: |
+          Cite memory-record-schema §3.9 scope field.
+          # PITFALLS §P7 mitigation 3: scope precedence drives arbitration.
+      scopeB:
+        type: string
+        enum: [global, project, session]
+        description: "Cite memory-record-schema §3.9 scope field."
+      confidenceA:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        description: "Cite memory-record-schema §3.5 confidence field (post time-decay)."
+      confidenceB:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        description: "Cite memory-record-schema §3.5 confidence field (post time-decay)."
+      resolution:
+        type: string
+        enum: [A-wins, B-wins, both-kept, both-quarantined, deferred-to-operator]
+        description: |
+          Comparator LLM's resolution decision.
+          # PITFALLS §P7 mitigation 2 + 3 + 4: comparator LLM pass produces this resolution
+          #   by combining scope precedence (session > project > global) and
+          #   confidence-weighted voting.
+          # Values:
+          #   - A-wins: memory A applies; memory B's supersedes_memory_id chain updated to point to A
+          #   - B-wins: symmetric
+          #   - both-kept: both remain active; no supersedes chain update
+          #   - both-quarantined: both records' status flips to quarantined (P5/P6 mitigation 6)
+          #   - deferred-to-operator: tie or low-confidence; human review triggered
+      rationale:
+        type: string
+        description: |
+          Comparator LLM's human-readable rationale for the resolution.
+          ≤200 chars recommended for curator log readability.
+      resolvedAt:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when the comparator LLM resolved this conflict."
+
+  # ─── EarlyStopRule ───
+  EarlyStopRule:
+    type: object
+    additionalProperties: false
+    description: |
+      Optional early-stop condition. When met, CC calls submit_round_table_result early.
+    properties:
+      type:
+        type: string
+        enum: [consensus, max-rounds, manual, comparator-confident]
+        description: |
+          Early-stop strategy.
+          Values:
+            - consensus: all N panelists' latest turns agree on conclusion
+                (semantic match via comparator LLM — high token cost)
+            - max-rounds: turnIndex > maxRounds (default 5)
+            - manual: CC or operator explicitly calls submit_round_table_result
+            - comparator-confident: comparator LLM confidence ≥ threshold on conflict resolution
+      threshold:
+        type: [number, "null"]
+        minimum: 0.0
+        maximum: 1.0
+        description: |
+          Required when type=comparator-confident (default 0.85). NULL otherwise.
+          # B6.2 borrowable point (Camel-AI task_complete_judge) — not cited in FEATURES §10
+          #   7-row audit but provides conceptual inspiration for the threshold mechanism.
+
+  # ─── RoundTableOpen (atomic open event) ───
+  RoundTableOpen:
+    type: object
+    required: [caller, openedAt, project, question]
+    additionalProperties: false
+    description: |
+      Atomic open event captured at round_table_open time.
+      # ARCHITECTURE §8.3 anti-pattern: round_table_open returns immediately with roundId;
+      #   this event marks the open; CC drives subsequent turns via get_agent_opinion.
+    properties:
+      caller:
+        type: string
+        description: |
+          CC session ID or operator handle that initiated the round.
+          Used for audit trail — who opened this round and when.
+      openedAt:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when round_table_open was received by Hermes."
+      project:
+        type: string
+        description: "Same as top-level projectId (denormalized for atomic open event)."
+      question:
+        type: string
+        description: "Same as top-level question (denormalized for atomic open event)."
+
+  # ─── SubmitRoundTableResult (atomic close event) ───
+  SubmitRoundTableResult:
+    type: object
+    required: [conclusion, citedMemories, closedAt, closedBy]
+    additionalProperties: false
+    description: |
+      Atomic close event. Present only when status=completed.
+      # Phase 44 决策 7: CC owns conclusion synthesis; Hermes persists verbatim + seals.
+      # Idempotent: second submit for same roundId returns 409 Conflict.
+    properties:
+      conclusion:
+        type: string
+        description: |
+          CC's synthesis of the round table discussion.
+          # Phase 44 决策 7: CC controls content; Hermes persists but does not modify.
+      citedMemories:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: |
+          All memory record_ids cited across all turns + in the conclusion.
+          Used by curator periodic pass to update recall_count + last_recalled_at.
+      artifacts:
+        type: array
+        default: []
+        items:
+          type: object
+          required: [artifactId, artifactType, content]
+          additionalProperties: false
+          properties:
+            artifactId:
+              type: string
+              description: "UUID or path identifier for the artifact."
+            artifactType:
+              type: string
+              description: "E.g. 'screenplay-draft', 'storyboard-sketch', 'decision-md'."
+            content:
+              type: string
+              description: "Artifact content (or path to artifact file)."
+            provenance:
+              type: string
+              description: "Provenance note — which agent(s)/turns produced this artifact."
+      closedAt:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when submit_round_table_result was validated."
+      closedBy:
+        type: string
+        description: |
+          CC session ID or operator handle that closed the round.
+          Used for audit trail.
