@@ -244,13 +244,145 @@ def _load_yaml_field_names(path: Path) -> set[str]:
 # ──────────────────────────────────────────────────────────────────────────
 
 
+def _scan_terminology_confusions(line: str, line_no: int, path: Path) -> list[Finding]:
+    """Conservative per-line terminology confusion heuristics (Dimension 1).
+
+    Philosophy: false-negative-averse. Only flags suspect *co-occurrences*
+    where one of the 5 locked terms appears next to a context anchor that
+    strongly implies the wrong term was used. Bare mentions of "agent" /
+    "skill" / "round table" / "panel" / "turn" are NOT flagged — only the
+    narrow confusions below.
+
+    Returns WARNING-only findings (terminology is fluid by design).
+    """
+    findings: list[Finding] = []
+    rel = path.name
+
+    # Pattern 1: "skill" near agent-only schema fields (persona, memory_scope,
+    # fitness_battery, evolution_log, lineage, persona_sha256). Skill has none
+    # of these per SKILL.md conventions in CLAUDE.md.
+    if re.search(r"\bskill\b", line, re.IGNORECASE):
+        for anchor in (
+            "persona_sha256", "persona", "memory_scope", "fitness_battery",
+            "fitness_score", "evolution_log", "lineage", "agents-schema",
+        ):
+            if anchor in line:
+                # Exception: lines explicitly contrasting "skill" vs "agent"
+                # (e.g. "Skill has no X; agent does") are NOT confusion — they
+                # are clarifications. Heuristic: if "agent" also appears near,
+                # skip.
+                if re.search(r"\bagent\b", line, re.IGNORECASE):
+                    continue
+                findings.append(Finding(
+                    dimension="terminology",
+                    severity="WARNING",
+                    file=path,
+                    line=line_no,
+                    message=(
+                        f"terminology: 'skill' co-occurs with agent-only "
+                        f"anchor '{anchor}' — did you mean 'agent'? "
+                        f"(skill has no {anchor}; agent does per "
+                        f"agents-schema.yaml)"
+                    ),
+                ))
+                break  # one anchor per line is enough signal
+
+    # Pattern 2: "agent" near skill-only contexts (SKILL.md, frontmatter,
+    # skills/ path). Agent YAML is at ~/.hermes/agents/, not skills/.
+    if re.search(r"\bagent\b", line, re.IGNORECASE):
+        for anchor in ("SKILL.md", "skills/", "metadata.hermes", "frontmatter"):
+            if anchor in line:
+                if re.search(r"\bskill\b", line, re.IGNORECASE):
+                    continue  # clarification line, skip
+                findings.append(Finding(
+                    dimension="terminology",
+                    severity="WARNING",
+                    file=path,
+                    line=line_no,
+                    message=(
+                        f"terminology: 'agent' co-occurs with skill-only "
+                        f"anchor '{anchor}' — did you mean 'skill'? "
+                        f"(agent YAML lives at ~/.hermes/agents/, not skills/)"
+                    ),
+                ))
+                break
+
+    # Pattern 3: "panel" used as if it were the round-table session itself.
+    # Panel = subset of agents; round table = the session. Only flag the
+    # narrow phrase "panel opens" / "panel closes" / "panel lifecycle" — the
+    # session opens/closes, not the panel.
+    if re.search(r"\bpanel\b", line, re.IGNORECASE):
+        for phrase in ("panel opens", "panel closes", "panel lifecycle",
+                       "panel state file", "panel status"):
+            if phrase in line.lower():
+                findings.append(Finding(
+                    dimension="terminology",
+                    severity="WARNING",
+                    file=path,
+                    line=line_no,
+                    message=(
+                        f"terminology: '{phrase}' — did you mean 'round "
+                        f"table'? (panel = subset of agents; round table = "
+                        f"the session per Phase 46 §PanelistSnapshot)"
+                    ),
+                ))
+                break
+
+    # Pattern 4: "turn" conflated with "round" — turn = one panelist's
+    # contribution; round = one full pass. Only flag the narrowest case:
+    # explicit "the turn opens" or "the turn closes" describing the session
+    # itself (which would be wrong — the round table opens/closes, not the
+    # turn). The compound "turn lifecycle" / "turn state" are legitimate
+    # terms (turns have lifecycles and states), so we deliberately do NOT
+    # flag them.
+    if re.search(r"\bturn\b", line, re.IGNORECASE):
+        for phrase in ("the turn opens", "the turn closes",
+                       "a turn opens", "a turn closes"):
+            if phrase in line.lower():
+                findings.append(Finding(
+                    dimension="terminology",
+                    severity="WARNING",
+                    file=path,
+                    line=line_no,
+                    message=(
+                        f"terminology: '{phrase}' — did you mean 'the round "
+                        f"table opens/closes'? (turn = single panelist "
+                        f"contribution; round table = the session that "
+                        f"opens/closes per Phase 46)"
+                    ),
+                ))
+                break
+
+    return findings
+
+
 def check_terminology(design_docs: list[Path]) -> list[Finding]:
     """Dimension 1 — terminology locked-sense enforcement.
 
     Returns findings with file:line evidence. WARNING-only for suspect
     co-occurrences; never ERROR (terminology is fluid by design).
+
+    Capped at MAX_FINDINGS_PER_FILE per file to keep signal high.
     """
-    return []
+    findings: list[Finding] = []
+    for path in design_docs:
+        per_file = 0
+        try:
+            for line_no, line in _iter_markdown_lines(path):
+                if per_file >= MAX_FINDINGS_PER_FILE:
+                    break
+                line_findings = _scan_terminology_confusions(line, line_no, path)
+                findings.extend(line_findings)
+                per_file += len(line_findings)
+        except OSError as exc:
+            findings.append(Finding(
+                dimension="terminology",
+                severity="ERROR",
+                file=path,
+                line=0,
+                message=f"failed to read {path.name}: {exc}",
+            ))
+    return findings
 
 
 def check_schema_references(design_docs: list[Path], schema_dir: Path) -> list[Finding]:
@@ -273,6 +405,46 @@ def check_decision_consistency(design_docs: list[Path]) -> list[Finding]:
     return []
 
 
+def _classify_tool_mention(tool: str, line: str, file_name: str) -> str:
+    """Classify a candidate MCP tool mention.
+
+    Returns one of:
+      * ``STACK_PASS`` — canonical STACK form (no prefix). No finding emitted.
+      * ``ARCH_EXCEPTION`` — ARCHITECTURE form in comparison/citation context.
+        No finding emitted (legitimate comparison per OQ-9 reconciliation).
+      * ``ARCH_WARNING`` — ARCHITECTURE form outside exception context.
+        Emit WARNING.
+      * ``UNKNOWN_ERROR`` — tool name not in either allow-list. Emit ERROR.
+
+    Exception context is detected by either:
+      * file is 03-COMPARISON-VS-KIMI-MCP-SHIM.md (the comparison doc), OR
+      * line contains explicit citation cues like ``ARCHITECTURE §`` /
+        ``ARCHITECTURE-form`` / ``STACK form`` / ``originally called`` /
+        ``deprecated`` / ``reconciliation``.
+    """
+    if tool in STACK_FORM_TOOLS:
+        return "STACK_PASS"
+
+    if tool in ARCHITECTURE_FORM_TOOLS:
+        # Check exception context
+        if file_name.endswith("03-COMPARISON-VS-KIMI-MCP-SHIM.md"):
+            return "ARCH_EXCEPTION"
+        citation_cues = (
+            "ARCHITECTURE §", "ARCHITECTURE-form", "ARCHITECTURE form",
+            "STACK §", "STACK form", "STACK-form",
+            "originally called", "deprecated", "Reconciliation",
+            "reconciliation", "旧命名", "命名冲突", "naming", "vs",
+            # Reconciliation table rows cite both forms side-by-side
+            "ADOPTED", "canonical", "→", " | ",
+        )
+        for cue in citation_cues:
+            if cue in line:
+                return "ARCH_EXCEPTION"
+        return "ARCH_WARNING"
+
+    return "UNKNOWN_ERROR"
+
+
 def check_mcp_tool_naming(design_docs: list[Path]) -> list[Finding]:
     """Dimension 4 — MCP tool naming (STACK form vs ARCHITECTURE form).
 
@@ -280,7 +452,108 @@ def check_mcp_tool_naming(design_docs: list[Path]) -> list[Finding]:
     unless in 03-COMPARISON doc or citation context. Unknown tool names →
     ERROR (likely typo / drift).
     """
-    return []
+    # Combined allow-list for the "unknown" classification
+    known_tools = STACK_FORM_TOOLS | ARCHITECTURE_FORM_TOOLS
+
+    # Pattern: tool-name candidates are snake_case identifiers starting with
+    # one of these prefixes AND containing an underscore. Bounded to avoid
+    # flagging arbitrary prose.
+    # Pattern: tool-name candidates are bounded to the known MCP tool
+    # vocabulary. We deliberately do NOT use a generic ``[a-z_]+`` pattern
+    # because it would false-flag field names like ``agent_id`` /
+    # ``agent_registry`` / ``agent_card`` / ``agent_scope``. The candidate
+    # regex requires the verb prefix + a known domain noun.
+    candidate_re = re.compile(
+        r"\b("
+        # STACK form: verb + domain_noun
+        r"(?:get|submit|query|run)_(?:"
+        r"agent_persona|agent_opinion|agent_memory|agent_fitness"
+        r"|round_table_result|round_table_open|round_table_state"
+        r"|memory|persona|opinion|artifact|python_phase"
+        r")"
+        # ARCHITECTURE form: agent_verb_noun
+        r"|agent_(?:get_persona|recall|conclude)"
+        r")\b"
+    )
+
+    findings: list[Finding] = []
+    # Per-tool doc-count tracker (for cross-doc consistency INFO note)
+    tool_doc_appearances: dict[str, set[str]] = {}
+
+    for path in design_docs:
+        per_file = 0
+        try:
+            for line_no, line in _iter_markdown_lines(path):
+                if per_file >= MAX_FINDINGS_PER_FILE:
+                    break
+                for m in candidate_re.finditer(line):
+                    tool = m.group(1)
+                    # Track appearances (for INFO summary at end)
+                    tool_doc_appearances.setdefault(tool, set()).add(path.name)
+
+                    classification = _classify_tool_mention(tool, line, path.name)
+
+                    if classification == "ARCH_WARNING":
+                        findings.append(Finding(
+                            dimension="mcp_tool_naming",
+                            severity="WARNING",
+                            file=path,
+                            line=line_no,
+                            message=(
+                                f"MCP tool naming: ARCHITECTURE-form "
+                                f"'{tool}' used outside comparison/citation "
+                                f"context. STACK form is canonical per OQ-9 "
+                                f"(see 02-ROUND-TABLE-PROTOCOL.md §naming "
+                                f"resolution table)."
+                            ),
+                        ))
+                        per_file += 1
+                    elif classification == "UNKNOWN_ERROR":
+                        # Only ERROR if the tool is plausibly an agent/round-
+                        # table tool (not arbitrary prose). The semantic_tokens
+                        # filter above already handles this.
+                        if tool in known_tools:
+                            continue  # bug in classification — skip
+                        findings.append(Finding(
+                            dimension="mcp_tool_naming",
+                            severity="ERROR",
+                            file=path,
+                            line=line_no,
+                            message=(
+                                f"MCP tool naming: unknown tool '{tool}' — "
+                                f"not in STACK form (7 canonical) nor "
+                                f"ARCHITECTURE form (3 legacy). Likely "
+                                f"typo or name drift."
+                            ),
+                        ))
+                        per_file += 1
+        except OSError as exc:
+            findings.append(Finding(
+                dimension="mcp_tool_naming",
+                severity="ERROR",
+                file=path,
+                line=0,
+                message=f"failed to read {path.name}: {exc}",
+            ))
+
+    # Cross-doc consistency INFO — emit PASS findings noting any STACK-form
+    # tool that appears in <2 docs. These are informational, not failures.
+    for tool in STACK_FORM_TOOLS:
+        doc_count = len(tool_doc_appearances.get(tool, set()))
+        if doc_count < 2 and doc_count > 0:
+            findings.append(Finding(
+                dimension="mcp_tool_naming",
+                severity="PASS",  # INFO-level; recorded but doesn't fail
+                file=Path(f"(cross-doc-{tool})"),
+                line=0,
+                message=(
+                    f"MCP tool naming: STACK-form tool '{tool}' appears in "
+                    f"only {doc_count} of 7 design docs (cross-doc "
+                    f"consistency INFO; not a failure)."
+                ),
+            ))
+
+    return findings
 
 
 # ──────────────────────────────────────────────────────────────────────────
