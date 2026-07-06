@@ -59,7 +59,7 @@ Plans:
   5. 6 个 Open Questions(OQ-1 / OQ-4 / OQ-7 / OQ-13 / OQ-14 / OQ-16)显式解决或显式 defer 到 v11.0;7 个 load-bearing pitfalls(P1/P2/P4/P5/P8/P10/P14)每个有对应 schema 字段级缓解
 **Plans**: 1 plan
 Plans:
-- [ ] 45-01-PLAN.md — 18-field agent YAML schema + memory-record-schema (2-layer) + per-agent memory tier + curator _memory_evolution_phase contract + 15-expert transform + OQ/pitfall audit (5 tasks, 3 deliverable files)
+- [x] 45-01-PLAN.md — 18-field agent YAML schema + memory-record-schema (2-layer) + per-agent memory tier + curator _memory_evolution_phase contract + 15-expert transform + OQ/pitfall audit (5 tasks, 3 deliverable files)
 **UI hint**: no
 
 ### Phase 46: ROUND-TABLE-PROTOCOL
@@ -177,7 +177,7 @@ Phases execute in numeric order with parallel wave {47, 48} overlapping {45, 46}
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 44. FIRST-PRINCIPLES | v10.0 | 1/1 | Complete    | 2026-07-06 |
-| 45. AGENT-SCHEMA | v10.0 | 0/TBD | Not started | - |
+| 45. AGENT-SCHEMA | v10.0 | 1/1 | Complete    | 2026-07-06 |
 | 46. ROUND-TABLE-PROTOCOL | v10.0 | 0/TBD | Not started | - |
 | 47. KIMI-COMPARISON | v10.0 | 0/TBD | Not started | - |
 | 48. CROSS-REPO-IMPACT | v10.0 | 0/TBD | Not started | - |
