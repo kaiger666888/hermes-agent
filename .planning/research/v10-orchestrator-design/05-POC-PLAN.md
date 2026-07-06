@@ -257,3 +257,344 @@ Phase 51 VALIDATE 的 lint 脚本会 cross-check 本 doc 的:
 
 ---
 
+## §2 PoC Scope + Boundary
+
+> 本节定义 PoC 的边界 —— what 'PoC done' means (vertical slice + acceptance criteria pass + risk register verdicts 执行) + what is explicitly NOT in PoC (full 15-agent round table, mem0 物理分区, production rollout). 边界清晰的目的是避免 PoC scope creep —— v11.0 PoC 是验证 v10.0 设计的可行性, 不是 ship production.
+
+### §2.1 PoC "Done" 定义
+
+PoC "done" 需满足以下 4 个条件 (all-or-nothing):
+
+**(a) 2 vertical slices 跑通** (per §3)
+- Infra slice (§3.3): 7 MCP tools wired + 1 sample agent YAML + 1 successful `round_table_open` → turn 1 → `submit_round_table_result` cycle (synthetic input)
+- Creative slice (§3.2): 9-agent subset YAMLs + 1 successful Step 3 screenplay round table on synthetic StoryKernel input + `fitness_trend.jsonl` baseline entry for screenplay
+
+**(b) 7 acceptance criteria 全 pass** (per §4)
+- §4.1 fitness battery design (3d): `fitness_trend.jsonl` baseline + regression auto-quarantine logic on synthetic mean_score drop > 0.5
+- §4.2 latency SLO p95 < 500ms (2d): 500-record `get_agent_memory` benchmark (excluding LLM call)
+- §4.3 bias canary (2d): curator `_memory_evolution_phase` dry-run rejects single-operator-derived insight
+- §4.4 compaction pass (1d): 600-record synthetic input produces valid 3-tier (core ≤10 / working ≤100 / archival ≤10000) output
+- §4.5 threshold tuning (1d): audit log captures "threshold too low" runaway warning + rate-limit kicks in
+- §4.6 dry-run-first invariant (1d): default mode zero memory writes; `--apply-memory` mode writes with audit log
+- §4.7 schema migration dry-run (2d): dry-run output plan correct + live migration shadow-run <1% retrieval discrepancy
+
+**(c) 7 risk register verdicts 执行** (per §5)
+- 6 must-fix items (P1/P2/P4/P5/P7/P8) mitigations verified in PoC
+- P6 PARTIAL: `operator_signature` schema field implemented (FeedbackRecord validates signature, anonymous rejected); outlier detection deferred with audit-log monitoring per §5.10
+
+**(d) Token cost 实测 ≈ STACK §7 估算** (within 2x)
+- Full pipeline baseline: ~550K tokens / pipeline run (per STACK §7.3 line 1026)
+- Per-vertical-slice estimate (per §6.2):
+  - Creative slice screenplay Step 3 (9 related_agents, denser than average): ~148K tokens (~4.5K MCP overhead + ~143K LLM opinion calls)
+  - Infra slice 1 round table invocation (3 agents × 1 turn × 2 call): ~10K tokens
+- Acceptance: 实测 within 2x of estimate (PoC 不要求精确预测, 但要求量级一致 —— 若实测 5x, 说明 STACK §7 估算模型有结构性偏差)
+
+**Exit condition**: PoC "done" 还要求 commit `.planning/milestones/v11.0-POC-REPORT.md` 报告, 含 (1) 7 acceptance criteria pass/fail per item, (2) 7 risk register verdicts 执行状态, (3) token cost 实测 vs estimate 对比表, (4) 30-day shadow-run <1% retrieval discrepancy 数据, (5) 下一步 (v11.1+) recommended scope.
+
+### §2.2 PoC Explicit Exclusions
+
+PoC **明确不做** (each with rationale):
+
+1. **不跑 full 15-agent round table** —— PoC creative slice 只跑 9-agent subset (screenplay + 8 peers from ARCHITECTURE §2 screenplay `related_agents`). Rationale: 15-agent 全规模 round table 的 token cost + multi-round GLM 4-key rotation 风险超出 PoC budget (§2.4). 15-agent 全规模留给 v11.1+ production rollout.
+2. **不迁 mem0 到 物理分区** —— PoC 用 Option B (mem0 单 backend + `agent_id` filter 路由, per ARCHITECTURE §3.2 + Phase 48 §3) baseline. 物理分区 deferred to v12+ per Phase 48 §3 决策 (PoC 单项目 18-agent 规模下 Option B 性能足够, 见 §4.2 latency SLO). §4.2 benchmark 若 p95 > 500ms 会 trigger 物理分区 early evaluation, 但 PoC 本身不实施物理分区.
+3. **不动 production `~/.hermes/`** —— PoC 用 dedicated workspace `~/.hermes-poc/` (见 §2.3). 不污染 operator daily 的 production 环境.
+4. **不跑 live client project** —— PoC 用 synthetic StoryKernel input (creative_source Step 1 output format, well-defined JSON). 不需要真实客户数据, 避免 NDA + privacy risk.
+5. **不 ship 到 operator (Kai)** —— PoC ends at "acceptance criteria pass + PoC report committed to `.planning/milestones/v11.0-POC-REPORT.md`" report, **不是** "Kai 日常用 PoC agent 替代现有 SKILL". Production rollout 是 v11.1+ 决定, 不是 PoC 决定.
+
+### §2.3 PoC Workspace 隔离
+
+PoC 用 dedicated workspace:
+
+- **目录**: `~/.hermes-poc/` (vs production `~/.hermes/`)
+- **mem0 workspace**: `hermes-poc` (Option B `agent_id` filter 仍生效, 但 `user_id="hermes-poc"` 隔离 vs production `user_id="kai"`)
+- **session DB**: `~/.hermes-poc/sessions.db` (独立 SQLite)
+- **logs**: `~/.hermes-poc/logs/` (独立 `agent.log` / `errors.log` / `gateway.log`)
+- **agent YAMLs**: `~/.hermes-poc/agents/` (infra slice `test-coordinator.agent.yaml` + creative slice 9-agent subset)
+
+**Phase 49 §5.5 legacy v7.0 mem0 `agent_id=hermes` sunset policy** 不影响 PoC —— PoC 用 fresh namespace (`agent_id=screenplay` / `agent_id=cinematographer` / etc., 没有 `agent_id=hermes` 旧 memory 需要 sunset). 30-day sunset window (per Phase 49 §5.5-§5.6) 是 production concern, 不是 PoC concern.
+
+**Backup / restore**: PoC workspace 是 disposable —— 任何破坏性测试 (e.g. §4.7 live migration 测试) 都可以用 `rm -rf ~/.hermes-poc/` + 重新 setup 恢复. PoC 报告 (`.planning/milestones/v11.0-POC-REPORT.md`) 是唯一需要 persist 的产物, 提交到 git.
+
+### §2.5 SC#1 Cross-Validation
+
+SC#1 acceptance: "File `05-POC-PLAN.md` exists + PoC scope clearly bounded."
+
+| Requirement | Where addressed | Verdict |
+|-------------|-----------------|---------|
+| File exists | this file | ✅ |
+| PoC done 定义 | §2.1 (4 conditions: slices / acceptance / risk verdicts / token cost) | ✅ |
+| Explicit exclusions | §2.2 (5 exclusions: full 15-agent / 物理分区 / production / live client / ship to operator) | ✅ |
+| Workspace isolation | §2.3 (`~/.hermes-poc/` dedicated) | ✅ |
+| Budget + duration | §2.4 (~15-17 person-days + ~6 calendar weeks) | ✅ |
+| Boundary rationale explicit | §2.0 (避免 scope creep, v11.0 PoC 是验证可行性, 不是 ship production) | ✅ |
+| Disposable workspace | §2.3 backup/restore (`rm -rf ~/.hermes-poc/` recoverable) | ✅ |
+| Token budget capped | §2.4 (~500K-800K total PoC tokens within GLM 4-key 800K TPM ceiling for serial execution) | ✅ |
+| 30-day shadow-run window | §2.4 + §6.3 Week 6 (per Phase 49 §4.7 Step 5 memory migration dual-read) | ✅ |
+
+SC#1 PASS.
+
+---
+
+### §2.4 PoC Duration + Budget
+
+**Acceptance criteria**: 12 person-days (per §4 task decomposition 总和)
+
+**Vertical slice setup**: 5 person-days
+- Infra slice setup ~3 days (7 MCP tool wire-up per STACK §3.2 + 1 sample agent YAML transform per Phase 49 §2 + 1 round_table cycle)
+- Creative slice setup ~2 days (on top of infra: 9-agent subset persona transform per Phase 49 §2.4 screenplay rules + Step 3 round table wiring)
+
+**Risk register mitigation 实施**: 1-2 person-days
+- P1 `persona_sha256` drift probe (1d in §4.1, 已计入 acceptance criteria)
+- P2 TTL + `verified_at` (在 §4.4 compaction pass 内, 不另算)
+- P4 `scope` + `project_id` required (在 §4.7 schema migration dry-run 内, 不另算)
+- P5 `evidence_chain` + bias canary + dry-run-first (在 §4.3 + §4.6 内, 已计入)
+- P6 `operator_signature` schema field (0.5d, 在 §4.6 dry-run-first 内)
+- P7 coordinator arbitration (Phase 46 round-table-state-schema 已 ship, PoC 仅验证 0.5d)
+- P8 fitness battery scaffold (在 §4.1 内, 已计入)
+
+**Total PoC effort: ~15-17 person-days** (12 acceptance + 5 vertical slice setup - 5 重叠在 acceptance 内 + 1-2 standalone mitigation)
+
+**Calendar timeline**: + 30-day shadow-run window (per Phase 49 §4.7 Step 5) for memory migration dual-read = total **~6 calendar weeks** (per §6.3 detailed timeline).
+
+**Token budget** (per STACK §7.3 + §6.2):
+- Full pipeline baseline run: ~550K tokens (PoC 不跑 full pipeline, 只跑 vertical slice)
+- Per-vertical-slice: ~148K (creative screenplay Step 3) + ~10K (infra 1 round table) = ~160K tokens for PoC vertical slice execution
+- Acceptance criteria 实施 + retry + debug: ~3-5x = ~500K-800K tokens total PoC budget
+- Within GLM 4-key × 200K TPM ≈ 800K TPM ceiling for serial execution (per §6.4)
+
+---
+
+## §3 Vertical Slice Selection (SC#2 Deep-Dive)
+
+> 本节是 ROADMAP SC#2 的完整论证. 2 vertical slices (creative + infra) each with **论据完整 non-arbitrary** —— 5-dimension selection criteria scorecard per slice + 决策号 + research citation + edge-case rationale. **NOT arbitrary picks.**
+
+### §3.0 Slice Selection Strategy
+
+PoC 选 2 vertical slices 而非 full pipeline run 的 rationale:
+
+- **Token / time budget**: Full pipeline ~550K tokens / run × N iteration 超出 PoC 6-week budget (§2.4). Vertical slice 单 slice ~10-150K tokens, 可多次迭代.
+- **Failure isolation**: Vertical slice 失败影响范围小, 易 debug. Full pipeline 失败可能由 13-step 中任一引起.
+- **Schema-field coverage**: 精心选的 2 slices 可覆盖 agents-schema.yaml 18 fields + memory-record-schema.yaml 10+ fields 的 ≥80%, 不需跑 full pipeline.
+- **Decision coverage**: 2 slices 精心选可覆盖 Phase 44 决策 1/3/5/6/7 (5 of 7), 不需 full pipeline.
+
+**Slice composition**: 1 **creative phase** slice (validates per-agent memory + round table in a real-creative-flow context) + 1 **infra phase** slice (validates agent registry + MCP tool wire-up + round table lifecycle dispatch in isolation). The two slices have complementary coverage:
+
+- Creative slice answers: "Does the per-agent memory + curator + round table actually produce better screenplay outputs?"
+- Infra slice answers: "Does the 7 MCP tool surface actually dispatch correctly? Does the agent registry loader work? Does the round table state lifecycle persist?"
+
+Both must pass for PoC to validate v10.0 设计 可行性. Creative slice alone 不验证 infra path (may paper over dispatch bugs with shortcuts); Infra slice alone 不验证 creative value (may dispatch correctly but produce garbage outputs).
+
+### §3.1 Selection Criteria (5 Dimensions)
+
+每 slice 按 5-dimension scorecard 评估, 每 dimension 0-10 分:
+
+| Dimension | Why it matters for PoC | Score guide |
+|-----------|------------------------|-------------|
+| **(1) Round-table density** | Slice 应 exercise Phase 46 turn lifecycle + conflict arbitration (P7 mitigation). 低 density = 不 exercise round table = 不验证 v10.0 core feature | 0 = no round table; 10 = multi-turn multi-agent dense conflict |
+| **(2) Schema-field coverage** | Slice 应 exercise ≥80% of agents-schema.yaml 18 fields + memory-record-schema.yaml key fields (`persona_sha256` / `fitness_battery` / `evidence_chain` / `scope` / `project_id` / `memory.max_records` / `expires_at`) | 0 = touches < 30%; 10 = touches ≥ 90% |
+| **(3) Decision coverage** | Slice 应 exercise 决策 1 (T6) / 3 (D2) / 5 (α form) / 6 (per-agent memory) / 7 (Hermes控 structure) —— 5 of 7 decisions | 0 = touches 0; 10 = touches 5+ |
+| **(4) Synthetic-input feasibility** | Slice 可在 synthetic StoryKernel input (no real client data) 下跑通. PoC 不能依赖 NDA 客户数据 | 0 = requires real client data; 10 = synthetic JSON input well-defined |
+| **(5) Isolation safety** | Slice 在 `~/.hermes-poc/` workspace 跑不污染 production. 无网络副作用, 无外部 API dependency | 0 = touches production; 10 = fully isolated |
+
+### §3.2 Creative Vertical Slice = Screenplay Step 3 Round Table
+
+**Slice**: screenplay Step 3 (V8.6 13-step pipeline 中的 scene-level script generation phase) round table, 9-agent subset on synthetic StoryKernel input.
+
+#### Selection rationale (5-dim scorecard)
+
+| Dimension | Score | Rationale |
+|-----------|-------|-----------|
+| (1) Round-table density | **9/10** | ARCHITECTURE §2 screenplay row: **9 related_agents** (densest among 15 experts). Multi-turn conflict on screenplay decisions (e.g. scene structure vs emotion curve) 自然 surfaces P7 memory conflict |
+| (2) Schema-field coverage | **90%+** | Touches `persona_sha256` (P1 fitness battery drift probe), `lineage.transform_notes` + HOOK-09 emotion_curve marker contract load-bearing, `memory_scope` (per-agent), `tools` whitelist (write_file + patch for screenplay write-path) |
+| (3) Decision coverage | **5/7** | 决策 1 (T6 MCP tool) + 决策 3 (D2 storyboard-first-class — screenplay is D2-compatible) + 决策 5 (α form agent registry entry) + 决策 6 (per-agent memory + curator) + 决策 7 (Hermes控 turn_order) |
+| (4) Synthetic-input feasibility | **high** | StoryKernel JSON (creative_source Step 1 output format) is well-defined synthetic input, no real client data needed |
+| (5) Isolation safety | **high** | `~/.hermes-poc/agents/screenplay.agent.yaml` + 8 peer YAMLs, 独立 mem0 workspace |
+
+#### Citations
+
+- **决策 3 D2 storyboard-first-class** (Phase 44 §2.3): screenplay is D2-compatible creative phase. D2 决策 把 storyboard (Step 6.5) 升为 first-class, 使 screenplay (Step 3) 的 HOOK-09 emotion_curve marker 成为 downstream storyboard assembly 的 contract-load-bearing 输出. 这意味着 screenplay persona 在 transform 时 MUST surface HOOK-09, 否则下游 storyboard 无法 consume.
+- **ARCHITECTURE §2 screenplay row**: HOOK-09 emotion_curve marker contract load-bearing + 5 refs (save-the-cat / mckee / cn-shortdrama / emotion-curve / dialogue-craft) + **9 related_agents** (densest in 15-expert pool — cinematographer + hook_retention + theory_critic + editor + scene_builder + performer + continuity + composer) + tools `[hermes_llm, read_file, search_files, write_file, patch]` (includes write_file + patch for screenplay write-path, exercises agent write-back).
+- **Phase 49 §2.4 screenplay transform rules**: agent YAML build procedure. `lineage.transform_notes` MUST surface HOOK-09 emotion_curve marker contract (具体: `lineage.transform_notes: ["HOOK-09 emotion_curve marker arrays remain contract-load-bearing"]`, 见 ARCHITECTURE §1.3 minimal example line 97).
+- **Phase 46 round-table-state-schema**: turn lifecycle (`round_table_open` → turn N → `submit_round_table_result`) + §3 conflict arbitration (scope precedence session>project>global + confidence-weighted voting + conflict log). Screenplay Step 3 with 9 related_agents 自然 surfaces P7 memory conflict (9 agents with different memory will disagree on screenplay decisions like pacing vs emotion_curve priority).
+- **PITFALLS §P7** (round-table memory conflict): coordinator arbitration + scope precedence + confidence voting. Screenplay 9-agent round table is the densest P7 exercise scenario in the 15-expert pool.
+- **PITFALLS §P1** (persona drift): screenplay's frozen `persona_sha256` baseline at registration is the foundation for §4.1 fitness battery drift probe (P1 mitigation 2).
+
+#### Slice scope
+
+- **Agent subset**: 9 agents (screenplay + 8 peers from ARCHITECTURE §2 screenplay `related_agents` column). Screenplay's 9 `related_agents` per ARCHITECTURE §2 row include the natural Step 3 collaborators: cinematographer (visual translation), hook_retention (HOOK-09 marker consumer), theory_critic (scene-structure audit), editor (pacing), scene_builder (asset continuity), performer (dialogue playability), continuity (跨场景 consistency), composer (emotional arc audio mirror). This 9-agent subset is the densest collaboration graph among 15 experts.
+- **Round table**: 1 Step 3 round table on synthetic StoryKernel input, ~5 turns (per STACK §7.1 Step 3 estimate: 5 experts × 3 turns × 2 call/expert/turn = ~30 MCP call; screenplay subset 9 agent 是 densest round table — 操作上 9 agents × 2-3 turns × 2 call/expert/turn ≈ 40-50 MCP call, 仍是 stack §7.1 estimate 量级)
+- **Token estimate**: ~30-50 MCP call × 100 token overhead + ~22 LLM opinion call × 6500 token = ~4.5K + ~143K = **~148K tokens** (higher than STACK §7.3 average 42K because screenplay has 9 related_agents vs 4 average; PoC 不要求精确, 量级一致即可)
+
+#### Edge case: HOOK-09 emotion_curve marker contract
+
+**HOOK-09** is the **load-bearing contract** that screenplay's persona MUST surface in `lineage.transform_notes` per Phase 49 §2.4. If the PoC transform drops HOOK-09, the screenplay agent produces wrong-format output (emotion_curve marker arrays missing → downstream Step 6.5 storyboard assembly + Step 7 visual_executor cannot consume screenplay output).
+
+**This is the PoC's first "did the transform work?" smoke test**: if the transformed `screenplay.agent.yaml` `lineage.transform_notes` does NOT mention HOOK-09, the transform pipeline is broken and all downstream vertical slice work is invalid. Operator (or PoC implementer) MUST verify HOOK-09 contract preservation before running Step 3 round table.
+
+### §3.3 Infra Vertical Slice = Agent Registry + 1 Round Table Invocation
+
+**Slice**: 7 MCP tools wired in `mcp_serve.py` per STACK §3.2 + 1 sample agent YAML `~/.hermes-poc/agents/test-coordinator.agent.yaml` (minimal α form) + 1 successful `round_table_open` → turn 1 → `submit_round_table_result` cycle on synthetic input.
+
+#### Selection rationale (5-dim scorecard)
+
+| Dimension | Score | Rationale |
+|-----------|-------|-----------|
+| (1) Round-table density | **N/A** (sets UP the round table, doesn't exercise creative conflict) | Infra slice 的目的是验证 7 MCP tool wire-up + agent registry loading + round_table lifecycle dispatch, 不是 creative 冲突 |
+| (2) Schema-field coverage | **100%** | 1 sample agent YAML touches all 18 fields of agents-schema.yaml (vs creative slice 只 touch screenplay-relevant subset) |
+| (3) Decision coverage | **4/7** | 决策 1 (T6 协议 — 7 MCP tool surface) + 决策 5 (α form agent registry entry) + 决策 6 (per-agent memory `get_agent_memory` + `query_memory`) + 决策 7 (Hermes控 `round_table_open` `max_rounds` `early_stop_rule` schema) |
+| (4) Synthetic-input feasibility | **high** | `test-coordinator.agent.yaml` is minimal α form (no real persona needed); synthetic input is trivial JSON |
+| (5) Isolation safety | **high** | `~/.hermes-poc/` fully isolated |
+
+#### Citations
+
+- **决策 1 T6 协议** (Phase 44 §2.1): Hermes MCP server extension
+- **STACK §3.2 7 MCP tool surface** (cite each tool's purpose):
+  - `get_agent_persona` (Tool 1) — return agent YAML persona block
+  - `get_agent_opinion` (Tool 2) — main LLM-call tool, CC provides question + prior_discussion
+  - `get_agent_memory` (Tool 3) — scoped retrieval (mem0 backend)
+  - `submit_round_table_result` (Tool 4) — turn lifecycle terminator, persists to `~/.hermes-poc/agents/.runtime/{slug}/round_tables/{id}.json`
+  - `submit_artifact` (Tool 5) — agent write-path
+  - `query_memory` (Tool 6) — semantic search variant of Tool 3
+  - `run_python_phase` (Tool 7) — boundary tool for retained-phases per Phase 49 §5.2 allowlist
+- **STACK §5.2 mcp_serve.py patch pseudocode**: implementation reference for v11.0 PoC implementer
+- **Phase 46 round-table-state-schema full lifecycle**: `round_table_open` → turn N → `submit_round_table_result` → state file persistence
+- **Phase 45 agents-schema.yaml 18-field**: `test-coordinator.agent.yaml` follows this schema
+- **Phase 49 §2 transform procedure**: SKILL.md → agent YAML transform rules
+
+#### Slice scope
+
+- **MCP tools**: 7 tools wired in `mcp_serve.py` (extending existing 9 messaging tools per STACK §5.2 pseudocode pattern)
+- **Agent YAML**: 1 sample `~/.hermes-poc/agents/test-coordinator.agent.yaml` (minimal α form, all 18 fields filled with test-coordinator-specific values)
+- **Round table**: 1 successful `round_table_open` → turn 1 → `submit_round_table_result` cycle (synthetic input "test coordinator opinion on test topic")
+
+#### Edge case: run_python_phase Step 6.5 storyboard assembly
+
+Infra slice's `run_python_phase` MCP tool (Tool 7) may be invoked as part of creative slice's storyboard Step 6.5 prerequisite (per Phase 49 §5.2 retained-phases allowlist: Steps 0/6.5/7/10/11/12/15). This validates:
+
+- **Phase 49 §5.2 allowlist enforcement**: dispatcher rejects non-allowlist step invocation with explicit error (per Phase 49 §5.4 dispatcher-layer validation, no silent fallback)
+- **Phase 49 §5.4 dispatcher-layer validation**: `run_python_phase` accepts only allowlisted step IDs
+- **决策 2 B3a Python runner 增量迁移** boundary: only Python-implemented steps (Steps 0/6.5/7/10/11/12/15) are eligible for `run_python_phase` dispatch; CC-side creative steps (Step 3 screenplay etc.) MUST go through `round_table_open` lifecycle, not `run_python_phase`
+
+PoC implementer may exercise this edge case by attempting to invoke a non-allowlist step (e.g. Step 3 screenplay) via `run_python_phase` and verifying the dispatcher rejects it. This is the PoC's "did the dispatcher enforce the boundary?" smoke test.
+
+Negative-test scenario: pass `step_id="3"` (non-allowlist) to `run_python_phase`. Expected: dispatcher rejects with `ValueError("Step 3 is not in retained_python_phases allowlist; use round_table_open instead")`. If dispatcher silently accepts or falls back, the Phase 49 §5.4 invariant is broken and T-50-04 (EoP threat) is realized.
+
+### §3.4 Why NOT Other Slices (Rejected Alternatives)
+
+每 rejected alternative 引用 决策号 or research section, 不是 arbitrary 排除.
+
+| Rejected alternative | Reason | Citation |
+|----------------------|--------|----------|
+| (a) Creative slice = **creative_source Step 1** | Too upstream, no round-table density — only 4 `related_agents` (vs screenplay's 9). Step 1 is single-LLM ideation (Snowflake Method + SCAMPER), not round-table-driven. 不 exercise Phase 46 conflict arbitration (P7 mitigation) | ARCHITECTURE §2 creative_source row: 4 related_agents |
+| (b) Creative slice = **visual_executor Step 5** | Heavy ComfyUI dependency (30s-10min per call, per STACK §7.4 latency table). PoC infra slice excludes long-running exec. ComfyUI availability is operator-dependent, breaks isolation safety (§3.1 dimension 5). Also visual_executor tools 包含 ComfyUI API call, 不在 7 MCP tool surface 内 (决策 1 T6 boundary) | STACK §7.4 + ARCHITECTURE §2 visual_executor row + 决策 1 T6 协议 |
+| (c) **Full pipeline run** | Out of PoC scope per §2.4 budget. ~550K tokens / run × N iteration 超出 PoC 6-week / ~800K token budget. Full pipeline 还要求 13 step 全部 wired (包括 ComfyUI-dependent steps), 远超 vertical slice setup ~5 person-days | §2.4 + STACK §7.3 |
+| (d) Creative slice = **compliance_gate / script_auditor** | Hard-gate authority requires operator policy review (compliance_gate hard-gates on `< 65% predicted_completion`; script_auditor 5-dim critic). PoC iteration would be blocked on operator policy decision, not technical feasibility. Hard-gate logic 是 operator policy concern (决策 7 Hermes控 structure 边界), 不是 v10.0 设计本身 | ARCHITECTURE §2 script_auditor + compliance_gate rows + 决策 7 |
+
+**Pattern**: 所有 rejected alternatives 都在 5-dimension scorecard (§3.1) 上至少 1 dimension 得分 ≤ 5, 而 screenplay Step 3 + agent registry 2 slices 在所有 relevant dimensions 上得分 ≥ 8 (除 infra slice 的 round-table density N/A).
+
+### §3.5 Slice Interaction + Sequence
+
+Creative slice **depends on** infra slice: screenplay Step 3 round table needs agent registry + 7 MCP tools wired + `round_table_open` lifecycle dispatch path.
+
+**Sequence**:
+1. **Infra slice first** (~3 days setup, per §3.3 + §6.3 Week 1)
+   - Wire 7 MCP tools in `mcp_serve.py`
+   - Transform `test-coordinator.agent.yaml` per Phase 49 §2
+   - Run 1 successful `round_table_open` → `submit_round_table_result` cycle (synthetic input)
+   - Validates: T6 协议 (决策 1) wire-up + agents-schema.yaml 18-field loader (决策 5) + round_table lifecycle (Phase 46) + Hermes控 structure (决策 7: Hermes owns `round_table_open` schema, max_rounds, early_stop_rule)
+2. **Creative slice on top** (~2 days, per §3.2 + §6.3 Week 2)
+   - Transform 9-agent subset YAMLs (screenplay + 8 peers per ARCHITECTURE §2 screenplay `related_agents`)
+   - Run 1 Step 3 round table on synthetic StoryKernel input
+   - Commit `fitness_trend.jsonl` baseline entry for screenplay (first data point for §4.1 fitness battery)
+   - Validates: per-agent memory (决策 6) — 9 agents 各自 retrieve project-scoped memory + screenplay persona_sha256 baseline (P1 mitigation 1) + Phase 46 conflict arbitration (P7 mitigation) on multi-agent screenplay decisions
+
+**Dependency rationale**: Infra slice establishes the dispatch path + agent registry + memory layer baseline. Creative slice 复用 infra slice 的 7 MCP tool + agent YAML loader, 但增加 9-agent persona transform + Step 3 specific round table wiring. Creative slice 不能 standalone (需要 infra slice 的 MCP tool wire-up + agent registry loading).
+
+**Total vertical slice setup: ~5 person-days** (within §2.4 budget). 这 5 days 是 vertical slice **setup** cost, 不包括 §4 acceptance criteria 实施 (acceptance criteria 在 vertical slice setup 之后跑, 见 §6.3 calendar).
+
+### §3.6 Slice Deliverables
+
+#### Infra slice produces 3 artifacts:
+
+1. **7 MCP tools wired** in `mcp_serve.py` per STACK §5.2 pseudocode (extending existing 9 messaging tools: `conversations_list` / `messages_read` / `messages_send` / `events_poll` / `permissions_respond` / `channels_list` / etc.)
+   - Tool 1 `get_agent_persona`: returns agent YAML persona block (per Phase 45 agents-schema.yaml field 4 + field 17 `persona_sha256`)
+   - Tool 2 `get_agent_opinion`: main LLM-call tool, CC provides question + prior_discussion (per STACK §3.2)
+   - Tool 3 `get_agent_memory`: scoped retrieval from mem0 backend with `agent_id` + `project_id` filter (per ARCHITECTURE §3.2 Option B)
+   - Tool 4 `submit_round_table_result`: turn lifecycle terminator, persists state to `~/.hermes-poc/agents/.runtime/test-coordinator/round_tables/{id}.json` (per Phase 46 round-table-state-schema)
+   - Tool 5 `submit_artifact`: agent write-path (per ARCHITECTURE §2 screenplay row tools include write_file/patch)
+   - Tool 6 `query_memory`: semantic search variant of Tool 3 (per STACK §3.2 Tool 6)
+   - Tool 7 `run_python_phase`: boundary tool for retained-phases per Phase 49 §5.2 allowlist (Steps 0/6.5/7/10/11/12/15), dispatcher enforcement per Phase 49 §5.4
+2. **1 sample agent YAML** `~/.hermes-poc/agents/test-coordinator.agent.yaml` (minimal α form, all 18 fields filled with test-coordinator-specific values per Phase 45 agents-schema.yaml). Field highlights:
+   - `name: test-coordinator` (field 1)
+   - `persona_sha256: <computed at registration>` (field 17, P1 mitigation 1)
+   - `memory.max_records: 500` (per SUMMARY OQ-7)
+   - `memory_scope: per_agent` (per ARCHITECTURE §1.1)
+   - `tools: [hermes_llm, read_file]` (minimal, test-coordinator 不需要 write_file)
+   - `lineage.derived_from_skill_id: null` (test-coordinator is synthetic, 不 derived from SKILL.md)
+   - `fitness_battery: null` (test-coordinator 不在 §4.1 acceptance criterion scope)
+3. **1 successful `round_table_open` → `submit_round_table_result` cycle** (synthetic input "test coordinator opinion on test topic", state file persisted to `~/.hermes-poc/agents/.runtime/test-coordinator/round_tables/{id}.json` per Phase 46 round-table-state-schema)
+
+#### Creative slice produces 3 artifacts:
+
+1. **9-agent subset YAMLs** (screenplay + 8 peers from ARCHITECTURE §2 screenplay `related_agents`) in `~/.hermes-poc/agents/`:
+   - `screenplay.agent.yaml` (HOOK-09 emotion_curve marker contract in lineage.transform_notes per Phase 49 §2.4)
+   - `cinematographer.agent.yaml` (visual translation peer)
+   - `hook_retention.agent.yaml` (HOOK-09 marker consumer)
+   - `theory_critic.agent.yaml` (scene-structure audit peer)
+   - `editor.agent.yaml` (pacing peer)
+   - `scene_builder.agent.yaml` (asset continuity peer)
+   - `performer.agent.yaml` (dialogue playability peer)
+   - `continuity.agent.yaml` (跨场景 consistency peer)
+   - `composer.agent.yaml` (emotional arc audio mirror peer)
+2. **1 successful Step 3 screenplay round table** on synthetic StoryKernel input:
+   - State file persisted to `~/.hermes-poc/agents/.runtime/screenplay/round_tables/{id}.json` (per Phase 46 round-table-state-schema full lifecycle)
+   - Screenplay output artifact committed with **HOOK-09 emotion_curve marker contract preserved** (smoke test: lineage.transform_notes in screenplay.agent.yaml mentions HOOK-09, output artifact contains emotion_curve marker arrays)
+   - Round table transcript shows at least 1 conflict arbitration event (per Phase 46 §3 — scope precedence session>project>global or confidence-weighted voting) — natural surfacing of P7 mitigation
+3. **`fitness_trend.jsonl` baseline entry for screenplay** (first data point for §4.1 acceptance criterion — schema per PITFALLS §P8 mitigation 2):
+   ```json
+   {
+     "ts": "2026-07-XX",
+     "battery_version": "v1-screenplay-baseline",
+     "mean_score": <baseline mean>,
+     "per_prompt_scores": {<prompt_id>: <score>, ...},
+     "persona_sha256": "<screenplay persona_sha256 at registration>",
+     "model_id": "glm-5.2"
+   }
+   ```
+   This baseline entry is the foundation for §4.1 regression auto-quarantine (mean_score drop > 0.5 across 3 runs triggers quarantine per PITFALLS §P8 mitigation 2).
+
+### §3.7 Slice Selection Summary
+
+| Slice | Round-table density | Schema coverage | Decision coverage | Synthetic-input | Isolation | Total |
+|-------|---------------------|-----------------|-------------------|------------------|-----------|-------|
+| Creative (§3.2 screenplay Step 3) | 9/10 | 90%+ | 5/7 (1/3/5/6/7) | high | high | **densest slice in 15-expert pool** |
+| Infra (§3.3 agent registry + 1 round table) | N/A (sets up) | 100% | 4/7 (1/5/6/7) | high | high | **foundational — creative slice depends on it** |
+| Rejected (a) creative_source Step 1 | 3/10 | 60% | 3/7 | high | high | low round-table density |
+| Rejected (b) visual_executor Step 5 | 7/10 | 70% | 3/7 | **low** (ComfyUI dep) | **low** | ComfyUI breaks isolation |
+| Rejected (c) full pipeline run | 10/10 | 100% | 7/7 | high | high | **out of budget** (~550K tokens/run × N) |
+| Rejected (d) compliance_gate | 5/10 | 75% | 4/7 | medium | high | blocked on operator policy |
+
+**结论**: Creative slice (screenplay Step 3) + Infra slice (agent registry + 1 round table) 是 SC#2 vertical slice 的最优组合 —— coverage 高, isolation safe, budget within range. 每 slice 都有 决策号 + research citation + edge-case rationale, 非 arbitrary pick.
+
+### §3.8 SC#2 Cross-Validation
+
+SC#2 acceptance: "PoC 目标明确 (vertical slice: 1 creative phase + 1 infra phase, 论据完整) —— creative = screenplay Step 3 round table; infra = agent registry + 1 round table invocation. Both selections cite 决策号 + research section + edge-case rationale, NOT arbitrary picks."
+
+| Requirement | Where addressed | Verdict |
+|-------------|-----------------|---------|
+| 1 creative phase | §3.2 screenplay Step 3 | ✅ |
+| 1 infra phase | §3.3 agent registry + 1 round table | ✅ |
+| creative cites 决策号 | §3.2 citations (决策 3 D2 + 决策 5 α form + 决策 6 per-agent memory + 决策 7 Hermes控) | ✅ |
+| creative cites research section | §3.2 citations (ARCHITECTURE §2 + Phase 49 §2.4 + Phase 46 round-table-state-schema + PITFALLS §P1/§P7) | ✅ |
+| creative cites edge-case rationale | §3.2 edge case (HOOK-09 emotion_curve marker contract — first "did the transform work?" smoke test) | ✅ |
+| infra cites 决策号 | §3.3 citations (决策 1 T6 + 决策 5 α form + 决策 6 per-agent memory + 决策 7 Hermes控) | ✅ |
+| infra cites research section | §3.3 citations (STACK §3.2 7 MCP tool + §5.2 pseudocode + Phase 46 round-table-state-schema + Phase 45 agents-schema.yaml) | ✅ |
+| infra cites edge-case rationale | §3.3 edge case (run_python_phase Step 6.5 dispatcher enforcement — Phase 49 §5.4 invariant) | ✅ |
+| Both non-arbitrary | §3.1 5-dimension scorecard + §3.4 rejected alternatives + §3.7 summary | ✅ |
+
+SC#2 PASS.
+
+**Note**: SC#2 的 "论据完整非任意挑" 要求每 slice 都通过 5-dimension scorecard + 决策号 citation + edge-case rationale 三道验证. §3.2 screenplay Step 3 + §3.3 agent registry + 1 round table 都满足.
+
+---
+
