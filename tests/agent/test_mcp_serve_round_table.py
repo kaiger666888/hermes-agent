@@ -82,6 +82,40 @@ def mcp_server(monkeypatch, tmp_path):
     except Exception:
         pass
 
+    # Mock auxiliary_client.call_llm so tests don't require GLM_API_KEY
+    # (Phase 53 swapped get_agent_opinion body from placeholder to real call_llm;
+    # lifecycle tests need to mock the LLM dispatch to remain hermetic.)
+    try:
+        from agent import auxiliary_client
+
+        def _fake_call_llm(*args, **kwargs):
+            """Return a deterministic opinion string for hermetic lifecycle tests."""
+            agent_id = kwargs.get("agent_id") or (args[0] if args else "test")
+            return type(
+                "FakeResponse",
+                (),
+                {
+                    "content": f"[TEST MOCK] opinion from {agent_id}",
+                    "choices": [
+                        type(
+                            "FakeChoice",
+                            (),
+                            {
+                                "message": type(
+                                    "FakeMsg", (), {"content": f"[TEST MOCK] opinion from {agent_id}"}
+                                )(),
+                                "finish_reason": "stop",
+                            },
+                        )
+                    ],
+                    "usage": {"total_tokens": 10},
+                },
+            )()
+
+        monkeypatch.setattr(auxiliary_client, "call_llm", _fake_call_llm)
+    except Exception:
+        pass
+
     bridge = EventBridge()  # NOT started — safe for live-system guard
     server = create_mcp_server(event_bridge=bridge)
     return server
@@ -298,7 +332,11 @@ class TestMcpRoundTableIntegration:
             topic="Meaning of test",
         )
         assert opinion_result["status"] == "ok", f"opinion failed: {opinion_result}"
-        assert opinion_result["opinion"] == "[phase52_placeholder]"
+        # Phase 53 replaced the placeholder with real call_llm; mcp_server fixture
+        # mocks call_llm to return "[TEST MOCK] opinion from {agent_id}"
+        assert "[TEST MOCK]" in opinion_result["opinion"], (
+            f"expected mocked opinion, got: {opinion_result['opinion']!r}"
+        )
         assert opinion_result["agent_id"] == "test-coordinator"
 
         # Step 3: submit result — terminal transition
@@ -625,7 +663,10 @@ class TestSerialEnforcementMcpIntegration:
             agent_id="test-coordinator", topic="happy path",
         )
         assert opinion_r["status"] == "ok", f"happy path broken: {opinion_r}"
-        assert opinion_r["opinion"] == "[phase52_placeholder]"
+        # Phase 53 replaced placeholder with real call_llm; fixture mocks call_llm.
+        assert "[TEST MOCK]" in opinion_r["opinion"], (
+            f"expected mocked opinion, got: {opinion_r['opinion']!r}"
+        )
 
 
 # ── Tool registration census — guard against name drift ────────────────────
