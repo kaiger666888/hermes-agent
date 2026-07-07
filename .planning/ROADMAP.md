@@ -2,9 +2,7 @@
 
 ## Overview
 
-v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v10.0 design suite as runtime code. **317 automated tests green; audit verdict `passed`; 5 operator-action smoke tests verified (4 PASSED + 1 SHADOW-VERIFIED).**
-
-**v12.0 (Production Hardening)** in progress on `v12.0-dev` branch — fixes 4 hardening gaps exposed by v11.0 real-GLM smoke tests + runs deferred live-backend benchmarks. 5 phases (57-61), 8 reqs, 6.5 person-days.
+v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps exposed by v11.0 real-GLM smoke tests + ran deferred live-backend benchmark infra. **8/8 reqs verified; audit verdict `passed`; 3 operator-action handoffs deferred.**
 
 ## Milestones
 
@@ -18,110 +16,36 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
 - ✅ **v9.0 kais-movie-pipeline 闭环深化** - Phases 38-43 (shipped 2026-06-27)
 - ✅ **v10.0 Hermes-Agent 编排架构第一性原理推导(设计型)** - Phases 44-51 (shipped 2026-07-07, tag `v10.0`)
 - ✅ **v11.0 Hermes-Native Expert Agents PoC Implementation** - Phases 52-56 (shipped 2026-07-07, tag `v11.0`)
-- 🚧 **v12.0 Production Hardening** - Phases 57-61 (in planning on `v12.0-dev` branch)
+- ✅ **v12.0 Production Hardening** - Phases 57-61 (shipped 2026-07-08, tag `v12.0`)
 
 ---
 
-## v12.0: Production Hardening (In Planning)
+## Next Milestone
 
-**Milestone Goal:** Fix the 4 hardening gaps that v11.0 real-GLM smoke tests exposed + run deferred live-backend benchmarks. v11.0 PoC 已证 round table 跑通, v12.0 把它 production-ready.
-
-**Hardening gaps targeted (from v11.0 smoke-test-report §3):**
-1. Synthesis endpoint timeout (z.ai coding plan 30s cap → 5x retry → fallback to anthropic-compat) → ENDPOINT-01
-2. RPM rate limit burst (v11.0 only has hardcoded `asyncio.sleep` Strategy A) → THROTTLE-01 + THROTTLE-02
-3. Auxiliary traffic shares credential pool with main agent (gateway burst exhausts keys) → POOL-01 + POOL-02
-4. Fitness battery real-mode + live mem0 benchmark unrun → EVAL-01 + EVAL-02
-
-**Acceptance budget:** ~6.5 person-days total per REQUIREMENTS.md traceability (8 reqs · 5 phases)
-
-**Scope discipline (cite v11.0 smoke-test-report, do not expand):**
-- 复用 v11.0 PoC runtime,只硬化不重写
-- 15-expert 全量 transform 留 v13.0
-- Curator self-evolution 闭环留 v13.0
-- Round table 异步并发 留 v13.0(取决于 GLM 上游容量)
-
-**Phase Numbering:** continues from v11.0 Phase 56 → v12.0 starts at **Phase 57**
-
-## Phases
-
-- [ ] **Phase 57: ENDPOINT-ROUTING** - Long-prompt-aware endpoint routing (synthesis + compaction → anthropic-compat)
-- [ ] **Phase 58: RPM-THROTTLING** - Per-task RPM token bucket + per-round-table TPM budget
-- [ ] **Phase 59: AUX-POOL-ISOLATION** - Separate auxiliary credential pool + per-key TPM tracking
-- [ ] **Phase 60: LIVE-EVAL** - Production mem0 p95 benchmark + fitness battery real-mode baseline
-- [ ] **Phase 61: VALIDATE** - Milestone audit + production smoke (target <240s vs v11.0's 490s)
-
----
-
-## Phase Details
-
-### Phase 57: ENDPOINT-ROUTING
-
-**Goal**: Route long-prompt LLM calls (synthesis, memory_compaction, memory_comparator) to `open.bigmodel.cn/api/anthropic` (anthropic-compat, no 30s cap); keep short-prompt calls (round_table_opinion panelists) on `z.ai/api/coding/paas/v4` (lower cost).
-**Depends on**: Nothing (first phase of v12.0)
-**Requirements**: ENDPOINT-01
-**Success Criteria**:
-  1. `auxiliary_client.call_llm` auto-selects endpoint based on prompt token count (threshold configurable, default 4096).
-  2. v11.0 SC#2 smoke test latency drops from 490s to <240s.
-  3. All v11.0 + v12.0 unit tests pass.
-**Plans**:
-- [x] 57-01-PLAN.md — Add prompt-length-aware endpoint routing (helper + wire-in + tests + config docs)
-
-### Phase 58: RPM-THROTTLING
-
-**Goal**: Replace v11.0's hardcoded `asyncio.sleep(2.5)` Strategy A with proper rate-aware pacing.
-**Depends on**: Phase 57
-**Requirements**: THROTTLE-01, THROTTLE-02
-**Success Criteria**:
-  1. `agent/glm_throttle.py` (NEW) implements token bucket per auxiliary task.
-  2. `round_table_open` accepts `token_budget`; budget_warning + budget_exceeded events.
-  3. v11.0 SC#2 smoke runs without manual sleep + zero `RateLimitError`.
-**Plans**:
-- [x] 58-01-PLAN.md — Per-task RPM token bucket (THROTTLE-01): NEW agent/glm_throttle.py + wire-in to auxiliary_client.call_llm + driver script sleep removal
-- [x] 58-02-PLAN.md — Per-round-table TPM budget (THROTTLE-02): token_budget field + budget_warning/exceeded events + receipt cost_usd_estimate
-
-### Phase 59: AUX-POOL-ISOLATION
-
-**Goal**: Isolate auxiliary credential pool from main agent pool. Per-key TPM tracking.
-**Depends on**: Phase 58
-**Requirements**: POOL-01, POOL-02
-**Success Criteria**:
-  1. `GLM_AUX_API_KEY_1..4` env vars (fallback to `GLM_API_KEY`).
-  2. Per-key TPM in sliding 60s window; auto-pick freshest key.
-  3. Test verifies pool isolation.
-**Plans**:
-- [x] 59-01-PLAN.md — Named pools (POOL-01): load_aux_pool + load_named_pool + _seed_aux_env (GLM_AUX_API_KEY_1..4 + GLM_API_KEY fallback) + isolation tests
-- [x] 59-02-PLAN.md — Per-key TPM tracking (POOL-02): sliding 60s window + select_freshest_tpm + record_usage + tpm_warning emission in acquire_slot
-
-### Phase 60: LIVE-EVAL
-
-**Goal**: Run deferred v11.0 EVAL handoffs against live backends.
-**Depends on**: Phase 59
-**Requirements**: EVAL-01, EVAL-02
-**Success Criteria**:
-  1. Production mem0 p50/p95/p99 in `latency-baseline.md §2.2`.
-  2. If p95 > 500ms, document 物理分区 trigger decision.
-  3. Fitness battery 8 scenarios real-mode; discrimination baseline (0.7+ vs 0.4-0.5).
-**Plans**:
-- [x] 60-01-PLAN.md — EVAL-01 live mem0 backend p95 benchmark (NEW seeder + --backend mem0 flag + populate §2.2 + conditional 物理分区-triggers.md)
-- [x] 60-02-PLAN.md — EVAL-02 fitness battery real-mode baseline (persona-aligned vs generic-LLM discrimination, aux pool, fitness-battery-baseline.md)
-
-### Phase 61: VALIDATE
-
-**Goal**: v12.0 close-out — audit + production smoke with hardening in place.
-**Depends on**: All previous phases (strictly LAST)
-**Requirements**: VALIDATE-01
-**Success Criteria**:
-  1. `.planning/milestones/v12.0-MILESTONE-AUDIT.md` with verdict.
-  2. `production-smoke-report.md` shows <240s round table + zero RateLimitError.
-  3. Git tag `v12.0`.
-**Plans**:
-- [x] 61-01-PLAN.md — VALIDATE-01 milestone audit + production smoke (extend run_milestone_audit.py with --milestone v12.0 + author v12.0-MILESTONE-AUDIT.md + author production-smoke-report.md + update REQUIREMENTS.md traceability)
-
----
+Not yet planned. Run `/gsd:new-milestone` to start.
 
 ---
 
 ## Shipped Milestone Details
+
+<details>
+<summary>✅ v12.0 Production Hardening (Phases 57-61) - SHIPPED 2026-07-08</summary>
+
+**Stats:** 5 phases · 9 plans · 53 commits on v12.0-dev · 8/8 reqs ✓ · Tag `v12.0` · Audit `passed`
+
+**One sentence:** Fixed 4 hardening gaps exposed by v11.0 real-GLM smoke tests — endpoint routing (long prompts → anthropic-compat), RPM throttling (token bucket + per-round-table TPM budget), auxiliary credential pool isolation (separate keys from main agent + per-key TPM tracking), live-eval infrastructure (mem0 backend adapter + fitness battery real-mode baseline).
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 57 | ENDPOINT-ROUTING — long-prompt endpoint routing (z.ai/anthropic-compat split) | SHIPPED (1 plan, 2026-07-08) |
+| 58 | RPM-THROTTLING — per-task RPM token bucket + per-round-table TPM budget | SHIPPED (2 plans, 2026-07-08) |
+| 59 | AUX-POOL-ISOLATION — separate auxiliary credential pool + per-key TPM tracking | SHIPPED (2 plans, 2026-07-08) |
+| 60 | LIVE-EVAL — mem0 backend adapter + fitness battery real-mode infra | SHIPPED (2 plans, 2026-07-08) |
+| 61 | VALIDATE — milestone audit + production smoke report | SHIPPED (1 plan, 2026-07-08) |
+
+See `.planning/milestones/v12.0-ROADMAP.md` for full archive + `.planning/milestones/v12.0-MILESTONE-AUDIT.md` for audit (status: passed, 8/8 reqs, 3 operator-action handoffs deferred).
+
+</details>
 
 <details>
 <summary>✅ v11.0 Hermes-Native Expert Agents PoC Implementation (Phases 52-56) - SHIPPED 2026-07-07</summary>
