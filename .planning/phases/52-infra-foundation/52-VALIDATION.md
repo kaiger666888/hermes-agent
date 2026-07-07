@@ -1,10 +1,11 @@
 ---
 phase: 52
 slug: infra-foundation
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-07
+approved: 2026-07-07
 ---
 
 # Phase 52 — Validation Strategy
@@ -93,4 +94,4 @@ Test files to create before main implementation tasks:
 - [ ] Feedback latency < 30s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-07-07 (plan-checker passed with warnings; all task-level content compliant — every task has automated verify, no watch-mode flags, feedback latency < 30s)

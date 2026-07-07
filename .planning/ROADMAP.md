@@ -24,12 +24,14 @@ v10.0 (design-only milestone) shipped 2026-07-07 — Hermes-Agent orchestrator +
 **Milestone Goal:** 按 v10.0 设计套件实施 vertical slice(1 creative phase + 1 infra phase),验证三层架构 runtime 可行性。v11.0 是 v10.0 设计的**实施 milestone** —— 不再产出设计文档,而是把 `00-FIRST-PRINCIPLES` 到 `06-CROSS-REPO-IMPACT` 的设计落地为 Python 代码 + agent YAML + mem0 extensions。
 
 **Vertical slice (per `05-POC-PLAN.md` §3):**
+
 - **Creative slice:** screenplay Step 3 round table(9-agent HOOK-09 edge case)
 - **Infra slice:** agent registry + 1 round table invocation(7 MCP tool wire-up)
 
 **Acceptance budget:** ~12-17 person-days total per `05-POC-PLAN.md` §2.4 + REQUIREMENTS.md traceability(15 reqs · 19.5 person-days incl. MIGR-01 + close-out)
 
 **Scope discipline (cite v10.0, do not re-derive):**
+
 - 复用 v10.0 设计,不重新推导 7 决策(cite `00-FIRST-PRINCIPLES.md` §2)
 - 强制串行(1 panelist 1 turn `await`)兼容 GLM 4-key rotation(INFRA-04 hard constraint)
 - dry-run-first invariant(curator 默认 dry-run,所有 schema 迁移默认 dry-run,EVAL-06 hard constraint)
@@ -50,81 +52,111 @@ v10.0 (design-only milestone) shipped 2026-07-07 — Hermes-Agent orchestrator +
 ## Phase Details
 
 ### Phase 52: INFRA-FOUNDATION
+
 **Goal**: Build the Hermes-side runtime layer that loads agent YAMLs, wires the 7 MCP tools into `mcp_serve.py`, persists round table state with crash recovery, and enforces the hard serial-execution constraint — so that downstream phases (53-55) can build creative + eval artifacts on a working registry + state machine foundation.
 **Depends on**: Nothing (first phase of v11.0; consumes v10.0 design suite as blueprint)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
+
   1. A user can place a YAML at `~/.hermes/agents/{name}.agent.yaml` and `agents_list` MCP tool returns it; a malformed YAML is rejected by Phase 45 `agents-schema.yaml` with a specific schema-violation error message.
-  2. A Claude Code (or other MCP client) round trip through `round_table_open` → 1 `get_agent_opinion` → `submit_round_table_result` lifecycle completes end-to-end against a single synthetic agent; the lifecycle is atomic (interrupted submit does not leave `status: in_progress`).
+  2. A Claude Code (or other MCP client) round trip through `round_table_open` → 1 `get_agent_opinion` → `submit_round_table_result` lifecycle completes end-to-end against a single synthetic agent; the lifecycle is atomic (interrupted submit does not leave `status` outside the locked schema enum `{open, completed, aborted, stalled}` — the prose `in_progress` is deprecated shorthand for the open-and-active state, NOT a serializable value per `round-table-state-schema.yaml`).
   3. A `round_table_open` invocation that crashes mid-turn (3 failure modes: partial-write, mid-turn crash, orphaned session) recovers on next access — the state machine transitions cleanly to `closed` or `error` without operator hand-intervention.
   4. A concurrent second `get_agent_opinion` submission against the same `roundId` is **rejected** with a clear serial-violation error (cites `feedback-glm-overload-reduce-concurrency.md`); a single sequential submission proceeds and returns the panelist opinion successfully.
-**Plans**: 4 plans across 3 waves (Wave 1: 52-01; Wave 2: 52-02 + 52-03 parallel; Wave 3: 52-04)
+
+**Plans**: 4 plans across 4 waves — strictly serial per `depends_on` graph (52-03 wires MCP tools that call 52-02's state machine; 52-04 wraps 52-03's `get_agent_opinion` with the per-roundId serial lock)
 
 Plans:
+**Wave 1**
+
 - [ ] 52-01-PLAN.md — INFRA-01 Agent Registry YAML Loader (registry_loader.py + jsonschema validation + lazy cache)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 52-02-PLAN.md — INFRA-03 Round Table State Machine (open/append/submit + atomic writes + 3 crash-recovery modes)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 52-03-PLAN.md — INFRA-02 7 MCP Tools Wire-up (FastMCP closures in mcp_serve.py + memory_arbitration stub)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 52-04-PLAN.md — INFRA-04 Serial Execution Enforcement (per-roundId asyncio.Lock + 429 + MEMORY.md citation)
 
 ---
 
 ### Phase 53: CREATIVE-SLICE
+
 **Goal**: Deliver the creative vertical slice end-to-end — transform 9 sample movie-expert SKILL.md to agent YAML (sufficient for screenplay Step 3 round table), wire the 9-agent round table invocation lifecycle, and implement memory conflict arbitration — so that a real GLM API call can produce a screenplay Step 3 artifact via round table deliberation.
 **Depends on**: Phase 52 (consumes agent registry loader + 7 MCP tools + state machine + serial executor)
 **Requirements**: MIGR-01, CREATIVE-01, CREATIVE-02
 **Success Criteria** (what must be TRUE):
+
   1. 9 agent YAML files at `~/.hermes/agents/*.agent.yaml` validate against Phase 45 `agents-schema.yaml` (camelCase keywords, 18 fields, lineage block populated with `derived_from_skill_id` + `skill_sha256`); the transform log documents which SKILL frontmatter field mapped to which agent YAML field per Phase 49 §2 75-cell rules.
   2. Running `scripts/run_screenplay_step3_roundtable.py` produces a JSON artifact that validates against the screenplay Step 3 schema (HOOK-09 emotion_curve marker contract), with latency < 30s on a real GLM API call (no mocks), exercising the full `round_table_open` → 9 sequential `get_agent_opinion` calls → 1 `submit_round_table_result` lifecycle.
   3. A 2-conflict test scenario (e.g. cinematographer asserts false vs. style_genome dissents) produces the correct arbitration outcome per Phase 46 §3 contract: comparator LLM pass detects the conflict, `session > project > global` scope precedence is honored, confidence-weighted voting picks a winner, and an entry is appended to `.runtime/{slug}/round_tables/{round_id}/conflicts.jsonl`.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 53-01: TBD
 
 ---
 
 ### Phase 54: EVAL-HARNESS-1
+
 **Goal**: Build the first wave of PoC acceptance criteria — fitness battery (P1/P8 mitigation), latency SLO benchmark (Option B mem0 filter viability gate), and bias canary (curator `_memory_evolution_phase` hallucination detector) — so the runtime produced in Phases 52-53 has measurable regression-detection + safety guards before any curator tick is allowed to transition from dry-run to live.
 **Depends on**: Phase 53 (consumes running vertical slice + memory layer + curator hook points)
 **Requirements**: EVAL-01, EVAL-02, EVAL-03
 **Success Criteria** (what must be TRUE):
+
   1. A user can run `scripts/run_fitness_battery.py` and get a per-scenario score for each of the 5-10 battery scenarios (screenplay Step 3 quality + conflict resolution correctness dimensions); the battery persists to `tests/v11-fitness-battery/` as data files with expected-output + scoring rubric, and produces a baseline `fitness_trend.jsonl` entry.
   2. A user can run the latency benchmark and observe `memory_retrieve_scoped` MCP tool p95 latency **< 500ms** across 100 sequential retrievals on a populated 500-record memory store (excluding LLM call); the benchmark is instrumented in code, produces a results JSON + `.planning/research/v11-poc-eval/latency-baseline.md` documenting baseline + bottleneck analysis.
   3. A user can run `scripts/run_bias_canary.py` and observe that 4/5 known-bad synthetic memory records (low `evidence_chain`, low `confidence`, unsupported claims) are flagged by the curator `_memory_evolution_phase` in dry-run mode; the bias canary is wired as an extension of `agent/curator.py` and emits a canary report.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 54-01: TBD
 
 ---
 
 ### Phase 55: EVAL-HARNESS-2
+
 **Goal**: Build the second wave of PoC acceptance criteria — compaction pass, threshold tuning documentation, dry-run-first invariant enforcement, and schema migration dry-run script — so that memory tiering works at scale, defaults are documented for v12.0 operators, curator + migration tools default to safe dry-run mode (P5/P14 mitigation), and v6.0 FeedbackStore JSONL can be migrated without silent drops.
 **Depends on**: Phase 54 (consumes fitness battery as regression-detection foundation; per `05-POC-PLAN.md` §6.1 implementation path: fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD — bias canary already done in 54, this phase completes the remaining items)
 **Requirements**: EVAL-04, EVAL-05, EVAL-06, EVAL-07
 **Success Criteria** (what must be TRUE):
+
   1. Triggering compaction at exactly `memory.max_records=500` produces a valid post-compaction 3-tier state (core ≤10 / working ≤100 / archival ≤10000); oldest archival-tier records are archived and working-tier is summarized into core-tier per Phase 46 memory tiering contract.
   2. The 3 thresholds (`memory.max_records`, `confidence_threshold_for_promotion`, `evidence_chain_min_for_acceptance`) are documented with initial defaults (from v10.0 schemas) + tuning methodology for v12.0 operators in `.planning/research/v11-poc-eval/threshold-tuning.md`; the config schema fields are verified present in `agents-schema.yaml`.
   3. Invoking curator without explicit `dry_run: false` flag and invoking `scripts/migrate_v6_feedback_to_memory_schema.py` without `--apply` flag both produce **zero** state mutation (no memory writes, no schema migration writes); dry-run-first is enforced as a default value in code, not just a CLI convention.
   4. Running `scripts/migrate_v6_feedback_to_memory_schema.py --dry-run` on a sample v6.0 FeedbackStore JSONL produces a diff report (what would change) without writing; the dry-run output accounts for every source record (zero silent drops, P14 mitigation); the output format matches `.planning/research/v11-poc-eval/migration-dry-run-format.md` spec.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 55-01: TBD
 
 ---
 
 ### Phase 56: VALIDATE
+
 **Goal**: v11.0 milestone close-out — audit all 15 requirements satisfied, run the vertical slice end-to-end smoke test on real GLM API (no mocks), publish latency benchmark + bias canary report, and produce milestone audit verdict (PASS / tech_debt / FAIL).
 **Depends on**: All previous phases (52-55), **strictly LAST**(analog to v10.0 Phase 51 / v5.0 Phase 27 close-out pattern; cannot run until all deliverables exist).
 **Requirements**: VALIDATE-01
 **Success Criteria** (what must be TRUE):
+
   1. `.planning/milestones/v11.0-MILESTONE-AUDIT.md` exists and verifies **15/15** requirements satisfied (INFRA-01..04 + CREATIVE-01..02 + EVAL-01..07 + MIGR-01 + VALIDATE-01), with per-req evidence pointers to deliverables (file paths + commit SHAs).
   2. `.planning/research/v11-poc-eval/smoke-test-report.md` exists documenting the vertical slice end-to-end run on a real GLM API call (no mocks) — round_table_open → 9 panelists → submit_round_table_result — with the screenplay Step 3 JSON artifact attached and timestamped.
   3. Audit verdict is `passed` or `tech_debt` (not `failed`); any `tech_debt` items are documented with v12.0+ deferral rationale + operator-action-handoff notes (analog to v9.0 close-out operator handoffs).
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 56-01: TBD
 
 ---
@@ -158,6 +190,7 @@ state machine + serial enforcement
 **Critical path:** 52 → 53 → 54 → 55 → 56 (5 sequential steps; no parallel waves — runtime implementation milestone, each phase consumes prior phase's code).
 
 **Hard dependencies:**
+
 - Phase 53 (CREATIVE-SLICE) → needs Phase 52 (INFRA) agent registry + 7 MCP tools + state machine + serial executor
 - Phase 54 (EVAL-1) → needs Phase 53 vertical slice running (fitness battery scores screenplay output, latency benchmarks memory layer populated by creative slice)
 - Phase 55 (EVAL-2) → needs Phase 54 fitness battery as regression-detection foundation (per `05-POC-PLAN.md` §6.1 sequencing rationale)
@@ -165,6 +198,7 @@ state machine + serial enforcement
 
 **Implementation path alignment (per `05-POC-PLAN.md` §6.1):**
 The v10.0 PoC plan specifies fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD as the implementation sequence. This roadmap adapts that sequence to phase structure where INFRA (Phase 52) + CREATIVE (Phase 53) come first because they produce the runtime that the eval harness then measures. Within the EVAL phases:
+
 - Phase 54 covers fitness battery (FIRST in §6.1) + bias canary (THIRD in §6.1) + latency SLO
 - Phase 55 covers compaction + tuning + dry-run-first + schema migration dry-run (SECOND in §6.1)
 

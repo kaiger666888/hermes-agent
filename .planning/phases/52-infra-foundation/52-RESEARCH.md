@@ -812,9 +812,11 @@ async def acquire_round_or_reject(round_id: str) -> Optional[asyncio.Lock]:
 | A7 | `contextvars.ContextVar` is the correct primitive for `_scoped_agent_id` (not `threading.local`) | Don't Hand-Roll table | LOW — ARCHITECTURE §3.3 + 01-AGENT-REGISTRY-SCHEMA §5.5 explicitly mandate contextvars. |
 | A8 | The `.planning/research/v10-orchestrator-design/` YAML files are stable inputs (won't change mid-phase) | All sections | LOW — they were committed in v10.0 design milestone (Phase 45-50, tag v10.0) and are LOCKED per stability markers. |
 
-## Open Questions
+## Open Questions (RESOLVED 2026-07-07 by Kai — see CONTEXT.md "Resolved by Kai")
 
-1. **Tool names — which list is authoritative?**
+> All 5 OQs below were resolved by Kai via AskUserQuestion grey-area acceptance on 2026-07-07 (post-research, pre-planning). Resolutions are recorded in `52-CONTEXT.md` under "Resolved by Kai" and have been propagated to all 4 PLAN.md files. The recommendations below were NOT all adopted — Kai's resolutions supersede them where they conflict.
+
+1. **Tool names — which list is authoritative?** ✅ RESOLVED: CONTEXT.md/REQUIREMENTS.md list is authoritative for v11.0 PoC. Implement exactly: `round_table_open`, `submit_round_table_result`, `get_agent_opinion`, `agents_list`, `agent_describe`, `memory_retrieve_scoped`, `memory_submit_record`. The §5 list (`get_agent_persona` etc.) is the v10.0 design's broader vision but PoC scope narrows to these 7.
    - What we know: CONTEXT.md/INFRA-02 lists 7 names (`round_table_open`, `submit_round_table_result`, `get_agent_opinion`, `agents_list`, `agent_describe`, `memory_retrieve_scoped`, `memory_submit_record`). `02-ROUND-TABLE-PROTOCOL.md §5` lists 7 different names (`get_agent_persona`, `get_agent_opinion`, `get_agent_memory`, `submit_round_table_result`, `submit_artifact`, `query_memory`, `run_python_phase`). Overlap is only 2 names (`get_agent_opinion`, `submit_round_table_result`).
    - What's unclear: whether CONTEXT.md was a deliberate simplification/renaming for v11.0 PoC scope, or an early-plan artifact that should defer to the locked design suite.
    - Recommendation: **Treat `02-ROUND-TABLE-PROTOCOL.md §5` as authoritative** for tool contracts (signatures, side effects). Use CONTEXT.md's `agents_list` / `agent_describe` as user-facing aliases for `get_agent_persona` if/when a registry-browsing surface is needed. Surface in discuss-phase or planner checkpoint before implementation.

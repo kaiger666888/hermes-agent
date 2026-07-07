@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Hermes-Native Expert Agents PoC Implementation
-status: planning
-last_updated: "2026-07-07T00:00:00.000Z"
-last_activity: 2026-07-07
+status: executing
+last_updated: "2026-07-07T01:17:29.122Z"
+last_activity: 2026-07-07 -- Phase 52 planning complete
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -30,8 +30,8 @@ progress:
 
 Phase: 52 of 56 (INFRA-FOUNDATION — agent registry + 7 MCP tools + state machine + serial enforcement)
 Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-07-07 — v11.0 roadmap created (5 phases 52-56, 15/15 reqs mapped)
+Status: Ready to execute
+Last activity: 2026-07-07 -- Phase 52 planning complete
 
 ### Progress
 
@@ -87,6 +87,7 @@ Phase 52 ─────────┘
 **Critical path:** 52 → 53 → 54 → 55 → 56 (5 sequential steps; no parallel waves — runtime implementation milestone).
 
 **Hard dependencies:**
+
 - Phase 53 → needs Phase 52 agent registry + 7 MCP tools + state machine
 - Phase 54 → needs Phase 53 vertical slice running
 - Phase 55 → needs Phase 54 fitness battery as regression-detection foundation
@@ -130,10 +131,12 @@ Phase 52 ─────────┘
 按 v10.0 设计套件(`.planning/research/v10-orchestrator-design/00-` 到 `06-` + 3 schemas + 1 lint script)实施 vertical slice(1 creative phase + 1 infra phase)+ 7 项 PoC 验收(12 person-days),验证三层架构 runtime 可行性。**v11.0 是 v10.0 设计的实施 milestone** —— 把设计落地为 Python 代码 + agent YAML + mem0 extensions。
 
 **Vertical slices (per `05-POC-PLAN.md` §3):**
+
 - **Infra slice (Phase 52):** agent registry + 7 MCP tools + state machine + serial enforcement
 - **Creative slice (Phase 53):** 9-agent screenplay Step 3 round table (HOOK-09 edge case)
 
 **7 acceptance criteria (per `05-POC-PLAN.md` §4):**
+
 1. Fitness battery design (3d) — Phase 54 EVAL-01
 2. Latency SLO p95 < 500ms (2d) — Phase 54 EVAL-02
 3. Bias canary (2d) — Phase 54 EVAL-03
@@ -148,6 +151,7 @@ Phase 52 ─────────┘
 - Agent vs Skill 分层:agent 是 Hermes-side 独立 YAML 实体,有 per-agent memory + 自进化能力;SKILL 作 fallback 保留(`default_invocation: skill_fallback`)
 
 **Scope explicitly out(与 Kai 2026-07-06 决策对齐 + v10.0 design carry-forward):**
+
 - 15 expert 全量 transform(仅 9 sample 在 v11.0)
 - per-agent memory benchmark 全量(仅 latency p95 测)
 - Option B → 物理分区迁移(v11.0 仍用 mem0 单 backend + agent_id filter)
@@ -171,6 +175,7 @@ Phase 52 ─────────┘
 ### Blockers / Risks (carried from v10.0)
 
 **16 Open Questions from v10.0 — 14 RESOLVED in design, 2 DEFERRED to v11.0 PoC:**
+
 - OQ-12 (mem0 Platform API filter behavior) → Phase 54 EVAL-02 latency benchmark resolves
 - (OQ-15 if any other was marked DEFERRED → resolved in v11.0 PoC execution)
 
