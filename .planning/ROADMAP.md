@@ -172,11 +172,11 @@ Plans:
   2. `.planning/research/v11-poc-eval/smoke-test-report.md` exists documenting the vertical slice end-to-end run on a real GLM API call (no mocks) — round_table_open → 9 panelists → submit_round_table_result — with the screenplay Step 3 JSON artifact attached and timestamped.
   3. Audit verdict is `passed` or `tech_debt` (not `failed`); any `tech_debt` items are documented with v12.0+ deferral rationale + operator-action-handoff notes (analog to v9.0 close-out operator handoffs).
 
-**Plans**: TBD
+**Plans**: 1 plan across 1 wave (strictly LAST per depends_on: all prior phases)
 
 Plans:
 
-- [ ] 56-01: TBD
+- [ ] 56-01-PLAN.md — VALIDATE-01 Milestone Audit + Smoke Test Aggregation (audit script + v11.0-MILESTONE-AUDIT.md + smoke-test-report.md + REQUIREMENTS.md traceability update; 5 operator-action handoffs aggregated)
 
 ---
 
@@ -236,7 +236,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
 | 54. EVAL-HARNESS-1 | 3/3 | Complete    | 2026-07-07 |
 | 55. EVAL-HARNESS-2 | 4/4 | Complete    | 2026-07-07 |
-| 56. VALIDATE | 0/TBD | Not started | - |
+| 56. VALIDATE | 0/1 | Not started | - |
 
 ---
 
