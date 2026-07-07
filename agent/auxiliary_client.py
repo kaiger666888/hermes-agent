@@ -606,7 +606,14 @@ def _select_pool_entry(
     if not pool or not pool.has_credentials():
         return False, None
     try:
-        selected = pool.select()
+        # Phase 59 POOL-02 wire-in: aux pool picks the freshest key (most
+        # remaining TPM in the sliding 60s window). Default pool keeps
+        # configured-strategy select (fill_first / round_robin) to preserve
+        # main agent's existing rotation semantics.
+        if pool_name == "auxiliary" and hasattr(pool, "select_freshest_tpm"):
+            selected = pool.select_freshest_tpm()
+        else:
+            selected = pool.select()
     except Exception as exc:
         logger.debug(
             "Auxiliary client: could not select pool entry for %s/%s: %s",

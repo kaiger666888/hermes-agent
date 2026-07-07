@@ -277,3 +277,77 @@ class TestAuxPoolIsolation:
         finally:
             if original_load_pool is not None:
                 aux_mod.load_pool = original_load_pool
+
+
+class TestAuxPoolSelectsFreshestTpm:
+    """Phase 59 POOL-02 SC#2 integration test.
+
+    Verifies that ``_select_pool_entry(provider, pool_name="auxiliary")``
+    returns the freshest-TPM entry when keys have unequal TPM consumption,
+    NOT the configured-strategy (fill_first / round_robin) entry.
+    """
+
+    def test_aux_pool_picks_freshest_entry(self, monkeypatch, tmp_path):
+        """When 2 aux entries have unequal TPM consumption, select the one
+        with more remaining TPM."""
+        import uuid
+        from agent.credential_pool import (
+            AUX_POOL_PREFIX,
+            PooledCredential,
+            CredentialPool,
+            TPM_CAP_PER_KEY_GLM,
+        )
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+        fresh_id = f"fresh-{uuid.uuid4().hex[:8]}"
+        stale_id = f"stale-{uuid.uuid4().hex[:8]}"
+        fresh_entry = PooledCredential(
+            provider="zai",
+            id=fresh_id,
+            label="GLM_AUX_API_KEY_2",
+            auth_type="api_key",
+            priority=10,
+            source="env:GLM_AUX_API_KEY_2",
+            access_token="fresh-key",
+            base_url="https://api.z.ai/api/paas/v4",
+        )
+        stale_entry = PooledCredential(
+            provider="zai",
+            id=stale_id,
+            label="GLM_AUX_API_KEY_1",
+            auth_type="api_key",
+            priority=20,  # higher priority — fill_first would pick this one
+            source="env:GLM_AUX_API_KEY_1",
+            access_token="stale-key",
+            base_url="https://api.z.ai/api/paas/v4",
+        )
+
+        pool = CredentialPool(
+            provider="zai",
+            entries=[stale_entry, fresh_entry],  # stale first (priority 20)
+            storage_key=f"{AUX_POOL_PREFIX}zai",
+        )
+        # Stale consumed 100K, fresh consumed 10K. Default cap = 200K.
+        pool.record_usage(stale_id, tokens=100_000)
+        pool.record_usage(fresh_id, tokens=10_000)
+
+        # Monkeypatch load_named_pool to return our instrumented pool.
+        import agent.credential_pool as cp_mod
+        monkeypatch.setattr(
+            cp_mod, "load_named_pool", lambda name, prov: pool
+        )
+
+        from agent.auxiliary_client import _select_pool_entry
+
+        pool_exists, entry = _select_pool_entry("zai", pool_name="auxiliary")
+        assert pool_exists is True, "aux pool should exist"
+        assert entry is not None
+        # SC#2: freshest entry picked = fresh_entry, NOT stale_entry.
+        # If wire-in was missing, fill_first would return stale_entry
+        # (higher priority).
+        assert entry.access_token == "fresh-key", (
+            f"Expected freshest-TPM entry 'fresh-key', got {entry.access_token!r}. "
+            f"select_freshest_tpm wire-in missing — pool.select() returned "
+            f"configured-strategy entry."
+        )

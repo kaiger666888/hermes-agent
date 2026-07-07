@@ -868,13 +868,28 @@ def test_cli_config_has_auxiliary_tasks():
     )
 
     # Both must declare provider: glm (or reference glm).
-    # Find each section + verify provider within a few lines.
+    # Find each section by its actual task block (start-of-line `taskname:`
+    # or `# taskname:` commented block) + verify provider within a few lines.
+    # Phase 59 added aux-pool docs that mention task names in prose — we
+    # must skip those and find the actual task definition block.
+    import re
     for task in ("round_table_opinion", "memory_comparator"):
-        idx = cfg.index(task)
+        # Match either `  taskname:` (active) or `#   taskname:` (commented template)
+        # at the start of a line. Anchor on the task name followed by colon.
+        pattern = re.compile(
+            rf"^(?:\s+|\#+\s+){re.escape(task)}\s*:\s*$",
+            re.MULTILINE,
+        )
+        m = pattern.search(cfg)
+        assert m is not None, (
+            f"task {task!r} not defined as a YAML block in cli-config.yaml.example"
+        )
         # Look in the next 200 chars for 'provider:' + 'glm'
+        idx = m.start()
         window = cfg[idx : idx + 200]
         assert "provider:" in window, (
-            f"task {task!r} missing 'provider:' in cli-config.yaml.example"
+            f"task {task!r} missing 'provider:' in cli-config.yaml.example "
+            f"(looked in actual YAML block, not docs prose); window={window!r}"
         )
         assert "glm" in window, (
             f"task {task!r} must reference provider 'glm' "
