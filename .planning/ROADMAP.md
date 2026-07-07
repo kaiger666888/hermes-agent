@@ -105,7 +105,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 53-03-PLAN.md — CREATIVE-01 Screenplay Step 3 Round Table Driver (mcp_serve.py GLM dispatch + run_screenplay_step3_roundtable.py + HOOK-09 schema validation + real-GLM smoke test)
+- [x] 53-03-PLAN.md — CREATIVE-01 Screenplay Step 3 Round Table Driver (mcp_serve.py GLM dispatch + run_screenplay_step3_roundtable.py + HOOK-09 schema validation + real-GLM smoke test)
 
 ---
 
@@ -220,7 +220,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
-| 53. CREATIVE-SLICE | 2/3 | In Progress|  |
+| 53. CREATIVE-SLICE | 3/3 | Complete   | 2026-07-07 |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
