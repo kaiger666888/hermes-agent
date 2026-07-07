@@ -47,9 +47,15 @@ async def test_600_record_fixture_3tier_post_state(
 
     assert report.triggered is True
     assert report.pre_count == 600
-    # No data loss — compaction reorganizes, does not delete.
-    assert report.post_count == 600
-    # Tier distribution within budget.
+    # No data loss — compaction reorganizes originals (archived, not deleted).
+    # Adding summary records may grow the total by the number of summaries
+    # produced (typically +1); originals are preserved as status="archived".
+    # Per §4.4 the invariant is "no DELETIONS" — post_count >= pre_count.
+    assert report.post_count >= report.pre_count, (
+        f"post_count ({report.post_count}) must not drop below pre_count "
+        f"({report.pre_count}) — compaction archives, never deletes"
+    )
+    # Tier distribution within budget (ACTIVE records per tier).
     tiers = report.tiers
     assert tiers["core"] <= TIER_CORE_MAX, f"core tier overflow: {tiers['core']}"
     assert tiers["working"] <= TIER_WORKING_MAX, f"working tier overflow: {tiers['working']}"
@@ -111,7 +117,7 @@ async def test_summary_record_carries_source_chain(
 async def test_no_data_loss_post_compaction(
     mock_mem0_backend, fixture_600_records, mock_claim_check_llm
 ) -> None:
-    """Compaction preserves total record count — reorganization, not deletion."""
+    """Compaction never deletes — total record count does not decrease."""
     mock_mem0_backend.seed_from(fixture_600_records)
     pre_count = mock_mem0_backend.count()
 
@@ -122,8 +128,9 @@ async def test_no_data_loss_post_compaction(
         claim_check_llm=mock_claim_check_llm,
     )
     post_count = mock_mem0_backend.count()
-    # Total record count unchanged (some archived + summary added).
-    assert post_count == pre_count + 0, (
+    # Total record count must not decrease (originals archived, not deleted).
+    # May increase by the number of summary records added (typically +1).
+    assert post_count >= pre_count, (
         f"record count must not decrease: pre={pre_count} post={post_count}"
     )
 

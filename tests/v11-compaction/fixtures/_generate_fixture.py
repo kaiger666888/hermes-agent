@@ -5,6 +5,15 @@ Distribution per 55-01-PLAN.md Task 2:
   - 100 records: status=active, scope=project, confidence 0.5-0.7, recent (working-tier)
   - 490 records: status=active, varied scope, confidence 0.3-0.5, older (archival-tier)
 
+All 600 records belong to ``agent_id="screenplay"`` because compaction
+operates PER-AGENT (per ``05-POC-PLAN.md §4.4`` "per-agent memory budget
+cap"). The §4.4 acceptance check compacts at exactly the screenplay
+namespace; spreading records across 5 agents would leave each under the
+500-record threshold and the compaction would never trigger. The "varied
+agent_id" suggestion in 55-01-PLAN.md Task 2 is superseded by the
+SC#1 contract which compacts one agent namespace against a 600-record
+total.
+
 Every record carries the 10 mandated memory-record-schema.yaml fields:
   record_id, agent_id, scope, status, confidence, evidence_chain,
   created_at, persona_sha256, schema_version="1.0.0", content
@@ -19,14 +28,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-AGENT_IDS = ["screenplay", "cinematographer", "colorist", "editor", "composer"]
-PERSONAS = {
-    "screenplay": "a" * 64,
-    "cinematographer": "b" * 64,
-    "colorist": "c" * 64,
-    "editor": "d" * 64,
-    "composer": "e" * 64,
-}
+# All records belong to the screenplay agent namespace (compaction is
+# per-agent per §4.4 — see module docstring for rationale).
+AGENT_ID = "screenplay"
+PERSONA_SHA256 = "a" * 64
 SCHEMA_VERSION = "1.0.0"
 
 # Anchor date — fixed so the fixture is reproducible across runs.
@@ -65,57 +70,54 @@ def main() -> None:
 
     # 10 core-tier seed records: global, high-confidence.
     for i in range(10):
-        agent = AGENT_IDS[i % len(AGENT_IDS)]
         records.append(
             _make_record(
                 record_id=str(uuid.uuid4()),
-                agent_id=agent,
+                agent_id=AGENT_ID,
                 scope="global",
                 status="active",
                 confidence=0.85 + (i % 11) * 0.01,  # 0.85..0.95
                 evidence_chain=[f"ev_core_{i}_{j}" for j in range(3)],
                 created_at=ANCHOR_DATE.isoformat(),
-                content=f"Core-tier global fact #{i} for {agent}: stable project-wide convention.",
-                persona_sha256=PERSONAS[agent],
+                content=f"Core-tier global fact #{i} for {AGENT_ID}: stable project-wide convention.",
+                persona_sha256=PERSONA_SHA256,
             )
         )
 
     # 100 working-tier records: project scope, mid confidence, recent (within 30 days).
     for i in range(100):
-        agent = AGENT_IDS[i % len(AGENT_IDS)]
         days_ago = (i % 30) + 1
         created = ANCHOR_DATE - timedelta(days=days_ago)
         records.append(
             _make_record(
                 record_id=str(uuid.uuid4()),
-                agent_id=agent,
+                agent_id=AGENT_ID,
                 scope="project",
                 status="active",
                 confidence=0.50 + (i % 21) * 0.01,  # 0.50..0.70
                 evidence_chain=[f"ev_work_{i}_{j}" for j in range(2)],
                 created_at=created.isoformat(),
-                content=f"Working-tier project note #{i} for {agent}: mid-confidence recent observation.",
-                persona_sha256=PERSONAS[agent],
+                content=f"Working-tier project note #{i} for {AGENT_ID}: mid-confidence recent observation.",
+                persona_sha256=PERSONA_SHA256,
             )
         )
 
     # 490 archival-tier records: varied scope, lower confidence, older (60-180 days).
     for i in range(490):
-        agent = AGENT_IDS[i % len(AGENT_IDS)]
         days_ago = 60 + (i % 121)  # 60..180
         created = ANCHOR_DATE - timedelta(days=days_ago)
         scope = "session" if (i % 3 == 0) else "project"
         records.append(
             _make_record(
                 record_id=str(uuid.uuid4()),
-                agent_id=agent,
+                agent_id=AGENT_ID,
                 scope=scope,
                 status="active",
                 confidence=0.30 + (i % 21) * 0.01,  # 0.30..0.50
                 evidence_chain=[f"ev_arch_{i}_{j}" for j in range(1)],
                 created_at=created.isoformat(),
-                content=f"Archival-tier {scope} observation #{i} for {agent}: low-confidence historical note.",
-                persona_sha256=PERSONAS[agent],
+                content=f"Archival-tier {scope} observation #{i} for {AGENT_ID}: low-confidence historical note.",
+                persona_sha256=PERSONA_SHA256,
             )
         )
 
