@@ -115,7 +115,7 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   2. `production-smoke-report.md` shows <240s round table + zero RateLimitError.
   3. Git tag `v12.0`.
 **Plans**:
-- [ ] 61-01-PLAN.md — VALIDATE-01 milestone audit + production smoke (extend run_milestone_audit.py with --milestone v12.0 + author v12.0-MILESTONE-AUDIT.md + author production-smoke-report.md + update REQUIREMENTS.md traceability)
+- [x] 61-01-PLAN.md — VALIDATE-01 milestone audit + production smoke (extend run_milestone_audit.py with --milestone v12.0 + author v12.0-MILESTONE-AUDIT.md + author production-smoke-report.md + update REQUIREMENTS.md traceability)
 
 ---
 
