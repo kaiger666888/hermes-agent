@@ -934,6 +934,12 @@ class TestToolRegistration:
             "attachments_fetch", "events_poll", "events_wait",
             "messages_send", "channels_list",
             "permissions_list_open", "permissions_respond",
+            # Phase 52 v11.0 round-table + memory tools (registered at
+            # module level in Phase 53 plan 53-03 — see mcp_serve.py).
+            "round_table_open", "get_agent_opinion",
+            "submit_round_table_result",
+            "agents_list", "agent_describe",
+            "memory_retrieve_scoped", "memory_submit_record",
         }
         assert expected == tool_names, f"Missing: {expected - tool_names}, Extra: {tool_names - expected}"
 
