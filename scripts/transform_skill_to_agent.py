@@ -41,6 +41,7 @@ import hashlib
 import json
 import logging
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -163,13 +164,16 @@ def transform_one(expert_name: str, skill_md_path: Path) -> dict[str, Any]:
             "transform requires tags / related_skills / expert_id / metrics"
         )
 
-    related_agents = _filter_related_agents(meta.get("related_skills", []))
+    related_agents = _filter_related_agents(_get_list(meta, "related_skills"))
     persona = _build_persona(expert_name, body)
     transform_notes = _transform_notes(expert_name)
     # Filter tags to agents-schema.yaml §2.9 pattern (lowercase-hyphenated).
     # Source SKILLs occasionally include non-ASCII tags (e.g. cinematographer
     # lists `镜头语言`); schema rejects these, so filter rather than fail.
-    raw_tags = meta.get("tags", [])
+    # CR-03: use _get_list to coerce ``tags:`` (empty value) → [] rather
+    # than the None that ``meta.get('tags', [])`` would return (the default
+    # is only used when the key is ABSENT, not when it's present-with-None).
+    raw_tags = _get_list(meta, "tags")
     filtered_tags = [t for t in raw_tags if isinstance(t, str) and _TAG_PATTERN.fullmatch(t)]
 
     data: dict[str, Any] = {
@@ -187,7 +191,7 @@ def transform_one(expert_name: str, skill_md_path: Path) -> dict[str, Any]:
         "lineage": {
             "derived_from_skill_id": meta.get("expert_id", expert_name),
             "derived_from_repo": "kais-hermes-skills",
-            "transform_date": "2026-07-07",  # Phase 53 transform date
+            "transform_date": date.today().isoformat(),  # WR-04: not hardcoded
             "transform_notes": transform_notes,
             "skill_sha256": skill_sha,
         },
@@ -200,7 +204,8 @@ def transform_one(expert_name: str, skill_md_path: Path) -> dict[str, Any]:
         # §2.10 — expert_id (FOUND-08 verbatim copy)
         "expert_id": meta.get("expert_id", expert_name),
         # §2.11 — Metrics (carried verbatim for eval gate continuity)
-        "metrics": meta.get("metrics", []),
+        # CR-03: use _get_list to handle ``metrics:`` present-with-None.
+        "metrics": _get_list(meta, "metrics"),
         # §2.12 — Prerequisites (activation conditions, NOT runtime tools)
         "prerequisites": frontmatter.get("prerequisites", {}),
         # §2.13 — Related agents (collaboration DAG, legacy names canonicalized)
@@ -235,7 +240,22 @@ def _compute_skill_sha256(content: str) -> str:
     return hashlib.sha256(lf_content.encode("utf-8")).hexdigest()
 
 
-def _filter_related_agents(related_skills: list[str]) -> list[str]:
+def _get_list(d: dict[str, Any], key: str) -> list[Any]:
+    """Read ``key`` from ``d`` as a list, handling missing AND None values.
+
+    CR-03 fix: ``dict.get(key, default)`` returns ``None`` when the key is
+    present with an empty value (e.g. frontmatter ``related_skills:``
+    with nothing after the colon — ``yaml.safe_load`` parses this as
+    ``None``). The list-comprehension consumers downstream then raise
+    ``TypeError: 'NoneType' object is not iterable``. The ``or []``
+    idiom handles both the missing-key case and the present-with-None
+    case uniformly.
+    """
+    v = d.get(key)
+    return v if isinstance(v, list) else []
+
+
+def _filter_related_agents(related_skills: list[Any]) -> list[str]:
     """Canonicalize legacy names + filter to the 9-agent panel subset.
 
     Per RESEARCH Pattern 1b: ``related_skills`` in source SKILLs may list
@@ -245,8 +265,25 @@ def _filter_related_agents(related_skills: list[str]) -> list[str]:
     documentary_maker, visual_executor, colorist, compliance_gate,
     production, prompt_injector) don't leak in. Deduplicate while
     preserving source ordering.
+
+    WR-08 fix: defensively skip non-string entries (a malformed
+    ``related_skills: [{name: foo}]`` frontmatter would otherwise raise
+    ``TypeError: unhashable type: 'dict'`` inside ``LEGACY_NAME_MAP.get``).
     """
-    canonicalized = [LEGACY_NAME_MAP.get(name, name) for name in related_skills]
+    if not isinstance(related_skills, list):
+        logger.warning(
+            "_filter_related_agents: expected list, got %s",
+            type(related_skills).__name__,
+        )
+        return []
+    canonicalized: list[str] = []
+    for name in related_skills:
+        if not isinstance(name, str):
+            logger.warning(
+                "_filter_related_agents: skipping non-string entry %r", name,
+            )
+            continue
+        canonicalized.append(LEGACY_NAME_MAP.get(name, name))
     seen: set[str] = set()
     result: list[str] = []
     for name in canonicalized:
@@ -651,7 +688,7 @@ def _build_audit_log_entry(
                 "verbatim from _transform_notes() per Phase 49 §2.x"
             ),
         },
-        "frontmatter_related_skills": meta.get("related_skills", []),
+        "frontmatter_related_skills": _get_list(meta, "related_skills"),
         "emitted_related_agents": data["related_agents"],
         "emitted_tools": data["tools"],
         "transform_notes_excerpt": data["lineage"]["transform_notes"][:120],

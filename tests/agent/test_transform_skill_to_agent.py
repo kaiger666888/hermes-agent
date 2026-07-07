@@ -315,3 +315,74 @@ def test_audit_log_records_field_mappings():
         assert "source_sha256" in entry, (
             f"{expert}: audit entry missing source_sha256 field"
         )
+
+
+# --------------------------------------------------------------------------- #
+# Test 8 — CR-03: transform tolerates ``related_skills:`` / ``tags:`` with
+# empty (None) values without crashing (regression)
+# --------------------------------------------------------------------------- #
+
+
+def test_transform_handles_empty_list_values_in_frontmatter():
+    """CR-03: SKILL.md frontmatter with ``related_skills:`` (no value) or
+    ``tags:`` (no value) MUST NOT crash the transform.
+
+    ``yaml.safe_load`` parses ``tags:`` (key with nothing after the colon)
+    as the YAML null value. ``dict.get(key, default)`` then returns ``None``,
+    NOT the default — the default only fires when the key is ABSENT. The
+    pre-CR-03 transform called ``meta.get("related_skills", [])`` and then
+    ``for name in related_skills`` — when the key was present-with-None,
+    the comprehension raised ``TypeError: 'NoneType' object is not iterable``.
+
+    The fix introduces a ``_get_list`` helper that explicitly checks
+    ``isinstance(v, list)`` before returning, so both missing-key and
+    present-with-None cases coerce to ``[]``.
+    """
+    fixture_path = ROOT / "tests" / "fixtures" / "skill-empty-list-values.md"
+    assert fixture_path.exists(), f"fixture missing at {fixture_path}"
+
+    # Use a name NOT in EXPERTS_9 so persona/tools/transform_notes fall back
+    # to the generic branches — the test only cares that related_agents/tags/
+    # metrics are emitted as empty arrays. We monkeypatch the three dict
+    # lookups that would otherwise KeyError on an unknown expert name.
+    import transform_skill_to_agent as t
+
+    original_tools_for = t._tools_for
+    t._tools_for = lambda name: ["hermes_llm"]
+    original_transform_notes = t._transform_notes
+    t._transform_notes = lambda name: "test fixture — empty list values"
+    try:
+        result = t.transform_one("empty_list_skill", fixture_path)
+    finally:
+        t._tools_for = original_tools_for
+        t._transform_notes = original_transform_notes
+
+    # The three None-vulnerable sites MUST be empty lists, not None.
+    assert result["related_agents"] == [], (
+        f"related_agents must be [] for empty frontmatter; "
+        f"got {result['related_agents']!r}"
+    )
+    assert result["tags"] == [], (
+        f"tags must be [] for empty frontmatter; got {result['tags']!r}"
+    )
+    assert result["metrics"] == [], (
+        f"metrics must be [] for empty frontmatter; got {result['metrics']!r}"
+    )
+    # And the lineage block must be intact (sanity).
+    assert result["lineage"]["skill_sha256"]
+    assert result["lineage"]["transform_date"]  # any non-empty date string
+
+
+def test_get_list_helper_handles_none_and_missing():
+    """CR-03: ``_get_list`` returns [] for missing, None, and non-list values."""
+    from transform_skill_to_agent import _get_list
+
+    # Missing key → []
+    assert _get_list({}, "x") == []
+    # Present-with-None → [] (the CR-03 regression)
+    assert _get_list({"x": None}, "x") == []
+    # Present with list → list unchanged
+    assert _get_list({"x": [1, 2]}, "x") == [1, 2]
+    # Present with non-list → []
+    assert _get_list({"x": "string"}, "x") == []
+    assert _get_list({"x": {"nested": "dict"}}, "x") == []
