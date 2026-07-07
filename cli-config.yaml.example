@@ -499,6 +499,19 @@ prompt_caching:
 #     provider: glm          # GLM-only — same policy
 #     model: glm-5.2         # Phase 53 CREATIVE-02 conflict arbitration
 #     timeout: 30
+#
+#   # ----- Phase 54 v11.0 fitness battery judge (EVAL-01) -----
+#   # MEMORY.md feedback-glm-5-2-only.md mandates GLM-only for the LLM
+#   # judge in scripts/run_fitness_battery.py + agent/fitness_battery.py.
+#   # The judge scores agent outputs against the frozen scenario rubric
+#   # in tests/v11-fitness-battery/scenarios/*.yaml and appends a
+#   # longitudinal entry to ~/.hermes/eval/fitness_trend.jsonl per
+#   # .planning/research/v11-poc-eval/fitness-battery-spec.md §4.
+#   # See .planning/phases/54-eval-harness-1/54-01-PLAN.md.
+#   fitness_judge:
+#     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
+#     model: glm-5.2         # Phase 54 EVAL-01 fitness battery judge
+#     timeout: 30            # T-54-03 mitigation (max_tokens clamp also applied)
 
 # =============================================================================
 # Persistent Memory
