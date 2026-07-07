@@ -287,3 +287,385 @@ class TestModuleConstants:
     def test_usd_cny_rate_constant(self):
         """Fixed USD/CNY conversion rate (configurable in v13+)."""
         assert USD_CNY_RATE == 7.2
+
+
+# --------------------------------------------------------------------------- #
+# Task 2 — round_table_executor.check_budget_before_turn + record_panelist_tokens
+# --------------------------------------------------------------------------- #
+
+
+class TestCheckBudgetBeforeTurn:
+    """Budget threshold enforcement per CONTEXT.md decisions #5-#6."""
+
+    def test_returns_true_when_ample_budget(self):
+        """remaining=90000 >> 2*5000=10000 → proceed without event."""
+        state_path = _make_round("round-budget-ok")
+        record_token_usage(state_path, tokens=10_000)
+        from agent.round_table_executor import check_budget_before_turn
+
+        proceed = check_budget_before_turn(state_path, expected_next_tokens=5000)
+        assert proceed is True
+        state = _read_state(state_path)
+        # No event emitted when above warning threshold.
+        assert state["events"] == []
+
+    def test_emits_warning_when_below_2x(self):
+        """remaining=8000 < 2*5000=10000 → budget_warning + proceed=True."""
+        state_path = _make_round("round-budget-warn")
+        record_token_usage(state_path, tokens=92_000)
+        from agent.round_table_executor import check_budget_before_turn
+
+        proceed = check_budget_before_turn(state_path, expected_next_tokens=5000)
+        assert proceed is True
+        state = _read_state(state_path)
+        assert len(state["events"]) == 1
+        assert state["events"][0]["type"] == "budget_warning"
+        assert state["events"][0]["threshold"] == 2.0
+
+    def test_returns_false_when_below_1x(self):
+        """remaining=3000 < 5000 → budget_exceeded + proceed=False."""
+        state_path = _make_round("round-budget-exceed")
+        record_token_usage(state_path, tokens=97_000)
+        from agent.round_table_executor import check_budget_before_turn
+
+        proceed = check_budget_before_turn(state_path, expected_next_tokens=5000)
+        assert proceed is False
+        state = _read_state(state_path)
+        # Find the exceeded event (warning may also be present from prior call).
+        exceeded_events = [e for e in state["events"] if e["type"] == "budget_exceeded"]
+        assert len(exceeded_events) >= 1
+        assert exceeded_events[-1]["threshold"] == 1.0
+
+
+class TestRecordPanelistTokens:
+    """record_panelist_tokens delegates to round_table_state.record_token_usage."""
+
+    def test_delegates_to_state_record_token_usage(self, monkeypatch):
+        state_path = _make_round("round-panelist-delegate")
+
+        from agent import round_table_executor as rte
+        from agent import round_table_state as rts
+
+        # Capture the real function before patching so the spy can delegate
+        # without infinite recursion.
+        real_record = rts.record_token_usage
+        called_with: list[tuple] = []
+        def _spy(path, tokens):
+            called_with.append((path, tokens))
+            return real_record(path, tokens)
+        monkeypatch.setattr(rts, "record_token_usage", _spy)
+        # The executor imports round_table_state as _rts at module load,
+        # so _rts.record_token_usage resolves to the same attribute we
+        # just patched (modules are mutable singletons).
+
+        result = rte.record_panelist_tokens(state_path, 3500)
+        assert len(called_with) == 1
+        assert called_with[0] == (state_path, 3500)
+        # The state file's tokensConsumed reflects the delegated call.
+        state = _read_state(state_path)
+        assert state["tokensConsumed"] == 3500
+        assert result["tokensConsumed"] == 3500
+
+
+# --------------------------------------------------------------------------- #
+# Task 2 — driver script wiring (mocked end-to-end)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def _mock_mcp_and_aux(monkeypatch, tmp_path):
+    """Monkeypatch the heavy dependencies in run_screenplay_step3_roundtable.
+
+    Returns a dict with call counters so individual tests can assert on them.
+    """
+    # Stub MCP tools — return JSON strings like the real ones.
+    open_calls: list[dict] = []
+    opinion_calls: list[dict] = []
+    submit_calls: list[dict] = []
+
+    # Per-call token usage. Defaults to 3500 (matches _FakeResp below).
+    # Tests that need a different per-call value override this via
+    # monkeypatching _TOKENS_PER_CALL.
+    import agent.auxiliary_client as aux
+    aux._LAST_CALL_USAGE["prompt_tokens"] = 0
+    aux._LAST_CALL_USAGE["completion_tokens"] = 0
+    aux._LAST_CALL_USAGE["total_tokens"] = 0
+
+    TOKENS_PER_CALL = {"value": 3500}  # mutable holder so tests can override
+
+    async def _fake_open(**kwargs):
+        open_calls.append(kwargs)
+        # Persist a real state file so budget checks can read it.
+        from agent.round_table_state import open_round_table
+        state_dir = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / kwargs.get("project_slug", "screenplay-step3-poc")
+            / "round_tables"
+        )
+        state = open_round_table(
+            state_dir=state_dir,
+            round_id=kwargs["round_id"],
+            project_id=kwargs.get("project_slug", "screenplay-step3-poc"),
+            question=kwargs.get("question", "Q?"),
+            panelist_agent_ids=kwargs.get("panelist_agent_ids", []),
+            caller=kwargs.get("caller", "test"),
+            token_budget=kwargs.get("token_budget"),
+        )
+        return json.dumps({"status": "ok", "round_id": kwargs["round_id"]})
+
+    async def _fake_opinion(**kwargs):
+        opinion_calls.append(kwargs)
+        # Bump the auxiliary_client token tracker — in real flow this is
+        # done by _validate_llm_response after the LLM returns; our fake
+        # bypasses that, so we bump manually to simulate the wire-in.
+        aux._LAST_CALL_USAGE["prompt_tokens"] = 1000
+        aux._LAST_CALL_USAGE["completion_tokens"] = 2500
+        aux._LAST_CALL_USAGE["total_tokens"] = TOKENS_PER_CALL["value"]
+        return json.dumps({
+            "status": "ok",
+            "agent_id": kwargs.get("agent_id"),
+            "opinion": "stub opinion for %s" % kwargs.get("agent_id"),
+            "cited_memory_ids": [],
+        })
+
+    async def _fake_submit(**kwargs):
+        submit_calls.append(kwargs)
+        # Real submit mutates state file (status → completed, receipt added).
+        from agent.round_table_state import submit_round_table_result
+        state_dir = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / kwargs.get("project_slug", "screenplay-step3-poc")
+            / "round_tables"
+        )
+        state_path = state_dir / f"{kwargs['round_id']}.json"
+        submit_round_table_result(
+            state_path=state_path,
+            conclusion=kwargs.get("conclusion", "{}"),
+            cited_memories=kwargs.get("cited_memories", []),
+            closed_by=kwargs.get("closed_by", "test"),
+        )
+        return json.dumps({"status": "ok"})
+
+    # Make mcp_serve.* point at the fakes.
+    import mcp_serve
+    monkeypatch.setattr(mcp_serve, "round_table_open", _fake_open)
+    monkeypatch.setattr(mcp_serve, "get_agent_opinion", _fake_opinion)
+    monkeypatch.setattr(mcp_serve, "submit_round_table_result", _fake_submit)
+
+    # Stub auxiliary_client.call_llm (used in _synthesize_step3_output).
+    # Bumps _LAST_CALL_USAGE to match the per-call value (simulates the
+    # Phase 58-01 wire-in path).
+    def _fake_call_llm(*a, **kw):
+        aux._LAST_CALL_USAGE["prompt_tokens"] = 1000
+        aux._LAST_CALL_USAGE["completion_tokens"] = 2500
+        aux._LAST_CALL_USAGE["total_tokens"] = TOKENS_PER_CALL["value"]
+        class _FakeResp:
+            class _Choice:
+                class _Msg:
+                    content = "{}"
+                message = _Msg()
+            choices = [_Choice()]
+            class _Usage:
+                prompt_tokens = 1000
+                completion_tokens = 2500
+                total_tokens = 3500
+            usage = _Usage()
+        return _FakeResp()
+    monkeypatch.setattr(aux, "call_llm", _fake_call_llm)
+
+    return {
+        "open_calls": open_calls,
+        "opinion_calls": opinion_calls,
+        "submit_calls": submit_calls,
+        "tokens_per_call": TOKENS_PER_CALL,
+    }
+
+
+class TestDriverBudgetWiring:
+    """Driver script wires record_panelist_tokens after each panelist."""
+
+    def test_records_tokens_after_each_panelist(self, _mock_mcp_and_aux, tmp_path):
+        """9 panelists × 3500 tokens + 1 synthesis × 3500 = 35000 tracked."""
+        # Default per-call tokens = 3500 (from _mock_mcp_and_aux fixture).
+        sk = tmp_path / "storykernel.json"
+        sk.write_text(
+            json.dumps({"logline": "A test scene for budget tracking."}),
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.json"
+
+        import scripts.run_screenplay_step3_roundtable as drv
+        # Stub schema validation — our stub "{}" output doesn't honor HOOK-09.
+        drv._validate_step3_schema = lambda output, output_path: None
+
+        asyncio.run(drv.run_roundtable(
+            storykernel_path=sk, output_path=out, smoke=False
+        ))
+
+        # The driver should have called opinion 9 times.
+        assert len(_mock_mcp_and_aux["opinion_calls"]) == 9
+        # Read the state file: tokensConsumed should be 9 × 3500 + 1 × 3500 = 35000
+        # (9 panelists + 1 synthesis call).
+        rt_dir = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / "screenplay-step3-poc"
+            / "round_tables"
+        )
+        round_files = list(rt_dir.glob("*.json"))
+        assert len(round_files) == 1, f"expected 1 state file, got {len(round_files)}"
+        with open(round_files[0], encoding="utf-8") as f:
+            state = json.load(f)
+        # 9 panelists + 1 synthesis = 10 calls × 3500 tokens = 35000.
+        assert state["tokensConsumed"] == 35_000, (
+            f"expected 35000 tokens, got {state['tokensConsumed']}"
+        )
+
+    def test_driver_aborts_on_budget_exceeded(self, _mock_mcp_and_aux, tmp_path):
+        """token_budget=20000 with 5000 tokens/call → abort before 5th panelist.
+
+        Setup:
+          - token_budget = 20_000 (low)
+          - per-call tokens = 5000 (override default 3500)
+        Sequence:
+          - call 1: check budget (consumed=0, remaining=20000 ≥ 2×5000=10000 → OK),
+                    call returns, record tokens → consumed=5000.
+          - call 2: check (consumed=5000, remaining=15000 ≥ 10000 → OK),
+                    record → consumed=10000.
+          - call 3: check (consumed=10000, remaining=10000 ≥ 10000 → OK, no warning),
+                    record → consumed=15000.
+          - call 4: check (consumed=15000, remaining=5000 < 10000 → WARNING,
+                    proceed), record → consumed=20000.
+          - call 5: check (consumed=20000, remaining=0 < 5000 → EXCEEDED, abort).
+        """
+        # Override per-call token count.
+        _mock_mcp_and_aux["tokens_per_call"]["value"] = 5000
+
+        # Patch mcp_serve.round_table_open to pass a low token_budget.
+        import mcp_serve
+        from hermes_constants import get_hermes_home as _get_home
+
+        async def _fake_open_lowbudget(**kwargs):
+            from agent.round_table_state import open_round_table
+            state_dir = (
+                _get_home()
+                / "agents"
+                / ".runtime"
+                / kwargs.get("project_slug", "screenplay-step3-poc")
+                / "round_tables"
+            )
+            open_round_table(
+                state_dir=state_dir,
+                round_id=kwargs["round_id"],
+                project_id=kwargs.get("project_slug", "screenplay-step3-poc"),
+                question=kwargs.get("question", "Q?"),
+                panelist_agent_ids=kwargs.get("panelist_agent_ids", []),
+                caller=kwargs.get("caller", "test"),
+                token_budget=20_000,
+            )
+            return json.dumps({"status": "ok", "round_id": kwargs["round_id"]})
+        mcp_serve.round_table_open = _fake_open_lowbudget
+
+        sk = tmp_path / "storykernel.json"
+        sk.write_text(
+            json.dumps({"logline": "A test scene for budget tracking."}),
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.json"
+
+        import scripts.run_screenplay_step3_roundtable as drv
+        drv._validate_step3_schema = lambda output, output_path: None
+
+        summary = asyncio.run(drv.run_roundtable(
+            storykernel_path=sk, output_path=out, smoke=False
+        ))
+
+        # Driver should have aborted with budget_exceeded error.
+        assert summary.get("error") == "budget_exceeded", (
+            f"expected budget_exceeded error, got summary={summary}"
+        )
+        # The driver should NOT have completed all 9 panelists.
+        assert len(_mock_mcp_and_aux["opinion_calls"]) < 9, (
+            f"expected <9 opinion calls (abort), got {len(_mock_mcp_and_aux['opinion_calls'])}"
+        )
+
+    def test_events_persisted_across_abort(self, _mock_mcp_and_aux, tmp_path):
+        """After abort, state file events array contains budget_warning AND budget_exceeded.
+
+        With the same scenario as test_driver_aborts_on_budget_exceeded:
+          - call 4 emits budget_warning (remaining < 2×)
+          - call 5 pre-check emits budget_exceeded (remaining < 1×) → abort
+        """
+        _mock_mcp_and_aux["tokens_per_call"]["value"] = 5000
+
+        import mcp_serve
+        from hermes_constants import get_hermes_home as _get_home
+
+        async def _fake_open_lowbudget(**kwargs):
+            from agent.round_table_state import open_round_table
+            state_dir = (
+                _get_home()
+                / "agents"
+                / ".runtime"
+                / kwargs.get("project_slug", "screenplay-step3-poc")
+                / "round_tables"
+            )
+            open_round_table(
+                state_dir=state_dir,
+                round_id=kwargs["round_id"],
+                project_id=kwargs.get("project_slug", "screenplay-step3-poc"),
+                question=kwargs.get("question", "Q?"),
+                panelist_agent_ids=kwargs.get("panelist_agent_ids", []),
+                caller=kwargs.get("caller", "test"),
+                token_budget=20_000,
+            )
+            return json.dumps({"status": "ok", "round_id": kwargs["round_id"]})
+        mcp_serve.round_table_open = _fake_open_lowbudget
+
+        sk = tmp_path / "storykernel.json"
+        sk.write_text(
+            json.dumps({"logline": "A test scene for events tracking."}),
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.json"
+
+        import scripts.run_screenplay_step3_roundtable as drv
+        drv._validate_step3_schema = lambda output, output_path: None
+
+        asyncio.run(drv.run_roundtable(
+            storykernel_path=sk, output_path=out, smoke=False
+        ))
+
+        # Read the most recently modified state file (the abort just happened).
+        rt_dir = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / "screenplay-step3-poc"
+            / "round_tables"
+        )
+        round_files = sorted(
+            rt_dir.glob("*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        assert round_files, "no state file found"
+        with open(round_files[0], encoding="utf-8") as f:
+            state = json.load(f)
+        event_types = [e["type"] for e in state["events"]]
+        assert "budget_warning" in event_types, (
+            f"events missing budget_warning: {event_types}"
+        )
+        assert "budget_exceeded" in event_types, (
+            f"events missing budget_exceeded: {event_types}"
+        )
+
+
+# Need asyncio at module top-level for the TestDriverBudgetWiring methods
+# that use asyncio.run directly.
+import asyncio
