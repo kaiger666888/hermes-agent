@@ -75,7 +75,9 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   1. `agent/glm_throttle.py` (NEW) implements token bucket per auxiliary task.
   2. `round_table_open` accepts `token_budget`; budget_warning + budget_exceeded events.
   3. v11.0 SC#2 smoke runs without manual sleep + zero `RateLimitError`.
-**Plans**: TBD
+**Plans**:
+- [ ] 58-01-PLAN.md — Per-task RPM token bucket (THROTTLE-01): NEW agent/glm_throttle.py + wire-in to auxiliary_client.call_llm + driver script sleep removal
+- [ ] 58-02-PLAN.md — Per-round-table TPM budget (THROTTLE-02): token_budget field + budget_warning/exceeded events + receipt cost_usd_estimate
 
 ### Phase 59: AUX-POOL-ISOLATION
 
