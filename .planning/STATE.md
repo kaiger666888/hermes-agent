@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: v10.0 Design Suite Full Rollout & Live Eval
 status: planning
-last_updated: "2026-07-07T23:19:52.620Z"
-last_activity: 2026-07-07
+last_updated: "2026-07-08T00:00:00.000Z"
+last_activity: 2026-07-08
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,19 +19,19 @@ progress:
 
 **Project code:** MESV2 (historical; v7.0+ broadens scope beyond movie-experts)
 **Name:** Hermes Agent — Kai's Personal Agent Platform
-**Core value:** 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)。v10.0 推导 Hermes 总调度器 + Hermes-native expert agents + CC 执行场的三层编排架构。**v11.0 是 v10.0 设计的实施 milestone** —— 把设计落地为运行时代码。
-**Key docs:** `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/MILESTONES.md`, `.planning/REQUIREMENTS.md`, `.planning/research/v10-orchestrator-design/05-POC-PLAN.md`(THE implementation blueprint)
+**Core value:** 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)。v10.0 推导 Hermes 总调度器 + Hermes-native expert agents + CC 执行场的三层编排架构。v11.0 实施垂直切片,v12.0 硬化生产缺口。**v13.0 是 v10.0-v13.0 四 milestone 架构弧线的收官 milestone** —— 把 4 项 scope deferrals 全部落地。
+**Key docs:** `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/MILESTONES.md`, `.planning/REQUIREMENTS.md`, `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md`(THE 12-expert transform rules §2)
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Milestone complete
+**Current focus:** Phase 62 — EXPERT-YAML-TRANSFORM (12 active expert agent YAML 全量 transform)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 62 (EXPERT-YAML-TRANSFORM) — first v13.0 phase
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-07 — Milestone v13.0 started
+Status: Ready to plan (roadmap just created)
+Last activity: 2026-07-08 — v13.0 ROADMAP created (8 phases 62-69, 20/20 reqs mapped)
 
 ### Progress
 
@@ -49,141 +49,136 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 
 v13.0 v10.0 Design Suite Full Rollout & Live Eval — IN PLANNING:
-  Phase numbers TBD (roadmap creation pending)
-  Tracks: EXPERT-COMPLETION (12 agents) + LIVE-EVAL-EXEC (3 smoke tests) + CURATOR-LIVE + OBSERVABILITY
+  Phases 62-69 (8 phases, 20 reqs, standard granularity)
+  Tracks: EXPERT-COMPLETION (12 agents → 15/15 active) + LIVE-EVAL-EXEC (3 smoke tests) + CURATOR-LIVE + OBSERVABILITY
 ```
 
-**v13.0 milestone status:** PLANNING — gathered 4 tracks from user, awaiting requirements definition + roadmap creation.
+**v13.0 milestone status:** PLANNING COMPLETE — ROADMAP.md + STATE.md + REQUIREMENTS.md traceability updated. 8 phases (62-69), 20/20 reqs mapped. Awaiting user approval to start planning Phase 62.
 
-### Phase Statuses (v11.0)
+### Phase Statuses (v13.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 52 | INFRA-FOUNDATION — agent registry + 7 MCP tools + state machine + serial enforcement | **Not started** | INFRA-01..04. First phase — produces runtime that 53-55 build on. Hard constraint: 强制串行 (INFRA-04) cites `feedback-glm-overload-reduce-concurrency.md`. |
-| 53 | CREATIVE-SLICE — 9 sample agent YAMLs + Step 3 round table + conflict arbitration | **Not started** | MIGR-01 + CREATIVE-01..02. Vertical slice end-to-end. 9-agent round table on real GLM API call. |
-| 54 | EVAL-HARNESS-1 — fitness battery + latency SLO + bias canary | **Not started** | EVAL-01..03. Per `05-POC-PLAN.md` §6.1: fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD. This phase ships fitness battery + bias canary + latency SLO. |
-| 55 | EVAL-HARNESS-2 — compaction + tuning + dry-run-first + schema migration | **Not started** | EVAL-04..07. Hard constraint: dry-run-first invariant (EVAL-06) — curator default dry-run, schema migration default dry-run. |
-| 56 | VALIDATE — milestone audit + smoke test | **Not started** | VALIDATE-01. **Strictly LAST**, analog to v10.0 Phase 51 / v5.0 Phase 27 close-out pattern. |
+| 62 | EXPERT-YAML-TRANSFORM — 12 expert agent YAML 全量 transform | **Not started** | EXPERT-01..03. First phase. 12 new YAMLs at `~/.hermes/agents/`. Source SKILL.md in kais-hermes-skills repo read-only (per Phase 48-49 lineage invariants L1-L6). |
+| 63 | EXPERT-REGISTRY-INTEGRATION — 21-agent registry load + visual_executor round table smoke | **Not started** | EXPERT-04..05. Depends on Phase 62 (12 new YAMLs must exist first). SC#3 requires `visual_executor` (带 sub_steps, 最复杂) 通过 `open_round_table` 产生非空响应。 |
+| 64 | LIVE-EVAL-EXEC — 3 deferred operator smoke tests + live-eval-report | **Not started** | EVAL-01..04. **Parallel track** — operator secrets needed (`GLM_API_KEY`, `MEM0_API_KEY`, `GLM_AUX_API_KEY_1..4`). Does not block code-work tracks. Produces v14 decision feed (物理分区 / 异步并发). |
+| 65 | CURATOR-LIVE-GUARDS — `--live` flag + bias canary + audit log | **Not started** | CURATE-01..03. Hard constraint: EVAL-06 dry-run-first invariant — `--live` is opt-in, default still dry-run. |
+| 66 | CURATOR-LIVE-TICK — 1st live tick end-to-end + runbook | **Not started** | CURATE-04..05. Depends on Phase 65 (`--live` flag + guards must be in place). Produces v14+ live-tick baseline. |
+| 67 | OBSERVABILITY-BACKEND — 3 metrics collectors | **Not started** | OBSRV-01..03. Soft dependency on Phase 63 (registry must load 21 agents for health check meaningful). 3 collectors wired into `/orchestrator/agents/status` endpoint + round table executor + mem0 adapter. |
+| 68 | OBSERVABILITY-PRESENTATION — CLI + dashboard web view | **Not started** | OBSRV-04..05. Depends on Phase 67 (collectors must emit data first). Mirrors v6.0 P33 OBS-01 pattern (`hermes curator stats` rich tables + `--json`). |
+| 69 | VALIDATE — milestone audit + close-out | **Not started** | VALIDATE-01. **Strictly LAST**, mirror v11.0 P56 / v12.0 P61 single-phase close-out pattern. Cross-20-req audit + 3+ operator-action handoffs. |
 
 ### Critical Path
 
 ```
-                                                                                              ┌──────────────────────┐
-                                                                                              │ Phase 56 (VALIDATE)   │
-                                                                                              │ strictly LAST         │
-                                                                                              └──────────▲───────────┘
-                                                                                                         │
-                                                                                ┌──── Phase 55 (EVAL-2) ─┘
-                                                                                │
-                                                  ┌──── Phase 54 (EVAL-1) ─────┘
-                                                  │
-                  ┌──── Phase 53 (CREATIVE) ─────┘
-                  │
-Phase 52 ─────────┘
-(INFRA-FOUNDATION)
+Phase 62 (EXPERT-TRANSFORM) ──▶ Phase 63 (EXPERT-REGISTRY) ──────────────┐
+                                                                          │
+Phase 64 (LIVE-EVAL-EXEC)  ─── parallel, operator-secrets-bound ──────────┤
+                                                                          │
+Phase 65 (CURATOR-GUARDS)  ──▶ Phase 66 (CURATOR-LIVE-TICK) ──────────────┤
+                                                                          │
+Phase 67 (OBSRV-BACKEND)   ──▶ Phase 68 (OBSRV-PRESENTATION) ─────────────┤
+                                                                          │
+                                          ALL OTHER PHASES COMPLETE ──▶ Phase 69 (VALIDATE)
+                                                                            strictly LAST
 ```
 
-**Critical path:** 52 → 53 → 54 → 55 → 56 (5 sequential steps; no parallel waves — runtime implementation milestone).
+**Critical path (must-hold dependencies):**
+- 62 → 63 (12 new YAMLs before 21-agent registry smoke)
+- 65 → 66 (`--live` flag + guards before 1st live tick)
+- 67 → 68 (collectors before CLI/dashboard)
+- 69 strictly LAST (all others complete)
 
-**Hard dependencies:**
+**Parallel tracks:**
+- Phase 64 (LIVE-EVAL-EXEC) needs operator secrets — runs in parallel with code-work tracks 62-63, 65-68; does not block them
+- Code-work tracks can interleave: 62→63 / 65→66 / 67→68 are 3 independent chains
 
-- Phase 53 → needs Phase 52 agent registry + 7 MCP tools + state machine
-- Phase 54 → needs Phase 53 vertical slice running
-- Phase 55 → needs Phase 54 fitness battery as regression-detection foundation
-- Phase 56 → strictly LAST; cross-phase audit + smoke test
+**Hard constraints preserved (carry-forward from v10.0-v12.0):**
+- INFRA-04 serial execution NOT lifted (GLM capacity gate — v14+ decision, deferred pending v13 live data)
+- EVAL-06 dry-run-first NOT changed (CURATE-01 only adds opt-in `--live` flag)
+- SKILL.md in kais-hermes-skills repo stays read-only (EXPERT-01..03 transform without modifying source)
+- Operator secrets needed for EVAL-01..03 — Phase 64 runs in parallel, does not block code-work
 
-## Performance Metrics (v11.0)
+## Performance Metrics (v13.0)
 
-- v11.0 phases total: 5 (Phases 52-56, continuing from v10.0 phase 51)
-- v11.0 phases completed: 0
-- v11.0 requirements total: 15 (INFRA-01..04 + CREATIVE-01..02 + EVAL-01..07 + MIGR-01 + VALIDATE-01)
-- v11.0 requirements mapped: 15 / 15 ✓
-- v11.0 requirements orphaned: 0
-- v11.0 plans completed: 0 / TBD (plan counts to be refined in plan-phase)
-- **Deliverable form:** Python code + agent YAML + mem0 extensions + test artifacts. **v11.0 is runtime implementation milestone**, NOT design. Each phase produces code (not docs). Cite v10.0 design decisions, do not re-derive.
-- **Granularity:** standard (5 phases — within 5-8 range typical for standard; justified by req category clustering + 12-day PoC budget per `05-POC-PLAN.md` §2.4)
+- v13.0 phases total: 8 (Phases 62-69, continuing from v12.0 phase 61)
+- v13.0 phases completed: 0
+- v13.0 requirements total: 20 (EXPERT-01..05 + EVAL-01..04 + CURATE-01..05 + OBSRV-01..05 + VALIDATE-01)
+- v13.0 requirements mapped: 20 / 20 ✓
+- v13.0 requirements orphaned: 0
+- v13.0 plans completed: 0 / TBD (plan counts to be refined in plan-phase)
+- **Deliverable form:** Python code + agent YAML + CLI commands + Jinja2 dashboard panels + report markdown. v13.0 is runtime + rollout milestone (NOT design). Each phase produces code or operator-runnable artifacts. Cite v10.0 design + v11.0/v12.0 implementation lineage, do not re-derive.
+- **Granularity:** standard (8 phases — within 5-8 range typical for standard; justified by 4-track clustering with 2-phase splits on EXPERT and OBSRV due to SC count / build-vs-consume separation)
 
-## Decisions (v11.0 — entered planning)
+## Decisions (v13.0 — entered planning)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| 5 phases continuing from v10.0 phase 51 (52-56) | Project maintains sequential phase numbering; decimal phases reserved for urgent insertions only. v10.0 ended at P51; v11.0 starts at P52. | Applied 2026-07-07 — ROADMAP phase numbering 52-56 |
-| Phase clustering by req category (52=INFRA / 53=CREATIVE+MIGR / 54=EVAL-wave-1 / 55=EVAL-wave-2 / 56=VALIDATE) | Each phase delivers one coherent capability. MIGR-01 (9 agent YAMLs) bundled into Phase 53 because CREATIVE-01 needs the 9 YAMLs as precondition — splitting would force a non-value-add dependency wall. EVAL split into 2 phases (54 + 55) to preserve `05-POC-PLAN.md` §6.1 sequencing (fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD) within phase structure. | Applied 2026-07-07 — ROADMAP phase-req mapping table |
-| Phase 56 (VALIDATE) strictly LAST | Cross-15-req audit + vertical slice smoke test on real GLM API + latency/bias reports publication. Mirrors v10.0 P51 / v9.0 P43 / v5.0 P27 single-phase close-out pattern. | Applied 2026-07-07 — ROADMAP critical path annotated |
-| **Hard constraint: 强制串行 (INFRA-04)** | Cites MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (global concurrency==1 by design). Round table executes 1 panelist 1 turn sequential `await` — no parallel panelist execution. Compatible with GLM 4-key rotation (no concurrent API calls within a round table). | Applied 2026-07-07 — Phase 52 SC#4 + Phase 53 SC#2 enforces serial |
-| **Hard constraint: dry-run-first (EVAL-06)** | Curator default `dry_run: true`. Schema migration default `dry_run: true`. P5 mitigation (curator failure modes) + P14 mitigation (silent drops). Test: invoke both without explicit `dry_run: false` flag, verify no state mutation. | Applied 2026-07-07 — Phase 55 SC#3 enforces default |
-| 7 v10.0 design decisions locked, cited not re-derived | T6 protocol / B3a Python runner 增量迁移 / D2 storyboard round-parallel / G2 通用框架 / α agent YAML / per-agent memory 自进化 / (vi) 分层 CC 角色 — all locked in PROJECT.md §Current Milestone. v11.0 implements, does not re-litigate. | Applied 2026-07-07 — ROADMAP overview + each phase cites v10.0 source doc |
+| 8 phases continuing from v12.0 phase 61 (62-69) | Project maintains sequential phase numbering; decimal phases reserved for urgent insertions only. v12.0 ended at P61; v13.0 starts at P62. | Applied 2026-07-08 — ROADMAP phase numbering 62-69 |
+| Phase clustering by track + SC-count splits (62-63=EXPERT / 64=LIVE-EVAL / 65-66=CURATOR / 67-68=OBSRV / 69=VALIDATE) | Each phase delivers one coherent capability. EXPERT split into 2 phases (12-YAML transform is a large batch with 4 SCs in P62; registry integration + smoke is a separate verifiable capability in P63). CURATE split into 2 phases (guards/scaffolding in P65; actual live tick + runbook in P66). OBSRV split into 2 phases (collectors/backend in P67; CLI+dashboard frontend in P68 — build-vs-consume separation). | Applied 2026-07-08 — ROADMAP phase-req mapping table |
+| Phase 69 (VALIDATE) strictly LAST | Cross-20-req audit + milestone close-out. Mirrors v10.0 P51 / v11.0 P56 / v12.0 P61 single-phase close-out pattern. | Applied 2026-07-08 — ROADMAP critical path annotated |
+| Phase 64 (LIVE-EVAL-EXEC) runs as parallel operator-secrets track | 3 smoke tests need `GLM_API_KEY`, `MEM0_API_KEY`, `GLM_AUX_API_KEY_1..4` — operator provides secrets; code-work tracks (62-63, 65-68) do not wait on secrets. Phase 64 still blocks Phase 69 (VALIDATE). | Applied 2026-07-08 — ROADMAP critical path annotated |
+| **Hard constraint: INFRA-04 serial execution NOT lifted** | Cites MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (global concurrency==1 by design). v13.0 does not address async concurrency; v14+ decision deferred pending v13 EVAL-02 mem0 p95 + EVAL-03 fitness battery live data. | Applied 2026-07-08 — Phase 64 EVAL-02/EVAL-03 produces decision feed |
+| **Hard constraint: EVAL-06 dry-run-first NOT changed** | Curator default `dry_run: true` preserved. CURATE-01 only adds opt-in `--live` flag; bias canary pre-check (CURATE-02) aborts live tick on failure. | Applied 2026-07-08 — Phase 65 SC#1 enforces default dry-run |
+| **Hard constraint: SKILL.md in kais-hermes-skills repo read-only** | Lineage invariants L1-L6 (Phase 48-49). EXPERT-01..03 transform SKILL.md into agent YAML at `~/.hermes/agents/` without modifying source. | Applied 2026-07-08 — Phase 62 SC#4 requires per-agent transform log citing source SHA |
 
-### Decisions (carried forward — relevant to v11.0)
+### Decisions (carried forward — relevant to v13.0)
 
-| Decision | Rationale | Why relevant to v11.0 |
+| Decision | Rationale | Why relevant to v13.0 |
 |----------|-----------|----------------------|
-| v10.0 design suite as canonical implementation blueprint | 7 design docs + 3 schemas + 1 lint script shipped 2026-07-07 (tag `v10.0`, audit PASSED). v11.0 implements these designs. | All v11.0 phases cite v10.0 docs (e.g., Phase 52 cites `01-AGENT-REGISTRY-SCHEMA.md` + `02-ROUND-TABLE-PROTOCOL.md` §5; Phase 53 cites `04-MIGRATION-PATH.md` §2 75-cell transform table). |
-| `.planning/research/v10-orchestrator-design/05-POC-PLAN.md` is THE implementation blueprint | v10.0 capstone doc — vertical slice + 7 acceptance criteria + 7-row risk register + sequencing rationale. | Phase 52-56 structure mirrors §3-§6 of POC-PLAN. Phase 54+55 split preserves §6.1 sequencing (fitness battery FIRST → schema migration dry-run SECOND → bias canary THIRD). |
-| `.planning/milestones/` is canonical close-out archive location | v3-v10 all wrote milestone audit/report to `.planning/milestones/v{X}-MILESTONE-AUDIT.md`. | Phase 56 SC#1 specifies `.planning/milestones/v11.0-MILESTONE-AUDIT.md`. |
-| Cross-repo migration of skills (post-v9.0 ship, 2026-06-27) | Commit `f10495332` moved `skills/kais-movie-pipeline/` + `skills/movie-experts/` + 4 plugins to 独立 repo `/data/workspace/kais-hermes-skills/`. hermes-agent repo 现仅保留 GSD `.planning/` 工件. | Phase 53 MIGR-01 transforms **9 sample** SKILL.md from kais-hermes-skills repo into agent YAMLs at `~/.hermes/agents/`. Read-only on SKILL.md (per Phase 48 + Phase 49 lineage invariants L1-L6). |
+| v10.0 design suite as canonical implementation blueprint | 7 design docs + 3 schemas + 1 lint script shipped 2026-07-07 (tag `v10.0`). v11.0 implemented, v12.0 hardened, v13.0 rolls out full scope. | All v13.0 phases cite v10.0 docs (e.g., Phase 62 cites `04-MIGRATION-PATH.md` §2 75-cell table; Phase 67 cites `02-ROUND-TABLE-PROTOCOL.md` §5 metrics contract). |
+| v11.0 PoC implementation as runtime baseline | Agent registry + 7 MCP tools + state machine + serial executor shipped. 9 sample agent YAMLs exist. | Phase 62 transforms 12 additional agents (total 21 = 9 ship + 12 new). Phase 63 SC#1 verifies 21-agent load against v11.0 registry. |
+| v12.0 hardening as production baseline | Endpoint routing + RPM throttling + aux pool + live-eval infra shipped. 3 operator-action handoffs deferred. | Phase 64 (LIVE-EVAL-EXEC) executes the 3 deferred v12.0 handoffs. Phase 67 OBSRV-03 wires metrics into v12.0 mem0 backend adapter. |
+| `.planning/milestones/` is canonical close-out archive location | v3-v12 all wrote milestone audit/report to `.planning/milestones/v{X}-MILESTONE-AUDIT.md`. | Phase 69 SC#1 specifies `.planning/milestones/v13.0-MILESTONE-AUDIT.md`. |
+| Cross-repo migration of skills (post-v9.0 ship, 2026-06-27) | Commit `f10495332` moved `skills/movie-experts/` + 5 plugins to 独立 repo `/data/workspace/kais-hermes-skills/`. | Phase 62 EXPERT-01..03 transforms 12 SKILL.md from kais-hermes-skills repo into agent YAMLs at `~/.hermes/agents/`. Read-only on SKILL.md (per Phase 48-49 lineage invariants L1-L6). |
 
 ## Accumulated Context
 
-### v11.0 Goal Restatement
+### v13.0 Goal Restatement
 
-按 v10.0 设计套件(`.planning/research/v10-orchestrator-design/00-` 到 `06-` + 3 schemas + 1 lint script)实施 vertical slice(1 creative phase + 1 infra phase)+ 7 项 PoC 验收(12 person-days),验证三层架构 runtime 可行性。**v11.0 是 v10.0 设计的实施 milestone** —— 把设计落地为 Python 代码 + agent YAML + mem0 extensions。
+把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地:
 
-**Vertical slices (per `05-POC-PLAN.md` §3):**
+1. **EXPERT-COMPLETION** — 12 active expert agent YAML 全量 transform(达成 15/15 active expert 覆盖,9 已 ship + 12 新增 = 21 total)
+2. **LIVE-EVAL-EXEC** — 跑 v12.0 deferred 的 3 个 operator smoke tests(GLM latency / mem0 p95 / fitness battery real-mode)收集真实 prod baseline,produce v14 decision feed
+3. **CURATOR-LIVE** — curator self-evolution 从 dry-run 切 live,with 安全护栏(bias canary pre-check + opt-in `--live` flag + audit log)
+4. **OBSERVABILITY** — 新增 operator dashboard(3 collectors + CLI + web view)把 round table / agent registry / memory backend 可观测化
 
-- **Infra slice (Phase 52):** agent registry + 7 MCP tools + state machine + serial enforcement
-- **Creative slice (Phase 53):** 9-agent screenplay Step 3 round table (HOOK-09 edge case)
+**完成后 v10.0-v13.0 四 milestone 弧线收官。** v14+ 决策(物理分区 / 异步并发 / 15-expert production tuning)由 v13 live data 驱动。
 
-**7 acceptance criteria (per `05-POC-PLAN.md` §4):**
+**关键范式声明(沿用 v10.0-v12.0):**
 
-1. Fitness battery design (3d) — Phase 54 EVAL-01
-2. Latency SLO p95 < 500ms (2d) — Phase 54 EVAL-02
-3. Bias canary (2d) — Phase 54 EVAL-03
-4. Compaction pass (1d) — Phase 55 EVAL-04
-5. Threshold tuning (1d) — Phase 55 EVAL-05
-6. Dry-run-first invariant (1d) — Phase 55 EVAL-06
-7. Schema migration dry-run (2d) — Phase 55 EVAL-07
+- **Hermes 是 agent 容器**(新形态 YAML),有 per-agent memory + 自进化能力;CC 仅是场地 + 协调员 + 结构化助手
+- Agent vs Skill 分层:agent 是 Hermes-side 独立 YAML 实体;SKILL 作 fallback 保留(`default_invocation: skill_fallback`)
+- v13.0 在 v11.0/v12.0 runtime 之上做 rollout + observability,不重新推导 v10.0 设计决策
 
-**关键范式声明(与 Kimi 方案的本质差异,cite v10.0 §03 决策):**
+**Scope explicitly out(与 PROJECT.md Out of Scope 对齐):**
 
-- **Kimi 默认**:CC 是 agent 容器;**v10.0 设计(v11.0 实施)**:Hermes 是 agent 容器(新形态 YAML),CC 仅是场地+协调员+结构化助手
-- Agent vs Skill 分层:agent 是 Hermes-side 独立 YAML 实体,有 per-agent memory + 自进化能力;SKILL 作 fallback 保留(`default_invocation: skill_fallback`)
+- 物理分区 migration(v13 EVAL-02 数据决定是否触发 v14)
+- 异步并发 / INFRA-04 解除(GLM capacity 扩容前保留串行,v14+ decision)
+- 15-expert 之外的 production hardening tuning(v13 完成 transform + smoke;tuning 留 v14+)
+- kais-hermes-skills repo SKILL.md 改动(lineage invariants L1-L6,只读)
+- 新 repo 创建(单 repo 收敛)
+- Automated rollback for curator live tick(太复杂;v13 用 operator 24h review + 手工 rollback)
+- OBSRV Prometheus/Grafana integration(范围控制;v13 用 rich tables + minimal Jinja2)
+- 15 expert 之外的新 agent(非-movie-expert 的 agent 化是 v14+ 候选)
 
-**Scope explicitly out(与 Kai 2026-07-06 决策对齐 + v10.0 design carry-forward):**
-
-- 15 expert 全量 transform(仅 9 sample 在 v11.0)
-- per-agent memory benchmark 全量(仅 latency p95 测)
-- Option B → 物理分区迁移(v11.0 仍用 mem0 单 backend + agent_id filter)
-- live production traffic(v11.0 PoC 仅 smoke test)
-- kais-hermes-skills repo 改动(v11.0 不改 SKILL.md,只读)
-- new repo 创建(单 repo 收敛)
-- deprecate SKILL.md form(SKILL 作 fallback 保留)
-
-### Blockers / Risks (v11.0 — new)
+### Blockers / Risks (v13.0 — new)
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| **mem0 Platform API filter latency > 500ms (OQ-12 deferred from v10.0)** | MEDIUM | HIGH (if filter doesn't scale, may need物理分区 re-architecture in v12) | Phase 54 EVAL-02 latency benchmark is the gate. If p95 > 500ms, document trigger conditions for v12 物理分区 evaluation per Phase 48 §3. |
-| **GLM 4-key rotation vs round table real concurrency (CC-6 from v10.0)** | HIGH | HIGH (concurrent 7 panelists × N rounds 撞 GLM 4-key ceiling) | Phase 52 INFRA-04 hard constraint: 强制串行 (1 panelist 1 turn `await`). MEMORY.md `feedback-glm-overload-reduce-concurrency.md` global concurrency==1 already in force. |
-| **curator `_memory_evolution_phase` hallucination rate unmeasured** | MEDIUM | MEDIUM (writes bad memory to store) | Phase 54 EVAL-03 bias canary is the gate — must catch 4/5 known-bad records. Phase 55 EVAL-06 dry-run-first ensures default mode zero writes. |
-| **9-agent transform produces invalid YAML (lineage/SHA mismatch)** | MEDIUM | MEDIUM (creative slice blocked, milestone slip) | Phase 53 SC#1 requires all 9 YAMLs pass `jsonschema.Draft202012Validator.validate()` + lineage block populated. Per-YAML transform log + audit trail per Phase 49 §2 75-cell rules. |
-| **Round table state corruption on crash (3 failure modes per Phase 48 §6)** | MEDIUM | HIGH (PoC blocked, manual recovery) | Phase 52 INFRA-03 SC#3 covers all 3 failure modes (partial-write, mid-turn crash, orphaned session) with crash recovery tests. |
-| **dry-run-first leaks (state mutation despite default)** | LOW | HIGH (P5/P14 mitigation voided) | Phase 55 EVAL-06 SC#3 test verifies default invocation produces zero state mutation in both curator + migration script. |
-| **5 phases at lower end of standard granularity range (5-8)** | LOW | LOW (slightly less granular than typical) | Justified by 12-day PoC budget per `05-POC-PLAN.md` §2.4 + req category clustering (INFRA / CREATIVE+MIGR / EVAL-wave-1 / EVAL-wave-2 / VALIDATE). Each phase delivers one coherent capability. |
+| **Operator secrets unavailable for Phase 64 (LIVE-EVAL-EXEC)** | MEDIUM | MEDIUM (Phase 64 deferred to handoff, but does not block code-work tracks or milestone close-out) | Phase 64 SCs explicitly allow operator-action handoff per VALIDATE-01 spec (mirror v12.0 pattern). Code-work tracks (62-63, 65-68) proceed independently. |
+| **12-expert YAML transform produces invalid schema (byte-fail agents-schema.yaml)** | MEDIUM | HIGH (Phase 63 registry load blocked, milestone slip) | Phase 62 SC#2 requires all 12 YAMLs byte-pass `jsonschema.Draft202012Validator.validate()` before phase complete. Per-YAML transform log + audit trail citing `04-MIGRATION-PATH.md §2` rule IDs. |
+| **visual_executor round table smoke fails (sub_steps complexity)** | LOW | MEDIUM (EXPERT-05 blocked; may need fallback to simpler agent for smoke) | Phase 63 SC#3 picks `visual_executor` as the most complex (sub_steps: [drawer, animator]). If smoke fails, document as tech_debt and pick alternative agent (e.g., `colorist`) for SC#3 partial pass. |
+| **mem0 p95 ≥ 500ms triggers v14 物理分区 evaluation prematurely** | LOW | LOW (this is the intended v14 decision feed, not a v13 blocker) | Phase 64 EVAL-02 produces decision feed; v14 physical-partition evaluation is a separate milestone. v13 scope explicitly excludes physical partition. |
+| **Curator 1st live tick produces bad memory writes (bias canary miss)** | LOW | HIGH (bad data in memory store) | Phase 65 SC#2 bias canary must catch ≥ 4/5 known-bad records pre-tick. Phase 66 SC#1 captures before/after diff for operator 24h review + manual rollback (CURATE-03 audit log supports this). |
+| **8 phases at upper end of standard granularity range (5-8)** | LOW | LOW (slightly more granular than typical) | Justified by 4-track clustering with build-vs-consume splits on EXPERT (62 transform / 63 registry+smoke), CURATOR (65 guards / 66 live tick), OBSRV (67 backend / 68 frontend). Each phase delivers one coherent verifiable capability. |
+| **Dashboard web view introduces scope creep (新 framework risk)** | LOW | MEDIUM (milestone slip if new framework adopted) | Phase 68 SC#2 explicitly requires minimal Jinja2 panel based on existing `hermes dashboard` FastAPI server — no new framework. OBSRV-05 spec constraint preserved. |
 
-### Blockers / Risks (carried from v10.0)
+### Blockers / Risks (carried from v11.0/v12.0 — resolved or monitored)
 
-**16 Open Questions from v10.0 — 14 RESOLVED in design, 2 DEFERRED to v11.0 PoC:**
-
-- OQ-12 (mem0 Platform API filter behavior) → Phase 54 EVAL-02 latency benchmark resolves
-- (OQ-15 if any other was marked DEFERRED → resolved in v11.0 PoC execution)
-
-**Inherited from v9.0 close (operator-action-handoffs, NOT gaps):**
-
-- (a) Phase 41 LTX2.3 live GPU generation testing (V9-FUTURE-02) — deferred to operator
-- (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01) — deferred to operator
-
-These do NOT block v11.0 (PoC milestone uses synthetic inputs, not production traffic).
+- OQ-12 (mem0 Platform API filter behavior) → Phase 64 EVAL-02 resolves with live p95 data
+- GLM 4-key rotation vs round table real concurrency → INFRA-04 serial constraint preserved in v13.0 (not lifted)
+- curator `_memory_evolution_phase` hallucination rate → Phase 65 SC#2 bias canary (carried from v11.0 EVAL-03, v12.0 EVAL-03 baseline)
 
 ### Quick Tasks Completed
 
@@ -197,65 +192,59 @@ These do NOT block v11.0 (PoC milestone uses synthetic inputs, not production tr
 
 ## Deferred Items
 
-Items acknowledged and carried forward (NOT in v11.0 scope, explicitly deferred):
+Items acknowledged and carried forward (NOT in v13.0 scope, explicitly deferred):
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| **15-expert 全量 transform** | Only 9 sample agents (CREATIVE-01 用) 在 v11.0;剩余 6 expert 留 v12.0 | Deferred to v12.0 | v11.0 planning (2026-07-07) |
-| **per-agent memory benchmark 全量** | Only latency p95 测;memory throughput / concurrent-agent scaling 留 v12.0 | Deferred to v12.0 | v11.0 planning (2026-07-07) |
-| **Option B → 物理分区迁移** | v11.0 用 mem0 单 backend + agent_id filter;物理分区触发条件留 v12+ 监测后决定 | Deferred to v12+ | v11.0 planning (2026-07-07) |
-| **live production traffic** | v11.0 PoC 仅 smoke test;production deployment 留 v12+ | Deferred to v12+ | v11.0 planning (2026-07-07) |
-| **kais-hermes-skills repo 改动** | 设计文档已锁定 lineage 不动 SKILL;v11.0 不改 SKILL.md,只读 | Deferred (read-only) | v11.0 planning (2026-07-07) |
-| **new repo 创建(如 kais-orchestrator)** | 单 repo 收敛决策保留;v11.0 全在 hermes-agent | Deferred (decision preserved) | v11.0 planning (2026-07-07) |
-| **deprecate SKILL.md form** | v11.0 SKILL 作 fallback 保留(`default_invocation: skill_fallback`) | Deferred (additive transition) | v11.0 planning (2026-07-07) |
-| **threshold tuning production data** | v11.0 仅文档化 initial defaults;tuning 用 prod data 留 v12+ | Deferred to v12+ | v11.0 planning (2026-07-07) |
+| **Option B → 物理分区 migration** | v13.0 EVAL-02 mem0 p95 数据决定是否触发 v14;若 p95 < 500ms 可保留单 backend + agent_id filter | Deferred to v14+ (decision feed from v13 EVAL-02) | v13.0 planning (2026-07-08) |
+| **Round table 异步并发(INFRA-04 解除)** | GLM upstream capacity 扩容前保留串行约束 | Deferred to v14+ (decision feed from v13 EVAL-03) | v13.0 planning (2026-07-08) |
+| **15-expert 全量 production hardening tuning** | v13.0 完成 12-expert transform + smoke;threshold tuning 用 prod 数据留 v14+ | Deferred to v14+ | v13.0 planning (2026-07-08) |
+| **kais-hermes-skills repo SKILL.md 改动** | Lineage invariants L1-L6(Phase 48-49)v13.0 仍只读 SKILL.md | Deferred (read-only invariant preserved) | v13.0 planning (2026-07-08) |
+| **新 repo 创建(如 kais-orchestrator)** | 单 repo 收敛决策保留;v13.0 全在 hermes-agent | Deferred (decision preserved) | v13.0 planning (2026-07-08) |
+| **Automated rollback for curator live tick** | 太复杂;v13.0 用 operator 24h review + 手工 rollback(CURATE-03) | Deferred to v14+ | v13.0 planning (2026-07-08) |
+| **OBSRV Prometheus/Grafana integration** | 范围控制;v13.0 用 rich tables + minimal Jinja2 panel,不引入新 observability stack | Deferred to v14+ | v13.0 planning (2026-07-08) |
+| **15 expert 之外的新 agent(例如 coding-agent-as-agent)** | v13.0 收口于 movie-experts 全量覆盖;非-movie-expert 的 agent 化是 v14+ 候选 | Deferred to v14+ | v13.0 planning (2026-07-08) |
 
-Items acknowledged at v10.0 close (2026-07-07) — design milestone produced blueprint, no implementation:
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| v11.0 PoC implementation | All code work implied by v10.0 design docs | v11.0 in planning | v10.0 close (2026-07-07) |
-| Live round table execution | v10.0 designs protocol; live execution is v11.0 PoC | v11.0 in planning | v10.0 close (2026-07-07) |
-| Per-agent memory latency benchmark | v10.0 designs schema + fields; v11.0 PoC runs benchmark | v11.0 in planning | v10.0 close (2026-07-07) |
-
-Items acknowledged at v9.0 close (2026-06-27) — operator-action-handoffs (NOT gaps):
+Items acknowledged at v12.0 close (2026-07-08) — 3 operator-action handoffs (runtime validations on real GLM/mem0 APIs):
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Operator smoke-test | Phase 41 LTX2.3 live GPU generation testing (V9-FUTURE-02) | Documented in v9.0-MILESTONE-AUDIT.md | v9.0 close (2026-06-27) |
-| Operator smoke-test | Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01) | Documented in v9.0-MILESTONE-AUDIT.md | v9.0 close (2026-06-27) |
+| Operator smoke-test | Phase 57 SC#2: live GLM synthesis endpoint latency smoke | v13.0 Phase 64 EVAL-01 executes this | v12.0 close (2026-07-08) |
+| Operator smoke-test | Phase 60 EVAL-01: live mem0 p95 benchmark | v13.0 Phase 64 EVAL-02 executes this | v12.0 close (2026-07-08) |
+| Operator smoke-test | Phase 60 EVAL-02: real-mode fitness battery | v13.0 Phase 64 EVAL-03 executes this | v12.0 close (2026-07-08) |
 
 ## Session Continuity
 
 **If session is lost, restore context by reading:**
 
-1. `.planning/PROJECT.md` §"Current Milestone: v11.0" — milestone goal + vertical slice + acceptance criteria + scope discipline
-2. `.planning/ROADMAP.md` — 5 phases (52-56), success criteria, critical path (52→53→54→55→56)
-3. `.planning/REQUIREMENTS.md` — 15 requirements (INFRA-01..04 + CREATIVE-01..02 + EVAL-01..07 + MIGR-01 + VALIDATE-01) with Traceability table
-4. `.planning/research/v10-orchestrator-design/05-POC-PLAN.md` — THE implementation blueprint (§3 vertical slice + §4 acceptance criteria + §5 risk register + §6 implementation path)
-5. `.planning/research/v10-orchestrator-design/01-AGENT-REGISTRY-SCHEMA.md` + `agents-schema.yaml` — agent YAML schema (Phase 45 stable, 18 fields camelCase)
-6. `.planning/research/v10-orchestrator-design/02-ROUND-TABLE-PROTOCOL.md` + `round-table-state-schema.yaml` — round table protocol + 7 MCP tool contract (§5)
-7. `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` — 15-expert × 5-field transform rules (§2 75-cell table)
-8. `~/.hermes/agents/` (target agent YAML location) + MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (serial constraint policy)
+1. `.planning/PROJECT.md` §"Current Milestone: v13.0" — milestone goal + 4 tracks + scope discipline + hard constraints
+2. `.planning/ROADMAP.md` — 8 phases (62-69), success criteria, critical path (62→63 / 65→66 / 67→68 sequential chains; 64 parallel; 69 strictly LAST)
+3. `.planning/REQUIREMENTS.md` — 20 requirements (EXPERT-01..05 + EVAL-01..04 + CURATE-01..05 + OBSRV-01..05 + VALIDATE-01) with Traceability table
+4. `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` §2 — THE 12-expert transform rules (75-cell table; Phase 62 cites this)
+5. `.planning/research/v10-orchestrator-design/agents-schema.yaml` — agent YAML schema (Phase 45 stable, 18 fields camelCase; Phase 62 SC#2 validates against this)
+6. `~/.hermes/agents/` (target agent YAML location; 9 already exist from v11.0, 12 new from Phase 62)
+7. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (serial constraint policy — INFRA-04 NOT lifted in v13.0)
 
-**Next action:** After user approval of ROADMAP, plan Phase 52 (`/gsd:plan-phase 52`). Phase 52 has no `--research-phase` flag (well-documented design from v10.0 suite).
+**Next action:** After user approval of ROADMAP, plan Phase 62 (`/gsd:plan-phase 62`). Phase 62 has no `--research-phase` flag (well-documented transform rules from v10.0 `04-MIGRATION-PATH.md` §2).
 
-**Resume from interrupted phase:** Not yet started — first v11.0 phase.
+**Resume from interrupted phase:** Not yet started — first v13.0 phase (Phase 62).
 
 ---
 
-*Last updated: 2026-07-07 — v11.0 ROADMAP.md + STATE.md + REQUIREMENTS.md traceability updated. 5 phases (52-56), 15/15 reqs mapped, runtime implementation milestone (Python code + agent YAML + mem0 extensions + test artifacts). Awaiting user approval to start planning Phase 52 (INFRA-FOUNDATION).*
+*Last updated: 2026-07-08 — v13.0 ROADMAP.md + STATE.md + REQUIREMENTS.md traceability updated. 8 phases (62-69), 20/20 reqs mapped, runtime + rollout milestone (Python code + agent YAML + CLI + Jinja2 dashboard + report markdown). Awaiting user approval to start planning Phase 62 (EXPERT-YAML-TRANSFORM).*
 
 ## Operator Next Steps
 
-**v11.0 milestone is in PLANNING.** Operator actions:
+**v13.0 milestone is in PLANNING.** Operator actions:
 
-1. Review `.planning/ROADMAP.md` (5 phases 52-56, 15/15 reqs mapped)
-2. Review `.planning/STATE.md` (this file — accumulated context + risk register)
+1. Review `.planning/ROADMAP.md` (8 phases 62-69, 20/20 reqs mapped, critical path annotated)
+2. Review `.planning/STATE.md` (this file — accumulated context + risk register + deferred items)
 3. Approve roadmap (or provide revision feedback)
-4. After approval: `/gsd:plan-phase 52` to start with INFRA-FOUNDATION
+4. After approval: `/gsd:plan-phase 62` to start with EXPERT-YAML-TRANSFORM
+5. **Parallel prep for Phase 64** (LIVE-EVAL-EXEC): ensure operator secrets available — `GLM_API_KEY`, `MEM0_API_KEY`, `GLM_AUX_API_KEY_1..4`. Phase 64 can run in parallel with code-work tracks once secrets configured.
 
-**Operator-action-handoffs from v9.0 (post-tag, NOT gaps, do NOT block v11.0):**
+**Operator-action-handoffs from v12.0 (executed in v13.0 Phase 64):**
 
-- (a) Phase 41 LTX2.3 live GPU testing (V9-FUTURE-02)
-- (b) Phase 42 5 平台 API key configuration + live data ingestion (V9-FUTURE-01)
+- (a) Phase 57 SC#2 live GLM synthesis endpoint latency smoke → v13.0 EVAL-01
+- (b) Phase 60 EVAL-01 live mem0 p95 benchmark → v13.0 EVAL-02
+- (c) Phase 60 EVAL-02 real-mode fitness battery → v13.0 EVAL-03

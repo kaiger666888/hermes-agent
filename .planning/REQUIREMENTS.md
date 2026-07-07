@@ -61,36 +61,49 @@
 
 ## Traceability
 
-(由 roadmapper 在 roadmap 创建阶段填充)
+(由 roadmapper 在 roadmap 创建阶段填充 — 2026-07-08)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXPERT-01 | TBD | Pending |
-| EXPERT-02 | TBD | Pending |
-| EXPERT-03 | TBD | Pending |
-| EXPERT-04 | TBD | Pending |
-| EXPERT-05 | TBD | Pending |
-| EVAL-01 | TBD | Pending |
-| EVAL-02 | TBD | Pending |
-| EVAL-03 | TBD | Pending |
-| EVAL-04 | TBD | Pending |
-| CURATE-01 | TBD | Pending |
-| CURATE-02 | TBD | Pending |
-| CURATE-03 | TBD | Pending |
-| CURATE-04 | TBD | Pending |
-| CURATE-05 | TBD | Pending |
-| OBSRV-01 | TBD | Pending |
-| OBSRV-02 | TBD | Pending |
-| OBSRV-03 | TBD | Pending |
-| OBSRV-04 | TBD | Pending |
-| OBSRV-05 | TBD | Pending |
-| VALIDATE-01 | TBD | Pending |
+| EXPERT-01 | Phase 62 | Pending |
+| EXPERT-02 | Phase 62 | Pending |
+| EXPERT-03 | Phase 62 | Pending |
+| EXPERT-04 | Phase 63 | Pending |
+| EXPERT-05 | Phase 63 | Pending |
+| EVAL-01 | Phase 64 | Pending |
+| EVAL-02 | Phase 64 | Pending |
+| EVAL-03 | Phase 64 | Pending |
+| EVAL-04 | Phase 64 | Pending |
+| CURATE-01 | Phase 65 | Pending |
+| CURATE-02 | Phase 65 | Pending |
+| CURATE-03 | Phase 65 | Pending |
+| CURATE-04 | Phase 66 | Pending |
+| CURATE-05 | Phase 66 | Pending |
+| OBSRV-01 | Phase 67 | Pending |
+| OBSRV-02 | Phase 67 | Pending |
+| OBSRV-03 | Phase 67 | Pending |
+| OBSRV-04 | Phase 68 | Pending |
+| OBSRV-05 | Phase 68 | Pending |
+| VALIDATE-01 | Phase 69 | Pending |
 
 **Coverage:**
 - v13.0 requirements: 20 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 20 ⚠️ (will be resolved by roadmapper)
+- Mapped to phases: 20 / 20 ✓
+- Unmapped: 0
+- Phase count: 8 (Phases 62-69, standard granularity)
+- Orphaned requirements: 0
+- Duplicate mappings: 0
+
+**Phase-requirement distribution:**
+- Phase 62 (EXPERT-YAML-TRANSFORM): EXPERT-01..03 (3 reqs)
+- Phase 63 (EXPERT-REGISTRY-INTEGRATION): EXPERT-04..05 (2 reqs)
+- Phase 64 (LIVE-EVAL-EXEC): EVAL-01..04 (4 reqs)
+- Phase 65 (CURATOR-LIVE-GUARDS): CURATE-01..03 (3 reqs)
+- Phase 66 (CURATOR-LIVE-TICK): CURATE-04..05 (2 reqs)
+- Phase 67 (OBSERVABILITY-BACKEND): OBSRV-01..03 (3 reqs)
+- Phase 68 (OBSERVABILITY-PRESENTATION): OBSRV-04..05 (2 reqs)
+- Phase 69 (VALIDATE): VALIDATE-01 (1 req)
 
 ---
 *Requirements defined: 2026-07-08*
-*Last updated: 2026-07-08 after initial v13.0 definition*
+*Last updated: 2026-07-08 — traceability filled by roadmapper. 8 phases (62-69), 20/20 reqs mapped, VALIDATE-01 strictly LAST.*
