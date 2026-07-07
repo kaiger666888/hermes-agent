@@ -157,7 +157,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion — 55-04 depends on 55-03 dry-run-first pattern)*
 
-- [ ] 55-04-PLAN.md — EVAL-07 Schema Migration Dry-Run (scripts/migrate_v6_feedback_to_memory_schema.py with --dry-run default + Phase 49 §4.3 17-row mapping + 5-metric output + zero silent drops P14 mitigation + tests/v11-schema-migration/ + migration-dry-run-format.md spec)
+- [x] 55-04-PLAN.md — EVAL-07 Schema Migration Dry-Run (scripts/migrate_v6_feedback_to_memory_schema.py with --dry-run default + Phase 49 §4.3 17-row mapping + 5-metric output + zero silent drops P14 mitigation + tests/v11-schema-migration/ + migration-dry-run-format.md spec)
 
 ---
 
@@ -235,7 +235,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
 | 54. EVAL-HARNESS-1 | 3/3 | Complete    | 2026-07-07 |
-| 55. EVAL-HARNESS-2 | 3/4 | In Progress|  |
+| 55. EVAL-HARNESS-2 | 4/4 | Complete   | 2026-07-07 |
 | 56. VALIDATE | 0/TBD | Not started | - |
 
 ---
