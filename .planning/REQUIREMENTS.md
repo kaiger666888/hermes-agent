@@ -179,23 +179,25 @@ End-of-milestone audit: 15/15 reqs verified, vertical slice end-to-end smoke tes
 
 ## Traceability
 
+> **Note on Status markers (per Phase 56 audit):** `⚠ Complete (operator smoke deferred)` indicates an operator-action handoff — runtime validation of code already automated-test-verified, NOT a design gap. The 5 handoffs are aggregated in the operator runbook at `.planning/research/v11-poc-eval/smoke-test-report.md §3` and `.planning/milestones/v11.0-MILESTONE-AUDIT.md §3`. See `scripts/run_milestone_audit.py` for the machine-readable coverage matrix.
+
 | REQ-ID | Phase | Category | Person-days | Status |
 |--------|-------|----------|-------------|--------|
-| INFRA-01 | 52 | INFRA | (bundled with INFRA-02) | Pending |
-| INFRA-02 | 52 | INFRA | 2 | Pending |
-| INFRA-03 | 52 | INFRA | 1 | Pending |
-| INFRA-04 | 52 | INFRA | 0.5 | Pending |
-| MIGR-01 | 53 | MIGR | 1 | Pending |
-| CREATIVE-01 | 53 | CREATIVE | 1 | Pending |
-| CREATIVE-02 | 53 | CREATIVE | 1 | Pending |
-| EVAL-01 | 54 | EVAL | 3 | Pending |
-| EVAL-02 | 54 | EVAL | 2 | Pending |
-| EVAL-03 | 54 | EVAL | 2 | Pending |
-| EVAL-04 | 55 | EVAL | 1 | Pending |
-| EVAL-05 | 55 | EVAL | 1 | Pending |
-| EVAL-06 | 55 | EVAL | 1 | Pending |
-| EVAL-07 | 55 | EVAL | 2 | Pending |
-| VALIDATE-01 | 56 | VALIDATE | 1 | Pending |
+| INFRA-01 | 52 | INFRA | (bundled with INFRA-02) | ✅ Complete |
+| INFRA-02 | 52 | INFRA | 2 | ✅ Complete |
+| INFRA-03 | 52 | INFRA | 1 | ✅ Complete |
+| INFRA-04 | 52 | INFRA | 0.5 | ✅ Complete |
+| MIGR-01 | 53 | MIGR | 1 | ✅ Complete |
+| CREATIVE-01 | 53 | CREATIVE | 1 | ⚠ Complete (operator smoke deferred) |
+| CREATIVE-02 | 53 | CREATIVE | 1 | ✅ Complete |
+| EVAL-01 | 54 | EVAL | 3 | ⚠ Complete (operator baseline deferred) |
+| EVAL-02 | 54 | EVAL | 2 | ⚠ Complete (operator benchmark deferred) |
+| EVAL-03 | 54 | EVAL | 2 | ⚠ Complete (operator smoke deferred) |
+| EVAL-04 | 55 | EVAL | 1 | ⚠ Complete (operator smoke deferred) |
+| EVAL-05 | 55 | EVAL | 1 | ✅ Complete |
+| EVAL-06 | 55 | EVAL | 1 | ✅ Complete |
+| EVAL-07 | 55 | EVAL | 2 | ✅ Complete |
+| VALIDATE-01 | 56 | VALIDATE | 1 | ✅ Complete (Phase 56 audit) |
 
 **Total:** 15 reqs · 19.5 person-days (slightly above 12-day PoC budget due to MIGR-01 + close-out; MIGR-01 can shrink to 0.5d if transform rules from Phase 49 §2 are sufficiently tight)
 
@@ -223,4 +225,4 @@ End-of-milestone audit: 15/15 reqs verified, vertical slice end-to-end smoke tes
 
 ---
 
-*Last updated: 2026-07-07 — v11.0 ROADMAP created (5 phases 52-56, 15/15 reqs mapped, all status=Pending). Traceability table aligned with ROADMAP phase mapping. Next: plan Phase 52 (`/gsd:plan-phase 52`).*
+*Last updated: 2026-07-07 — Phase 56 audit complete (v11.0 milestone verdict: `passed`). 15/15 reqs verified at automated level (10 ✅ Complete + 5 ⚠ Complete with operator-action deferrals). 5 operator-action handoffs documented at `.planning/research/v11-poc-eval/smoke-test-report.md §3`. Audit matrix: `scripts/run_milestone_audit.py`. Previous: v11.0 ROADMAP created 2026-07-07 (5 phases 52-56, 15/15 reqs mapped, all status=not-yet-started); traceability table aligned with ROADMAP phase mapping.*
