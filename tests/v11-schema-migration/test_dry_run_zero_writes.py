@@ -62,14 +62,23 @@ class TestDefaultModeIsDryRun:
 
 class TestDryRunZeroAuditEntries:
     def test_dry_run_zero_audit_calls(
-        self, run_migration, mock_audit_chain
+        self, run_migration, hermes_home_tmp
     ) -> None:
-        """``append_audit`` must NEVER be called in dry-run mode."""
+        """``append_audit`` must NEVER be called in dry-run mode.
+
+        Verified via filesystem: dry-run must NOT create the audit log file
+        at ``$HERMES_HOME/skills/.audit/log.jsonl``. (Subprocess-invoked
+        scripts can't be intercepted by monkeypatch — we check the side
+        effect on disk.)
+        """
+        audit_log = hermes_home_tmp / "skills" / ".audit" / "log.jsonl"
         run_migration("--dry-run")
-        assert len(mock_audit_chain) == 0, (
-            f"expected 0 audit calls in dry-run, got {len(mock_audit_chain)}: "
-            f"{mock_audit_chain}"
-        )
+        # The audit log file must either not exist OR be empty.
+        if audit_log.exists():
+            content = audit_log.read_text(encoding="utf-8").strip()
+            assert content == "", (
+                f"dry-run wrote audit entries: {content}"
+            )
 
 
 # ── Source FeedbackStore unchanged (T-55-11) ────────────────────────────
@@ -138,44 +147,68 @@ class TestApplyRequiresConfirmation:
     def test_apply_with_correct_confirmation_proceeds(
         self,
         run_migration,
-        mock_audit_chain,
-        monkeypatch: pytest.MonkeyPatch,
+        hermes_home_tmp,
     ) -> None:
         """With correct confirmation, --apply calls append_audit + writes target.
 
         This test exercises the live path for coverage. v12+ is when this
         becomes operator-facing per 04-MIGRATION-PATH.md §4.7 Step 4.
+
+        NOTE: monkeypatch cannot intercept append_audit in the subprocess
+        (it's a fresh Python process). We verify by reading the real audit
+        log file written under HERMES_HOME/skills/.audit/log.jsonl.
         """
-        # NOTE: the live path writes to a target path under HERMES_HOME
-        # (NOT to mem0 in v11.0 PoC — that's v12+). The mock_audit_chain
-        # fixture intercepts append_audit so no real audit log is mutated.
+        from agent import curator_audit
+
+        # Pre-record the audit log state (file may or may not exist yet).
+        audit_log = hermes_home_tmp / "skills" / ".audit" / "log.jsonl"
+
         result, _ = run_migration(
             "--apply", expect_exit=0, stdin_input="apply\n"
         )
         assert result.returncode == 0
         # Audit entry MUST be appended in --apply mode (T-55-15 mitigation).
-        assert len(mock_audit_chain) >= 1, (
-            "expected ≥1 audit call in --apply mode, got "
-            f"{len(mock_audit_chain)}"
-        )
-        # The audit action should be "auto_apply".
-        actions = [c.get("action") for c in mock_audit_chain]
-        assert "auto_apply" in actions
+        # The script writes to $HERMES_HOME/skills/.audit/log.jsonl.
+        assert audit_log.is_file(), f"audit log not created at {audit_log}"
+        lines = [
+            line.strip()
+            for line in audit_log.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert len(lines) >= 1, "no audit entries written"
+        # Verify the action is "auto_apply".
+        import json as _json
+
+        actions = []
+        for line in lines:
+            try:
+                entry = _json.loads(line)
+                actions.append(entry.get("action"))
+            except _json.JSONDecodeError:
+                pass
+        assert "auto_apply" in actions, f"expected auto_apply in {actions}"
 
     def test_apply_no_prompt_skips_confirmation(
         self,
         run_migration,
-        mock_audit_chain,
+        hermes_home_tmp,
     ) -> None:
         """``--apply --no-prompt`` skips confirmation (for scripting).
 
         Useful for CI / batch jobs. Use with care.
         """
+        audit_log = hermes_home_tmp / "skills" / ".audit" / "log.jsonl"
         result, _ = run_migration(
             "--apply", "--no-prompt", expect_exit=0
         )
         assert result.returncode == 0
-        assert len(mock_audit_chain) >= 1
+        assert audit_log.is_file(), "audit log not written"
+        lines = [
+            line.strip()
+            for line in audit_log.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert len(lines) >= 1, "no audit entries written"
 
 
 # ── Mutual exclusion + arg validation ────────────────────────────────────
