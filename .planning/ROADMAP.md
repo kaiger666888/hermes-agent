@@ -95,11 +95,17 @@ Plans:
   2. Running `scripts/run_screenplay_step3_roundtable.py` produces a JSON artifact that validates against the screenplay Step 3 schema (HOOK-09 emotion_curve marker contract), with latency < 30s on a real GLM API call (no mocks), exercising the full `round_table_open` → 9 sequential `get_agent_opinion` calls → 1 `submit_round_table_result` lifecycle.
   3. A 2-conflict test scenario (e.g. cinematographer asserts false vs. style_genome dissents) produces the correct arbitration outcome per Phase 46 §3 contract: comparator LLM pass detects the conflict, `session > project > global` scope precedence is honored, confidence-weighted voting picks a winner, and an entry is appended to `.runtime/{slug}/round_tables/{round_id}/conflicts.jsonl`.
 
-**Plans**: TBD
+**Plans**: 3 plans across 2 waves — Wave 1 (53-01 + 53-02 parallel, no file overlap) + Wave 2 (53-03 serial, depends on both Wave 1 plans)
 
 Plans:
+**Wave 1** (parallel — no file overlap)
 
-- [ ] 53-01: TBD
+- [ ] 53-01-PLAN.md — MIGR-01 9-Agent YAML Transform (Wave 0 contract test + transform_skill_to_agent.py + 9 YAMLs + HOOK-09 invariant)
+- [ ] 53-02-PLAN.md — CREATIVE-02 Conflict Arbitration Runtime (5-mechanism memory_arbitration.py + comparator prompt + conflicts.jsonl writer + 2-conflict test)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 53-03-PLAN.md — CREATIVE-01 Screenplay Step 3 Round Table Driver (mcp_serve.py GLM dispatch + run_screenplay_step3_roundtable.py + HOOK-09 schema validation + real-GLM smoke test)
 
 ---
 
@@ -214,7 +220,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
-| 53. CREATIVE-SLICE | 0/TBD | Not started | - |
+| 53. CREATIVE-SLICE | 0/3 | Not started | - |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
