@@ -52,6 +52,13 @@ from typing import Dict
 
 logger = logging.getLogger(__name__)
 
+# Phase 59 POOL-02: fraction of TPM cap below which a key is considered
+# "low". When ALL aux-pool keys are below this threshold, ``acquire_slot``
+# emits a ``tpm_warning`` log + brief sleep until the soonest window slides
+# (CONTEXT.md decision #4). Hardcoded default 0.1 (10%); overridable via
+# ``auxiliary.tpm_warning_threshold`` in cli-config.yaml.
+_TPM_WARNING_THRESHOLD_DEFAULT: float = 0.1
+
 # Load-bearing default per CONTEXT.md decision #3: "well under GLM single-key
 # RPM ceiling". The 4-key pool can theoretically serve 240 RPM steady-state,
 # but burst is the failure mode — 30/task keeps a 9-agent round table (9
@@ -178,6 +185,106 @@ def _get_or_create_bucket(task: str) -> TokenBucket:
     return bucket
 
 
+def _resolve_tpm_warning_threshold() -> float:
+    """Read ``auxiliary.tpm_warning_threshold`` from config, fallback to default.
+
+    Returns a float in ``[0.0, 1.0]``. Invalid values (negative, > 1,
+    non-numeric) fall back to ``_TPM_WARNING_THRESHOLD_DEFAULT`` (0.1) —
+    never raise, never block the caller.
+
+    Reads config fresh on each call (cheap dict lookup; avoids stale config
+    if the operator edits cli-config.yaml mid-session).
+    """
+    try:
+        from hermes_cli.config import load_config
+
+        cfg = load_config() or {}
+        aux_cfg = cfg.get("auxiliary") or {}
+        raw = aux_cfg.get("tpm_warning_threshold", _TPM_WARNING_THRESHOLD_DEFAULT)
+        val = float(raw)
+        if 0.0 <= val <= 1.0:
+            return val
+        logger.debug(
+            "glm_throttle: auxiliary.tpm_warning_threshold=%r out of range "
+            "[0.0, 1.0] — using default %.2f",
+            raw, _TPM_WARNING_THRESHOLD_DEFAULT,
+        )
+        return _TPM_WARNING_THRESHOLD_DEFAULT
+    except Exception as exc:  # noqa: BLE001 — config load must never crash callers
+        return _TPM_WARNING_THRESHOLD_DEFAULT
+
+
+def _check_aux_pool_tpm(pool_name: str) -> None:
+    """Phase 59 POOL-02: per-key TPM availability check (aux pool only).
+
+    Called from :func:`acquire_slot` BEFORE the existing token-bucket
+    refill loop (CONTEXT.md decision #4). If ALL aux-pool keys are below
+    the configured ``tpm_warning_threshold`` (default 10%), emit a
+    ``tpm_warning`` log + brief sleep until the soonest window slides
+    (capped at 60s).
+
+    Best-effort: any failure (loader crash, empty pool, non-aux pool name)
+    is logged at debug and swallowed — the token bucket still paces RPM
+    correctly. TPM is a refinement, not a hard gate.
+
+    For v12.0 the provider is hardcoded to ``"zai"`` (GLM is the only
+    aux-pool target per MEMORY.md ``feedback-glm-5-2-only.md``). v13+
+    should resolve the provider from task config.
+    """
+    # Non-aux pool → skip entirely. This is the load-bearing short-circuit
+    # for Test 5: default-pool callers never pay the TPM-check cost.
+    if pool_name != "auxiliary":
+        return
+    try:
+        from agent.credential_pool import load_named_pool
+
+        pool = load_named_pool("auxiliary", "zai")
+    except Exception as exc:  # noqa: BLE001 — TPM check must not crash callers
+        logger.debug(
+            "glm_throttle: aux pool load failed for TPM check: %s", exc
+        )
+        return
+    if not pool or not pool.has_credentials():
+        logger.debug(
+            "glm_throttle: aux pool empty for TPM check — skipping"
+        )
+        return
+    try:
+        status = pool.pool_tpm_status()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(
+            "glm_throttle: pool_tpm_status failed: %s — skipping TPM check",
+            exc,
+        )
+        return
+    if not status:
+        return
+
+    threshold = _resolve_tpm_warning_threshold()
+    # All keys below threshold? (remaining_fraction is in [0.0, 1.0].)
+    all_below = all(
+        entry.get("remaining_fraction", 1.0) < threshold
+        for entry in status.values()
+    )
+    if not all_below:
+        return
+
+    # All aux keys are low — emit tpm_warning + sleep until the soonest
+    # window slides. Cap at 60s (one full TPM window).
+    min_window_remaining = min(
+        entry.get("window_remaining_s", 60.0) for entry in status.values()
+    )
+    sleep_seconds = min(60.0, max(0.0, min_window_remaining))
+    logger.warning(
+        "tpm_warning: all aux pool keys below %.0f%% TPM cap; "
+        "pausing %.1fs for window slide",
+        threshold * 100.0,
+        sleep_seconds,
+    )
+    if sleep_seconds > 0:
+        time.sleep(sleep_seconds)
+
+
 def acquire_slot(task: str, pool_name: str = "auxiliary") -> None:
     """Blocking RPM acquire for *task*.
 
@@ -196,9 +303,28 @@ def acquire_slot(task: str, pool_name: str = "auxiliary") -> None:
     reads this metadata via its own ``pool_name`` kwarg. The default
     ``"auxiliary"`` is correct for all current aux callers (round table,
     memory_compaction, fitness_judge, etc.).
+
+    Phase 59 POOL-02: before each token-bucket iteration, calls
+    :func:`_check_aux_pool_tpm` for the auxiliary pool. If all aux keys are
+    below ``tpm_warning_threshold``, emits a ``tpm_warning`` log + brief
+    sleep. The TPM check is best-effort — any failure is swallowed so the
+    RPM token-bucket pacing continues to function.
     """
     bucket = _get_or_create_bucket(task)
     while True:
+        # Phase 59 POOL-02: per-key TPM availability check (aux pool only).
+        # Wrapped in try/except so a buggy TPM path can never wedge the
+        # RPM pacer (Rule 1 mitigation: TPM is a refinement, not a hard
+        # gate). Skipped entirely for non-aux pools — verified by the
+        # test_default_pool_name_skips_tpm_check test.
+        if pool_name == "auxiliary":
+            try:
+                _check_aux_pool_tpm(pool_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "glm_throttle: _check_aux_pool_tpm raised unexpectedly: %s", exc
+                )
+
         now = time.monotonic()
         bucket.refill(now)
         if bucket.try_acquire():
@@ -226,6 +352,10 @@ def try_acquire_slot(task: str, pool_name: str = "auxiliary") -> bool:
     Phase 59 POOL-01: ``pool_name`` is informational metadata (see
     :func:`acquire_slot` docstring). Backward-compatible: callers that omit
     it default to ``"auxiliary"``.
+
+    Phase 59 POOL-02: does NOT call ``_check_aux_pool_tpm`` (non-blocking
+    caller — a TPM warning would defeat the fail-fast contract). The TPM
+    warning is emitted only on the blocking path.
     """
     bucket = _get_or_create_bucket(task)
     bucket.refill(time.monotonic())
