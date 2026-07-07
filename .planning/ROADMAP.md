@@ -151,9 +151,9 @@ Plans:
 Plans:
 **Wave 1** (parallel — no file overlap)
 
-- [ ] 55-01-PLAN.md — EVAL-04 Compaction Pass (agent/memory_compaction.py with compact_memory() + 3-tier post-state + GLM summarization + 600-record fixture + tests/v11-compaction/)
-- [ ] 55-02-PLAN.md — EVAL-05 Threshold Tuning (.planning/research/v11-poc-eval/threshold-tuning.md doc + additive memory.thresholds block in agents-schema.yaml; P13 runaway protection documented)
-- [ ] 55-03-PLAN.md — EVAL-06 Dry-Run-First Invariant (agent/curator.py default flipped dry_run: bool = True + defensive None-check + AST-walk non-bypassable test mirroring v6.0 TestNonBypassableHumanInLoop)
+- [x] 55-01-PLAN.md — EVAL-04 Compaction Pass (agent/memory_compaction.py with compact_memory() + 3-tier post-state + GLM summarization + 600-record fixture + tests/v11-compaction/)
+- [x] 55-02-PLAN.md — EVAL-05 Threshold Tuning (.planning/research/v11-poc-eval/threshold-tuning.md doc + additive memory.thresholds block in agents-schema.yaml; P13 runaway protection documented)
+- [x] 55-03-PLAN.md — EVAL-06 Dry-Run-First Invariant (agent/curator.py default flipped dry_run: bool = True + defensive None-check + AST-walk non-bypassable test mirroring v6.0 TestNonBypassableHumanInLoop)
 
 **Wave 2** *(blocked on Wave 1 completion — 55-04 depends on 55-03 dry-run-first pattern)*
 
@@ -235,7 +235,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
 | 54. EVAL-HARNESS-1 | 3/3 | Complete    | 2026-07-07 |
-| 55. EVAL-HARNESS-2 | 0/4 | Not started | - |
+| 55. EVAL-HARNESS-2 | 3/4 | In Progress|  |
 | 56. VALIDATE | 0/TBD | Not started | - |
 
 ---
