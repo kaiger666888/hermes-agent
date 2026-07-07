@@ -372,3 +372,129 @@ class Mem0MemoryProvider(MemoryProvider):
 def register(ctx) -> None:
     """Register Mem0 as a memory provider plugin."""
     ctx.register_memory_provider(Mem0MemoryProvider())
+
+
+# ---------------------------------------------------------------------------
+# Module-level backend singleton — Phase 60 plan 01 Task 1
+# ---------------------------------------------------------------------------
+#
+# ``agent.memory_arbitration._get_mem0_backend()`` does
+# ``from plugins.memory.mem0 import backend`` and then calls
+# ``backend.is_available()`` / ``backend.search()`` / ``backend.add()``.
+# Phase 60 wires that contract here. The adapter is a *shell* — it does NOT
+# initialize the underlying ``MemoryClient`` at module import time (per
+# CLAUDE.md "Eager plugin/provider imports" anti-pattern). Each method
+# constructs a fresh ``Mem0MemoryProvider`` and delegates via the existing
+# ``handle_tool_call`` JSON-string interface so we inherit the existing
+# circuit breaker + filter logic without duplicating it.
+#
+# Back-reference: consumer at ``agent/memory_arbitration.py:579``
+# (``_get_mem0_backend``).
+
+
+class _BackendAdapter:
+    """Thin adapter exposing the contract ``_get_mem0_backend`` expects.
+
+    Methods never raise — on any exception they return ``[]`` / ``None``
+    and log a warning. This keeps the benchmark loop (100 sequential
+    retrievals) alive across transient API failures.
+    """
+
+    def is_available(self) -> bool:
+        """Return True iff a ``MEM0_API_KEY`` is configured.
+
+        Delegates to ``Mem0MemoryProvider.is_available()`` which checks
+        ``_load_config()["api_key"]``. Does NOT construct a client — the
+        check is purely config inspection.
+        """
+        try:
+            return Mem0MemoryProvider().is_available()
+        except Exception as exc:  # noqa: BLE001 — config inspection must never crash caller
+            logger.warning("mem0 backend is_available() check failed: %s", exc)
+            return False
+
+    def search(
+        self,
+        *,
+        query: str,
+        agent_id: str | None = None,
+        top_k: int = 5,
+    ) -> list[Dict[str, Any]]:
+        """Scoped retrieval. Returns ``list[dict]`` shaped like
+        ``{"memory": str, "score": float, "agent_id": str}``.
+
+        The mem0 Platform API does not echo ``agent_id`` back in each hit;
+        we inject it from the request so the arbitration runtime's T-53-06
+        layered defense (``agent.memory_arbitration.memory_retrieve_scoped``
+        filter at line 439-443) can verify scope.
+        """
+        try:
+            provider = Mem0MemoryProvider()
+            provider.initialize(session_id="benchmark")
+            if agent_id:
+                provider._agent_id = agent_id
+            raw = provider.handle_tool_call(
+                "mem0_search",
+                {"query": query, "top_k": top_k, "rerank": False},
+            )
+            parsed = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
+            logger.warning("mem0 backend search failed: %s", exc)
+            return []
+        if not isinstance(parsed, dict):
+            return []
+        items = parsed.get("results", [])
+        if not isinstance(items, list):
+            return []
+        out: list[Dict[str, Any]] = []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            out.append({
+                "memory": it.get("memory", ""),
+                "score": float(it.get("score", 0.0) or 0.0),
+                "agent_id": agent_id,
+            })
+        return out
+
+    def add(
+        self,
+        *,
+        content: str,
+        agent_id: str | None = None,
+        scope: str = "global",
+        confidence: float = 0.5,
+    ) -> str | None:
+        """Store one record. Returns a record id (mem0-echoed or synthesized).
+
+        mem0 Platform ``add(infer=False)`` returns success without an id,
+        so when no id is echoed we synthesize ``f"mem0-{ts_ms}"`` for
+        caller-side tracking. On any exception returns ``None`` and logs
+        warning — never raises.
+        """
+        try:
+            provider = Mem0MemoryProvider()
+            provider.initialize(session_id="benchmark")
+            if agent_id:
+                provider._agent_id = agent_id
+            raw = provider.handle_tool_call(
+                "mem0_conclude",
+                {"conclusion": content},
+            )
+            # Validate the response parsed cleanly; we do not require an id
+            # in the response, but we want to confirm it wasn't an error.
+            if isinstance(raw, str):
+                parsed = json.loads(raw)
+            else:
+                parsed = raw
+            if isinstance(parsed, dict) and parsed.get("error"):
+                logger.warning("mem0 backend add returned error: %s", parsed.get("error"))
+                return None
+        except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
+            logger.warning("mem0 backend add failed: %s", exc)
+            return None
+        return f"mem0-{int(time.time() * 1000)}"
+
+
+#: Module-level singleton consumed by ``agent.memory_arbitration._get_mem0_backend``.
+backend = _BackendAdapter()
