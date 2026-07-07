@@ -294,6 +294,88 @@ class TestMcpRoundTableIntegration:
         assert result.get("status") == 400
         assert result.get("error") == "invalid_project_slug"
 
+    # ── CR-01 fix: path-traversal rejection on round_id (3 closures) ──────
+
+    @pytest.mark.asyncio
+    async def test_round_table_open_rejects_path_traversal_round_id(self, mcp_server):
+        """CR-01: ``round_table_open`` MUST reject path-traversal round_id.
+
+        Without this guard, a malicious MCP client could pass
+        ``round_id="../../etc/passwd"`` and cause ``open_round_table`` to
+        create arbitrary directories + files under ``~/.hermes/``.
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "round_table_open",
+            round_id="../../etc/passwd",  # path traversal attempt
+            project_slug="test-slug",
+            question="Q?",
+            panelist_agent_ids=["a", "b"],
+            caller="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_round_id"
+
+    @pytest.mark.asyncio
+    async def test_get_agent_opinion_rejects_path_traversal_round_id(self, mcp_server):
+        """CR-01: ``get_agent_opinion`` MUST reject path-traversal round_id.
+
+        ``get_agent_opinion`` builds ``state_path`` from the unvalidated
+        ``round_id`` parameter; without validation it would read arbitrary
+        files (information disclosure via the JSON decode error path).
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "get_agent_opinion",
+            round_id="../../etc/passwd",  # path traversal attempt
+            project_slug="test-slug",
+            agent_id="test-coordinator",
+            topic="anything",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_round_id"
+
+    @pytest.mark.asyncio
+    async def test_submit_round_table_result_rejects_path_traversal_round_id(self, mcp_server):
+        """CR-01: ``submit_round_table_result`` MUST reject path-traversal round_id.
+
+        ``submit_round_table_result`` builds ``state_path`` from the
+        unvalidated ``round_id`` parameter; without validation it would
+        read + atomic-write arbitrary paths (worst case: arbitrary file
+        creation via atomic_json_write's mkdir(parents=True)).
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "submit_round_table_result",
+            round_id="../../etc/passwd",  # path traversal attempt
+            project_slug="test-slug",
+            conclusion="done",
+            cited_memories=[],
+            closed_by="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_round_id"
+
+    @pytest.mark.asyncio
+    async def test_round_table_open_rejects_non_uuid_round_id(self, mcp_server):
+        """CR-01: round_id MUST be UUID-shaped (32 hex or 8-4-4-4-12).
+
+        The ``round_table_open`` docstring promises "CC-generated UUID v4";
+        this test guards against the lax pattern drifting back to a permissive
+        regex that would weaken the path-traversal defense.
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "round_table_open",
+            round_id="not-a-uuid",  # not UUID v4 hex / canonical
+            project_slug="test-slug",
+            question="Q?",
+            panelist_agent_ids=["a", "b"],
+            caller="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_round_id"
+
     @pytest.mark.asyncio
     async def test_submit_round_table_result_idempotent(self, mcp_server):
         """Second submit on a completed round returns 409 Conflict."""

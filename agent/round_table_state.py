@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -66,6 +67,67 @@ from hermes_constants import get_hermes_home
 from utils import atomic_json_write
 
 logger = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Path-traversal validation (T-52-09 mitigation, CR-01 fix)
+# --------------------------------------------------------------------------- #
+# round_id is the literal filename stem of a state file; project_slug is a
+# path component of the state dir. Both MUST be validated before being
+# concatenated into a filesystem path — otherwise a malicious MCP client
+# can pass ``round_id="../../etc/passwd"`` to read/write arbitrary files
+# under ``~/.hermes/`` (CR-01).
+#
+# Validation rules:
+#   - Reject empty strings.
+#   - Reject any value containing ``..`` substring (covers ``../``, ``..\\``).
+#   - Reject path separators (``/``, ``\\``) explicitly — defense-in-depth
+#     even though the regex below already excludes them.
+#   - Match the full string against a strict allow-list regex:
+#       * round_id: UUID v4 hex (32 lowercase hex) OR canonical UUID form
+#         (8-4-4-4-12 lowercase hex, 36 chars). The ``round_table_open``
+#         docstring promises "CC-generated UUID v4" — enforce it.
+#       * project_slug: kebab/snake/camel slug chars (alphanumeric + ``_``,
+#         ``-``, ``.``, ``:``); max 64 chars.
+
+_PATH_SEP_RE = re.compile(r"[\\/]")
+_ROUND_ID_RE = re.compile(r"^[a-f0-9]{32}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
+_PROJECT_SLUG_RE = re.compile(r"^[A-Za-z0-9_.:\-]{1,64}$")
+
+
+def validate_round_id(round_id: str) -> str | None:
+    """Return ``None`` if ``round_id`` is path-safe, else an error code string.
+
+    A path-safe ``round_id`` is a UUID v4 hex (32 lowercase hex digits) or
+    the canonical UUID form (36 chars, lowercase). Anything else — including
+    path separators, ``..`` substrings, or non-hex chars — is rejected.
+
+    The return value is a short error code suitable for inclusion in an MCP
+    400 response body (e.g. ``"invalid_round_id"``). Callers should map
+    non-None returns to a 400 status response without further processing.
+    """
+    if not isinstance(round_id, str) or not round_id:
+        return "invalid_round_id"
+    if ".." in round_id or _PATH_SEP_RE.search(round_id):
+        return "invalid_round_id"
+    if not _ROUND_ID_RE.fullmatch(round_id):
+        return "invalid_round_id"
+    return None
+
+
+def validate_project_slug(project_slug: str) -> str | None:
+    """Return ``None`` if ``project_slug`` is path-safe, else an error code.
+
+    A path-safe slug is 1-64 chars of ``[A-Za-z0-9_.:-]`` with no ``..``
+    substring and no path separators. Anything else is rejected.
+    """
+    if not isinstance(project_slug, str) or not project_slug:
+        return "invalid_project_slug"
+    if ".." in project_slug or _PATH_SEP_RE.search(project_slug):
+        return "invalid_project_slug"
+    if not _PROJECT_SLUG_RE.fullmatch(project_slug):
+        return "invalid_project_slug"
+    return None
 
 
 # --------------------------------------------------------------------------- #

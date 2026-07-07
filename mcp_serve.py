@@ -1003,16 +1003,25 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
                 round-table-state-schema.yaml $defs.PanelistSnapshot.
             caller: CC session ID / operator handle for audit trail.
         """
-        # T-52-09 mitigation: validate project_slug to prevent path traversal
-        if not project_slug or ".." in project_slug:
+        # T-52-09 mitigation + CR-01 fix: validate both project_slug AND
+        # round_id before they are concatenated into a filesystem path.
+        # Without round_id validation, a malicious MCP client could pass
+        # round_id="../../etc/passwd" to read/write arbitrary files.
+        from agent.round_table_state import (
+            validate_project_slug,
+            validate_round_id,
+        )
+
+        slug_err = validate_project_slug(project_slug)
+        if slug_err is not None:
             return json.dumps(
-                {"error": "invalid_project_slug", "status": 400},
+                {"error": slug_err, "status": 400},
                 indent=2,
             )
-        import re as _re
-        if not _re.fullmatch(r"[A-Za-z0-9_.:\-]+", project_slug):
+        round_err = validate_round_id(round_id)
+        if round_err is not None:
             return json.dumps(
-                {"error": "invalid_project_slug", "status": 400},
+                {"error": round_err, "status": 400, "round_id": round_id},
                 indent=2,
             )
 
@@ -1102,7 +1111,25 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             _now_iso as _state_now_iso,
             append_turn,
             read_and_recover_state,
+            validate_project_slug,
+            validate_round_id,
         )
+
+        # CR-01 fix: validate BOTH inputs before they touch the filesystem.
+        # Order matters — reject before acquiring the lock so a rejected
+        # call doesn't pollute the per-roundId lock registry.
+        slug_err = validate_project_slug(project_slug)
+        if slug_err is not None:
+            return json.dumps(
+                {"error": slug_err, "status": 400},
+                indent=2,
+            )
+        round_err = validate_round_id(round_id)
+        if round_err is not None:
+            return json.dumps(
+                {"error": round_err, "status": 400, "round_id": round_id},
+                indent=2,
+            )
 
         lock = await acquire_round_or_reject(round_id)
         if lock is None:
@@ -1227,7 +1254,23 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
         from hermes_constants import get_hermes_home
         from agent.round_table_state import (
             submit_round_table_result as _submit,
+            validate_project_slug,
+            validate_round_id,
         )
+
+        # CR-01 fix: validate BOTH inputs before they touch the filesystem.
+        slug_err = validate_project_slug(project_slug)
+        if slug_err is not None:
+            return json.dumps(
+                {"error": slug_err, "status": 400},
+                indent=2,
+            )
+        round_err = validate_round_id(round_id)
+        if round_err is not None:
+            return json.dumps(
+                {"error": round_err, "status": 400, "round_id": round_id},
+                indent=2,
+            )
 
         state_path = (
             get_hermes_home()
