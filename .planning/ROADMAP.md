@@ -146,11 +146,18 @@ Plans:
   3. Invoking curator without explicit `dry_run: false` flag and invoking `scripts/migrate_v6_feedback_to_memory_schema.py` without `--apply` flag both produce **zero** state mutation (no memory writes, no schema migration writes); dry-run-first is enforced as a default value in code, not just a CLI convention.
   4. Running `scripts/migrate_v6_feedback_to_memory_schema.py --dry-run` on a sample v6.0 FeedbackStore JSONL produces a diff report (what would change) without writing; the dry-run output accounts for every source record (zero silent drops, P14 mitigation); the output format matches `.planning/research/v11-poc-eval/migration-dry-run-format.md` spec.
 
-**Plans**: TBD
+**Plans**: 4 plans across 2 waves — Wave 1 (55-01 + 55-02 + 55-03 parallel, no file overlap) + Wave 2 (55-04 serial, depends on 55-03 for dry-run-first pattern)
 
 Plans:
+**Wave 1** (parallel — no file overlap)
 
-- [ ] 55-01: TBD
+- [ ] 55-01-PLAN.md — EVAL-04 Compaction Pass (agent/memory_compaction.py with compact_memory() + 3-tier post-state + GLM summarization + 600-record fixture + tests/v11-compaction/)
+- [ ] 55-02-PLAN.md — EVAL-05 Threshold Tuning (.planning/research/v11-poc-eval/threshold-tuning.md doc + additive memory.thresholds block in agents-schema.yaml; P13 runaway protection documented)
+- [ ] 55-03-PLAN.md — EVAL-06 Dry-Run-First Invariant (agent/curator.py default flipped dry_run: bool = True + defensive None-check + AST-walk non-bypassable test mirroring v6.0 TestNonBypassableHumanInLoop)
+
+**Wave 2** *(blocked on Wave 1 completion — 55-04 depends on 55-03 dry-run-first pattern)*
+
+- [ ] 55-04-PLAN.md — EVAL-07 Schema Migration Dry-Run (scripts/migrate_v6_feedback_to_memory_schema.py with --dry-run default + Phase 49 §4.3 17-row mapping + 5-metric output + zero silent drops P14 mitigation + tests/v11-schema-migration/ + migration-dry-run-format.md spec)
 
 ---
 
@@ -228,7 +235,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
 | 54. EVAL-HARNESS-1 | 3/3 | Complete    | 2026-07-07 |
-| 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
+| 55. EVAL-HARNESS-2 | 0/4 | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
 
 ---
