@@ -1,0 +1,66 @@
+{
+  "logline": "A young sous-chef returns to her coastal hometown after her mother's sudden death, only to discover the family restaurant hides a generations-old secret recipe that her ruthless metropolitan employer will do anything to steal.",
+  "theme": "Belonging vs. ambition — what we owe the places that made us.",
+  "characters": [
+    {
+      "id": "C1",
+      "name": "Lin Xiaoyao",
+      "role": "protagonist",
+      "arc": "Hot-headed metropolitan sous-chef → reconciles ambition with filial duty",
+      "voice_traits": ["clipped consonants", "code-switches to dialect when angry", "never uses filler words"],
+      "core_wound": "abandoned her mother for a culinary career in Shanghai 5 years ago",
+      "external_goal": "win the Golden Wok national chef tournament",
+      "internal_goal": "earn the right to grieve"
+    },
+    {
+      "id": "C2",
+      "name": "Mr. Tan",
+      "role": "antagonist",
+      "arc": "Charismatic Shanghai restaurateur → revealed as recipe-thief + blackmailer",
+      "voice_traits": ["slick Shanghainese cadence", "always serves expensive tea", "uses culinary metaphors as threats"],
+      "core_wound": "never created an original dish in his life",
+      "external_goal": "acquire the Lin family recipe by any means",
+      "internal_goal": "prove he belongs at the top of the culinary world"
+    },
+    {
+      "id": "C3",
+      "name": "Auntie Mei",
+      "role": "mentor",
+      "arc": "Stubborn aunt → reveals the recipe's true (communal, not secret-sauce) nature",
+      "voice_traits": ["long pauses", "uses fishing metaphors", "sings while cooking"],
+      "core_wound": "watched Xiaoyao leave and never forgave herself for not stopping her",
+      "external_goal": "keep the restaurant alive",
+      "internal_goal": "pass on the family's real legacy"
+    }
+  ],
+  "setting": {
+    "location": "Fujian coastal fishing village (Xiamen outskirts)",
+    "time_period": "present day, late autumn (typhoon season)",
+    "atmosphere": "salt air, neon shrines, wet markets at dawn, scooter horns, religious incense",
+    "key_locations": [
+      "Lin Family Restaurant — 40-year-old corner shop, neon sign half-burnt",
+      "Harbor dock — where Xiaoyao's mother kept her fishing boat",
+      "Ancestral kitchen — back room with a 100-year-old wood stove"
+    ]
+  },
+  "episode_count": 80,
+  "target_episode_duration_seconds": 90,
+  "genre": "modern-life short drama (都市短剧)",
+  "tone": "80% emotional melodrama + 20% culinary-craft realism",
+  "target_demographic": "female 25-45, tier-2 cities and above",
+  "comparable_titles": [
+    "The Banquet of Concubine (2024)",
+    "A Rotary Diary (2023)"
+  ],
+  "story_spine": {
+    "inciting_incident": "Xiaoyao receives a voicemail from Auntie Mei: her mother drowned during a typhoon; the restaurant is hers now.",
+    "central_question": "Will Xiaoyao sell the restaurant to Mr. Tan and return to Shanghai, or stay and discover what her mother was actually protecting?",
+    "act_1_turn": "Xiaoyao finds a hidden recipe journal in the wood stove — written in code.",
+    "midpoint_reversal": "Mr. Tan arrives in the village, offers her 5 million RMB for the journal — revealing he has been hunting it for years.",
+    "all_is_lost": "Xiaoyao's Shanghai restaurant fires her; her metropolitan identity collapses.",
+    "climax": "Golden Wok finale: Xiaoyao cooks the family recipe on live TV — but公开 reveals it is not a secret sauce but a technique every fishing village family in Fujian uses. Mr. Tan's brand collapses.",
+    "resolution": "Xiaoyao reopens the restaurant with Auntie Mei, hosts a village-wide banquet."
+  },
+  "ip_provenance": "fully original — no source IP",
+  "content_safety": "SFW; no on-screen death depiction; typhoon scene uses stock footage; culinary scenes use food-stylist props (no real animal slaughter)"
+}
