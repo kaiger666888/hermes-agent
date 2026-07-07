@@ -40,6 +40,16 @@ All implementation choices are at Claude's discretion — pure infrastructure ph
 - `jsonschema.Draft202012Validator` for schema validation (already pinned in pyproject.toml).
 - `asyncio.Lock` for in-process serial enforcement; cross-process locking unnecessary (gateway runs single-process event loop per architecture constraint).
 
+### Resolved by Kai (2026-07-07, post-research grey-area acceptance)
+
+The v10.0 design suite has internal discrepancies between REQUIREMENTS.md (PoC scope, newer) and `02-ROUND-TABLE-PROTOCOL.md §5` (locked earlier). Kai resolved:
+
+1. **7 MCP tool names — REQUIREMENTS.md list is authoritative for v11.0 PoC.** Implement exactly: `round_table_open`, `submit_round_table_result`, `get_agent_opinion`, `agents_list`, `agent_describe`, `memory_retrieve_scoped`, `memory_submit_record`. This list intentionally diverges from `02-ROUND-TABLE-PROTOCOL.md §5` (which lists `get_agent_persona` / `get_agent_memory` / `submit_artifact` / `query_memory` / `run_python_phase` and defers `round_table_open` to v11.1+). SC#2/SC#3 require `round_table_open` to be callable, so it MUST be implemented in Phase 52. The §5.0 deferral comment is stale (predates `05-POC-PLAN.md` §3.3 which mandates `round_table_open`).
+
+2. **State machine enum — `round-table-state-schema.yaml` is authoritative for the wire format.** Use exactly: `open | completed | aborted | stalled` (with `stalled → open` resume and `stalled → aborted` paths). The informal `open → in_progress → closed` in INFRA-03 / CONTEXT.md / REQUIREMENTS.md is shorthand only; **DO NOT** serialize `in_progress` or `closed` to state JSON. SC#2 "interrupted submit doesn't leave status: in_progress" — that test must check that no state file has `status: in_progress` because that value is not in the schema enum.
+
+3. **Memory tools ship as stubs in Phase 52.** `memory_retrieve_scoped` returns `{"status": "phase53_not_implemented", "hits": []}`. `memory_submit_record` returns `{"status": "phase53_not_implemented", "record_id": null}`. Phase 53 (CREATIVE-SLICE) fills in real mem0 backend routing. The `_scoped_agent_id` `contextvars.ContextVar` primitive is built in Phase 52 (per `01-AGENT-REGISTRY-SCHEMA.md` §5.5) and used by Phase 53.
+
 ### Implementation-level open questions (Claude's discretion)
 
 1. **JSON file per round table vs append-only JSONL vs SQLite for state persistence** — design doc says "JSON file at `.runtime/{slug}/round_tables/{round_id}.json`" so this is locked; Claude's discretion is only on the temp-file + atomic-rename mechanics (use existing `atomic_json_write`).
