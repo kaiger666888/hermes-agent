@@ -8,19 +8,75 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current State (v11.0 SHIPPED 2026-07-07)
+## Current Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval
 
-v11.0 SHIPPED + closed 2026-07-07 (tag `v11.0`, phases archived to `.planning/milestones/v11.0-ROADMAP.md` + `.planning/milestones/v11.0-REQUIREMENTS.md`). v11.0 is the **implementation milestone** for the v10.0 design suite — 5 phases (52-56) · 12 plans · 15/15 reqs verified · 317 automated tests green · audit verdict `passed` with 5 operator-action handoffs deferred per VALIDATE-01 spec.
+**Goal:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(达成 15/15 active expert 覆盖)+ 跑 v12.0 deferred 的 3 个 operator smoke tests 收集真实 prod baseline + curator self-evolution 从 dry-run 切 live + 新增 operator dashboard 把 round table / agent registry / memory backend 可观测化。**完成后 v10.0-v13.0 四 milestone 弧线收官。**
 
-**v11.0 shipped:**
-- INFRA-01..04: agent registry YAML loader + 7 MCP tools + round table state machine (3-mode crash recovery) + per-roundId asyncio.Lock serial enforcement
-- CREATIVE-01..02 + MIGR-01: 9 sample agent YAMLs (HOOK-09 invariant) + screenplay Step 3 round table driver + 5-mechanism memory conflict arbitration runtime
-- EVAL-01..07: fitness battery (8 scenarios) + latency SLO wrapper + bias canary (3-check) + memory compaction (3-tier) + threshold tuning doc + dry-run-first invariant (curator + migration) + schema migration dry-run (P14 zero silent drops)
-- VALIDATE-01: milestone audit + smoke test report + 5 operator-action runbook
+**Target features (4 tracks):**
 
-**Next:** Not yet planned. Run `/gsd:new-milestone` to start the next milestone. Candidates: (a) v12.0 production hardening — 15-expert full transform + live GLM smoke tests + threshold tuning with prod data; (b) operator smoke tests on v11.0 deferred items first.
+1. **EXPERT-COMPLETION** — 12 active expert agent YAML 全量 transform
+   - 待转(12): `animation_studio / colorist / compliance_gate / creative_source / documentary_maker / performer / production / prompt_injector / scene_builder / script_auditor / storyboard_designer / visual_executor`
+   - Source: `kais-hermes-skills/skills/movie-experts/{name}/SKILL.md`(只读,lineage 不动)
+   - Target: `~/.hermes/agents/{name}.agent.yaml`
+   - Transform rules: v10.0 `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` §2 75-cell table
+   - 完成后 agent registry 共 21 agents(9 已 ship + 12 新增,达成 v10.0 design 假设的 15 active DAG + redirect stubs 覆盖)
 
-**v10.0 paradigm shift** (locked in design, v11.0 implemented): agents are Hermes-side YAML entities with per-agent memory + self-evolution; CC is场地+协调员+结构化助手; SKILL form preserved as fallback (`default_invocation: skill_fallback`).
+2. **LIVE-EVAL-EXEC** — 跑 v12.0 deferred 的 3 个 operator smoke tests
+   - Phase 57 SC#2: live GLM synthesis endpoint latency smoke(ENDPOINT-01 真实链路,需 GLM API key)
+   - Phase 60 EVAL-01: live mem0 p95 benchmark(`MEM0_API_KEY`,触发 v14 物理分区决策条件)
+   - Phase 60 EVAL-02: real-mode fitness battery(`GLM_AUX_API_KEY_1..4`,capture production-grade accuracy/latency numbers)
+   - Output: `.planning/research/v13-live-eval/live-eval-report.md` + decision feed for v14(v14 是否做物理分区、是否解 INFRA-04 串行约束)
+
+3. **CURATOR-LIVE** — curator self-evolution 从 dry-run → live tick
+   - Currently: `dry_run: true` default per v11.0 EVAL-06 invariant
+   - Target: `dry_run: false` live mode + 安全护栏(bias canary pre-check + rollback on anomaly)
+   - 前置依赖: v12.0 EVAL-03 bias canary 必须先在 live mode 验证 ≥ 4/5 catch rate(否则保留 dry-run)
+   - Output: live tick runbook + safety policy + 1st live run report
+
+4. **OBSERVABILITY** — operator dashboard(新能力,非 v10.0 设计直接覆盖,从 v12.0 audit §7 gap 衍生)
+   - Round table metrics: latency p50/p95 · token cost · state transitions · serial-lock wait time · early-stop trigger rate
+   - Agent registry health: 21 agents loaded · schema validation status · missing-expert告警 · lineage integrity
+   - Memory backend status: mem0 p95 read/write · conflict arbitration rate · compaction trigger rate · error rate
+   - Output: CLI command(`hermes orchestrator status`)+ 可选 web dashboard(基于现有 `hermes dashboard`)
+
+**Key context:**
+
+- **范式沿用:** Hermes 是 agent 容器 + per-agent memory + 自进化;CC 仅是场地 + 协调员 + 结构化助手(v10.0 锁定,v11.0 实施,v12.0 hardening,v13.0 收官)
+- **范围严格收口:** 仅落地已 deferred 的 4 项 scope + 新加 OBSERVABILITY;**不**做物理分区、**不**解串行约束(均 v14+,取决于 v13 live data)
+- **Operator-action 与 code-work 并行:** LIVE-EVAL-EXEC 需要 operator secrets(GLM/mem0 keys),其它 3 tracks 是纯 code-work;两条线可以并行推进
+- **物理位置:** agent YAML 写 `~/.hermes/agents/`;orchestrator/metrics code 写 hermes-agent repo(`agent/` + `tools/`);live-eval report 写 `.planning/research/v13-live-eval/`
+- **阶段编号:** 继续从 v12.0 Phase 61 之后 → Phase 62 起
+- **Hard constraints(沿用 + 新增):**
+  - INFRA-04 串行约束不变(v13.0不解,MEMORY.md `feedback-glm-overload-reduce-concurrency.md`)
+  - EVAL-06 dry-run-first 不变(v13.0 curator 切 live 是 opt-in `--live` flag,默认仍 dry-run)
+  - Operator secrets 由 operator 提供,LIVE-EVAL-EXEC 不 block 其它 tracks
+
+**Constraints(沿用 + 新增):**
+
+- **Tech stack:** 沿用 v11.0/v12.0(Python 3.11+ + PyYAML + mem0 + asyncio.Lock + FastAPI dashboard);OBSERVABILITY 复用 `hermes dashboard` FastAPI server
+- **Compatibility:** 12 新 agent YAML 必须 byte-pass v10.0 `agents-schema.yaml` lint;`related_skills` + `lineage` 字段必须 populated
+- **SKILL.md read-only:** kais-hermes-skills repo 的 SKILL.md 不动(per Phase 48-49 lineage invariants L1-L6)
+- **Single repo 收敛:** 全部在 hermes-agent repo + `~/.hermes/`,不创建新 repo
+
+## Current State (v12.0 SHIPPED 2026-07-08)
+
+v12.0 SHIPPED + closed 2026-07-08 (tag `v12.0`, phases archived to `.planning/milestones/v12.0-ROADMAP.md` + `.planning/milestones/v12.0-REQUIREMENTS.md`). v12.0 是 **Production Hardening** milestone —— 5 phases (57-61) · 9 plans · 8/8 reqs verified · 586+ automated tests green · audit verdict `passed` · 3 operator-action handoffs deferred per VALIDATE-01 spec.
+
+**v12.0 shipped(4 hardening gaps closed):**
+- ENDPOINT-ROUTING (P57): long-prompt endpoint routing(z.ai/anthropic-compat split)
+- RPM-THROTTLING (P58): per-task RPM token bucket + per-round-table TPM budget
+- AUX-POOL-ISOLATION (P59): separate auxiliary credential pool + per-key TPM tracking
+- LIVE-EVAL (P60): mem0 backend adapter + fitness battery real-mode infrastructure(operator run deferred)
+
+**v11.0 paradigm shift** (locked in design, v11.0 implemented, v12.0 hardened): agents are Hermes-side YAML entities with per-agent memory + self-evolution; CC is场地+协调员+结构化助手; SKILL form preserved as fallback (`default_invocation: skill_fallback`).
+
+## Previous Milestone: v12.0 — Production Hardening ✅ SHIPPED 2026-07-08
+
+**Stats:** 5 phases (57-61) · 9 plans · 53 commits on v12.0-dev · 8/8 reqs ✓ · Tag `v12.0` · Audit `passed`
+
+**Goal:** Fixed 4 hardening gaps exposed by v11.0 real-GLM smoke tests — endpoint routing (long prompts → anthropic-compat), RPM throttling (token bucket + per-round-table TPM budget), auxiliary credential pool isolation (separate keys from main agent + per-key TPM tracking), live-eval infrastructure (mem0 backend adapter + fitness battery real-mode baseline).
+
+See `.planning/milestones/v12.0-MILESTONE-AUDIT.md` for the full audit (status: passed, 8/8 reqs).
 
 ## Previous Milestone: v11.0 — Hermes-Native Expert Agents PoC Implementation ✅ SHIPPED 2026-07-07
 
@@ -187,9 +243,9 @@ v9.0 shipped 后,候选方向:
 
 ### Active
 
-<!-- v2.0 in planning — REQ-IDs assigned after step 9 of /gsd-new-milestone. See REQUIREMENTS.md. -->
+<!-- v13.0 in planning — REQ-IDs assigned after step 9 of /gsd-new-milestone. See REQUIREMENTS.md. -->
 
-Milestone **v2.0 — Pipeline Redesign from First Principles (PRFP)** is being scoped. Requirements TBD via this workflow; see `.planning/REQUIREMENTS.md` once written.
+Milestone **v13.0 — v10.0 Design Suite Full Rollout & Live Eval** is being scoped. 4 tracks: EXPERT-COMPLETION (12 active expert YAMLs) + LIVE-EVAL-EXEC (3 deferred operator smoke tests) + CURATOR-LIVE (curator self-evolution dry-run → live) + OBSERVABILITY (operator dashboard). Requirements TBD via this workflow; see `.planning/REQUIREMENTS.md` once written.
 
 ### Deferred to operator (acknowledged at v1 close)
 
@@ -511,4 +567,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — v10.0 Hermes-Agent 编排架构第一性原理推导(设计型)milestone started. v9.0 closed (tag `v9.0` @ `599ef61a8`). 7 design decisions locked: T6 protocol / B3a Python runner 增量迁移 / D2 storyboard round-parallel / G2 通用框架 / α agent YAML / per-agent memory 自进化 / (vi) 分层 CC 角色.*
+*Last updated: 2026-07-08 — v13.0 v10.0 Design Suite Full Rollout & Live Eval milestone started. v12.0 closed (tag `v12.0` @ 8ea0b2eec). 4 tracks locked: EXPERT-COMPLETION (12 active expert YAMLs to reach 15/15 active coverage) + LIVE-EVAL-EXEC (3 deferred operator smoke tests with prod secrets) + CURATOR-LIVE (curator dry-run → live tick with safety guards) + OBSERVABILITY (operator dashboard: round table metrics + agent registry health + memory backend status).*

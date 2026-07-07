@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v12.0
-milestone_name: Production Hardening
-status: milestone_complete
-last_updated: 2026-07-07T22:17:13.538Z
-last_activity: 2026-07-07 -- Phase 61 execution started
+milestone: v13.0
+milestone_name: v10.0 Design Suite Full Rollout & Live Eval
+status: planning
+last_updated: "2026-07-07T23:19:52.620Z"
+last_activity: 2026-07-07
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 24
-  percent: 80
-stopped_at: Milestone complete (Phase 61 was final phase)
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -29,33 +28,32 @@ stopped_at: Milestone complete (Phase 61 was final phase)
 
 ## Current Position
 
-Phase: 61
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-07
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-07 — Milestone v13.0 started
 
 ### Progress
 
 ```
-v1 movie-experts:                [██████████] 100% (Phases 0-6, shipped 2026-06-15)
-v2.0 PRFP design:                [██████████] 100% (Phases 7-12, shipped 2026-06-16)
-v3.0 Skills-to-DAG:              [██████████] 100% (Phases 13-18, shipped 2026-06-17)
-v4.0 Methodology Backfill:       [██████████] 100% (Phases 19-21, shipped 2026-06-18)
-v5.0 V8.6 Adaptation:            [██████████] 100% (Phases 22-27, shipped 2026-06-19)
-v6.0 Self-Evolution Feedback:    [██████████] 100% (Phases 28-33, shipped 2026-06-24)
-v7.0 openclaw → hermes Migration:[██████████] 100% (Phases 34-37, shipped 2026-06-25)
-v9.0 kais-movie-pipeline 闭环深化:[██████████] 100% (Phases 38-43, shipped 2026-06-27)
-v10.0 Hermes-Agent 编排架构(设计型):[██████████] 100% (Phases 44-51, shipped 2026-07-07, tag v10.0)
+v1 movie-experts:                  [██████████] 100% (Phases 0-6, shipped 2026-06-15)
+v2.0 PRFP design:                  [██████████] 100% (Phases 7-12, shipped 2026-06-16)
+v3.0 Skills-to-DAG:                [██████████] 100% (Phases 13-18, shipped 2026-06-17)
+v4.0 Methodology Backfill:         [██████████] 100% (Phases 19-21, shipped 2026-06-18)
+v5.0 V8.6 Adaptation:              [██████████] 100% (Phases 22-27, shipped 2026-06-19)
+v6.0 Self-Evolution Feedback:      [██████████] 100% (Phases 28-33, shipped 2026-06-24)
+v7.0 openclaw → hermes Migration:  [██████████] 100% (Phases 34-37, shipped 2026-06-25)
+v9.0 kais-movie-pipeline 闭环深化:  [██████████] 100% (Phases 38-43, shipped 2026-06-27)
+v10.0 编排架构设计(设计型):         [██████████] 100% (Phases 44-51, shipped 2026-07-07, tag v10.0)
+v11.0 Expert Agents PoC:           [██████████] 100% (Phases 52-56, shipped 2026-07-07, tag v11.0)
+v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 
-v11.0 Hermes-Native Expert Agents PoC Implementation — IN PLANNING:
-  Phase 52 (INFRA-FOUNDATION)            [░░░░░░░░░░] 0%   agent registry + 7 MCP tools + state machine + serial enforcement
-  Phase 53 (CREATIVE-SLICE)              [░░░░░░░░░░] 0%   9 agent YAMLs + Step 3 round table + conflict arbitration
-  Phase 54 (EVAL-HARNESS-1)              [░░░░░░░░░░] 0%   fitness battery + latency SLO + bias canary
-  Phase 55 (EVAL-HARNESS-2)              [░░░░░░░░░░] 0%   compaction + tuning + dry-run-first + schema migration
-  Phase 56 (VALIDATE)                    [░░░░░░░░░░] 0%   milestone audit + smoke test(严格 LAST)
+v13.0 v10.0 Design Suite Full Rollout & Live Eval — IN PLANNING:
+  Phase numbers TBD (roadmap creation pending)
+  Tracks: EXPERT-COMPLETION (12 agents) + LIVE-EVAL-EXEC (3 smoke tests) + CURATOR-LIVE + OBSERVABILITY
 ```
 
-**v11.0 milestone status:** PLANNING — roadmap created (5 phases 52-56), 15/15 reqs mapped, awaiting user approval. After approval, plan Phase 52.
+**v13.0 milestone status:** PLANNING — gathered 4 tracks from user, awaiting requirements definition + roadmap creation.
 
 ### Phase Statuses (v11.0)
 
