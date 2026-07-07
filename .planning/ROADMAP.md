@@ -80,7 +80,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 52-04-PLAN.md — INFRA-04 Serial Execution Enforcement (per-roundId asyncio.Lock + 429 + MEMORY.md citation)
+- [x] 52-04-PLAN.md — INFRA-04 Serial Execution Enforcement (per-roundId asyncio.Lock + 429 + MEMORY.md citation)
 
 ---
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. INFRA-FOUNDATION | 3/4 | In Progress|  |
+| 52. INFRA-FOUNDATION | 4/4 | Complete   | 2026-07-07 |
 | 53. CREATIVE-SLICE | 0/TBD | Not started | - |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
