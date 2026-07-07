@@ -207,6 +207,18 @@ properties:
       Carries conclusion / citedMemories / artifacts / closedAt / closedBy.
       # Idempotent: second submit for same roundId returns 409 Conflict.
 
+  abortRoundTable:
+    $ref: "#/$defs/AbortRoundTable"
+    description: |
+      Atomic abort event. Present only when status=aborted.
+      Operator / CC cancellation path (CR-04 fix — Phase 52). Carries
+      reason / abortedAt / abortedBy. Conflict log remains sealed for audit.
+      # NOT exposed as an MCP tool in Phase 52 (programmatic API only).
+      #   ``round_table_abort`` MCP wiring is v11.1+ scope per
+      #   02-ROUND-TABLE-PROTOCOL.md §5.0.
+      # Allowed transition: open → aborted. Already-terminal states
+      #   (completed, aborted) reject with 409 Conflict.
+
   # ──────────────────────────────────────────────────────────────────────
   # Cross-layer invariants — persona snapshots + schema version
   # ──────────────────────────────────────────────────────────────────────
@@ -569,4 +581,32 @@ $defs:
         type: string
         description: |
           CC session ID or operator handle that closed the round.
+          Used for audit trail.
+
+  AbortRoundTable:
+    type: object
+    required: [reason, abortedAt, abortedBy]
+    additionalProperties: false
+    description: |
+      Atomic abort event. Present only when status=aborted.
+      Operator / CC cancellation path (CR-04 fix — Phase 52).
+      # NOT exposed as an MCP tool in Phase 52 (programmatic API only);
+      #   ``round_table_abort`` MCP wiring is v11.1+ scope per
+      #   02-ROUND-TABLE-PROTOCOL.md §5.0.
+      # Allowed transition: open → aborted. Already-terminal states
+      #   (completed, aborted) reject with 409 Conflict.
+    properties:
+      reason:
+        type: string
+        description: |
+          Operator-supplied cancellation reason (free text). Sealed in
+          the audit trail — Hermes persists verbatim and does not modify.
+      abortedAt:
+        type: string
+        format: date-time
+        description: "ISO-8601 UTC timestamp when abort_round_table was validated."
+      abortedBy:
+        type: string
+        description: |
+          Operator handle / CC session ID that aborted the round.
           Used for audit trail.

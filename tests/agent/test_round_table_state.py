@@ -25,6 +25,7 @@ import pytest
 
 from agent.round_table_state import (
     RoundTableStatus,
+    abort_round_table,
     append_turn,
     open_round_table,
     read_and_recover_state,
@@ -358,6 +359,103 @@ class TestCrashRecovery:
 
         recovered = read_and_recover_state(state_path)
         assert recovered["status"] == "stalled"
+
+
+# --------------------------------------------------------------------------- #
+# Schema-enum authority — explicit guard against in_progress / closed
+# --------------------------------------------------------------------------- #
+
+
+class TestAbortRoundTable:
+    """CR-04 fix: ``abort_round_table`` programmatic API.
+
+    The schema enum (round-table-state-schema.yaml:127-141) includes
+    ``aborted`` (operator / CC cancellation). Before CR-04, no function
+    produced it — cancelled rounds looked identical to open rounds for
+    the 30-minute stall timeout. These tests pin the transition.
+    """
+
+    def test_abort_round_table_open_to_aborted_happy_path(self):
+        """Happy path: ``open → aborted`` with reason + aborted_by sealed."""
+        state_dir = _state_dir()
+        open_round_table(
+            state_dir=state_dir,
+            round_id="round-abort-1",
+            project_id="test-slug",
+            question="Q?",
+            panelist_agent_ids=["agent-a", "agent-b"],
+            caller="cc-1",
+        )
+        state_path = state_dir / "round-abort-1.json"
+
+        result = abort_round_table(
+            state_path,
+            reason="operator cancelled — wrong panel",
+            aborted_by="operator-kai",
+        )
+        assert result["status"] == "aborted"
+        assert result["abortRoundTable"]["reason"] == "operator cancelled — wrong panel"
+        assert result["abortRoundTable"]["abortedBy"] == "operator-kai"
+        assert result["abortRoundTable"]["abortedAt"] == result["lastUpdatedAt"], (
+            "abortRoundTable.abortedAt MUST match lastUpdatedAt — they are "
+            "computed from the same _now_iso() call so future refactors don't drift"
+        )
+
+        # Reload from disk to confirm atomic write persisted the abort
+        with open(state_path, encoding="utf-8") as f:
+            reloaded = json.load(f)
+        assert reloaded["status"] == "aborted"
+        assert reloaded["abortRoundTable"]["abortedBy"] == "operator-kai"
+
+    def test_abort_round_table_rejects_already_completed(self):
+        """Already-terminal (completed) round rejects abort with 409."""
+        state_dir = _state_dir()
+        open_round_table(
+            state_dir=state_dir,
+            round_id="round-abort-2",
+            project_id="test-slug",
+            question="Q?",
+            panelist_agent_ids=["agent-a", "agent-b"],
+            caller="cc-1",
+        )
+        state_path = state_dir / "round-abort-2.json"
+        # First complete the round
+        submit_round_table_result(
+            state_path=state_path,
+            conclusion="done",
+            cited_memories=[],
+            closed_by="cc-1",
+        )
+        # Now attempt to abort — must reject
+        result = abort_round_table(
+            state_path,
+            reason="too late",
+            aborted_by="operator",
+        )
+        assert result["status"] == 409
+        assert result["error"] == "round_not_open"
+        assert result["current_status"] == "completed"
+
+    def test_abort_round_table_rejects_already_aborted_idempotent(self):
+        """Re-aborting an aborted round rejects with 409 (idempotent contract)."""
+        state_dir = _state_dir()
+        open_round_table(
+            state_dir=state_dir,
+            round_id="round-abort-3",
+            project_id="test-slug",
+            question="Q?",
+            panelist_agent_ids=["agent-a", "agent-b"],
+            caller="cc-1",
+        )
+        state_path = state_dir / "round-abort-3.json"
+        # First abort succeeds
+        first = abort_round_table(state_path, reason="first", aborted_by="op")
+        assert first["status"] == "aborted"
+        # Second abort rejects (already terminal)
+        second = abort_round_table(state_path, reason="second", aborted_by="op")
+        assert second["status"] == 409
+        assert second["error"] == "round_not_open"
+        assert second["current_status"] == "aborted"
 
 
 # --------------------------------------------------------------------------- #

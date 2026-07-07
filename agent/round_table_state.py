@@ -419,6 +419,76 @@ def submit_round_table_result(
     return state
 
 
+def abort_round_table(
+    state_path: Path,
+    *,
+    reason: str,
+    aborted_by: str,
+) -> dict[str, Any]:
+    """Operator / CC cancellation transition (CR-04 fix).
+
+    Mirrors ``submit_round_table_result``'s shape but flips status to
+    ``"aborted"`` instead of ``"completed"``. ``RoundTableStatus.ABORTED``
+    is in the schema enum (round-table-state-schema.yaml:127-141) but no
+    function previously produced it — operators / CC could not represent
+    cancellation in the state file, leaving cancelled rounds looking
+    identical to open rounds until stall timeout kicked in 30 minutes
+    later. The audit trail for cancellations was lost.
+
+    Allowed transition: ``open → aborted``. Rejects if already in a
+    terminal state (``completed`` or ``aborted``). Also rejects ``stalled``
+    because stalled rounds should be resumed (``stalled → open`` via
+    ``open_round_table``'s idempotent re-open) or explicitly resumed-then-
+    aborted by the operator, not silently flipped to aborted from stalled.
+
+    Idempotent: re-aborting an already-aborted round returns 409 Conflict
+    (the round is already terminal). This mirrors the
+    ``submit_round_table_result`` contract.
+
+    Not wired into MCP tools (Phase 52 deliberately ships no
+    ``round_table_abort`` MCP tool — that is v11.1+ scope per
+    ``02-ROUND-TABLE-PROTOCOL.md §5.0``). This is a programmatic API for
+    operator scripts / curator hooks / future MCP wiring.
+
+    Args:
+        state_path: State file path.
+        reason: Operator-supplied cancellation reason (free text). Sealed
+            in the ``abortRoundTable.reason`` audit field.
+        aborted_by: Operator handle / CC session ID. Sealed in the
+            ``abortRoundTable.abortedBy`` audit field.
+
+    Returns:
+        The aborted state dict (``status="aborted"``) OR
+        ``{"error": "round_not_open", "status": 409}`` on terminal conflict.
+    """
+    state = _read_state_sync(state_path)
+    current = state.get("status")
+    if current != RoundTableStatus.OPEN.value:
+        # Already terminal (completed / aborted) or stalled. Reject.
+        return {
+            "error": "round_not_open",
+            "status": 409,
+            "current_status": current,
+        }
+
+    now_iso = _now_iso()
+    state["status"] = RoundTableStatus.ABORTED.value
+    state["abortRoundTable"] = {
+        "reason": reason,
+        "abortedAt": now_iso,
+        "abortedBy": aborted_by,
+    }
+    state["lastUpdatedAt"] = now_iso
+    atomic_json_write(state_path, state, indent=2)
+    logger.info(
+        "round_table aborted: round_id=%s aborted_by=%s reason=%s",
+        state.get("roundId"),
+        aborted_by,
+        reason,
+    )
+    return state
+
+
 # --------------------------------------------------------------------------- #
 # Read-time crash recovery — SC#3 a / b / c
 # --------------------------------------------------------------------------- #
