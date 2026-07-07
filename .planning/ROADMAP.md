@@ -68,7 +68,7 @@ v10.0 (design-only milestone) shipped 2026-07-07 — Hermes-Agent orchestrator +
 Plans:
 **Wave 1**
 
-- [ ] 52-01-PLAN.md — INFRA-01 Agent Registry YAML Loader (registry_loader.py + jsonschema validation + lazy cache)
+- [x] 52-01-PLAN.md — INFRA-01 Agent Registry YAML Loader (registry_loader.py + jsonschema validation + lazy cache)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. INFRA-FOUNDATION | 0/TBD | Not started | - |
+| 52. INFRA-FOUNDATION | 1/4 | In Progress|  |
 | 53. CREATIVE-SLICE | 0/TBD | Not started | - |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
