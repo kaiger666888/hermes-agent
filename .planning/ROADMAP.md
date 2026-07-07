@@ -114,7 +114,8 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   1. `.planning/milestones/v12.0-MILESTONE-AUDIT.md` with verdict.
   2. `production-smoke-report.md` shows <240s round table + zero RateLimitError.
   3. Git tag `v12.0`.
-**Plans**: TBD
+**Plans**:
+- [ ] 61-01-PLAN.md — VALIDATE-01 milestone audit + production smoke (extend run_milestone_audit.py with --milestone v12.0 + author v12.0-MILESTONE-AUDIT.md + author production-smoke-report.md + update REQUIREMENTS.md traceability)
 
 ---
 
@@ -181,4 +182,4 @@ See `.planning/milestones/v9.0-MILESTONE-AUDIT.md` for full audit.
 
 ---
 
-*Last updated: 2026-07-07 — v12.0 milestone started; Phase 57 (ENDPOINT-ROUTING) planned (1 plan, 3 tasks, ENDPOINT-01). Next: `/gsd:execute-phase 57` or plan Phases 58-61.*
+*Last updated: 2026-07-08 — Phase 61 (VALIDATE) planned: 1 plan, 3 tasks, VALIDATE-01. v12.0 milestone audit + production smoke close-out (strictly LAST phase). Next: `/gsd:execute-phase 61` then operator §3 handoffs + git tag v12.0.*
