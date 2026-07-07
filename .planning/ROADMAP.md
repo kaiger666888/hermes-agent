@@ -95,7 +95,12 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
   2. 全部 12 个新 YAML byte-pass `jsonschema.Draft202012Validator.validate()` against `.planning/research/v10-orchestrator-design/agents-schema.yaml`(scripted check exits 0)
   3. 全部 12 个新 YAML lineage 字段 populated —— `source_sha` + `transform_rule_id` + `transform_timestamp`(grep finds non-empty values in all 12 files; spot-check 1 traces back to source SKILL.md commit SHA)
   4. Transform rules applied match v10.0 `04-MIGRATION-PATH.md §2` 75-cell table(per-agent transform log emitted with rule IDs cited)
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 62-01-PLAN.md — Wave 0 validation infra (scripts/validate_phase62_yamls.py — jsonschema Draft202012Validator batch gate)
+- [ ] 62-02-PLAN.md — Wave 1 Batch A (6 simpler experts: animation_studio/colorist/compliance_gate/creative_source/documentary_maker/performer)
+- [ ] 62-03-PLAN.md — Wave 1 Batch B (6 edge-case experts: production/prompt_injector/scene_builder/script_auditor/storyboard_designer/visual_executor — parallel with 02)
+- [ ] 62-04-PLAN.md — Wave 2 integration (62-TRANSFORM-LOG.md + 21-agent registry smoke + SHA spot-check)
 
 ### Phase 63: EXPERT-REGISTRY-INTEGRATION
 **Goal**: Agent registry 启动时加载全部 21 agents 无错误,且至少 1 个新 agent(`visual_executor` — 最复杂,带 sub_steps)能通过 round table 实际调用产生非空响应。
@@ -177,7 +182,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. EXPERT-YAML-TRANSFORM | 0/TBD | Not started | - |
+| 62. EXPERT-YAML-TRANSFORM | 0/4 | Not started | - |
 | 63. EXPERT-REGISTRY-INTEGRATION | 0/TBD | Not started | - |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 0/TBD | Not started | - |
