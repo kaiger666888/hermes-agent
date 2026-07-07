@@ -444,6 +444,617 @@ class EventBridge:
 
 
 # ---------------------------------------------------------------------------
+# Round-table + memory tools — module-level Phase 53 surface
+# ---------------------------------------------------------------------------
+#
+# Phase 53 (CREATIVE-SLICE): the 5 Phase 52 round-table / memory MCP tools
+# were originally defined as nested functions inside ``create_mcp_server()``,
+# making them unimportable. Plan 53-03 lifted them to module level so:
+#
+#   - The driver script ``scripts/run_screenplay_step3_roundtable.py`` can
+#     call them directly via ``from mcp_serve import round_table_open,
+#     get_agent_opinion, submit_round_table_result`` (Wave 0 contract).
+#   - Unit tests in ``tests/agent/test_run_screenplay_step3.py`` can invoke
+#     them directly (including the concurrent-gather serial-violation test).
+#   - ``create_mcp_server`` simply re-registers them via ``mcp.tool()(fn)``.
+#
+# Phase 52 contract preserved verbatim:
+#   - Signatures, docstrings, error responses, status codes unchanged.
+#   - The FastMCP server still exposes the same 5 tool names.
+#   - T-52-15 try/finally lock contract in ``get_agent_opinion`` intact.
+#
+# Phase 53 contract addition:
+#   - ``get_agent_opinion`` no longer returns the Phase 52 placeholder
+#     opinion string — it now performs real GLM dispatch via
+#     ``auxiliary_client.call_llm(task="round_table_opinion", provider="glm")``
+#     and routes memory through ``memory_arbitration.memory_retrieve_scoped``
+#     with the ``_scoped_agent_id`` ContextVar set + cleared in finally.
+
+
+async def round_table_open(
+    round_id: str,
+    project_slug: str,
+    question: str,
+    panelist_agent_ids: list[str],
+    caller: str = "cc",
+) -> str:
+    """Open a new round-table discussion (lifecycle step 1 of 3).
+
+    Creates a state file at
+    ``~/.hermes/agents/.runtime/{project_slug}/round_tables/{round_id}.json``
+    with ``status="open"``. Idempotent — re-calling with the same
+    ``round_id`` returns 409 Conflict (does NOT mutate).
+
+    Follow with ``get_agent_opinion`` (one or more times) and terminate
+    with ``submit_round_table_result``.
+
+    Args:
+        round_id: CC-generated UUID v4. Filename stem for the state file.
+        project_slug: Project identifier for per-project state isolation
+            (``.runtime/{slug}/round_tables/``). Validated against
+            ``^[a-zA-Z0-9_.:-]+$``; ``..`` substrings rejected (T-52-09).
+        question: Free-text topic being debated.
+        panelist_agent_ids: List of agent IDs; minItems=2 per
+            round-table-state-schema.yaml $defs.PanelistSnapshot.
+        caller: CC session ID / operator handle for audit trail.
+    """
+    # T-52-09 mitigation + CR-01 fix: validate both project_slug AND
+    # round_id before they are concatenated into a filesystem path.
+    # Without round_id validation, a malicious MCP client could pass
+    # round_id="../../etc/passwd" to read/write arbitrary files.
+    from agent.round_table_state import (
+        validate_project_slug,
+        validate_round_id,
+    )
+
+    slug_err = validate_project_slug(project_slug)
+    if slug_err is not None:
+        return json.dumps(
+            {"error": slug_err, "status": 400},
+            indent=2,
+        )
+    round_err = validate_round_id(round_id)
+    if round_err is not None:
+        return json.dumps(
+            {"error": round_err, "status": 400, "round_id": round_id},
+            indent=2,
+        )
+
+    # Schema minItems=2 enforcement at open-time
+    if not isinstance(panelist_agent_ids, list) or len(panelist_agent_ids) < 2:
+        return json.dumps(
+            {"error": "panelists_min_2_required", "status": 400},
+            indent=2,
+        )
+
+    # WR-03 fix: item-level validation. The previous check only verified
+    # "is a list of length >= 2" — it did NOT verify each item is a
+    # non-empty string matching the agent-id pattern, nor that the list
+    # has no duplicates. Without this, None / empty-string / duplicate
+    # IDs silently land on disk via open_round_table's
+    # panelists[].agentId + turnOrder.seed writes (and the loader does
+    # NOT re-validate persisted state against the schema).
+    import re as _panel_re
+    _AGENT_ID_RE = _panel_re.compile(r"^[a-z0-9_-]+$")
+    for pid in panelist_agent_ids:
+        if not isinstance(pid, str) or not pid:
+            return json.dumps(
+                {"error": "invalid_panelist_id", "status": 400,
+                 "detail": "panelist_agent_ids items must be non-empty strings"},
+                indent=2,
+            )
+        if not _AGENT_ID_RE.fullmatch(pid):
+            return json.dumps(
+                {"error": "invalid_panelist_id", "status": 400,
+                 "detail": f"panelist_agent_ids item {pid!r} must match ^[a-z0-9_-]+$",
+                 "invalid_value": pid},
+                indent=2,
+            )
+    if len(set(panelist_agent_ids)) != len(panelist_agent_ids):
+        return json.dumps(
+            {"error": "duplicate_panelist_id", "status": 400,
+             "detail": "panelist_agent_ids must be unique — duplicates would "
+                       "violate the 'different panelists' contract of minItems=2"},
+            indent=2,
+        )
+
+    from hermes_constants import get_hermes_home
+    from agent.registry_loader import RegistryValidationError
+    from agent.round_table_state import open_round_table
+
+    state_dir = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / project_slug
+        / "round_tables"
+    )
+    try:
+        state = open_round_table(
+            state_dir=state_dir,
+            round_id=round_id,
+            project_id=project_slug,
+            question=question,
+            panelist_agent_ids=panelist_agent_ids,
+            caller=caller,
+        )
+    except RegistryValidationError as exc:
+        # WR-02 fix: surface typed 400 with the structured json_path /
+        # invalid_field so callers can debug schema violations without
+        # parsing the human-readable message.
+        logger.warning(
+            "round_table_open: registry validation failed: %s", exc
+        )
+        return json.dumps(
+            {
+                "error": "registry_validation_failed",
+                "status": 400,
+                "detail": str(exc),
+                "json_path": exc.json_path,
+                "invalid_field": exc.invalid_field,
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        logger.warning(
+            "round_table_open: open_round_table failed: %s", exc
+        )
+        return json.dumps(
+            {"error": "open_failed", "status": 500, "detail": str(exc)},
+            indent=2,
+        )
+
+    if "error" in state:
+        # open_round_table returns a dict-with-error on 409 Conflict
+        return json.dumps(state, indent=2)
+
+    return json.dumps(
+        {"roundId": round_id, "status": "open", "state": state},
+        indent=2,
+    )
+
+
+# -- get_agent_opinion --------------------------------------------------
+#
+# Phase 53 (plan 53-03 Task 1) replaces the Phase 52 placeholder opinion
+# with real GLM dispatch + scoped memory retrieval. The T-52-15 try/finally
+# lock contract is preserved verbatim — the only structural change is the
+# nested try/finally for ``set_scoped_agent_id`` cleanup (RESEARCH Pitfall 5).
+
+
+def _format_memory_context(hits: list) -> str:
+    """Format memory hits as a prior-memory preamble for the panelist prompt.
+
+    Returns an empty string when no hits — the caller should omit the
+    section entirely rather than emit a "no prior memory" line (which
+    tends to confuse the LLM into apologizing for forgetting things).
+    """
+    if not hits:
+        return ""
+    lines = ["Prior memory (from this agent's namespace):"]
+    for hit in hits:
+        if isinstance(hit, dict):
+            content = hit.get("content") or hit.get("text") or ""
+            rid = hit.get("record_id") or hit.get("id") or "?"
+        else:
+            content = str(hit)
+            rid = "?"
+        if content:
+            lines.append(f"- [{rid}] {content}")
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
+def _load_persona_for_agent(agent_id: str) -> str:
+    """Load the persona field from the agent's YAML, fallback to generic.
+
+    Used by ``get_agent_opinion`` as the system-prompt persona for the GLM
+    call. Falls back to a generic directive if the YAML is missing (e.g.
+    registry not seeded) so the round table can still proceed.
+    """
+    try:
+        from hermes_constants import get_hermes_home
+        from agent.registry_loader import load_one_agent_yaml
+
+        yaml_path = get_hermes_home() / "agents" / f"{agent_id}.agent.yaml"
+        if yaml_path.exists():
+            record = load_one_agent_yaml(yaml_path)
+            persona = record.get("persona")
+            if isinstance(persona, str) and persona.strip():
+                return persona
+        logger.debug(
+            "get_agent_opinion: no persona for agent_id=%s (yaml missing or empty)",
+            agent_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — persona lookup is best-effort
+        logger.debug(
+            "get_agent_opinion: persona lookup failed for %s: %s",
+            agent_id,
+            exc,
+        )
+    return f"You are {agent_id}. Contribute your expert slice on the round-table topic."
+
+
+def _extract_cited_memory_ids(hits: list) -> list:
+    """Pull record IDs out of memory hits for the Turn dict's citedMemoryIds."""
+    ids: list = []
+    for hit in hits or []:
+        if isinstance(hit, dict):
+            rid = hit.get("record_id") or hit.get("id")
+            if rid and rid not in ids:
+                ids.append(rid)
+    return ids
+
+
+async def get_agent_opinion(
+    round_id: str,
+    project_slug: str,
+    agent_id: str,
+    topic: str,
+    panel_context: Optional[str] = None,
+) -> str:
+    """Get one panelist's opinion on a topic within an open round table.
+
+    Phase 53 (plan 53-03): performs real GLM dispatch via
+    ``auxiliary_client.call_llm(task="round_table_opinion", provider="glm")``
+    + scoped memory retrieval via ``memory_arbitration.memory_retrieve_scoped``.
+
+    Lifecycle step 2 of 3 — call between ``round_table_open`` and
+    ``submit_round_table_result``.
+
+    Args:
+        round_id: The roundId from round_table_open.
+        project_slug: Same slug passed to round_table_open.
+        agent_id: The panelist's agent name.
+        topic: Topic/question this turn addresses.
+        panel_context: Optional prior-turn context for the panelist.
+    """
+    # INFRA-04 (Phase 52-04): per-roundId asyncio.Lock serializes
+    # get_agent_opinion so concurrent calls for the same roundId are
+    # REJECTED with 429 + MEMORY.md citation (NOT queued). This is the
+    # GLM concurrency safety layer — queueing would violate the 4-key
+    # rotation compatibility constraint locked by user-memory policy
+    # feedback-glm-overload-reduce-concurrency.md.
+    from agent.round_table_executor import (
+        _serial_violation_response,
+        acquire_round_or_reject,
+        release_round_lock,
+    )
+    from hermes_constants import get_hermes_home
+    from agent.round_table_state import (
+        _now_iso as _state_now_iso,
+        append_turn,
+        read_and_recover_state,
+        validate_project_slug,
+        validate_round_id,
+    )
+    # Phase 53 wiring: real memory routing + real GLM dispatch.
+    from agent.memory_arbitration import (
+        memory_retrieve_scoped,
+        set_scoped_agent_id,
+    )
+    from agent.auxiliary_client import call_llm
+
+    # CR-01 fix: validate BOTH inputs before they touch the filesystem.
+    # Order matters — reject before acquiring the lock so a rejected
+    # call doesn't pollute the per-roundId lock registry.
+    slug_err = validate_project_slug(project_slug)
+    if slug_err is not None:
+        return json.dumps(
+            {"error": slug_err, "status": 400},
+            indent=2,
+        )
+    round_err = validate_round_id(round_id)
+    if round_err is not None:
+        return json.dumps(
+            {"error": round_err, "status": 400, "round_id": round_id},
+            indent=2,
+        )
+
+    lock = await acquire_round_or_reject(round_id)
+    if lock is None:
+        return _serial_violation_response(round_id)
+
+    try:
+        state_path = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / project_slug
+            / "round_tables"
+            / f"{round_id}.json"
+        )
+
+        if not state_path.exists():
+            return json.dumps(
+                {
+                    "error": "round_not_found",
+                    "status": 404,
+                    "round_id": round_id,
+                },
+                indent=2,
+            )
+
+        try:
+            state = read_and_recover_state(state_path)
+        except FileNotFoundError:
+            return json.dumps(
+                {
+                    "error": "round_not_found",
+                    "status": 404,
+                    "round_id": round_id,
+                },
+                indent=2,
+            )
+        except Exception as exc:
+            logger.warning(
+                "get_agent_opinion: state read failed for %s: %s",
+                round_id,
+                exc,
+            )
+            return json.dumps(
+                {"error": "state_read_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        if state.get("status") != "open":
+            return json.dumps(
+                {
+                    "error": "round_not_open",
+                    "status": 409,
+                    "round_id": round_id,
+                    "current_status": state.get("status"),
+                },
+                indent=2,
+            )
+
+        # Phase 53: real GLM dispatch + scoped memory retrieval.
+        #
+        # Nested try/finally: the OUTER finally releases the per-roundId
+        # lock (T-52-15 DoS mitigation preserved verbatim from Phase 52).
+        # The INNER finally clears ``_scoped_agent_id`` so the ContextVar
+        # does not leak into the next panelist's turn (RESEARCH Pitfall 5).
+        set_scoped_agent_id(agent_id)
+        try:
+            # memory_retrieve_scoped honors the ContextVar we just set; it
+            # falls back to the explicit agent_id if the ContextVar is unset
+            # (defensive — never blocks the round on missing scope).
+            try:
+                mem_result = await memory_retrieve_scoped(
+                    query=topic, agent_id=agent_id, top_k=5,
+                )
+            except Exception as exc:  # noqa: BLE001 — memory degrade, never crash
+                logger.warning(
+                    "get_agent_opinion: memory_retrieve_scoped failed for %s: %s",
+                    agent_id,
+                    exc,
+                )
+                mem_result = {"status": "unavailable", "hits": []}
+
+            memory_context = _format_memory_context(mem_result.get("hits", []))
+            cited_memory_ids = _extract_cited_memory_ids(mem_result.get("hits", []))
+
+            persona = _load_persona_for_agent(agent_id)
+
+            # Build the opinion query: topic + panel_context + memory + story
+            # context (driver script passes StoryKernel JSON via panel_context).
+            user_parts = [f"# Round-table topic\n{topic}"]
+            if panel_context:
+                user_parts.append(
+                    f"\n# Prior panel discussion (chain)\n{panel_context}"
+                )
+            if memory_context:
+                user_parts.append(f"\n# {memory_context}")
+            user_parts.append(
+                "\n# Your task\nContribute your expert slice on this topic. "
+                "Be concrete and actionable; cite specific moments from "
+                "the topic or panel discussion. Limit to ~200 words."
+            )
+            user_prompt = "\n".join(user_parts)
+
+            # CRITICAL (MEMORY.md feedback-glm-5-2-only.md): explicit
+            # provider="glm" — never rely on the auto-chain (which could
+            # pick OpenRouter and violate the user's GLM-only policy).
+            response = call_llm(
+                task="round_table_opinion",
+                provider="glm",
+                messages=[
+                    {"role": "system", "content": persona},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=2048,
+            )
+            opinion_text = response.choices[0].message.content
+
+            # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
+            turn = {
+                "turnIndex": len(state.get("turns", [])) + 1,
+                "panelistId": agent_id,
+                "opinion": opinion_text,
+                "citedMemoryIds": cited_memory_ids,
+                "submittedAt": _state_now_iso(),
+            }
+
+            try:
+                append_turn(state_path, turn)
+            except Exception as exc:
+                logger.warning(
+                    "get_agent_opinion: append_turn failed for %s: %s",
+                    round_id,
+                    exc,
+                )
+                return json.dumps(
+                    {"error": "append_turn_failed", "detail": str(exc)},
+                    indent=2,
+                )
+
+            return json.dumps(
+                {
+                    "round_id": round_id,
+                    "agent_id": agent_id,
+                    "opinion": opinion_text,
+                    "cited_memory_ids": cited_memory_ids,
+                    "status": "ok",
+                },
+                indent=2,
+            )
+        finally:
+            # RESEARCH Pitfall 5 mitigation: clear the ContextVar on EVERY
+            # exit path (happy, error, asyncio.CancelledError). Without this,
+            # the scope leaks into the next panelist's turn and memory calls
+            # hit the wrong namespace.
+            set_scoped_agent_id(None)
+    finally:
+        # T-52-15 (DoS): lock MUST be released on every path — happy,
+        # error, AND asyncio.CancelledError. Without finally, an
+        # exception in read_and_recover_state or append_turn would
+        # permanently block that roundId.
+        await release_round_lock(round_id)
+
+
+async def submit_round_table_result(
+    round_id: str,
+    project_slug: str,
+    conclusion: str,
+    cited_memories: Optional[list[str]] = None,
+    closed_by: str = "cc",
+) -> str:
+    """Submit the round-table conclusion (terminal lifecycle step 3 of 3).
+
+    Flips state file ``status`` from ``"open"`` to ``"completed"`` and
+    seals the ``submitRoundTableResult`` block. Idempotent: re-calling
+    on a completed round returns 409 Conflict.
+
+    Args:
+        round_id: The roundId from round_table_open.
+        project_slug: Same slug passed to round_table_open.
+        conclusion: CC's synthesis of the round-table discussion.
+        cited_memories: Memory record_ids cited across turns + conclusion.
+        closed_by: CC session ID / operator handle for audit trail.
+    """
+    from hermes_constants import get_hermes_home
+    from agent.round_table_state import (
+        submit_round_table_result as _submit,
+        validate_project_slug,
+        validate_round_id,
+    )
+
+    # CR-01 fix: validate BOTH inputs before they touch the filesystem.
+    slug_err = validate_project_slug(project_slug)
+    if slug_err is not None:
+        return json.dumps(
+            {"error": slug_err, "status": 400},
+            indent=2,
+        )
+    round_err = validate_round_id(round_id)
+    if round_err is not None:
+        return json.dumps(
+            {"error": round_err, "status": 400, "round_id": round_id},
+            indent=2,
+        )
+
+    state_path = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / project_slug
+        / "round_tables"
+        / f"{round_id}.json"
+    )
+
+    if not state_path.exists():
+        return json.dumps(
+            {
+                "error": "round_not_found",
+                "status": 404,
+                "round_id": round_id,
+            },
+            indent=2,
+        )
+
+    try:
+        result = _submit(
+            state_path,
+            conclusion=conclusion,
+            cited_memories=cited_memories or [],
+            closed_by=closed_by,
+        )
+    except Exception as exc:
+        logger.warning(
+            "submit_round_table_result: submit failed for %s: %s",
+            round_id,
+            exc,
+        )
+        return json.dumps(
+            {"error": "submit_failed", "detail": str(exc)},
+            indent=2,
+        )
+
+    if "error" in result:
+        # _submit returns a dict-with-error on 409 round_not_open
+        return json.dumps(result, indent=2)
+
+    return json.dumps(
+        {"roundId": round_id, "status": "completed"},
+        indent=2,
+    )
+
+
+# -- memory_retrieve_scoped / memory_submit_record ----------------------
+#
+# Phase 52 stubs replaced by Phase 53 routing in plan 53-02. These thin
+# MCP wrappers forward to the (now-real) agent.memory_arbitration functions.
+
+
+async def memory_retrieve_scoped(
+    query: str,
+    agent_id: str,
+    top_k: int = 5,
+) -> str:
+    """Retrieve scoped memories for an agent.
+
+    Forwards to ``agent.memory_arbitration.memory_retrieve_scoped`` which
+    routes to the mem0 backend (or returns ``{"status": "unavailable",
+    "hits": []}`` when the backend is not configured).
+
+    Args:
+        query: Free-text recall query.
+        agent_id: The agent whose memory namespace to consult.
+        top_k: Max results to return.
+    """
+    from agent.memory_arbitration import memory_retrieve_scoped as _retrieve
+
+    result = await _retrieve(query, agent_id, top_k=top_k)
+    return json.dumps(result, indent=2)
+
+
+async def memory_submit_record(
+    agent_id: str,
+    content: str,
+    scope: str = "per_agent",
+    confidence: float = 0.5,
+) -> str:
+    """Submit a memory record for an agent.
+
+    Forwards to ``agent.memory_arbitration.memory_submit_record`` which
+    routes to the mem0 backend (or returns ``{"status": "unavailable",
+    "record_id": null}`` when the backend is not configured).
+
+    Args:
+        agent_id: The agent whose memory namespace to write into.
+        content: Free-text memory content to persist.
+        scope: One of ``shared`` / ``per_agent`` / ``project_scoped``.
+        confidence: Optional confidence score in [0.0, 1.0].
+    """
+    from agent.memory_arbitration import memory_submit_record as _submit_record
+
+    result = await _submit_record(
+        agent_id, content, scope=scope, confidence=confidence
+    )
+    return json.dumps(result, indent=2)
+
+
+# ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
 
@@ -1007,452 +1618,19 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             indent=2,
         )
 
-    # -- round_table_open ---------------------------------------------------
-
-    @mcp.tool()
-    async def round_table_open(
-        round_id: str,
-        project_slug: str,
-        question: str,
-        panelist_agent_ids: list[str],
-        caller: str = "cc",
-    ) -> str:
-        """Open a new round-table discussion (lifecycle step 1 of 3).
-
-        Creates a state file at
-        ``~/.hermes/agents/.runtime/{project_slug}/round_tables/{round_id}.json``
-        with ``status="open"``. Idempotent — re-calling with the same
-        ``round_id`` returns 409 Conflict (does NOT mutate).
-
-        Follow with ``get_agent_opinion`` (one or more times) and terminate
-        with ``submit_round_table_result``.
-
-        Args:
-            round_id: CC-generated UUID v4. Filename stem for the state file.
-            project_slug: Project identifier for per-project state isolation
-                (``.runtime/{slug}/round_tables/``). Validated against
-                ``^[a-zA-Z0-9_.:-]+$``; ``..`` substrings rejected (T-52-09).
-            question: Free-text topic being debated.
-            panelist_agent_ids: List of agent IDs; minItems=2 per
-                round-table-state-schema.yaml $defs.PanelistSnapshot.
-            caller: CC session ID / operator handle for audit trail.
-        """
-        # T-52-09 mitigation + CR-01 fix: validate both project_slug AND
-        # round_id before they are concatenated into a filesystem path.
-        # Without round_id validation, a malicious MCP client could pass
-        # round_id="../../etc/passwd" to read/write arbitrary files.
-        from agent.round_table_state import (
-            validate_project_slug,
-            validate_round_id,
-        )
-
-        slug_err = validate_project_slug(project_slug)
-        if slug_err is not None:
-            return json.dumps(
-                {"error": slug_err, "status": 400},
-                indent=2,
-            )
-        round_err = validate_round_id(round_id)
-        if round_err is not None:
-            return json.dumps(
-                {"error": round_err, "status": 400, "round_id": round_id},
-                indent=2,
-            )
-
-        # Schema minItems=2 enforcement at open-time
-        if not isinstance(panelist_agent_ids, list) or len(panelist_agent_ids) < 2:
-            return json.dumps(
-                {"error": "panelists_min_2_required", "status": 400},
-                indent=2,
-            )
-
-        # WR-03 fix: item-level validation. The previous check only verified
-        # "is a list of length >= 2" — it did NOT verify each item is a
-        # non-empty string matching the agent-id pattern, nor that the list
-        # has no duplicates. Without this, None / empty-string / duplicate
-        # IDs silently land on disk via open_round_table's
-        # panelists[].agentId + turnOrder.seed writes (and the loader does
-        # NOT re-validate persisted state against the schema).
-        import re as _panel_re
-        _AGENT_ID_RE = _panel_re.compile(r"^[a-z0-9_-]+$")
-        for pid in panelist_agent_ids:
-            if not isinstance(pid, str) or not pid:
-                return json.dumps(
-                    {"error": "invalid_panelist_id", "status": 400,
-                     "detail": "panelist_agent_ids items must be non-empty strings"},
-                    indent=2,
-                )
-            if not _AGENT_ID_RE.fullmatch(pid):
-                return json.dumps(
-                    {"error": "invalid_panelist_id", "status": 400,
-                     "detail": f"panelist_agent_ids item {pid!r} must match ^[a-z0-9_-]+$",
-                     "invalid_value": pid},
-                    indent=2,
-                )
-        if len(set(panelist_agent_ids)) != len(panelist_agent_ids):
-            return json.dumps(
-                {"error": "duplicate_panelist_id", "status": 400,
-                 "detail": "panelist_agent_ids must be unique — duplicates would "
-                           "violate the 'different panelists' contract of minItems=2"},
-                indent=2,
-            )
-
-        from hermes_constants import get_hermes_home
-        from agent.registry_loader import RegistryValidationError
-        from agent.round_table_state import open_round_table
-
-        state_dir = (
-            get_hermes_home()
-            / "agents"
-            / ".runtime"
-            / project_slug
-            / "round_tables"
-        )
-        try:
-            state = open_round_table(
-                state_dir=state_dir,
-                round_id=round_id,
-                project_id=project_slug,
-                question=question,
-                panelist_agent_ids=panelist_agent_ids,
-                caller=caller,
-            )
-        except RegistryValidationError as exc:
-            # WR-02 fix: surface typed 400 with the structured json_path /
-            # invalid_field so callers can debug schema violations without
-            # parsing the human-readable message.
-            logger.warning(
-                "round_table_open: registry validation failed: %s", exc
-            )
-            return json.dumps(
-                {
-                    "error": "registry_validation_failed",
-                    "status": 400,
-                    "detail": str(exc),
-                    "json_path": exc.json_path,
-                    "invalid_field": exc.invalid_field,
-                },
-                indent=2,
-            )
-        except Exception as exc:
-            logger.warning(
-                "round_table_open: open_round_table failed: %s", exc
-            )
-            return json.dumps(
-                {"error": "open_failed", "status": 500, "detail": str(exc)},
-                indent=2,
-            )
-
-        if "error" in state:
-            # open_round_table returns a dict-with-error on 409 Conflict
-            return json.dumps(state, indent=2)
-
-        return json.dumps(
-            {"roundId": round_id, "status": "open", "state": state},
-            indent=2,
-        )
-
-    # -- get_agent_opinion --------------------------------------------------
-
-    @mcp.tool()
-    async def get_agent_opinion(
-        round_id: str,
-        project_slug: str,
-        agent_id: str,
-        topic: str,
-        panel_context: Optional[str] = None,
-    ) -> str:
-        """Get one panelist's opinion on a topic within an open round table.
-
-        Phase 52 returns a placeholder opinion (``"[phase52_placeholder]"``)
-        and appends a Turn to the state file. Phase 53 will fill in the
-        real GLM call.
-
-        Lifecycle step 2 of 3 — call between ``round_table_open`` and
-        ``submit_round_table_result``.
-
-        Args:
-            round_id: The roundId from round_table_open.
-            project_slug: Same slug passed to round_table_open.
-            agent_id: The panelist's agent name.
-            topic: Topic/question this turn addresses.
-            panel_context: Optional prior-turn context for the panelist.
-        """
-        # INFRA-04 (Phase 52-04): per-roundId asyncio.Lock serializes
-        # get_agent_opinion so concurrent calls for the same roundId are
-        # REJECTED with 429 + MEMORY.md citation (NOT queued). This is the
-        # GLM concurrency safety layer — queueing would violate the 4-key
-        # rotation compatibility constraint locked by user-memory policy
-        # feedback-glm-overload-reduce-concurrency.md.
-        from agent.round_table_executor import (
-            _serial_violation_response,
-            acquire_round_or_reject,
-            release_round_lock,
-        )
-        from hermes_constants import get_hermes_home
-        from agent.round_table_state import (
-            _now_iso as _state_now_iso,
-            append_turn,
-            read_and_recover_state,
-            validate_project_slug,
-            validate_round_id,
-        )
-
-        # CR-01 fix: validate BOTH inputs before they touch the filesystem.
-        # Order matters — reject before acquiring the lock so a rejected
-        # call doesn't pollute the per-roundId lock registry.
-        slug_err = validate_project_slug(project_slug)
-        if slug_err is not None:
-            return json.dumps(
-                {"error": slug_err, "status": 400},
-                indent=2,
-            )
-        round_err = validate_round_id(round_id)
-        if round_err is not None:
-            return json.dumps(
-                {"error": round_err, "status": 400, "round_id": round_id},
-                indent=2,
-            )
-
-        lock = await acquire_round_or_reject(round_id)
-        if lock is None:
-            return _serial_violation_response(round_id)
-
-        try:
-            state_path = (
-                get_hermes_home()
-                / "agents"
-                / ".runtime"
-                / project_slug
-                / "round_tables"
-                / f"{round_id}.json"
-            )
-
-            if not state_path.exists():
-                return json.dumps(
-                    {
-                        "error": "round_not_found",
-                        "status": 404,
-                        "round_id": round_id,
-                    },
-                    indent=2,
-                )
-
-            try:
-                state = read_and_recover_state(state_path)
-            except FileNotFoundError:
-                return json.dumps(
-                    {
-                        "error": "round_not_found",
-                        "status": 404,
-                        "round_id": round_id,
-                    },
-                    indent=2,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "get_agent_opinion: state read failed for %s: %s",
-                    round_id,
-                    exc,
-                )
-                return json.dumps(
-                    {"error": "state_read_failed", "detail": str(exc)},
-                    indent=2,
-                )
-
-            if state.get("status") != "open":
-                return json.dumps(
-                    {
-                        "error": "round_not_open",
-                        "status": 409,
-                        "round_id": round_id,
-                        "current_status": state.get("status"),
-                    },
-                    indent=2,
-                )
-
-            # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
-            # Phase 52: opinion is a fixed placeholder; Phase 53 swaps in the
-            # real GLM call result.
-            turn = {
-                "turnIndex": len(state.get("turns", [])) + 1,
-                "panelistId": agent_id,
-                "opinion": "[phase52_placeholder]",
-                "citedMemoryIds": [],
-                "submittedAt": _state_now_iso(),
-            }
-
-            try:
-                append_turn(state_path, turn)
-            except Exception as exc:
-                logger.warning(
-                    "get_agent_opinion: append_turn failed for %s: %s",
-                    round_id,
-                    exc,
-                )
-                return json.dumps(
-                    {"error": "append_turn_failed", "detail": str(exc)},
-                    indent=2,
-                )
-
-            return json.dumps(
-                {
-                    "round_id": round_id,
-                    "agent_id": agent_id,
-                    "opinion": "[phase52_placeholder]",
-                    "status": "ok",
-                },
-                indent=2,
-            )
-        finally:
-            # T-52-15 (DoS): lock MUST be released on every path — happy,
-            # error, AND asyncio.CancelledError. Without finally, an
-            # exception in read_and_recover_state or append_turn would
-            # permanently block that roundId.
-            await release_round_lock(round_id)
-
-    # -- submit_round_table_result ------------------------------------------
-
-    @mcp.tool()
-    async def submit_round_table_result(
-        round_id: str,
-        project_slug: str,
-        conclusion: str,
-        cited_memories: Optional[list[str]] = None,
-        closed_by: str = "cc",
-    ) -> str:
-        """Submit the round-table conclusion (terminal lifecycle step 3 of 3).
-
-        Flips state file ``status`` from ``"open"`` to ``"completed"`` and
-        seals the ``submitRoundTableResult`` block. Idempotent: re-calling
-        on a completed round returns 409 Conflict.
-
-        Args:
-            round_id: The roundId from round_table_open.
-            project_slug: Same slug passed to round_table_open.
-            conclusion: CC's synthesis of the round-table discussion.
-            cited_memories: Memory record_ids cited across turns + conclusion.
-            closed_by: CC session ID / operator handle for audit trail.
-        """
-        from hermes_constants import get_hermes_home
-        from agent.round_table_state import (
-            submit_round_table_result as _submit,
-            validate_project_slug,
-            validate_round_id,
-        )
-
-        # CR-01 fix: validate BOTH inputs before they touch the filesystem.
-        slug_err = validate_project_slug(project_slug)
-        if slug_err is not None:
-            return json.dumps(
-                {"error": slug_err, "status": 400},
-                indent=2,
-            )
-        round_err = validate_round_id(round_id)
-        if round_err is not None:
-            return json.dumps(
-                {"error": round_err, "status": 400, "round_id": round_id},
-                indent=2,
-            )
-
-        state_path = (
-            get_hermes_home()
-            / "agents"
-            / ".runtime"
-            / project_slug
-            / "round_tables"
-            / f"{round_id}.json"
-        )
-
-        if not state_path.exists():
-            return json.dumps(
-                {
-                    "error": "round_not_found",
-                    "status": 404,
-                    "round_id": round_id,
-                },
-                indent=2,
-            )
-
-        try:
-            result = _submit(
-                state_path,
-                conclusion=conclusion,
-                cited_memories=cited_memories or [],
-                closed_by=closed_by,
-            )
-        except Exception as exc:
-            logger.warning(
-                "submit_round_table_result: submit failed for %s: %s",
-                round_id,
-                exc,
-            )
-            return json.dumps(
-                {"error": "submit_failed", "detail": str(exc)},
-                indent=2,
-            )
-
-        if "error" in result:
-            # _submit returns a dict-with-error on 409 round_not_open
-            return json.dumps(result, indent=2)
-
-        return json.dumps(
-            {"roundId": round_id, "status": "completed"},
-            indent=2,
-        )
-
-    # -- memory_retrieve_scoped (Phase 53 stub) -----------------------------
-
-    @mcp.tool()
-    async def memory_retrieve_scoped(
-        query: str,
-        agent_id: str,
-        top_k: int = 5,
-    ) -> str:
-        """Retrieve scoped memories for an agent (Phase 53 stub).
-
-        Phase 52 ships a STUB returning ``{"status": "phase53_not_implemented",
-        "hits": []}``. Phase 53 (CREATIVE-SLICE) wires real mem0 backend
-        routing per agents-schema.yaml §2.6 ``memory_scope``.
-
-        Args:
-            query: Free-text recall query.
-            agent_id: The agent whose memory namespace to consult.
-            top_k: Max results to return (Phase 53 honors; stub ignores).
-        """
-        from agent.memory_arbitration import memory_retrieve_scoped as _retrieve
-
-        result = await _retrieve(query, agent_id, top_k=top_k)
-        return json.dumps(result, indent=2)
-
-    # -- memory_submit_record (Phase 53 stub) -------------------------------
-
-    @mcp.tool()
-    async def memory_submit_record(
-        agent_id: str,
-        content: str,
-        scope: str = "per_agent",
-        confidence: float = 0.5,
-    ) -> str:
-        """Submit a memory record for an agent (Phase 53 stub).
-
-        Phase 52 ships a STUB returning
-        ``{"status": "phase53_not_implemented", "record_id": None}``.
-        Phase 53 wires real mem0 backend routing.
-
-        Args:
-            agent_id: The agent whose memory namespace to write into.
-            content: Free-text memory content to persist.
-            scope: One of ``shared`` / ``per_agent`` / ``project_scoped``
-                (Phase 53 validates; stub accepts any string).
-            confidence: Optional confidence score in [0.0, 1.0].
-        """
-        from agent.memory_arbitration import memory_submit_record as _submit_record
-
-        result = await _submit_record(
-            agent_id, content, scope=scope, confidence=confidence
-        )
-        return json.dumps(result, indent=2)
+    # -- Phase 53 round-table + memory tools (module-level, registered here) --
+    #
+    # Phase 53 (plan 53-03) lifted these 5 Phase 52 tools from nested
+    # functions inside create_mcp_server() to module-level async functions
+    # (see ``async def round_table_open`` etc. above). This makes them
+    # importable for the driver script + directly unit-testable. The
+    # FastMCP ``mcp.tool()`` decorator simply re-registers each module
+    # function under the same tool name — the MCP surface is unchanged.
+    mcp.tool()(round_table_open)
+    mcp.tool()(get_agent_opinion)
+    mcp.tool()(submit_round_table_result)
+    mcp.tool()(memory_retrieve_scoped)
+    mcp.tool()(memory_submit_record)
 
     return mcp
 

@@ -161,14 +161,14 @@ async def test_get_agent_opinion_returns_real_glm_opinion(tmp_path, monkeypatch)
 
     # Open a round
     open_resp = await mcp_serve.round_table_open(
-        round_id="round-opinion-0001",
+        round_id="aabbccdd000000110000000000000001",
         **_open_round(),
     )
     open_data = json.loads(open_resp)
     assert "error" not in open_data, f"round_table_open failed: {open_data}"
 
     opinion_resp = await mcp_serve.get_agent_opinion(
-        round_id="round-opinion-0001",
+        round_id="aabbccdd000000110000000000000001",
         project_slug="screenplay-step3-poc",
         agent_id="screenplay",
         topic="Screenplay Step 3 scene design",
@@ -207,11 +207,11 @@ async def test_get_agent_opinion_uses_round_table_opinion_task(tmp_path, monkeyp
     monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
 
     await mcp_serve.round_table_open(
-        round_id="round-task-0001",
+        round_id="d39069b74b8143acba04e9c00c5db979",
         **_open_round(),
     )
     await mcp_serve.get_agent_opinion(
-        round_id="round-task-0001",
+        round_id="d39069b74b8143acba04e9c00c5db979",
         project_slug="screenplay-step3-poc",
         agent_id="screenplay",
         topic="design the scene",
@@ -282,11 +282,11 @@ async def test_get_agent_opinion_sets_scoped_agent_id_before_memory_call(
     )
 
     await mcp_serve.round_table_open(
-        round_id="round-scope-0001",
+        round_id="025dbdc75e1f4f7f8412d28d5cfc92a5",
         **_open_round(),
     )
     await mcp_serve.get_agent_opinion(
-        round_id="round-scope-0001",
+        round_id="025dbdc75e1f4f7f8412d28d5cfc92a5",
         project_slug="screenplay-step3-poc",
         agent_id="screenplay",
         topic="design the scene",
@@ -351,7 +351,7 @@ async def test_get_agent_opinion_preserves_try_finally_lock_contract(
     )
 
     await mcp_serve.round_table_open(
-        round_id="round-finally-0001",
+        round_id="00d55895645c41a0a42730f498b0425b",
         **_open_round(),
     )
 
@@ -359,7 +359,7 @@ async def test_get_agent_opinion_preserves_try_finally_lock_contract(
     # Either way the lock MUST have been released exactly once.
     try:
         await mcp_serve.get_agent_opinion(
-            round_id="round-finally-0001",
+            round_id="00d55895645c41a0a42730f498b0425b",
             project_slug="screenplay-step3-poc",
             agent_id="screenplay",
             topic="test",
@@ -371,7 +371,7 @@ async def test_get_agent_opinion_preserves_try_finally_lock_contract(
         f"release_round_lock must be called exactly once on exception path; "
         f"got {len(release_calls)} calls (roundIds: {release_calls})"
     )
-    assert release_calls[0] == "round-finally-0001"
+    assert release_calls[0] == "00d55895645c41a0a42730f498b0425b"
 
 
 # --------------------------------------------------------------------------- #
@@ -389,38 +389,48 @@ async def test_get_agent_opinion_serial_violation_unchanged(tmp_path, monkeypatc
     """
     import mcp_serve
     import agent.auxiliary_client
+    import agent.memory_arbitration
 
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     _seed_screenplay_agent_yaml(tmp_path)
 
     call_count = {"n": 0}
 
-    def _slow_call_llm(*args, **kwargs):
+    def _mock_call_llm(*args, **kwargs):
         call_count["n"] += 1
-        # Yield point — lets the second coroutine race into the lock check
-        # while the first is still inside the body.
-        import time
-
-        time.sleep(0.05)
         return _MockResponse(f"opinion-{call_count['n']}")
 
-    monkeypatch.setattr(agent.auxiliary_client, "call_llm", _slow_call_llm)
+    monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
+
+    # Inject an async yield point inside the locked body so the second
+    # coroutine's acquire_round_or_reject runs while the first is still
+    # holding the lock — without this, sync call_llm blocks the event
+    # loop and the second coroutine never gets a chance to race.
+    original_mem = agent.memory_arbitration.memory_retrieve_scoped
+
+    async def _slow_mem(*args, **kwargs):
+        await asyncio.sleep(0.05)  # yield — lets coroutine B observe the lock
+        return await original_mem(*args, **kwargs)
+
+    monkeypatch.setattr(
+        agent.memory_arbitration, "memory_retrieve_scoped", _slow_mem
+    )
 
     await mcp_serve.round_table_open(
-        round_id="round-serial-0001",
+        round_id="3e21378584b04040943b0b1bb962a395",
         **_open_round(),
     )
 
     # Two concurrent calls to the SAME round_id.
     results = await asyncio.gather(
         mcp_serve.get_agent_opinion(
-            round_id="round-serial-0001",
+            round_id="3e21378584b04040943b0b1bb962a395",
             project_slug="screenplay-step3-poc",
             agent_id="screenplay",
             topic="topic-A",
         ),
         mcp_serve.get_agent_opinion(
-            round_id="round-serial-0001",
+            round_id="3e21378584b04040943b0b1bb962a395",
             project_slug="screenplay-step3-poc",
             agent_id="screenplay",
             topic="topic-B",
@@ -478,11 +488,11 @@ async def test_get_agent_opinion_appends_turn_with_opinion(tmp_path, monkeypatch
     )
 
     await mcp_serve.round_table_open(
-        round_id="round-state-0001",
+        round_id="ddb4c8b16d0b4e37bf9df5578834f718",
         **_open_round(),
     )
     await mcp_serve.get_agent_opinion(
-        round_id="round-state-0001",
+        round_id="ddb4c8b16d0b4e37bf9df5578834f718",
         project_slug="screenplay-step3-poc",
         agent_id="screenplay",
         topic="scene 1 design",
@@ -494,7 +504,7 @@ async def test_get_agent_opinion_appends_turn_with_opinion(tmp_path, monkeypatch
         / ".runtime"
         / "screenplay-step3-poc"
         / "round_tables"
-        / "round-state-0001.json"
+        / "ddb4c8b16d0b4e37bf9df5578834f718.json"
     )
     assert state_path.exists(), f"state file not written at {state_path}"
     state = read_and_recover_state(state_path)
