@@ -149,14 +149,14 @@ End-of-milestone audit:
 
 | REQ-ID | Phase | Category | Person-days | Status |
 |--------|-------|----------|-------------|--------|
-| ENDPOINT-01 | 57 | ENDPOINT | 0.5 | Pending |
-| THROTTLE-01 | 58 | THROTTLE | 0.75 | Pending |
-| THROTTLE-02 | 58 | THROTTLE | 0.75 | Pending |
-| POOL-01 | 59 | POOL | 1 | Pending |
-| POOL-02 | 59 | POOL | 1 | Pending |
-| EVAL-01 | 60 | EVAL | 1 | Pending |
-| EVAL-02 | 60 | EVAL | 1 | Pending |
-| VALIDATE-01 | 61 | VALIDATE | 0.5 | Pending |
+| ENDPOINT-01 | 57 | ENDPOINT | 0.5 | ⚠ Complete (SC#2 smoke deferred) |
+| THROTTLE-01 | 58 | THROTTLE | 0.75 | Complete |
+| THROTTLE-02 | 58 | THROTTLE | 0.75 | Complete |
+| POOL-01 | 59 | POOL | 1 | Complete |
+| POOL-02 | 59 | POOL | 1 | Complete |
+| EVAL-01 | 60 | EVAL | 1 | ⚠ Complete (live mem0 deferred) |
+| EVAL-02 | 60 | EVAL | 1 | ⚠ Complete (live fitness deferred) |
+| VALIDATE-01 | 61 | VALIDATE | 0.5 | Complete (this audit — verdict passed) |
 
 **Total:** 8 reqs · 6.5 person-days · 5 phases (57-61)
 
@@ -182,4 +182,4 @@ End-of-milestone audit:
 
 ---
 
-*Last updated: 2026-07-07 — v12.0 Production Hardening requirements defined (8 reqs, 5 phases 57-61, 6.5 person-days). All status=Pending. Next: /gsd:plan-phase 57.*
+*Last updated: 2026-07-08 — v12.0 milestone audit complete. All 8 reqs verified (5 Complete + 3 Complete-with-operator-deferral). Audit verdict: passed. See .planning/milestones/v12.0-MILESTONE-AUDIT.md. Next: operator runs §3 handoffs + git tag v12.0.*
