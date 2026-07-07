@@ -864,6 +864,448 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
         result = bridge.respond_to_approval(id, decision)
         return json.dumps(result, indent=2)
 
+    # ── v11.0 round-table tools (Phase 52 INFRA-02) ───────────────────────
+    #
+    # 7 new MCP tools implementing the v11.0 PoC round-table surface.
+    # Tool names LOCKED by 52-CONTEXT.md "Resolved by Kai" point 1 — this
+    # list intentionally diverges from the stale 02-ROUND-TABLE-PROTOCOL.md
+    # §5 list (which is the v10.0 broader vision, not v11.0 PoC scope).
+    #
+    # Tool contracts (delegating modules):
+    #   agents_list / agent_describe  → agent.registry_loader
+    #   round_table_open / get_agent_opinion /
+    #   submit_round_table_result     → agent.round_table_state
+    #   memory_retrieve_scoped /
+    #   memory_submit_record          → agent.memory_arbitration (Phase 52 stub)
+    #
+    # All closures use lazy imports for agent.* modules to avoid coupling
+    # mcp_serve startup to registry_loader / round_table_state (mirrors the
+    # lazy-import pattern in channels_list above).
+
+    # -- agents_list --------------------------------------------------------
+
+    @mcp.tool()
+    def agents_list(
+        category: Optional[str] = None,
+        tag: Optional[str] = None,
+    ) -> str:
+        """List registered Hermes agents (~/.hermes/agents/*.agent.yaml).
+
+        Returns each agent's name, description, version, tags, fitness_score,
+        and memory_scope. Use ``agent_describe`` for full details on a
+        specific agent.
+
+        Args:
+            category: Optional category filter (reserved — Phase 53)
+            tag: Optional tag filter; matches any tag in the agent's
+                ``tags`` list (agents-schema.yaml §2.9).
+        """
+        from agent.registry_loader import load_agent_registry
+
+        try:
+            entries = load_agent_registry()
+        except Exception as exc:
+            logger.warning("agents_list: registry load failed: %s", exc)
+            return json.dumps(
+                {"error": "registry_load_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        filtered = entries
+        if tag:
+            filtered = [e for e in filtered if tag in e.get("tags", [])]
+        # category filter reserved for Phase 53 (agents-schema.yaml has no
+        # top-level "category" field yet — only "tags").
+
+        return json.dumps(
+            {
+                "count": len(filtered),
+                "agents": [
+                    {
+                        "name": e.get("name", ""),
+                        "description": e.get("description", ""),
+                        "version": e.get("version", ""),
+                        "tags": e.get("tags", []),
+                        "fitness_score": e.get("fitness_score"),
+                        "memory_scope": e.get("memory_scope"),
+                    }
+                    for e in filtered
+                ],
+            },
+            indent=2,
+        )
+
+    # -- agent_describe -----------------------------------------------------
+
+    @mcp.tool()
+    def agent_describe(name: str) -> str:
+        """Return the full agent YAML for one named agent.
+
+        Use ``agents_list`` to discover names. Returns the complete agent
+        dict (persona, tools, memory_scope, lineage, etc.) — broader than
+        just the persona block.
+
+        Args:
+            name: The agent's ``name`` field (must match a filename stem
+                under ``~/.hermes/agents/``).
+        """
+        from agent.registry_loader import load_agent_registry
+
+        try:
+            entries = load_agent_registry()
+        except Exception as exc:
+            logger.warning("agent_describe: registry load failed: %s", exc)
+            return json.dumps(
+                {"error": "registry_load_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        for entry in entries:
+            if entry.get("name") == name:
+                return json.dumps({"agent": entry}, indent=2)
+
+        return json.dumps(
+            {
+                "error": "agent_not_found",
+                "status": 404,
+                "name": name,
+            },
+            indent=2,
+        )
+
+    # -- round_table_open ---------------------------------------------------
+
+    @mcp.tool()
+    async def round_table_open(
+        round_id: str,
+        project_slug: str,
+        question: str,
+        panelist_agent_ids: list[str],
+        caller: str = "cc",
+    ) -> str:
+        """Open a new round-table discussion (lifecycle step 1 of 3).
+
+        Creates a state file at
+        ``~/.hermes/agents/.runtime/{project_slug}/round_tables/{round_id}.json``
+        with ``status="open"``. Idempotent — re-calling with the same
+        ``round_id`` returns 409 Conflict (does NOT mutate).
+
+        Follow with ``get_agent_opinion`` (one or more times) and terminate
+        with ``submit_round_table_result``.
+
+        Args:
+            round_id: CC-generated UUID v4. Filename stem for the state file.
+            project_slug: Project identifier for per-project state isolation
+                (``.runtime/{slug}/round_tables/``). Validated against
+                ``^[a-zA-Z0-9_.:-]+$``; ``..`` substrings rejected (T-52-09).
+            question: Free-text topic being debated.
+            panelist_agent_ids: List of agent IDs; minItems=2 per
+                round-table-state-schema.yaml $defs.PanelistSnapshot.
+            caller: CC session ID / operator handle for audit trail.
+        """
+        # T-52-09 mitigation: validate project_slug to prevent path traversal
+        if not project_slug or ".." in project_slug:
+            return json.dumps(
+                {"error": "invalid_project_slug", "status": 400},
+                indent=2,
+            )
+        import re as _re
+        if not _re.fullmatch(r"[A-Za-z0-9_.:\-]+", project_slug):
+            return json.dumps(
+                {"error": "invalid_project_slug", "status": 400},
+                indent=2,
+            )
+
+        # Schema minItems=2 enforcement at open-time
+        if not isinstance(panelist_agent_ids, list) or len(panelist_agent_ids) < 2:
+            return json.dumps(
+                {"error": "panelists_min_2_required", "status": 400},
+                indent=2,
+            )
+
+        from hermes_constants import get_hermes_home
+        from agent.round_table_state import open_round_table
+
+        state_dir = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / project_slug
+            / "round_tables"
+        )
+        try:
+            state = open_round_table(
+                state_dir=state_dir,
+                round_id=round_id,
+                project_id=project_slug,
+                question=question,
+                panelist_agent_ids=panelist_agent_ids,
+                caller=caller,
+            )
+        except Exception as exc:
+            logger.warning(
+                "round_table_open: open_round_table failed: %s", exc
+            )
+            return json.dumps(
+                {"error": "open_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        if "error" in state:
+            # open_round_table returns a dict-with-error on 409 Conflict
+            return json.dumps(state, indent=2)
+
+        return json.dumps(
+            {"roundId": round_id, "status": "open", "state": state},
+            indent=2,
+        )
+
+    # -- get_agent_opinion --------------------------------------------------
+
+    @mcp.tool()
+    async def get_agent_opinion(
+        round_id: str,
+        project_slug: str,
+        agent_id: str,
+        topic: str,
+        panel_context: Optional[str] = None,
+    ) -> str:
+        """Get one panelist's opinion on a topic within an open round table.
+
+        Phase 52 returns a placeholder opinion (``"[phase52_placeholder]"``)
+        and appends a Turn to the state file. Phase 53 will fill in the
+        real GLM call.
+
+        Lifecycle step 2 of 3 — call between ``round_table_open`` and
+        ``submit_round_table_result``.
+
+        Args:
+            round_id: The roundId from round_table_open.
+            project_slug: Same slug passed to round_table_open.
+            agent_id: The panelist's agent name.
+            topic: Topic/question this turn addresses.
+            panel_context: Optional prior-turn context for the panelist.
+        """
+        from hermes_constants import get_hermes_home
+        from agent.round_table_state import (
+            _now_iso as _state_now_iso,
+            append_turn,
+            read_and_recover_state,
+        )
+
+        state_path = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / project_slug
+            / "round_tables"
+            / f"{round_id}.json"
+        )
+
+        if not state_path.exists():
+            return json.dumps(
+                {
+                    "error": "round_not_found",
+                    "status": 404,
+                    "round_id": round_id,
+                },
+                indent=2,
+            )
+
+        try:
+            state = read_and_recover_state(state_path)
+        except FileNotFoundError:
+            return json.dumps(
+                {
+                    "error": "round_not_found",
+                    "status": 404,
+                    "round_id": round_id,
+                },
+                indent=2,
+            )
+        except Exception as exc:
+            logger.warning(
+                "get_agent_opinion: state read failed for %s: %s",
+                round_id,
+                exc,
+            )
+            return json.dumps(
+                {"error": "state_read_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        if state.get("status") != "open":
+            return json.dumps(
+                {
+                    "error": "round_not_open",
+                    "status": 409,
+                    "round_id": round_id,
+                    "current_status": state.get("status"),
+                },
+                indent=2,
+            )
+
+        # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
+        # Phase 52: opinion is a fixed placeholder; Phase 53 swaps in the
+        # real GLM call result.
+        turn = {
+            "turnIndex": len(state.get("turns", [])) + 1,
+            "panelistId": agent_id,
+            "opinion": "[phase52_placeholder]",
+            "citedMemoryIds": [],
+            "submittedAt": _state_now_iso(),
+        }
+
+        try:
+            append_turn(state_path, turn)
+        except Exception as exc:
+            logger.warning(
+                "get_agent_opinion: append_turn failed for %s: %s",
+                round_id,
+                exc,
+            )
+            return json.dumps(
+                {"error": "append_turn_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        return json.dumps(
+            {
+                "round_id": round_id,
+                "agent_id": agent_id,
+                "opinion": "[phase52_placeholder]",
+                "status": "ok",
+            },
+            indent=2,
+        )
+
+    # -- submit_round_table_result ------------------------------------------
+
+    @mcp.tool()
+    async def submit_round_table_result(
+        round_id: str,
+        project_slug: str,
+        conclusion: str,
+        cited_memories: Optional[list[str]] = None,
+        closed_by: str = "cc",
+    ) -> str:
+        """Submit the round-table conclusion (terminal lifecycle step 3 of 3).
+
+        Flips state file ``status`` from ``"open"`` to ``"completed"`` and
+        seals the ``submitRoundTableResult`` block. Idempotent: re-calling
+        on a completed round returns 409 Conflict.
+
+        Args:
+            round_id: The roundId from round_table_open.
+            project_slug: Same slug passed to round_table_open.
+            conclusion: CC's synthesis of the round-table discussion.
+            cited_memories: Memory record_ids cited across turns + conclusion.
+            closed_by: CC session ID / operator handle for audit trail.
+        """
+        from hermes_constants import get_hermes_home
+        from agent.round_table_state import (
+            submit_round_table_result as _submit,
+        )
+
+        state_path = (
+            get_hermes_home()
+            / "agents"
+            / ".runtime"
+            / project_slug
+            / "round_tables"
+            / f"{round_id}.json"
+        )
+
+        if not state_path.exists():
+            return json.dumps(
+                {
+                    "error": "round_not_found",
+                    "status": 404,
+                    "round_id": round_id,
+                },
+                indent=2,
+            )
+
+        try:
+            result = _submit(
+                state_path,
+                conclusion=conclusion,
+                cited_memories=cited_memories or [],
+                closed_by=closed_by,
+            )
+        except Exception as exc:
+            logger.warning(
+                "submit_round_table_result: submit failed for %s: %s",
+                round_id,
+                exc,
+            )
+            return json.dumps(
+                {"error": "submit_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        if "error" in result:
+            # _submit returns a dict-with-error on 409 round_not_open
+            return json.dumps(result, indent=2)
+
+        return json.dumps(
+            {"roundId": round_id, "status": "completed"},
+            indent=2,
+        )
+
+    # -- memory_retrieve_scoped (Phase 53 stub) -----------------------------
+
+    @mcp.tool()
+    async def memory_retrieve_scoped(
+        query: str,
+        agent_id: str,
+        top_k: int = 5,
+    ) -> str:
+        """Retrieve scoped memories for an agent (Phase 53 stub).
+
+        Phase 52 ships a STUB returning ``{"status": "phase53_not_implemented",
+        "hits": []}``. Phase 53 (CREATIVE-SLICE) wires real mem0 backend
+        routing per agents-schema.yaml §2.6 ``memory_scope``.
+
+        Args:
+            query: Free-text recall query.
+            agent_id: The agent whose memory namespace to consult.
+            top_k: Max results to return (Phase 53 honors; stub ignores).
+        """
+        from agent.memory_arbitration import memory_retrieve_scoped as _retrieve
+
+        result = await _retrieve(query, agent_id, top_k=top_k)
+        return json.dumps(result, indent=2)
+
+    # -- memory_submit_record (Phase 53 stub) -------------------------------
+
+    @mcp.tool()
+    async def memory_submit_record(
+        agent_id: str,
+        content: str,
+        scope: str = "per_agent",
+        confidence: float = 0.5,
+    ) -> str:
+        """Submit a memory record for an agent (Phase 53 stub).
+
+        Phase 52 ships a STUB returning
+        ``{"status": "phase53_not_implemented", "record_id": None}``.
+        Phase 53 wires real mem0 backend routing.
+
+        Args:
+            agent_id: The agent whose memory namespace to write into.
+            content: Free-text memory content to persist.
+            scope: One of ``shared`` / ``per_agent`` / ``project_scoped``
+                (Phase 53 validates; stub accepts any string).
+            confidence: Optional confidence score in [0.0, 1.0].
+        """
+        from agent.memory_arbitration import memory_submit_record as _submit_record
+
+        result = await _submit_record(
+            agent_id, content, scope=scope, confidence=confidence
+        )
+        return json.dumps(result, indent=2)
+
     return mcp
 
 
