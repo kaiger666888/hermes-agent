@@ -4985,6 +4985,67 @@ def _select_endpoint_by_prompt_length(
 _DEFAULT_AUX_TIMEOUT = 30.0
 
 
+# Phase 58 THROTTLE-02 prep: per-process last-call usage tracker.
+# Populated by _capture_usage (called from _validate_llm_response) after each
+# successful LLM response; read by round_table_executor (Phase 58-02) for
+# token-budget accounting. Single-writer (_validate_llm_response) +
+# single-reader (round_table_executor) within the gateway process. Safe
+# under the ThreadPoolExecutor because auxiliary calls serialize per-task
+# via the RPM throttle (Phase 58 THROTTLE-01).
+_LAST_CALL_USAGE: Dict[str, int] = {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+}
+
+
+def get_last_call_usage() -> Dict[str, int]:
+    """Return a COPY of the last call_llm response's token usage.
+
+    Returns a dict with keys ``prompt_tokens`` / ``completion_tokens`` /
+    ``total_tokens``. Returns zeros if the last response had no ``usage``
+    attribute (graceful fallback for adapters that don't populate usage).
+
+    Phase 58 THROTTLE-02 consumer (``round_table_executor``) reads this
+    after each panelist opinion to decrement the per-round-table token
+    budget. See ``.planning/phases/58-rpm-throttling/58-CONTEXT.md``.
+    """
+    return dict(_LAST_CALL_USAGE)
+
+
+def _capture_usage(response: Any) -> None:
+    """Extract token usage from *response* into the module-level tracker.
+
+    Called from :func:`_validate_llm_response` so EVERY successful return
+    path in :func:`call_llm` / :func:`async_call_llm` populates the tracker
+    (initial success, transient retry, temperature-stripped retry, payment
+    fallback — all funnel through the validator).
+
+    Handles OpenAI-style ``usage.prompt_tokens`` AND Anthropic-style
+    ``usage.input_tokens`` field naming. No-op when the response lacks a
+    ``usage`` attribute (some custom adapters skip it).
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        # Graceful fallback: leave the previous values intact rather than
+        # zeroing — a no-usage response shouldn't clobber a prior reading.
+        return
+    prompt = (
+        getattr(usage, "prompt_tokens", None)
+        or getattr(usage, "input_tokens", None)
+        or 0
+    )
+    completion = (
+        getattr(usage, "completion_tokens", None)
+        or getattr(usage, "output_tokens", None)
+        or 0
+    )
+    total = getattr(usage, "total_tokens", None) or (int(prompt) + int(completion))
+    _LAST_CALL_USAGE["prompt_tokens"] = int(prompt)
+    _LAST_CALL_USAGE["completion_tokens"] = int(completion)
+    _LAST_CALL_USAGE["total_tokens"] = int(total)
+
+
 def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
     """Return the config dict for auxiliary.<task>, or {} when unavailable.
 
@@ -5253,6 +5314,10 @@ def _validate_llm_response(response: Any, task: str = None) -> Any:
     propagate to downstream consumers where they crash with misleading
     AttributeError (e.g. "'str' object has no attribute 'choices'").
 
+    Also captures token usage into the module-level ``_LAST_CALL_USAGE``
+    tracker (Phase 58 THROTTLE-02 prep) so downstream budget accounting
+    can read it via :func:`get_last_call_usage`.
+
     See #7264.
     """
     if response is None:
@@ -5274,6 +5339,10 @@ def _validate_llm_response(response: Any, task: str = None) -> Any:
             f"Expected object with .choices[0].message — check provider "
             f"adapter or custom endpoint compatibility."
         ) from exc
+    # Phase 58 THROTTLE-02 prep: capture token usage for downstream budget
+    # tracking. Safe to call here — every successful return path in
+    # call_llm / async_call_llm goes through this validator.
+    _capture_usage(response)
     return response
 
 
@@ -5316,6 +5385,18 @@ def call_llm(
     Raises:
         RuntimeError: If no provider is configured.
     """
+    # Phase 58 THROTTLE-01: per-task RPM token bucket. Acquire slot BEFORE
+    # endpoint routing so both z.ai (short prompt) and open.bigmodel.cn/api/
+    # anthropic (long prompt) routes count against the same per-task bucket.
+    # See .planning/phases/58-rpm-throttling/58-CONTEXT.md decision #8.
+    if task:
+        # Lazy import: glm_throttle lazy-imports _get_auxiliary_task_config
+        # from this module, so a top-level import would deadlock on the
+        # first auxiliary call. Matches the _ra() lazy-indirection pattern
+        # used throughout agent/* (see CLAUDE.md "Forwarder shim pattern").
+        from agent.glm_throttle import acquire_slot
+        acquire_slot(task)
+
     # Phase 57 ENDPOINT-01: route long-prompt GLM calls (synthesis,
     # memory_compaction, memory_comparator) to open.bigmodel.cn/api/anthropic
     # (anthropic-compat, no 30s z.ai coding-plan cap). Helper returns None

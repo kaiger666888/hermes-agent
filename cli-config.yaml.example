@@ -557,6 +557,22 @@ prompt_caching:
 #       provider: zhipu-anthropic     # Anthropic-compat endpoint
 #       base_url: "https://open.bigmodel.cn/api/anthropic"
 #       api_mode: chat_completions    # OpenAI SDK talks to /chat/completions on this URL
+#
+#   # ----- Phase 58 v12.0 per-task RPM throttle (THROTTLE-01) -----
+#   # Each auxiliary task gets its own refillable token bucket. Acquire
+#   # happens BEFORE endpoint routing (Phase 57), so both z.ai (short)
+#   # and open.bigmodel.cn/api/anthropic (long) routes count against
+#   # the same per-task bucket. Replaces the v11.0 hardcoded
+#   # asyncio.sleep(2.5) RPM pacing patch in run_screenplay_step3_roundtable.py.
+#   # Default 30 RPM/task — well under GLM single-key RPM ceiling.
+#   # See .planning/phases/58-rpm-throttling/58-CONTEXT.md.
+#   # Per-task override (applies to that task's bucket only):
+#   # round_table_opinion:
+#   #   rpm: 30              # Default; raise to 60 if 4-key pool allows
+#   # memory_compaction:
+#   #   rpm: 20              # Compaction is bursty; lower ceiling
+#   # fitness_judge:
+#   #   rpm: 30
 
 # =============================================================================
 # Persistent Memory
