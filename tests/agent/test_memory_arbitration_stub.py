@@ -162,16 +162,38 @@ class TestNoEagerMem0Import:
     """
 
     def test_module_does_not_import_mem0_at_top_level(self):
+        """Walk the AST: no ``import plugins.memory.mem0`` / ``from plugins.memory.mem0``.
+
+        AST-walking is precise — docstring/comment mentions of the module
+        name don't trigger false positives (the original substring check
+        did). Only actual ``Import`` / ``ImportFrom`` nodes count.
+        """
+        import ast
         import inspect
 
         from agent import memory_arbitration
         src = inspect.getsource(memory_arbitration)
-        # Hard assertion: no mem0 import anywhere in the module source
-        assert "import plugins.memory.mem0" not in src, (
+        tree = ast.parse(src)
+
+        forbidden_prefix = "plugins.memory.mem0"
+        offenders: list[str] = []
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == forbidden_prefix or alias.name.startswith(
+                        forbidden_prefix + "."
+                    ):
+                        offenders.append(f"line {node.lineno}: import {alias.name}")
+            elif isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                if mod == forbidden_prefix or mod.startswith(forbidden_prefix + "."):
+                    offenders.append(
+                        f"line {node.lineno}: from {mod} import ...",
+                    )
+
+        assert not offenders, (
             "Phase 52 memory_arbitration MUST NOT import plugins.memory.mem0 — "
-            "Phase 53 fills in real mem0 routing (RESEARCH.md Pitfall #5)."
-        )
-        assert "from plugins.memory.mem0" not in src, (
-            "Phase 52 memory_arbitration MUST NOT import from "
-            "plugins.memory.mem0 — Phase 53 fills in real mem0 routing."
+            "Phase 53 fills in real mem0 routing (RESEARCH.md Pitfall #5). "
+            f"Found: {offenders}"
         )
