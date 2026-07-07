@@ -200,8 +200,19 @@ def _parse_judge_scores(content: str, rubric: list[dict]) -> list[float]:
     if not content:
         logger.warning("empty judge content — falling back to 0.0 scores")
         return [0.0] * len(rubric)
+    # Strip markdown code fences (GLM/Claude often wrap JSON in ```json ... ```)
+    stripped = content.strip()
+    if stripped.startswith("```"):
+        # Remove opening fence (with optional language tag like 'json')
+        first_nl = stripped.find("\n")
+        if first_nl > 0:
+            stripped = stripped[first_nl + 1 :]
+        # Remove closing fence
+        if stripped.rstrip().endswith("```"):
+            stripped = stripped.rstrip()[:-3]
+        stripped = stripped.strip()
     try:
-        parsed = json.loads(content)
+        parsed = json.loads(stripped if stripped else content)
     except (json.JSONDecodeError, TypeError) as exc:
         logger.warning("malformed judge response (%s): %r", exc, content[:200])
         return [0.0] * len(rubric)
