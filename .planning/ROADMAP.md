@@ -63,7 +63,8 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   1. `auxiliary_client.call_llm` auto-selects endpoint based on prompt token count (threshold configurable, default 4096).
   2. v11.0 SC#2 smoke test latency drops from 490s to <240s.
   3. All v11.0 + v12.0 unit tests pass.
-**Plans**: TBD
+**Plans**:
+- [ ] 57-01-PLAN.md — Add prompt-length-aware endpoint routing (helper + wire-in + tests + config docs)
 
 ### Phase 58: RPM-THROTTLING
 
@@ -174,4 +175,4 @@ See `.planning/milestones/v9.0-MILESTONE-AUDIT.md` for full audit.
 
 ---
 
-*Last updated: 2026-07-07 — v11.0 milestone archived (5 phases, 12 plans, 15/15 reqs, audit `passed`). Next: `/gsd:new-milestone` to start the next milestone.*
+*Last updated: 2026-07-07 — v12.0 milestone started; Phase 57 (ENDPOINT-ROUTING) planned (1 plan, 3 tasks, ENDPOINT-01). Next: `/gsd:execute-phase 57` or plan Phases 58-61.*
