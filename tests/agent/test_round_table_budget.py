@@ -488,7 +488,7 @@ def _mock_mcp_and_aux(monkeypatch, tmp_path):
 class TestDriverBudgetWiring:
     """Driver script wires record_panelist_tokens after each panelist."""
 
-    def test_records_tokens_after_each_panelist(self, _mock_mcp_and_aux, tmp_path):
+    def test_records_tokens_after_each_panelist(self, _mock_mcp_and_aux, monkeypatch, tmp_path):
         """9 panelists × 3500 tokens + 1 synthesis × 3500 = 35000 tracked."""
         # Default per-call tokens = 3500 (from _mock_mcp_and_aux fixture).
         sk = tmp_path / "storykernel.json"
@@ -500,7 +500,11 @@ class TestDriverBudgetWiring:
 
         import scripts.run_screenplay_step3_roundtable as drv
         # Stub schema validation — our stub "{}" output doesn't honor HOOK-09.
-        drv._validate_step3_schema = lambda output, output_path: None
+        # Use monkeypatch so the stub is reverted after the test (direct
+        # attribute assignment would leak into other driver tests, causing
+        # test_driver_runs_full_lifecycle_with_mocked_glm to silently skip
+        # file write).
+        monkeypatch.setattr(drv, "_validate_step3_schema", lambda output, output_path: None)
 
         asyncio.run(drv.run_roundtable(
             storykernel_path=sk, output_path=out, smoke=False
@@ -526,7 +530,7 @@ class TestDriverBudgetWiring:
             f"expected 35000 tokens, got {state['tokensConsumed']}"
         )
 
-    def test_driver_aborts_on_budget_exceeded(self, _mock_mcp_and_aux, tmp_path):
+    def test_driver_aborts_on_budget_exceeded(self, _mock_mcp_and_aux, monkeypatch, tmp_path):
         """token_budget=20000 with 5000 tokens/call → abort before 5th panelist.
 
         Setup:
@@ -579,7 +583,7 @@ class TestDriverBudgetWiring:
         out = tmp_path / "out.json"
 
         import scripts.run_screenplay_step3_roundtable as drv
-        drv._validate_step3_schema = lambda output, output_path: None
+        monkeypatch.setattr(drv, "_validate_step3_schema", lambda output, output_path: None)
 
         summary = asyncio.run(drv.run_roundtable(
             storykernel_path=sk, output_path=out, smoke=False
@@ -594,7 +598,7 @@ class TestDriverBudgetWiring:
             f"expected <9 opinion calls (abort), got {len(_mock_mcp_and_aux['opinion_calls'])}"
         )
 
-    def test_events_persisted_across_abort(self, _mock_mcp_and_aux, tmp_path):
+    def test_events_persisted_across_abort(self, _mock_mcp_and_aux, monkeypatch, tmp_path):
         """After abort, state file events array contains budget_warning AND budget_exceeded.
 
         With the same scenario as test_driver_aborts_on_budget_exceeded:
@@ -635,7 +639,7 @@ class TestDriverBudgetWiring:
         out = tmp_path / "out.json"
 
         import scripts.run_screenplay_step3_roundtable as drv
-        drv._validate_step3_schema = lambda output, output_path: None
+        monkeypatch.setattr(drv, "_validate_step3_schema", lambda output, output_path: None)
 
         asyncio.run(drv.run_roundtable(
             storykernel_path=sk, output_path=out, smoke=False
@@ -761,7 +765,7 @@ class TestPhase58FullThrottlePipeline:
       - Zero asyncio.sleep, zero RateLimitError.
     """
 
-    def test_full_throttle_pipeline_mocked(self, _mock_mcp_and_aux, tmp_path):
+    def test_full_throttle_pipeline_mocked(self, _mock_mcp_and_aux, monkeypatch, tmp_path):
         # Spy on glm_throttle.acquire_slot to count calls.
         from agent import glm_throttle
 
@@ -781,7 +785,7 @@ class TestPhase58FullThrottlePipeline:
             out = tmp_path / "out.json"
 
             import scripts.run_screenplay_step3_roundtable as drv
-            drv._validate_step3_schema = lambda output, output_path: None
+            monkeypatch.setattr(drv, "_validate_step3_schema", lambda output, output_path: None)
 
             # Confirm zero asyncio.sleep CALLS in the driver source.
             # Phase 58-01 removed the hardcoded RPM pacing; this guards

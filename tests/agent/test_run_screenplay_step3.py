@@ -644,6 +644,17 @@ async def test_driver_runs_full_lifecycle_with_mocked_glm(tmp_path, monkeypatch)
 
     monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
 
+    # Reset _LAST_CALL_USAGE so prior test_run_screenplay_step3 / budget tests
+    # don't leak token counts into this driver lifecycle test. The driver
+    # reads get_last_call_usage() after each panelist; without reset, a stale
+    # value from a previous test accumulates across 9 panelists and may trip
+    # budget_exceeded. The real call_llm populates this via _capture_usage;
+    # our mock bypasses that path so the dict stays at whatever the last
+    # writer left.
+    agent.auxiliary_client._LAST_CALL_USAGE["prompt_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["completion_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["total_tokens"] = 0
+
     from scripts.run_screenplay_step3_roundtable import run_roundtable
 
     output_path = tmp_path / "step3-output.json"
@@ -749,6 +760,13 @@ async def test_driver_output_validates_against_hook09_schema(
         return _MockResponse(f"panelist-opinion-{call_count['n']}")
 
     monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
+
+    # Reset _LAST_CALL_USAGE (see test_driver_runs_full_lifecycle_with_mocked_glm
+    # for rationale — prevents stale token counts from prior tests tripping
+    # budget_exceeded in this driver lifecycle test).
+    agent.auxiliary_client._LAST_CALL_USAGE["prompt_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["completion_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["total_tokens"] = 0
 
     from scripts.run_screenplay_step3_roundtable import run_roundtable
 
