@@ -376,10 +376,16 @@ class TestToolRegistrationCensus:
             f"different (narrower) tool set than 02-ROUND-TABLE-PROTOCOL.md §5."
         )
 
-    def test_total_tool_count_is_nine_plus_seven(self, mcp_server):
-        """Existing 9 messaging tools + 7 new v11.0 tools = 16 total."""
+    def test_total_tool_count_is_seventeen(self, mcp_server):
+        """Existing 10 messaging tools + 7 new v11.0 tools = 17 total.
+
+        Note: the plan / CONTEXT.md said "9 existing" but the actual
+        pre-Phase-52 count is 10 (the plan omitted ``attachments_fetch``
+        from its informal census). Verified by enumerating the registered
+        tool set before adding any v11.0 closures.
+        """
         registered = set(mcp_server._tool_manager._tools.keys())
-        assert len(registered) == 16, (
-            f"Expected 16 tools (9 messaging + 7 v11.0), got {len(registered)}: "
+        assert len(registered) == 17, (
+            f"Expected 17 tools (10 messaging + 7 v11.0), got {len(registered)}: "
             f"{sorted(registered)}"
         )
