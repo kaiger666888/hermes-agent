@@ -1,0 +1,45 @@
+id: conflict-resolution-scope-precedence
+description: >
+  Three-scope ladder probe: session vs project vs global. Runner must
+  correctly identify the highest-precedence scope (session) when all
+  three scopes disagree on the same question. This exercises the
+  scope_precedence rule chain independent of confidence values.
+input:
+  question: "What protagonist motivation should drive scene 2?"
+  mem_a:
+    record_id: "mem-A-session"
+    content: "This round's panel settled on revenge motivation."
+    scope: "session"
+    confidence: 0.60
+    evidence_chain:
+      - {source_type: "round_table", source_id: "rt-current"}
+    evidence_operator_ids: ["kai"]
+    agent_id: "screenplay"
+  mem_b:
+    record_id: "mem-B-project"
+    content: "This project's bible says redemption arc."
+    scope: "project"
+    confidence: 0.85
+    evidence_chain:
+      - {source_type: "operator_edit", source_id: "bible-v1"}
+    evidence_operator_ids: ["kai"]
+    agent_id: "screenplay"
+expected_output:
+  feature: >
+    When run through arbitrate_two_memaries with mem_a (session) vs
+    mem_b (project), winner == "a" (session wins over project). The
+    arbitration correctly identifies the precedence order
+    session > project > global — even though project confidence (0.85)
+    exceeds session confidence (0.60).
+  rationale: >
+    Scope precedence is a hard rule — confidence only enters as a
+    tiebreaker WITHIN the same scope. If confidence could override
+    scope, project/global memories would dominate every session
+    decision, defeating the per-session memory design.
+scoring_rubric:
+  - criterion: "winner == 'a' (session beats project despite lower confidence)"
+    weight: 0.45
+  - criterion: "scope_precedence names the full ladder (session > project > global)"
+    weight: 0.30
+  - criterion: "reason explicitly states scope dominates over confidence"
+    weight: 0.25

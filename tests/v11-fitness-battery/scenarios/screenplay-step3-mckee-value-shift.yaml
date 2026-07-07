@@ -1,0 +1,36 @@
+id: screenplay-step3-mckee-value-shift
+description: >
+  Screenplay Step 3 must encode a McKee value-shift — the protagonist's
+  core value (positive ↔ negative) flips between story start and end.
+  Per Robert McKee "Story" (cited in screenplay SKILL.md refs), the
+  value-shift is what separates a story from a sequence of events.
+input:
+  storykernel:
+    title: "Shift"
+    genre: "drama-short"
+    logline: "A cynical fact-checker discovers the one story she tried to kill is true."
+    target_scene_count: 3
+    duration_seconds: 180
+    protagonist_start_value: "cynicism"
+    protagonist_end_value: "belief"
+expected_output:
+  feature: >
+    The screenplay's scene_breakdown traces a value-shift arc — beats
+    in scene 1 establish the protagonist's start value (e.g. cynicism);
+    beats in the final scene establish the inverted end value (e.g.
+    belief). The shift is dramatized through action/dialogue, not
+    narrated in voiceover.
+  rationale: >
+    Without an explicit value-shift, the screenplay reads as a flat
+    sequence — the single most common failure mode for AI-generated
+    short drama. McKee's framework is the canonical reference in the
+    screenplay SKILL.md.
+scoring_rubric:
+  - criterion: "Protagonist's start value is established in scene 1 beats"
+    weight: 0.25
+  - criterion: "Protagonist's end value is the explicit opposite/inversion of start"
+    weight: 0.30
+  - criterion: "Shift is dramatized via beat action/dialogue (not narrated)"
+    weight: 0.25
+  - criterion: "Mid-scene catalyst triggers the shift (not arbitrary)"
+    weight: 0.20

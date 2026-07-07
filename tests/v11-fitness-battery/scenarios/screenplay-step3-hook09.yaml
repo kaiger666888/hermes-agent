@@ -1,0 +1,37 @@
+id: screenplay-step3-hook09
+description: >
+  Screenplay Step 3 output must satisfy the HOOK-09 emotion_curve marker
+  contract per tests/fixtures/screenplay-step3-schema.json — top-level
+  emotion_curve array + per-scene emotion_curve arrays, each marker
+  pinning {timestamp_seconds, arousal in [0,1], valence in [-1,1]}.
+  This is the load-bearing invariant for downstream hook_retention +
+  script_auditor + storyboard Step 6.5 (Phase 49 §2.4 HOOK-09).
+input:
+  storykernel:
+    title: "The Last Delivery"
+    genre: "urban-short"
+    logline: "A delivery rider on her last run of the night picks up a parcel that changes her life."
+    target_scene_count: 3
+    duration_seconds: 180
+expected_output:
+  feature: >
+    JSON object with required top-level keys: logline (>=10 chars),
+    scene_breakdown (>=1 item, each with scene_id + beats + emotion_curve),
+    hooks, payoffs, cliffhangers, emotion_curve. Every emotion_curve
+    entry has timestamp_seconds>=0, arousal in [0,1], valence in [-1,1].
+    At least one hook per scene boundary (cold_open, curiosity, shock,
+    cliffhanger, paywall categories).
+  rationale: >
+    HOOK-09 contract is the regression backstop for the entire creative
+    slice — losing it breaks the downstream pipeline (Phase 49 §2.4).
+scoring_rubric:
+  - criterion: "Top-level emotion_curve array present + non-empty + valid marker schema"
+    weight: 0.25
+  - criterion: "Per-scene emotion_curve arrays present (>=1 marker per scene)"
+    weight: 0.25
+  - criterion: "All required top-level keys present (logline, scene_breakdown, hooks, payoffs, cliffhangers, emotion_curve)"
+    weight: 0.20
+  - criterion: "Hook markers carry valid timestamp + enumerated type + non-empty payload"
+    weight: 0.20
+  - criterion: "Logline minLength 10 + at least 1 beat per scene"
+    weight: 0.10

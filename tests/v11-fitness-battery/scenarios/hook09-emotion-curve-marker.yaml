@@ -1,0 +1,42 @@
+id: hook09-emotion-curve-marker
+description: >
+  Tighter probe on the HOOK-09 contract: every hook in hooks[] must
+  have a corresponding emotion_curve marker at the same timestamp.
+  This pins the cross-reference invariant — downstream hook_retention
+  + script_auditor join on timestamp_seconds.
+input:
+  storykernel:
+    title: "Aligned Markers"
+    genre: "thriller-short"
+    logline: "A night-shift radio host receives a call from someone describing a crime that hasn't happened yet."
+    target_scene_count: 3
+    duration_seconds: 180
+    pre_seed_hooks:
+      - timestamp_seconds: 5
+        type: cold_open
+        payload: "Radio static, then a whispered name."
+      - timestamp_seconds: 45
+        type: curiosity
+        payload: "Caller describes the protagonist's commute in detail."
+      - timestamp_seconds: 120
+        type: shock
+        payload: "The crime happens exactly as called."
+expected_output:
+  feature: >
+    For each pre_seed_hooks entry, the output's emotion_curve array
+    contains a marker at the same timestamp_seconds (within +/-2s
+    tolerance) — pinning the arousal/valence shift at the hook event.
+    Hook payloads are preserved verbatim or close-paraphrased.
+  rationale: >
+    Downstream consumers (hook_retention, script_auditor, storyboard
+    Step 6.5) join on timestamp_seconds. Losing the join key breaks
+    the cross-reference — Phase 49 §2.4 HOOK-09 invariant.
+scoring_rubric:
+  - criterion: "Every pre-seeded hook has an emotion_curve marker at matching timestamp (+/-2s)"
+    weight: 0.40
+  - criterion: "Arousal at hook timestamps is elevated (>=0.6 for shock/cliffhanger; >=0.4 for curiosity)"
+    weight: 0.20
+  - criterion: "Valence at hook timestamps is appropriate (negative for shock, mixed for curiosity)"
+    weight: 0.20
+  - criterion: "Hook payloads are preserved (verbatim or close paraphrase)"
+    weight: 0.20
