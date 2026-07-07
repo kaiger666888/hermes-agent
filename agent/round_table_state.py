@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from datetime import datetime, timezone
 from enum import Enum
@@ -203,6 +204,48 @@ def _read_state_sync(state_path: Path) -> dict[str, Any]:
     """Read + json.load a state file. Encoding explicit per CLAUDE.md PLW1514."""
     with open(state_path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def _fsync_parent_dir(dir_path: Path) -> None:
+    """Fsync ``dir_path`` so recent renames / creations inside it are durable.
+
+    CR-03 fix: POSIX ``rename(2)`` atomically swaps the name but does NOT
+    guarantee the parent directory's metadata change is flushed to disk.
+    On a crash between ``rename`` and the implicit dir-metadata flush, both
+    the source and target files can vanish on ext4 / XFS default mount
+    options. Calling ``fsync(dir_fd)`` after the rename closes that window.
+
+    Linux supports directory fsync. Windows (where ``os.open`` on a
+    directory may not be available) raises ``OSError`` — we swallow it
+    because the rename has already logically succeeded; the fsync is
+    defense-in-depth, not load-bearing for correctness on this happy path.
+
+    Used by ``read_and_recover_state``'s corrupt-archive rename and by any
+    other path that renames state files outside ``utils.atomic_json_write``
+    (which already fsyncs its temp-file body — the body's parent-dir
+    durability is the more subtle property this helper guarantees).
+    """
+    try:
+        dir_fd = os.open(str(dir_path), os.O_RDONLY)
+    except OSError as exc:
+        logger.warning(
+            "round_table_state: cannot open dir %s for fsync: %s",
+            dir_path,
+            exc,
+        )
+        return
+    try:
+        os.fsync(dir_fd)
+    except OSError as exc:
+        # Not all platforms / filesystems support directory fsync. The
+        # rename has already succeeded; this fsync is best-effort.
+        logger.warning(
+            "round_table_state: parent-dir fsync failed for %s: %s",
+            dir_path,
+            exc,
+        )
+    finally:
+        os.close(dir_fd)
 
 
 # --------------------------------------------------------------------------- #
@@ -426,6 +469,12 @@ def read_and_recover_state(
         # unavailable (rather than silently masking with a default).
         archive = state_path.with_suffix(".json.corrupt")
         state_path.rename(archive)
+        # CR-03 fix: fsync the parent dir so the rename (POSIX rename(2)) is
+        # durable across power loss. Without this, a crash between rename and
+        # the implicit directory metadata flush can lose BOTH files on ext4 /
+        # XFS default mount options. Linux supports directory fsync; on
+        # platforms that don't (Windows), the OSError is swallowed.
+        _fsync_parent_dir(state_path.parent)
         logger.error(
             "round_table_state corrupt at %s, archived to %s: %s",
             state_path,

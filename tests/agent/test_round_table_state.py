@@ -17,6 +17,7 @@ those are stale CONTEXT.md shorthand (52-CONTEXT.md "Resolved by Kai" point 2).
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -251,6 +252,49 @@ class TestCrashRecovery:
             read_and_recover_state(state_path)
 
         assert state_path.with_suffix(".json.corrupt").exists()
+
+    def test_corrupt_archive_fsyncs_parent_dir(self, tmp_path, monkeypatch):
+        """CR-03: the rename(2) durability hole is closed.
+
+        POSIX ``rename(2)`` atomically swaps the directory entry but does
+        NOT guarantee the parent directory's metadata change is flushed to
+        disk. Without an explicit ``fsync(dir_fd)`` after the rename, a
+        power loss can lose BOTH the original and the archive on ext4 /
+        XFS default mount options. This test asserts the fsync call is
+        made through the rename path.
+        """
+        from agent import round_table_state as rts_module
+
+        fsync_calls: list[int] = []
+        real_fsync = os.fsync
+
+        def _track_fsync(fd):
+            fsync_calls.append(fd)
+            # Don't actually call real_fsync — the fd is a real dir fd
+            # opened by the helper; we want to record + still let the
+            # fsync execute so the dir metadata is durable on this CI run.
+            return real_fsync(fd)
+
+        monkeypatch.setattr(rts_module.os, "fsync", _track_fsync)
+
+        state_dir = _state_dir()
+        state_path = state_dir / "round-fsync.json"
+        _write_raw_state(state_path, "{ broken json")
+
+        with pytest.raises(json.JSONDecodeError):
+            read_and_recover_state(state_path)
+
+        # The corrupt archive must exist, AND at least one fsync must have
+        # been called against a dir fd (CR-03 fix). We don't assert the
+        # exact fd identity because os.open is internal to the helper; we
+        # only assert that >= 1 fsync call happened post-rename.
+        assert state_path.with_suffix(".json.corrupt").exists(), (
+            "archive file must exist after recovery"
+        )
+        assert len(fsync_calls) >= 1, (
+            f"expected parent-dir fsync after corrupt-archive rename, "
+            f"got {len(fsync_calls)} fsync calls"
+        )
 
     def test_mid_turn_crash_recovers_via_stall(self, tmp_path):
         """SC#3b: process died between turn append + status flip. State file
