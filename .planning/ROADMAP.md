@@ -72,7 +72,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 52-02-PLAN.md — INFRA-03 Round Table State Machine (open/append/submit + atomic writes + 3 crash-recovery modes)
+- [x] 52-02-PLAN.md — INFRA-03 Round Table State Machine (open/append/submit + atomic writes + 3 crash-recovery modes)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. INFRA-FOUNDATION | 1/4 | In Progress|  |
+| 52. INFRA-FOUNDATION | 2/4 | In Progress|  |
 | 53. CREATIVE-SLICE | 0/TBD | Not started | - |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
