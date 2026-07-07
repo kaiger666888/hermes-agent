@@ -84,11 +84,14 @@ class TestMemoryRoutingReturnContract:
         self, memory_module, monkeypatch
     ):
         monkeypatch.delenv("MEM0_API_KEY", raising=False)
+        # CR-01: callers may pass either §3.9 vocabulary (global|project|session)
+        # or agents-schema memory_scope (shared|per_agent|project_scoped) — both
+        # are normalized to §3.9 by ``_normalize_scope_for_arbitration``.
         a = await memory_module.memory_submit_record(
-            agent_id="agent_a", content="c1", scope="per_agent", confidence=0.9
+            agent_id="agent_a", content="c1", scope="project", confidence=0.9
         )
         b = await memory_module.memory_submit_record(
-            agent_id="agent_b", content="c2", scope="shared", confidence=0.1
+            agent_id="agent_b", content="c2", scope="global", confidence=0.1
         )
         for r in (a, b):
             assert r["status"] in ("ok", "unavailable")

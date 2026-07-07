@@ -68,8 +68,72 @@ class TestComparatorPromptTemplate:
         assert "confidence within 0.05" in template
         # evidence_operator_ids field per §3.2 line 637
         assert "evidence_operator_ids" in template
+        # Evidence-diversity threshold per §3.2 line 655 — Unicode U+2265,
+        # NOT ASCII ">=" (CR-04: §3.2 verbatim claim was false for this segment).
+        assert "≥2 distinct operators" in template
+        assert ">=2 distinct" not in template  # guard against ASCII drift
         # 5-value enum per §3.2 line 659
         assert '"resolution": "A-wins" | "B-wins" | "both-kept" | "both-quarantined" | "deferred-to-operator"' in template
+
+    def test_normalize_scope_for_arbitration_translates_agents_schema_vocab(self, memory_module):
+        """CR-01: ``_normalize_scope_for_arbitration`` translates the
+        agents-schema ``memory_scope`` vocabulary (shared|per_agent|
+        project_scoped) into the §3.9 ``scope`` vocabulary
+        (global|project|session) so submitted records round-trip through
+        ``apply_tie_break`` + ``COMPARATOR_PROMPT_TEMPLATE``."""
+        f = memory_module._normalize_scope_for_arbitration
+        # §3.9 vocabulary passes through unchanged.
+        assert f("global") == "global"
+        assert f("project") == "project"
+        assert f("session") == "session"
+        # agents-schema §2.6 vocabulary translates round-trip through §3.9.
+        assert f("shared") == "global"
+        assert f("project_scoped") == "project"
+        assert f("per_agent") == "session"
+        # Defensive cases.
+        assert f(None) == "global"
+        assert f("") == "global"  # empty → falls through to global w/ warning
+        assert f("nonsense") == "global"
+
+    def test_submit_record_normalizes_scope_before_persisting(self, memory_module, monkeypatch):
+        """CR-01: ``memory_submit_record`` coerces the legacy
+        ``scope="per_agent"`` argument through
+        ``_normalize_scope_for_arbitration`` BEFORE forwarding to the
+        mem0 backend, so the persisted record carries the §3.9 value
+        the comparator expects."""
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
+        captured: dict[str, Any] = {}
+
+        class _StubBackend:
+            def is_available(self) -> bool:
+                return True
+
+            def add(self, *, content, agent_id, scope, confidence):
+                captured["scope"] = scope
+                captured["content"] = content
+                captured["agent_id"] = agent_id
+                captured["confidence"] = confidence
+                return "rec-001"
+
+        # Inject our stub backend directly (bypasses _get_mem0_backend's
+        # MEM0_API_KEY gate).
+        monkeypatch.setattr(
+            memory_module, "_get_mem0_backend", lambda: _StubBackend()
+        )
+
+        # Legacy callers (e.g. mcp_serve) still pass the agents-schema
+        # vocabulary. After CR-01 the persisted scope must be the §3.9
+        # value the comparator speaks.
+        import asyncio
+        result = asyncio.run(memory_module.memory_submit_record(
+            agent_id="agent_a", content="hello",
+            scope="per_agent", confidence=0.9,
+        ))
+        assert result == {"status": "ok", "record_id": "rec-001"}
+        assert captured["scope"] == "session", (
+            f"per_agent must translate to §3.9 'session' for arbitration; "
+            f"got {captured['scope']!r}"
+        )
 
 
 # ── Test 2: arbitrate_two_memories with session-over-global ────────────────

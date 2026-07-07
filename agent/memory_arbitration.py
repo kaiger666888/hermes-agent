@@ -109,6 +109,7 @@ def get_scoped_agent_id() -> str | None:
 #   - "Apply scope precedence: session > project > global"
 #   - "confidence within 0.05"
 #   - "evidence_operator_ids"
+#   - "≥2 distinct operators" (Unicode U+2265, NOT ASCII >= — CR-04)
 #   - the 5-value resolution enum line
 
 COMPARATOR_PROMPT_TEMPLATE: str = """You are arbitrating a memory conflict in a Hermes round table.
@@ -138,7 +139,7 @@ Apply confidence-weighting: at the same scope level, higher confidence wins.
   each other, defer to operator (human review).
 
 Apply evidence diversity check: prefer memory with more diverse
-  evidence_operator_ids (>=2 distinct operators per Phase 45 §3.7).
+  evidence_operator_ids (≥2 distinct operators per Phase 45 §3.7).
 
 Output JSON:
 {{
@@ -432,9 +433,13 @@ async def memory_retrieve_scoped(
 
     # Layered defense (T-53-06): only return records whose agent_id matches
     # the requested scope. mem0 should already filter, but we re-check.
+    # WR-06 fix: drop the ``not isinstance(h, dict) OR ...`` short-circuit
+    # (it KEPT non-dict hits, then crashed downstream _format_memory_context).
+    # Only KEEP dict hits whose agent_id is unset (legacy record) or matches.
     filtered = [
         h for h in (hits or [])
-        if not isinstance(h, dict) or h.get("agent_id") in (None, effective_agent_id)
+        if isinstance(h, dict)
+        and h.get("agent_id") in (None, effective_agent_id)
     ]
     return {"status": "ok", "hits": filtered}
 
@@ -448,15 +453,22 @@ async def memory_submit_record(
     agent_id: str,
     content: str,
     *,
-    scope: str = "per_agent",
+    scope: str = "global",
     confidence: float = 0.5,
 ) -> dict[str, Any]:
     """Store a new memory record (Phase 53 routing).
 
     Args:
-        agent_id: The agent namespace to write into.
+        agent_id: The agent namespace to write into (routes via memory_scope).
         content: Free-text memory content.
-        scope: ``shared`` / ``per_agent`` / ``project_scoped``.
+        scope: Visibility tier per memory-record-schema.yaml §3.9
+            (``global`` / ``project`` / ``session``). Distinct from the
+            agent-YAML's ``memory_scope`` field (shared|per_agent|project_scoped)
+            which governs mem0 namespace routing. The comparator's
+            ``apply_tie_break`` + ``COMPARATOR_PROMPT_TEMPLATE`` use this
+            §3.9 vocabulary; submitting a record with the agents-schema
+            ``memory_scope`` vocabulary would never round-trip through the
+            comparator (CR-01 fix).
         confidence: ``[0.0, 1.0]`` score for downstream arbitration.
 
     Returns:
@@ -464,6 +476,7 @@ async def memory_submit_record(
         ``{"status": "unavailable", "record_id": None}`` when the mem0
         backend is not configured.
     """
+    scope = _normalize_scope_for_arbitration(scope)
     scoped = get_scoped_agent_id()
     effective_agent_id = scoped or agent_id
     logger.debug(
@@ -494,6 +507,63 @@ async def memory_submit_record(
         return {"status": "unavailable", "record_id": None}
 
     return {"status": "ok", "record_id": record_id}
+
+
+#: Authoritative §3.9 scope vocabulary per memory-record-schema.yaml:89.
+#: Distinct from agents-schema.yaml §2.6 ``memory_scope`` enum
+#: (shared|per_agent|project_scoped) — that field routes mem0 namespaces;
+#: the §3.9 ``scope`` field governs cross-project VISIBILITY at retrieve
+#: time and is the enum the comparator's ``apply_tie_break`` keys against.
+_ARBITRATION_SCOPE_VALUES: frozenset[str] = frozenset({"global", "project", "session"})
+
+
+def _normalize_scope_for_arbitration(scope: Any) -> str:
+    """Coerce a scope value to the memory-record-schema §3.9 vocabulary.
+
+    The 5-mechanism arbitration runtime (comparator prompt +
+    ``apply_tie_break``) speaks ONLY the §3.9 enum
+    (``global|project|session``). Callers occasionally hand in
+    agents-schema §2.6 ``memory_scope`` values
+    (``shared|per_agent|project_scoped``) — those are a DIFFERENT axis
+    (mem0 namespace routing) and must be translated before arbitration.
+
+    Translation map (CR-01 fix):
+
+    - ``shared`` → ``global`` (cross-agent shared == global visibility)
+    - ``project_scoped`` → ``project``
+    - ``per_agent`` → ``session`` (agent-private == session-scoped for
+      arbitration purposes; same-scope ties are the comparator's only
+      project-level deferral path, and per_agent records belong to one
+      agent's namespace exactly like session-scoped records belong to
+      one conversation)
+
+    Any value already in the §3.9 vocabulary is passed through.
+    Unknown values coerce to ``global`` with a warning (defensive —
+    the comparator prompt labels ``global|project|session``, so an
+    out-of-vocab string would mislead the LLM).
+    """
+    if scope is None:
+        return "global"
+    s = str(scope).strip()
+    if s in _ARBITRATION_SCOPE_VALUES:
+        return s
+    mapped = {
+        "shared": "global",
+        "project_scoped": "project",
+        "per_agent": "session",
+    }.get(s)
+    if mapped is not None:
+        logger.debug(
+            "scope %r is agents-schema memory_scope vocabulary; "
+            "coerced to §3.9 %r for arbitration", s, mapped,
+        )
+        return mapped
+    logger.warning(
+        "scope=%r is outside §3.9 vocabulary (global|project|session) "
+        "and outside agents-schema memory_scope (shared|per_agent|project_scoped); "
+        "coercing to global", s,
+    )
+    return "global"
 
 
 def _get_mem0_backend() -> Any:
