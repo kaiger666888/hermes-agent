@@ -101,7 +101,9 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   1. Production mem0 p50/p95/p99 in `latency-baseline.md §2.2`.
   2. If p95 > 500ms, document 物理分区 trigger decision.
   3. Fitness battery 8 scenarios real-mode; discrimination baseline (0.7+ vs 0.4-0.5).
-**Plans**: TBD
+**Plans**:
+- [ ] 60-01-PLAN.md — EVAL-01 live mem0 backend p95 benchmark (NEW seeder + --backend mem0 flag + populate §2.2 + conditional 物理分区-triggers.md)
+- [ ] 60-02-PLAN.md — EVAL-02 fitness battery real-mode baseline (persona-aligned vs generic-LLM discrimination, aux pool, fitness-battery-baseline.md)
 
 ### Phase 61: VALIDATE
 
