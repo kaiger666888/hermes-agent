@@ -1,27 +1,22 @@
-"""Tests for ``agent/memory_arbitration.py`` (Phase 52 STUB).
+"""Tests for ``agent/memory_arbitration.py`` — Phase 52 primitive + Phase 53 contract.
 
-Phase 52 ships the two memory MCP-tool functions (``memory_retrieve_scoped``
-+ ``memory_submit_record``) as **stubs** that return a fixed
-``phase53_not_implemented`` payload. Phase 53 (CREATIVE-SLICE) fills in
-real mem0 backend routing per agents-schema.yaml §2.6 ``memory_scope``.
+This file was originally written for the Phase 52 STUB contract. Phase 53
+(CREATIVE-SLICE) **replaced** the stub return contract per ``53-CONTEXT.md``
+decision #3:
 
-This file also tests the ``_scoped_agent_id`` ``contextvars.ContextVar``
-primitive that Phase 53's memory routing will hook into. The primitive
-MUST be ``contextvars``-based (not ``threading.local``) because
-``ThreadPoolExecutor`` worker reuse makes ``threading.local`` leak scope
-across tasks; ``contextvars`` is asyncio-correct per ARCHITECTURE §3.3.
+- ``memory_retrieve_scoped(...)`` now returns ``{"status": "ok", ...}`` or
+  ``{"status": "unavailable", "hits": []}`` (when ``MEM0_API_KEY`` is
+  unset, which is always the case in the hermetic test environment).
+- ``memory_submit_record(...)`` similarly returns
+  ``{"status": "unavailable", "record_id": None}`` in hermetic tests.
 
-Stub return contract (locked by 52-CONTEXT.md "Resolved by Kai" point 3):
+The ``_scoped_agent_id`` ``contextvars.ContextVar`` primitive — and its
+no-eager-mem0-import guard — are preserved verbatim. Those sub-suites
+remain authoritative for Phase 53 as well.
 
-- ``memory_retrieve_scoped(...)`` →
-  ``{"status": "phase53_not_implemented", "hits": []}``
-- ``memory_submit_record(...)`` →
-  ``{"status": "phase53_not_implemented", "record_id": None}``
-
-TDD note: this file is RED until Task 1 lands ``agent/memory_arbitration.py``.
-The import is deferred into the fixture so ``pytest --collect-only`` works
-even before the module exists; the first test run raises a clear
-``ModuleNotFoundError`` until implementation lands.
+The Phase 52 STUB tests below were updated by Phase 53 Plan 53-02 Task 1
+to assert the new (Phase 53) return contract instead of the now-removed
+``phase53_not_implemented`` payload.
 """
 
 from __future__ import annotations
@@ -41,50 +36,63 @@ def memory_module():
     return memory_arbitration
 
 
-# ── Stub return contract ───────────────────────────────────────────────────
+# ── Phase 53 routing return contract ──────────────────────────────────────
+#
+# Phase 53 replaced the Phase 52 ``phase53_not_implemented`` stub with
+# real mem0 routing. In the hermetic test env (no MEM0_API_KEY), the
+# backend is unavailable → graceful ``{"status": "unavailable", ...}``
+# payload.
 
 
-class TestMemoryStubReturnContract:
-    """Verify the exact dict the stubs return per CONTEXT.md point 3."""
+class TestMemoryRoutingReturnContract:
+    """Verify the Phase 53 return contract: ``status=unavailable`` when
+    the mem0 backend is not configured (the hermetic-test invariant)."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_scoped_returns_phase53_not_implemented(self, memory_module):
+    async def test_retrieve_scoped_returns_unavailable_without_mem0_key(
+        self, memory_module, monkeypatch
+    ):
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
         result = await memory_module.memory_retrieve_scoped(
             query="anything", agent_id="anyagent"
         )
-        assert result == {"status": "phase53_not_implemented", "hits": []}
+        assert result == {"status": "unavailable", "hits": []}
 
     @pytest.mark.asyncio
-    async def test_retrieve_scoped_ignores_arguments(self, memory_module):
-        """Stub contract: returns the same payload regardless of args."""
-        a = await memory_module.memory_retrieve_scoped(
+    async def test_retrieve_scoped_status_is_one_of_ok_or_unavailable(
+        self, memory_module, monkeypatch
+    ):
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
+        result = await memory_module.memory_retrieve_scoped(
             query="q1", agent_id="agent_a", top_k=1
         )
-        b = await memory_module.memory_retrieve_scoped(
-            query="totally different", agent_id="agent_b", top_k=99
-        )
-        assert a == b
-        assert a == {"status": "phase53_not_implemented", "hits": []}
+        assert result["status"] in ("ok", "unavailable")
+        assert isinstance(result["hits"], list)
 
     @pytest.mark.asyncio
-    async def test_submit_record_returns_phase53_not_implemented_with_null_id(
-        self, memory_module
+    async def test_submit_record_returns_unavailable_without_mem0_key(
+        self, memory_module, monkeypatch
     ):
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
         result = await memory_module.memory_submit_record(
             agent_id="anyagent", content="x"
         )
-        assert result == {"status": "phase53_not_implemented", "record_id": None}
+        assert result == {"status": "unavailable", "record_id": None}
 
     @pytest.mark.asyncio
-    async def test_submit_record_ignores_arguments(self, memory_module):
+    async def test_submit_record_status_is_one_of_ok_or_unavailable(
+        self, memory_module, monkeypatch
+    ):
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
         a = await memory_module.memory_submit_record(
             agent_id="agent_a", content="c1", scope="per_agent", confidence=0.9
         )
         b = await memory_module.memory_submit_record(
             agent_id="agent_b", content="c2", scope="shared", confidence=0.1
         )
-        assert a == b
-        assert a == {"status": "phase53_not_implemented", "record_id": None}
+        for r in (a, b):
+            assert r["status"] in ("ok", "unavailable")
+            assert "record_id" in r
 
 
 # ── Contextvars primitive ─────────────────────────────────────────────────
@@ -154,19 +162,24 @@ class TestScopedAgentId:
 
 
 class TestNoEagerMem0Import:
-    """Phase 52 stub MUST NOT eagerly import the mem0 backend.
+    """``memory_arbitration`` MUST NOT eagerly import the mem0 backend at module top level.
 
-    See RESEARCH.md §"Pitfall 5" — eager-importing
-    ``plugins.memory.mem0`` couples Phase 52 to a Phase 53 backend that may
-    not have ``MEM0_API_KEY`` set, breaking the test suite.
+    Phase 52 originally enforced this invariant as part of the stub
+    contract. Phase 53 (Plan 53-02) introduces a **function-level** lazy
+    import inside ``_get_mem0_backend`` so the heavy backend is only
+    loaded when memory routing is actually invoked. This AST guard now
+    verifies that any ``plugins.memory.mem0`` import lives inside a
+    function body — never at module top level — preserving the original
+    RESEARCH.md §"Pitfall 5" guarantee.
     """
 
     def test_module_does_not_import_mem0_at_top_level(self):
-        """Walk the AST: no ``import plugins.memory.mem0`` / ``from plugins.memory.mem0``.
+        """AST-walk: no top-level (depth-0) ``import plugins.memory.mem0``.
 
-        AST-walking is precise — docstring/comment mentions of the module
-        name don't trigger false positives (the original substring check
-        did). Only actual ``Import`` / ``ImportFrom`` nodes count.
+        A top-level ``Import`` / ``ImportFrom`` has its parent in
+        ``ast.Module.body``. Imports nested inside ``FunctionDef`` /
+        ``AsyncFunctionDef`` are allowed (those are the lazy Phase 53
+        imports). AST-walking the module body directly is precise.
         """
         import ast
         import inspect
@@ -178,7 +191,8 @@ class TestNoEagerMem0Import:
         forbidden_prefix = "plugins.memory.mem0"
         offenders: list[str] = []
 
-        for node in ast.walk(tree):
+        # Only inspect top-level statements (tree.body), not nested function bodies.
+        for node in tree.body:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name == forbidden_prefix or alias.name.startswith(
@@ -193,7 +207,8 @@ class TestNoEagerMem0Import:
                     )
 
         assert not offenders, (
-            "Phase 52 memory_arbitration MUST NOT import plugins.memory.mem0 — "
-            "Phase 53 fills in real mem0 routing (RESEARCH.md Pitfall #5). "
+            "memory_arbitration MUST NOT eagerly import plugins.memory.mem0 at "
+            "module top level — Phase 53 routes via a function-level lazy import "
+            "(RESEARCH.md Pitfall #5). "
             f"Found: {offenders}"
         )
