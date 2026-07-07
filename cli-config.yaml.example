@@ -417,6 +417,46 @@ prompt_caching:
   cache_ttl: "5m" # use "1h" for long sessions with pauses between turns
 
 # =============================================================================
+# Auxiliary Credential Pool (Phase 59 POOL-01 — GLM isolation)
+# =============================================================================
+# Hermes isolates the auxiliary pool (round_table_opinion, memory_compaction,
+# fitness_judge, bias_canary_claim_check, memory_comparator) from the main
+# agent/gateway pool so a gateway burst cannot exhaust all 4 GLM keys and
+# starve the round table halfway through a 9-panelist session.
+#
+# Set GLM_AUX_API_KEY_1..4 in ~/.hermes/.env (or your shell environment) to
+# give the auxiliary pool its own dedicated keys. When NONE of these are set,
+# the auxiliary pool transparently reuses GLM_API_KEY so single-key operators
+# are not broken (no config breaking change).
+#
+# .env example (dedicated aux keys — strict isolation):
+#   GLM_AUX_API_KEY_1=glm-aux-key-1
+#   GLM_AUX_API_KEY_2=glm-aux-key-2
+#   GLM_AUX_API_KEY_3=glm-aux-key-3
+#   GLM_AUX_API_KEY_4=glm-aux-key-4
+#
+# .env example (single-key fallback — aux pool reuses the main key):
+#   GLM_API_KEY=your-only-glm-key
+#
+# Audit: `hermes auth list` shows both pools. Aux entries appear under the
+# "auxiliary:zai" storage namespace, separate from the default "zai" pool.
+#
+# Phase 59 POOL-02: per-key TPM (tokens-per-minute) tracking. Each aux-pool
+# key tracks its consumed tokens in a sliding 60s window (hardcoded cap
+# 200_000/key — GLM-5.2 single-key ceiling). Before each aux call, the
+# pool picks the freshest key (most remaining TPM). When ALL aux keys drop
+# below the warning threshold, acquire_slot emits a tpm_warning log +
+# brief sleep until the soonest window slides.
+#
+# auxiliary.tpm_warning_threshold (default 0.1 = 10%): emit tpm_warning
+# when all aux pool keys are below this fraction of the TPM cap. Range
+# [0.0, 1.0]. Set to 0.0 to disable the warning; set to 0.2 for stricter
+# pre-emptive pacing. Must be set under the top-level `auxiliary:` block:
+#
+# auxiliary:
+#   tpm_warning_threshold: 0.1    # Phase 59-02 — 10% default
+
+# =============================================================================
 # Auxiliary Models (Advanced — Experimental)
 # =============================================================================
 # Hermes uses lightweight "auxiliary" models for side tasks: image analysis,
@@ -538,6 +578,58 @@ prompt_caching:
 #     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
 #     model: glm-5.2         # Phase 55 EVAL-04 memory compaction summarizer
 #     timeout: 30            # T-55-02 mitigation (fail-safe to deterministic merge on malformed response)
+#
+#   # ----- Phase 57 v12.0 endpoint routing (ENDPOINT-01) -----
+#   # Long-prompt GLM calls (synthesis, memory_compaction, memory_comparator)
+#   # auto-route to open.bigmodel.cn/api/anthropic (anthropic-compat, no 30s
+#   # cap) when the estimated input tokens exceed token_threshold. Short
+#   # prompts (panelists, vision) stay on the cheaper z.ai coding plan.
+#   # Eliminates the v11.0 SC#2 synthesis 5x retry storm (490s -> <240s).
+#   # See .planning/phases/57-endpoint-routing/57-CONTEXT.md.
+#   endpoint_routing:
+#     enabled: true                   # Operator opt-out (set false to disable)
+#     token_threshold: 4096           # Prompts >= this many estimated tokens route to long_prompt
+#                                      # Default 4096; raise to 8000 if anthropic endpoint cost is a concern
+#     short_prompt:
+#       provider: glm                 # Routes via existing zai alias (z.ai coding plan)
+#       # base_url omitted -> uses provider default (api.z.ai/api/coding/paas/v4)
+#     long_prompt:
+#       provider: zhipu-anthropic     # Anthropic-compat endpoint
+#       base_url: "https://open.bigmodel.cn/api/anthropic"
+#       api_mode: chat_completions    # OpenAI SDK talks to /chat/completions on this URL
+#
+#   # ----- Phase 58 v12.0 per-task RPM throttle (THROTTLE-01) -----
+#   # Each auxiliary task gets its own refillable token bucket. Acquire
+#   # happens BEFORE endpoint routing (Phase 57), so both z.ai (short)
+#   # and open.bigmodel.cn/api/anthropic (long) routes count against
+#   # the same per-task bucket. Replaces the v11.0 hardcoded
+#   # asyncio.sleep(2.5) RPM pacing patch in run_screenplay_step3_roundtable.py.
+#   # Default 30 RPM/task — well under GLM single-key RPM ceiling.
+#   # See .planning/phases/58-rpm-throttling/58-CONTEXT.md.
+#   # Per-task override (applies to that task's bucket only):
+#   # round_table_opinion:
+#   #   rpm: 30              # Default; raise to 60 if 4-key pool allows
+#   # memory_compaction:
+#   #   rpm: 20              # Compaction is bursty; lower ceiling
+#   # fitness_judge:
+#   #   rpm: 30
+#
+#   # ----- Phase 58 v12.0 cost estimate (THROTTLE-02 receipt) -----
+#   # Per-round-table receipt includes tokensConsumed + costUsdEstimate.
+#   # Pricing hardcoded at GLM-5.2 rates (MEMORY.md feedback-glm-5-2-only.md).
+#   # Configurable in v13+ when real pricing API lands.
+#   # See .planning/phases/58-rpm-throttling/58-CONTEXT.md decision #7.
+#   cost_estimate:
+#     glm_5_2_cny_per_1m_tokens: 0.5    # GLM-5.2 published CNY pricing
+#     usd_cny_rate: 7.2                 # Approximate conversion; configurable
+#     # costUsdEstimate = (tokensConsumed / 1_000_000)
+#     #                   * glm_5_2_cny_per_1m_tokens / usd_cny_rate
+#     # NOTE: These values are DOCUMENTATION ONLY in v12.0 — the actual
+#     # constants used by submit_round_table_result live in
+#     # agent/round_table_state.py (DEFAULT_TOKEN_BUDGET,
+#     # GLM_5_2_CNY_PER_1M_TOKENS, USD_CNY_RATE). Wiring these to read
+#     # from cli-config.yaml is a v13+ enhancement per 58-CONTEXT.md
+#     # deferred items.
 
 # =============================================================================
 # Persistent Memory

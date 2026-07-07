@@ -9,9 +9,9 @@ import threading
 import time
 import uuid
 import re
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple
 
 from hermes_constants import OPENROUTER_BASE_URL
 from hermes_cli.config import load_env
@@ -117,6 +117,37 @@ EXHAUSTED_TTL_DEFAULT_SECONDS = 60 * 60      # 1 hour
 # custom_providers name: 'custom:<normalized_name>'.
 CUSTOM_POOL_PREFIX = "custom:"
 
+# Pool key prefix for the auxiliary credential pool (Phase 59 POOL-01).
+# Auxiliary traffic (round_table_opinion, memory_compaction, fitness_judge,
+# bias_canary_claim_check, memory_comparator) reads its keys from a SEPARATE
+# pool so a gateway burst cannot exhaust all 4 GLM keys and starve the
+# round table halfway through a 9-panelist session. Named-pool storage keys
+# take the form 'auxiliary:<provider>' (e.g. 'auxiliary:zai').
+AUX_POOL_PREFIX = "auxiliary:"
+
+# Phase 59 POOL-02: GLM per-key TPM (tokens-per-minute) cap.
+# Hardcoded per CONTEXT.md deferred list:
+#   "Configurable per-key TPM cap — hardcode at GLM 200K/key for v12.0".
+# GLM-5.2 single-key TPM ceiling. Configurable in v13+.
+TPM_CAP_PER_KEY_GLM: int = 200_000
+
+# Sliding-window length (seconds) for per-key TPM tracking.
+# Matches the GLM upstream RPM window (60s). Uses ``time.monotonic`` per the
+# Phase 58 TokenBucket precedent + CONTEXT.md decision #3 (wall clock can
+# jump on NTP sync, breaking the window logic).
+TPM_WINDOW_SECONDS: float = 60.0
+
+# Dedicated env vars for the auxiliary pool. Operators who set these get
+# strict isolation from the main agent/gateway pool. When NONE are set,
+# ``_seed_aux_env`` falls back to ``GLM_API_KEY`` (single-key operators —
+# CONTEXT.md decision #2 + decision #6).
+_AUX_ENV_VARS: tuple[str, ...] = (
+    "GLM_AUX_API_KEY_1",
+    "GLM_AUX_API_KEY_2",
+    "GLM_AUX_API_KEY_3",
+    "GLM_AUX_API_KEY_4",
+)
+
 
 # Fields that are only round-tripped through JSON — never used for logic as attributes.
 _EXTRA_KEYS = frozenset({
@@ -151,6 +182,13 @@ class PooledCredential:
     agent_key_expires_at: Optional[str] = None
     request_count: int = 0
     extra: Dict[str, Any] = None  # type: ignore[assignment]
+    # Phase 59 POOL-02: per-key TPM sliding-window state. Optional + None
+    # default so default-pool entries deserialized from auth.json (which
+    # don't carry these fields) load cleanly. Both fields lazy-init on the
+    # first ``record_usage`` call. TPM tracking is aux-pool-only — the
+    # default ``select()`` does NOT consult these fields.
+    tokens_this_minute: Optional[int] = None
+    window_start: Optional[float] = None
 
     def __post_init__(self):
         if self.extra is None:
@@ -226,6 +264,59 @@ class PooledCredential:
         if self.provider == "nous":
             return self.inference_base_url or self.base_url
         return self.base_url
+
+
+@dataclass
+class TpmWindow:
+    """Phase 59 POOL-02: lightweight sliding-window TPM tracker.
+
+    Holds the in-window consumed-token count and the monotonic timestamp
+    at which the current window opened. The window slides when
+    ``now - window_start >= TPM_WINDOW_SECONDS`` (60s) — the next
+    :meth:`record` resets the counter instead of accumulating.
+
+    Used by :meth:`CredentialPool.record_usage` to attribute consumed
+    tokens to the aux-pool key that produced them. Defensive against
+    negative inputs (T-59-08-T mitigation): clamps to ``>= 0``.
+    """
+
+    tokens_consumed: int
+    window_start: float
+
+    TPM_WINDOW_SECONDS: ClassVar[float] = TPM_WINDOW_SECONDS
+
+    @classmethod
+    def fresh(cls) -> "TpmWindow":
+        """Start a new window at the current monotonic time, zero tokens."""
+        return cls(tokens_consumed=0, window_start=time.monotonic())
+
+    def remaining(self, cap: int) -> int:
+        """Return ``max(0, cap - tokens_consumed)`` — never negative."""
+        return max(0, cap - max(0, self.tokens_consumed))
+
+    def remaining_fraction(self, cap: int) -> float:
+        """Return ``remaining(cap) / cap`` — in ``[0.0, 1.0]``."""
+        if cap <= 0:
+            return 0.0
+        return self.remaining(cap) / float(cap)
+
+    def window_remaining_seconds(self, now: float) -> float:
+        """Seconds until the current window slides (clamped >= 0)."""
+        return max(0.0, self.TPM_WINDOW_SECONDS - (now - self.window_start))
+
+    def record(self, tokens: int, now: float) -> None:
+        """Add ``tokens`` to the window, sliding it if expired.
+
+        Negative inputs are clamped to zero (T-59-08-T: hand-edited
+        auth.json with a negative value must not corrupt state).
+        """
+        safe_tokens = max(0, int(tokens))
+        if now - self.window_start >= self.TPM_WINDOW_SECONDS:
+            # Window slid — start a fresh count at this timestamp.
+            self.tokens_consumed = safe_tokens
+            self.window_start = now
+        else:
+            self.tokens_consumed += safe_tokens
 
 
 def label_from_token(token: str, fallback: str) -> str:
@@ -447,8 +538,20 @@ DEFAULT_MAX_CONCURRENT_PER_CREDENTIAL = 1
 
 
 class CredentialPool:
-    def __init__(self, provider: str, entries: List[PooledCredential]):
+    def __init__(
+        self,
+        provider: str,
+        entries: List[PooledCredential],
+        *,
+        storage_key: Optional[str] = None,
+    ):
         self.provider = provider
+        # Phase 59 POOL-02: ``storage_key`` is the auth.json credential_pool
+        # namespace this pool persists to. Defaults to ``provider`` for
+        # backward compat (default pool). Named pools (e.g. ``auxiliary:zai``)
+        # pass the explicit pool_key so ``_persist`` writes to the correct
+        # namespace instead of clobbering the default pool's storage.
+        self._storage_key = storage_key or provider
         self._entries = sorted(entries, key=lambda entry: entry.priority)
         self._current_id: Optional[str] = None
         self._strategy = get_pool_strategy(provider)
@@ -480,7 +583,7 @@ class CredentialPool:
 
     def _persist(self) -> None:
         write_credential_pool(
-            self.provider,
+            self._storage_key,
             [entry.to_dict() for entry in self._entries],
         )
 
@@ -1371,6 +1474,151 @@ class CredentialPool:
         entry = available[0]
         self._current_id = entry.id
         return entry
+
+    # ── Phase 59 POOL-02: per-key TPM selection ───────────────────────────
+    #
+    # ``select_freshest_tpm`` is a PARALLEL selection path to
+    # ``_select_unlocked``. It bypasses the configured strategy
+    # (``fill_first`` / ``round_robin`` / etc.) and picks the entry with the
+    # MOST remaining TPM. Used only by the TPM-aware throttle layer
+    # (``agent.glm_throttle``) for the auxiliary pool — default-pool callers
+    # go through ``select()`` unchanged.
+    #
+    # Both ``select_freshest_tpm`` and ``record_usage`` are NO-OPs on entries
+    # whose ``tokens_this_minute is None`` (the default state). They lazy-init
+    # the ``TpmWindow`` on first use.
+
+    def select_freshest_tpm(
+        self, cap: int = TPM_CAP_PER_KEY_GLM
+    ) -> Optional[PooledCredential]:
+        """Return the entry with the most remaining TPM.
+
+        Bypasses the configured strategy (``fill_first`` etc.) — when TPM
+        tracking is active, the aux pool ALWAYS picks the freshest key per
+        CONTEXT.md decision #4 ("acquire_slot picks the key with most
+        remaining TPM"). Used by the TPM-aware throttle layer for the
+        auxiliary pool. Default-pool callers go through ``select()``.
+
+        Returns ``None`` when the pool is empty. Ties broken by priority
+        (stable sort preserves ``_entries`` order, which is priority-sorted
+        in ``__init__``).
+        """
+        with self._lock:
+            if not self._entries:
+                return None
+            now = time.monotonic()
+
+            def _remaining_for(entry: PooledCredential) -> int:
+                # Lazy-init: a fresh entry (tokens_this_minute=None) has the
+                # full cap available. We do NOT mutate the entry here — that
+                # happens in record_usage. This keeps selection side-effect-free.
+                if entry.tokens_this_minute is None or entry.window_start is None:
+                    return cap
+                # If the window has slid since last record, the entry effectively
+                # has full cap available again (next record_usage will reset it).
+                if now - entry.window_start >= TPM_WINDOW_SECONDS:
+                    return cap
+                return max(0, cap - max(0, entry.tokens_this_minute))
+
+            # Stable sort by descending remaining (max first). Ties keep
+            # priority order (lowest priority first = highest in the
+            # ``_entries`` list, since __init__ sorts ascending).
+            entries_by_remaining = sorted(
+                self._entries,
+                key=lambda e: (-_remaining_for(e), e.priority),
+            )
+            return entries_by_remaining[0] if entries_by_remaining else None
+
+    def record_usage(self, entry_id: str, tokens: int) -> None:
+        """Post-call hook: subtract ``tokens`` from the entry's TPM window.
+
+        Looks up the entry by id. If not found, debug-log + return (no-op).
+        If found: lazy-init ``TpmWindow`` from the entry's current
+        ``tokens_this_minute`` / ``window_start`` (when both present) OR
+        start a fresh window (when either is None). Then call
+        ``window.record(tokens, now)`` and persist back to the entry.
+
+        Persists the updated entry to ``auth.json`` via :meth:`_persist` so
+        a long-running gateway process and a parallel CLI round-table driver
+        see consistent TPM state (T-59-09-R mitigation). One write per aux
+        call — acceptable because aux calls are ~30 RPM/task (Phase 58
+        default), not high-frequency.
+        """
+        if not entry_id:
+            logger.debug("record_usage: empty entry_id, no-op")
+            return
+        with self._lock:
+            entry = next(
+                (e for e in self._entries if e.id == entry_id), None
+            )
+            if entry is None:
+                logger.debug(
+                    "record_usage: entry_id=%s not in pool, no-op", entry_id
+                )
+                return
+
+            now = time.monotonic()
+            # Lazy-init the TpmWindow from entry state.
+            if (
+                entry.tokens_this_minute is not None
+                and entry.window_start is not None
+            ):
+                window = TpmWindow(
+                    tokens_consumed=entry.tokens_this_minute,
+                    window_start=entry.window_start,
+                )
+            else:
+                window = TpmWindow.fresh()
+            window.record(tokens, now)
+
+            updated = replace(
+                entry,
+                tokens_this_minute=window.tokens_consumed,
+                window_start=window.window_start,
+            )
+            self._replace_entry(entry, updated)
+            self._persist()
+
+    def pool_tpm_status(
+        self, cap: int = TPM_CAP_PER_KEY_GLM
+    ) -> Dict[str, Dict[str, float]]:
+        """Return per-entry TPM status for diagnostics + throttle decisions.
+
+        Shape: ``{entry_id: {"remaining_tokens": int, "window_remaining_s":
+        float, "remaining_fraction": float, "tokens_consumed": int}}``.
+
+        Lazy-inits the TpmWindow on each entry (does NOT mutate state — the
+        status is a read-only snapshot). Used by ``agent.glm_throttle`` to
+        decide whether to emit a ``tpm_warning`` log.
+        """
+        now = time.monotonic()
+        status: Dict[str, Dict[str, float]] = {}
+        with self._lock:
+            for entry in self._entries:
+                if (
+                    entry.tokens_this_minute is None
+                    or entry.window_start is None
+                ):
+                    consumed = 0
+                    window_start = now
+                else:
+                    consumed = entry.tokens_this_minute
+                    window_start = entry.window_start
+                # If window slid, treat as fresh for status purposes.
+                if now - window_start >= TPM_WINDOW_SECONDS:
+                    consumed = 0
+                    window_start = now
+                remaining = max(0, cap - max(0, consumed))
+                fraction = (remaining / float(cap)) if cap > 0 else 0.0
+                status[entry.id] = {
+                    "remaining_tokens": remaining,
+                    "window_remaining_s": max(
+                        0.0, TPM_WINDOW_SECONDS - (now - window_start)
+                    ),
+                    "remaining_fraction": fraction,
+                    "tokens_consumed": consumed,
+                }
+        return status
 
     def peek(self) -> Optional[PooledCredential]:
         current = self.current()
@@ -2290,3 +2538,169 @@ def load_pool(provider: str) -> CredentialPool:
             [entry.to_dict() for entry in sorted(entries, key=lambda item: item.priority)],
         )
     return CredentialPool(provider, entries)
+
+
+# ── Phase 59: Named auxiliary pool (POOL-01) ───────────────────────────────
+#
+# The default ``load_pool`` seeds a single pool per provider from auth.json +
+# env vars + singletons. Phase 59 adds a SEPARATE auxiliary pool so gateway
+# bursts cannot starve round-table calls (v11.0 smoke-test §3.1 fix).
+#
+# Design (CONTEXT.md decisions #1, #2, #5, #6):
+# - Named-pool storage key: ``auxiliary:<provider>`` (e.g. ``auxiliary:zai``).
+# - Dedicated env vars: ``GLM_AUX_API_KEY_1..4``. When NONE are set, the
+#   aux pool transparently reuses ``GLM_API_KEY`` so single-key operators
+#   are not broken (no config breaking change).
+# - The default ``load_pool`` is untouched — named-pool code path is additive.
+
+
+def _seed_aux_env(provider: str, entries: List[PooledCredential]) -> Tuple[bool, Set[str]]:
+    """Seed the auxiliary pool from ``GLM_AUX_API_KEY_1..4`` + ``GLM_API_KEY``.
+
+    Structural twin of :func:`_seed_from_env` but reads the dedicated aux
+    env var list (hardcoded per CONTEXT.md decision #2) instead of
+    ``PROVIDER_REGISTRY[provider].api_key_env_vars``.
+
+    Seeding rules (matches plan Test 1-4):
+    1. For each ``GLM_AUX_API_KEY_<N>`` that is set, upsert one entry with
+       ``source=f"env:GLM_AUX_API_KEY_<N>"``.
+    2. Additionally, if ``GLM_API_KEY`` is set, upsert one entry with
+       ``source="env:GLM_API_KEY"`` so single-key operators still have a
+       usable aux pool. This is the no-breaking-change path (CONTEXT.md
+       decision #6).
+    3. If NEITHER aux vars NOR ``GLM_API_KEY`` are set, return ``(False, set())``
+       — pool stays empty until the operator configures keys.
+
+    The base URL is resolved via :func:`_resolve_zai_base_url` for ``zai``
+    (matching ``_seed_from_env``'s behavior) and falls back to the provider's
+    ``inference_base_url`` for other providers.
+
+    Returns ``(changed, active_sources)`` matching ``_seed_from_env``
+    semantics so ``_prune_stale_seeded_entries`` works unchanged.
+    """
+    changed = False
+    active_sources: Set[str] = set()
+
+    def _get_env_prefer_dotenv(key: str) -> str:
+        env_file = load_env()
+        val = env_file.get(key) or os.environ.get(key) or ""
+        return val.strip()
+
+    try:
+        from hermes_cli.auth import is_source_suppressed as _is_source_suppressed
+    except ImportError:
+        def _is_source_suppressed(_p, _s):  # type: ignore[misc]
+            return False
+
+    pconfig = PROVIDER_REGISTRY.get(provider)
+    if not pconfig or pconfig.auth_type != AUTH_TYPE_API_KEY:
+        # No provider config → can't resolve base_url. Still allow aux vars
+        # for unknown providers? Per CONTEXT.md decision #2 the aux pool is
+        # GLM-specific, so we bail for unknown providers.
+        return changed, active_sources
+
+    def _resolve_base_url(token: str) -> str:
+        env_url = ""
+        if pconfig.base_url_env_var:
+            env_url = _get_env_prefer_dotenv(pconfig.base_url_env_var).rstrip("/")
+        if provider == "zai":
+            return _resolve_zai_base_url(token, pconfig.inference_base_url, env_url)
+        return env_url or pconfig.inference_base_url
+
+    def _env_payload(env_var: str, token: str, base_url: str) -> Dict[str, Any]:
+        return {
+            "source": f"env:{env_var}",
+            "auth_type": AUTH_TYPE_API_KEY,
+            "access_token": token,
+            "base_url": base_url,
+            "label": env_var,
+        }
+
+    # 1. Dedicated aux env vars (GLM_AUX_API_KEY_1..4).
+    for env_var in _AUX_ENV_VARS:
+        token = _get_env_prefer_dotenv(env_var)
+        if not token:
+            continue
+        source = f"env:{env_var}"
+        if _is_source_suppressed(f"{AUX_POOL_PREFIX}{provider}", source):
+            continue
+        active_sources.add(source)
+        changed |= _upsert_entry(
+            entries,
+            provider,
+            source,
+            _env_payload(env_var, token, _resolve_base_url(token)),
+        )
+
+    # 2. GLM_API_KEY fallback (additive — never suppresses the main key).
+    main_token = _get_env_prefer_dotenv("GLM_API_KEY")
+    if main_token:
+        source = "env:GLM_API_KEY"
+        if not _is_source_suppressed(f"{AUX_POOL_PREFIX}{provider}", source):
+            active_sources.add(source)
+            changed |= _upsert_entry(
+                entries,
+                provider,
+                source,
+                _env_payload("GLM_API_KEY", main_token, _resolve_base_url(main_token)),
+            )
+
+    return changed, active_sources
+
+
+def load_named_pool(name: str, provider: str) -> CredentialPool:
+    """Generic named-pool loader.
+
+    Storage key format: ``<name>:<provider>`` (e.g. ``auxiliary:zai``,
+    ``custom-foo:zai``). Used by :func:`load_aux_pool` for the specialized
+    auxiliary-pool case AND available as the extension point for future
+    named pools without changing this code.
+
+    For ``name == "auxiliary"``: delegates env seeding to :func:`_seed_aux_env`
+    (reads ``GLM_AUX_API_KEY_1..4`` + ``GLM_API_KEY`` fallback).
+
+    For other names: no env seeding (operator-managed via ``hermes auth add``);
+    the loader just reads whatever is in auth.json and returns the pool.
+    """
+    name = (name or "").strip().lower()
+    provider = (provider or "").strip().lower()
+    pool_key = f"{name}:{provider}"
+
+    raw_entries = read_credential_pool(pool_key)
+    entries = [PooledCredential.from_dict(provider, payload) for payload in raw_entries]
+    changed = False
+    active_sources: Set[str] = set()
+
+    if name == "auxiliary":
+        aux_changed, aux_sources = _seed_aux_env(provider, entries)
+        changed = aux_changed
+        active_sources = aux_sources
+
+    # Always prune stale seeded entries so auth.json doesn't accumulate
+    # dangling sources (T-59-06-E mitigation: keep the prune path symmetric
+    # with the default ``load_pool``).
+    if active_sources:
+        changed |= _prune_stale_seeded_entries(entries, active_sources)
+
+    if changed:
+        write_credential_pool(
+            pool_key,
+            [entry.to_dict() for entry in sorted(entries, key=lambda item: item.priority)],
+        )
+    return CredentialPool(provider, entries, storage_key=pool_key)
+
+
+def load_aux_pool(provider: str) -> CredentialPool:
+    """Load the auxiliary credential pool for ``provider``.
+
+    Specialized wrapper over :func:`load_named_pool` for the ``"auxiliary"``
+    name. Reads ``GLM_AUX_API_KEY_1..4`` (with fallback to ``GLM_API_KEY``
+    when none are set — CONTEXT.md decision #2/#6) and persists entries under
+    the ``auxiliary:<provider>`` storage key.
+
+    Returns a :class:`CredentialPool` that owns its entries list. The pool
+    is isolated from the default ``load_pool(provider)`` at the storage
+    namespace level, so exhausting the default pool does NOT affect aux
+    pool selection (verified by ``test_aux_pool_isolation_*``).
+    """
+    return load_named_pool("auxiliary", provider)

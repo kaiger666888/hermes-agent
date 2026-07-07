@@ -100,6 +100,7 @@ class _OpenAIProxy:
 OpenAI = _OpenAIProxy()  # module-level name, resolves lazily on call/isinstance
 
 from agent.credential_pool import load_pool
+from agent.model_metadata import estimate_messages_tokens_rough
 from hermes_cli.config import get_hermes_home
 from hermes_constants import OPENROUTER_BASE_URL
 from utils import base_url_host_matches, base_url_hostname, model_forces_max_completion_tokens, normalize_proxy_env_vars
@@ -569,28 +570,87 @@ def _to_openai_base_url(base_url: str) -> str:
     return url
 
 
-def _select_pool_entry(provider: str) -> Tuple[bool, Optional[Any]]:
-    """Return (pool_exists_for_provider, selected_entry)."""
+def _select_pool_entry(
+    provider: str, pool_name: str = "default"
+) -> Tuple[bool, Optional[Any]]:
+    """Return (pool_exists_for_provider, selected_entry).
+
+    Phase 59 POOL-01: when ``pool_name == "default"`` (the backward-compat
+    default), loads the default pool via ``load_pool(provider)``. When
+    ``pool_name != "default"`` (e.g. ``"auxiliary"``), loads the named pool
+    via ``load_named_pool(pool_name, provider)`` so auxiliary callers
+    rotate through their own keys, isolated from gateway/main pool
+    exhaustion.
+
+    Phase 59 POOL-02: when ``pool_name == "auxiliary"`` AND a non-None
+    entry is selected, records the entry's ``id`` in
+    ``_LAST_SELECTED_AUX_ENTRY_ID`` so ``_capture_usage`` can attribute
+    consumed tokens to that entry via ``record_usage``. Cleared on
+    default-pool calls (T-59-11-E mitigation: default-pool calls must
+    never touch aux-pool TPM).
+    """
+    global _LAST_SELECTED_AUX_ENTRY_ID
     try:
-        pool = load_pool(provider)
+        if pool_name == "default":
+            pool = load_pool(provider)
+        else:
+            from agent.credential_pool import load_named_pool
+
+            pool = load_named_pool(pool_name, provider)
     except Exception as exc:
-        logger.debug("Auxiliary client: could not load pool for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not load pool %s for %s: %s",
+            pool_name, provider, exc,
+        )
         return False, None
     if not pool or not pool.has_credentials():
         return False, None
     try:
-        return True, pool.select()
+        # Phase 59 POOL-02 wire-in: aux pool picks the freshest key (most
+        # remaining TPM in the sliding 60s window). Default pool keeps
+        # configured-strategy select (fill_first / round_robin) to preserve
+        # main agent's existing rotation semantics.
+        if pool_name == "auxiliary" and hasattr(pool, "select_freshest_tpm"):
+            selected = pool.select_freshest_tpm()
+        else:
+            selected = pool.select()
     except Exception as exc:
-        logger.debug("Auxiliary client: could not select pool entry for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not select pool entry for %s/%s: %s",
+            provider, pool_name, exc,
+        )
         return True, None
 
+    # Phase 59 POOL-02: track the aux-pool entry id for post-call TPM
+    # attribution. Default-pool calls clear the tracker so prior aux state
+    # never bleeds into a subsequent default-pool call's _capture_usage.
+    if pool_name == "auxiliary" and selected is not None:
+        _LAST_SELECTED_AUX_ENTRY_ID = getattr(selected, "id", None)
+    elif pool_name == "default":
+        _LAST_SELECTED_AUX_ENTRY_ID = None
+    return True, selected
 
-def _peek_pool_entry(provider: str) -> Optional[Any]:
-    """Best-effort current/next pool entry without mutating selection order."""
+
+def _peek_pool_entry(
+    provider: str, pool_name: str = "default"
+) -> Optional[Any]:
+    """Best-effort current/next pool entry without mutating selection order.
+
+    Phase 59 POOL-01: ``pool_name`` kwarg mirrors :func:`_select_pool_entry`.
+    Default ``"default"`` preserves all existing callers.
+    """
     try:
-        pool = load_pool(provider)
+        if pool_name == "default":
+            pool = load_pool(provider)
+        else:
+            from agent.credential_pool import load_named_pool
+
+            pool = load_named_pool(pool_name, provider)
     except Exception as exc:
-        logger.debug("Auxiliary client: could not load pool for %s (peek): %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not load pool %s for %s (peek): %s",
+            pool_name, provider, exc,
+        )
         return None
     if not pool or not pool.has_credentials():
         return None
@@ -604,7 +664,10 @@ def _peek_pool_entry(provider: str) -> Optional[Any]:
         if callable(peek_fn):
             return peek_fn()
     except Exception as exc:
-        logger.debug("Auxiliary client: could not peek pool entry for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not peek pool entry for %s/%s: %s",
+            provider, pool_name, exc,
+        )
     return None
 
 
@@ -4870,7 +4933,213 @@ def _resolve_task_provider_model(
     return "auto", resolved_model, None, None, resolved_api_mode
 
 
+# ---------------------------------------------------------------------------
+# Phase 57 ENDPOINT-ROUTING: prompt-length-aware endpoint selection
+# ---------------------------------------------------------------------------
+
+# Default long-prompt override target: the Anthropic-compat endpoint exposed by
+# Zhipu (open.bigmodel.cn/api/anthropic). The z.ai coding-plan endpoint
+# (api.z.ai/api/coding/paas/v4) has a 30s request timeout that trips
+# synthesis calls (~5K input tokens), causing the openai-SDK 5x retry storm
+# observed in v11.0 SC#2 smoke (smoke-test-report.md §3.1).
+# See .planning/phases/57-endpoint-routing/57-CONTEXT.md decisions D-01..D-05.
+_DEFAULT_LONG_PROMPT_OVERRIDE: Dict[str, str] = {
+    "provider": "zhipu-anthropic",
+    "base_url": "https://open.bigmodel.cn/api/anthropic",
+    "api_mode": "chat_completions",
+}
+
+# Providers where routing is permitted. None means "auto" — the auxiliary
+# layer defaults to GLM when GLM_API_KEY is set (per MEMORY.md
+# feedback-glm-5-2-only.md), so the override still applies.
+_ROUTABLE_PROVIDERS = frozenset({"glm", "zai", None})
+
+
+def _select_endpoint_by_prompt_length(
+    messages: list,
+    provider: Optional[str],
+    base_url: Optional[str],
+) -> Optional[Dict[str, str]]:
+    """Return a long-prompt endpoint override dict, or None when routing doesn't apply.
+
+    Routing logic (per CONTEXT.md locked decisions D-01..D-05):
+
+    1. Empty ``messages`` -> no routing decision (return None).
+    2. ``enabled: false`` in ``auxiliary.endpoint_routing`` config -> opt-out (None).
+    3. Estimated input tokens < ``token_threshold`` (default 4096) -> short
+       prompt, stay on default endpoint (None).
+    4. Caller already routed (provider == "zhipu-anthropic" or base_url
+       contains ``/anthropic``) -> no double-override (None).
+    5. Caller provider not in {glm, zai, None} -> out of scope, do not touch
+       non-GLM providers (None). MEMORY.md feedback-glm-5-2-only.md honored.
+    6. Otherwise -> return deep copy of the configured ``long_prompt`` block
+       (default: zhipu-anthropic + open.bigmodel.cn/api/anthropic).
+
+    Token estimation delegates to
+    :func:`agent.model_metadata.estimate_messages_tokens_rough` (char count
+    // 4 with image cost) — same heuristic the context_compressor trusts.
+
+    Args:
+        messages: Chat messages list (may be empty).
+        provider: Caller's provider arg (None means auto).
+        base_url: Caller's base_url arg (None means use provider default).
+
+    Returns:
+        Override dict with keys {provider, base_url, api_mode} when routing
+        applies; None otherwise. Caller owns applying the override.
+    """
+    if not messages or len(messages) == 0:
+        return None
+
+    config = _get_auxiliary_task_config("endpoint_routing")
+    if not isinstance(config, dict):
+        return None
+    if not config.get("enabled", True):
+        return None
+
+    # Token threshold (default 4096 per D-01). Coerce to int with fallback.
+    raw_threshold = config.get("token_threshold", 4096)
+    try:
+        token_threshold = int(raw_threshold)
+    except (ValueError, TypeError):
+        logger.warning(
+            "Endpoint routing: invalid token_threshold=%r, falling back to 4096",
+            raw_threshold,
+        )
+        token_threshold = 4096
+
+    # Top-level import (agent.model_metadata has no circular dep — it imports
+    # only stdlib + utils + hermes_constants + requests/yaml).
+    estimated_tokens = estimate_messages_tokens_rough(messages)
+
+    if estimated_tokens < token_threshold:
+        return None
+
+    # Caller already routed? Don't double-override.
+    if provider == "zhipu-anthropic":
+        return None
+    if base_url and "/anthropic" in base_url:
+        return None
+
+    # Only override GLM/zai coding-plan routes (and the auto/None case which
+    # resolves to GLM when GLM_API_KEY is set).
+    if provider not in _ROUTABLE_PROVIDERS:
+        return None
+
+    long_prompt_cfg = config.get("long_prompt")
+    if not isinstance(long_prompt_cfg, dict):
+        long_prompt_cfg = {}
+    override: Dict[str, str] = {}
+    for key, default_val in _DEFAULT_LONG_PROMPT_OVERRIDE.items():
+        override[key] = str(long_prompt_cfg.get(key, default_val))
+
+    logger.debug(
+        "Endpoint routing: %d estimated tokens >= threshold %d; "
+        "overriding provider=%s -> %s",
+        estimated_tokens,
+        token_threshold,
+        provider,
+        override.get("provider"),
+    )
+    return override
+
+
 _DEFAULT_AUX_TIMEOUT = 30.0
+
+
+# Phase 58 THROTTLE-02 prep: per-process last-call usage tracker.
+# Populated by _capture_usage (called from _validate_llm_response) after each
+# successful LLM response; read by round_table_executor (Phase 58-02) for
+# token-budget accounting. Single-writer (_validate_llm_response) +
+# single-reader (round_table_executor) within the gateway process. Safe
+# under the ThreadPoolExecutor because auxiliary calls serialize per-task
+# via the RPM throttle (Phase 58 THROTTLE-01).
+_LAST_CALL_USAGE: Dict[str, int] = {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+}
+
+# Phase 59 POOL-02: id of the aux-pool entry that was selected for the
+# current call. Set by _select_pool_entry when ``pool_name == "auxiliary"``
+# and consumed by _capture_usage to attribute consumed tokens to that entry
+# via ``credential_pool.record_usage``. Cleared to ``None`` on default-pool
+# calls so default-pool usage never accidentally decrements aux-pool TPM
+# (T-59-11-E mitigation). Single-writer (_select_pool_entry) + single-reader
+# (_capture_usage) within the gateway process.
+_LAST_SELECTED_AUX_ENTRY_ID: Optional[str] = None
+
+
+def get_last_call_usage() -> Dict[str, int]:
+    """Return a COPY of the last call_llm response's token usage.
+
+    Returns a dict with keys ``prompt_tokens`` / ``completion_tokens`` /
+    ``total_tokens``. Returns zeros if the last response had no ``usage``
+    attribute (graceful fallback for adapters that don't populate usage).
+
+    Phase 58 THROTTLE-02 consumer (``round_table_executor``) reads this
+    after each panelist opinion to decrement the per-round-table token
+    budget. See ``.planning/phases/58-rpm-throttling/58-CONTEXT.md``.
+    """
+    return dict(_LAST_CALL_USAGE)
+
+
+def _capture_usage(response: Any) -> None:
+    """Extract token usage from *response* into the module-level tracker.
+
+    Called from :func:`_validate_llm_response` so EVERY successful return
+    path in :func:`call_llm` / :func:`async_call_llm` populates the tracker
+    (initial success, transient retry, temperature-stripped retry, payment
+    fallback — all funnel through the validator).
+
+    Handles OpenAI-style ``usage.prompt_tokens`` AND Anthropic-style
+    ``usage.input_tokens`` field naming. No-op when the response lacks a
+    ``usage`` attribute (some custom adapters skip it).
+
+    Phase 59 POOL-02: also decrement TPM on the aux-pool entry that was
+    selected for this call (tracked via
+    ``_LAST_SELECTED_AUX_ENTRY_ID``). Default-pool calls leave that tracker
+    ``None`` so default-pool usage never touches aux-pool TPM state
+    (T-59-11-E mitigation). Best-effort: any failure in the TPM
+    attribution path is logged at debug and swallowed — the existing
+    usage-tracker semantics must not be disturbed.
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        # Graceful fallback: leave the previous values intact rather than
+        # zeroing — a no-usage response shouldn't clobber a prior reading.
+        return
+    prompt = (
+        getattr(usage, "prompt_tokens", None)
+        or getattr(usage, "input_tokens", None)
+        or 0
+    )
+    completion = (
+        getattr(usage, "completion_tokens", None)
+        or getattr(usage, "output_tokens", None)
+        or 0
+    )
+    total = getattr(usage, "total_tokens", None) or (int(prompt) + int(completion))
+    _LAST_CALL_USAGE["prompt_tokens"] = int(prompt)
+    _LAST_CALL_USAGE["completion_tokens"] = int(completion)
+    _LAST_CALL_USAGE["total_tokens"] = int(total)
+
+    # Phase 59 POOL-02: attribute consumed tokens to the aux-pool entry
+    # that was selected for this call. Best-effort — failure here must NOT
+    # crash the validator path or disturb _LAST_CALL_USAGE (which downstream
+    # budget accounting depends on).
+    aux_entry_id = _LAST_SELECTED_AUX_ENTRY_ID
+    if not aux_entry_id:
+        return
+    try:
+        from agent.credential_pool import load_named_pool
+
+        pool = load_named_pool("auxiliary", "zai")
+        total_int = int(total)
+        if total_int > 0:
+            pool.record_usage(aux_entry_id, total_int)
+    except Exception as exc:  # noqa: BLE001 — TPM attribution must not crash callers
+        logger.debug("TPM record_usage failed: %s", exc)
 
 
 def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
@@ -5141,6 +5410,10 @@ def _validate_llm_response(response: Any, task: str = None) -> Any:
     propagate to downstream consumers where they crash with misleading
     AttributeError (e.g. "'str' object has no attribute 'choices'").
 
+    Also captures token usage into the module-level ``_LAST_CALL_USAGE``
+    tracker (Phase 58 THROTTLE-02 prep) so downstream budget accounting
+    can read it via :func:`get_last_call_usage`.
+
     See #7264.
     """
     if response is None:
@@ -5162,6 +5435,10 @@ def _validate_llm_response(response: Any, task: str = None) -> Any:
             f"Expected object with .choices[0].message — check provider "
             f"adapter or custom endpoint compatibility."
         ) from exc
+    # Phase 58 THROTTLE-02 prep: capture token usage for downstream budget
+    # tracking. Safe to call here — every successful return path in
+    # call_llm / async_call_llm goes through this validator.
+    _capture_usage(response)
     return response
 
 
@@ -5204,6 +5481,38 @@ def call_llm(
     Raises:
         RuntimeError: If no provider is configured.
     """
+    # Phase 58 THROTTLE-01: per-task RPM token bucket. Acquire slot BEFORE
+    # endpoint routing so both z.ai (short prompt) and open.bigmodel.cn/api/
+    # anthropic (long prompt) routes count against the same per-task bucket.
+    # See .planning/phases/58-rpm-throttling/58-CONTEXT.md decision #8.
+    #
+    # Phase 59 POOL-01: pool_name="auxiliary" documents that auxiliary callers
+    # target the dedicated aux pool (GLM_AUX_API_KEY_1..4 or GLM_API_KEY
+    # fallback). The metadata is informational — actual pool selection happens
+    # in _select_pool_entry / _peek_pool_entry downstream.
+    if task:
+        # Lazy import: glm_throttle lazy-imports _get_auxiliary_task_config
+        # from this module, so a top-level import would deadlock on the
+        # first auxiliary call. Matches the _ra() lazy-indirection pattern
+        # used throughout agent/* (see CLAUDE.md "Forwarder shim pattern").
+        from agent.glm_throttle import acquire_slot
+        acquire_slot(task, pool_name="auxiliary")
+
+    # Phase 57 ENDPOINT-01: route long-prompt GLM calls (synthesis,
+    # memory_compaction, memory_comparator) to open.bigmodel.cn/api/anthropic
+    # (anthropic-compat, no 30s z.ai coding-plan cap). Helper returns None
+    # when routing doesn't apply (short prompt, non-GLM provider, opt-out).
+    # See .planning/phases/57-endpoint-routing/57-CONTEXT.md decisions D-01..D-05.
+    if messages and not base_url and (provider in _ROUTABLE_PROVIDERS):
+        _route_override = _select_endpoint_by_prompt_length(messages, provider, base_url)
+        if _route_override:
+            provider = _route_override.get("provider") or provider
+            base_url = _route_override.get("base_url") or base_url
+            # api_mode plumbing: when base_url contains /anthropic, the
+            # existing _is_anthropic_compat_endpoint check (line ~5401) fires
+            # image-block conversion correctly. _resolve_task_provider_model
+            # sees base_url and returns provider="custom" + the override URL.
+
     resolved_provider, resolved_model, resolved_base_url, resolved_api_key, resolved_api_mode = _resolve_task_provider_model(
         task, provider, model, base_url, api_key)
     effective_extra_body = _get_task_extra_body(task)

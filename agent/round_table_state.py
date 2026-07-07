@@ -5,6 +5,25 @@ Persists per-project round-table state to
 with crash-safe atomic writes (``utils.atomic_json_write``) plus read-time
 crash recovery for 3 failure modes per ``06-CROSS-REPO-IMPACT.md §6.4``:
 
+Phase 58 THROTTLE-02 (v12.0) extensions
+---------------------------------------
+``open_round_table`` accepts an optional ``token_budget`` parameter
+(default ``DEFAULT_TOKEN_BUDGET = 100_000``). The state file carries:
+
+- ``tokenBudget`` (int)     — round-table ceiling, set at open time
+- ``tokensConsumed`` (int)  — running sum, mutated by ``record_token_usage``
+- ``events`` (list[dict])   — append-only event log; populated by
+                              ``append_event`` for budget_warning /
+                              budget_exceeded thresholds (see
+                              ``agent/round_table_executor.check_budget_before_turn``)
+- ``costUsdEstimate`` (float) — populated at submit time from
+                                ``tokensConsumed`` via the cost formula:
+                                ``(tokensConsumed / 1M) * 0.5 / 7.2``.
+
+Pricing is hardcoded at GLM-5.2 rates (``MEMORY.md`` feedback-glm-5-2-only)
+— configurable in v13+ when a real pricing API lands (see
+``.planning/phases/58-rpm-throttling/58-CONTEXT.md`` decision #7).
+
     (a) Partial-write corruption → archive to ``{state_path}.corrupt`` +
         re-raise ``json.JSONDecodeError`` (defense-in-depth — the atomic
         write contract already guarantees no partial body)
@@ -59,6 +78,7 @@ import json
 import logging
 import os
 import re
+import threading
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -68,6 +88,32 @@ from hermes_constants import get_hermes_home
 from utils import atomic_json_write
 
 logger = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 58 THROTTLE-02 — per-round-table TPM budget constants
+# --------------------------------------------------------------------------- #
+# Locked in .planning/phases/58-rpm-throttling/58-CONTEXT.md decisions #5-#7.
+# These are NOT yet wired to read from cli-config.yaml — the cli-config
+# block documents the formula operators can verify, but the actual values
+# are read here from module constants. v13+ may move to config-driven pricing.
+
+DEFAULT_TOKEN_BUDGET: int = 100_000
+"""Per-round-table TPM ceiling (Phase 58 THROTTLE-02).
+
+Covers a 9-panelist round (9 × ~5K = 45K) + synthesis (~10K) + ~45K retry
+slack. Operator can override per-round via the ``token_budget`` param on
+``open_round_table`` (when the MCP tool layer is extended to pass it).
+"""
+
+GLM_5_2_CNY_PER_1M_TOKENS: float = 0.5
+"""GLM-5.2 published CNY pricing per 1M tokens (MEMORY.md feedback-glm-5-2-only).
+
+Hardcoded — no real pricing API yet. Phase 58-CONTEXT.md decision #7.
+"""
+
+USD_CNY_RATE: float = 7.2
+"""Approximate USD ↔ CNY conversion rate. Configurable in v13+."""
 
 
 # --------------------------------------------------------------------------- #
@@ -260,6 +306,8 @@ def open_round_table(
     question: str,
     panelist_agent_ids: list[str],
     caller: str,
+    *,
+    token_budget: int | None = None,
 ) -> dict[str, Any]:
     """SC#2 step 1: create a new round-table state file with ``status="open"``.
 
@@ -276,6 +324,11 @@ def open_round_table(
         question: Free-text topic being debated.
         panelist_agent_ids: List of agent IDs; minItems 2 per schema.
         caller: CC session ID / operator handle for audit trail.
+        token_budget: Optional per-round-table TPM ceiling (Phase 58
+            THROTTLE-02). Defaults to ``DEFAULT_TOKEN_BUDGET = 100_000``
+            when ``None``. Persisted as ``tokenBudget`` in the state file.
+            Negative or zero values are accepted as-is here (the MCP tool
+            layer is responsible for input validation per T-58-02-01).
 
     Returns:
         The newly-created state dict (camelCase keys per schema YAML),
@@ -333,6 +386,16 @@ def open_round_table(
         "personaSnapshots": {},
         # Schema migration safety (PITFALLS §P14 mitigation 1)
         "schemaVersion": "1.0.0",
+        # Phase 58 THROTTLE-02 — per-round-table TPM budget tracking.
+        # tokenBudget = ceiling; tokensConsumed = running sum mutated by
+        # ``record_token_usage``; events = append-only log of budget
+        # threshold transitions (budget_warning at <2× next call,
+        # budget_exceeded at <1× next call) populated by ``append_event``.
+        "tokenBudget": (
+            token_budget if token_budget is not None else DEFAULT_TOKEN_BUDGET
+        ),
+        "tokensConsumed": 0,
+        "events": [],
         # Timestamps
         "createdAt": now_iso,
         "lastUpdatedAt": None,  # NULL until first turn append (per schema YAML:246-253)
@@ -374,6 +437,119 @@ def append_turn(state_path: Path, turn: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
+# --------------------------------------------------------------------------- #
+# Phase 58 THROTTLE-02 — per-round-table TPM budget helpers
+# --------------------------------------------------------------------------- #
+# Per-state-file threading.Lock registry. Serializes concurrent
+# record_token_usage / append_event calls against the SAME state file so
+# read-modify-write cycles don't lose updates. Distinct from the asyncio
+# per-roundId lock in round_table_executor (which serializes async turns);
+# this protects against multi-PROCESS writes (driver script + gateway both
+# mutating the same state file).
+_TOKEN_LOCKS: dict[str, threading.Lock] = {}
+_TOKEN_LOCKS_GUARD = threading.Lock()
+
+
+def _get_or_create_token_lock(state_path: Path) -> threading.Lock:
+    """Return the per-state-file threading.Lock, lazily creating it."""
+    key = str(state_path)
+    lock = _TOKEN_LOCKS.get(key)
+    if lock is not None:
+        return lock
+    with _TOKEN_LOCKS_GUARD:
+        # Double-checked pattern: another thread may have created it
+        # between our first check and the guard acquisition.
+        lock = _TOKEN_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _TOKEN_LOCKS[key] = lock
+        return lock
+
+
+def record_token_usage(state_path: Path, tokens: int) -> dict[str, Any]:
+    """Phase 58 THROTTLE-02: add ``tokens`` to ``tokensConsumed`` atomically.
+
+    Read-modify-write under a per-state-file ``threading.Lock`` so
+    concurrent callers (driver script threads, gateway processes) cannot
+    lose updates. The atomic_json_write (temp+fsync+os.replace) still
+    guarantees no partial body, but without this lock, two concurrent
+    readers could both see the same ``tokensConsumed`` and both write
+    ``old + their_delta`` instead of ``old + sum(deltas)``.
+
+    Called by ``agent.round_table_executor.record_panelist_tokens`` after
+    each panelist ``get_agent_opinion`` call (reads
+    ``auxiliary_client.get_last_call_usage()['total_tokens']``).
+
+    Args:
+        state_path: State file path (must already exist).
+        tokens: Number of tokens consumed by the just-completed call.
+            ``0`` is a no-op but does NOT raise (the driver guards on
+            ``tokens > 0`` before calling, so this only matters when the
+            helper is invoked directly).
+
+    Returns:
+        The updated state dict after the write.
+
+    Raises:
+        FileNotFoundError: state file missing (operator/CC bug — open
+            must run first).
+    """
+    lock = _get_or_create_token_lock(state_path)
+    with lock:
+        state = _read_state_sync(state_path)
+        # Use .get() defensively — pre-Phase 58 state files lack this
+        # field. A KeyError here would crash the driver; better to
+        # initialize from a missing field than to fail.
+        current = state.get("tokensConsumed", 0)
+        state["tokensConsumed"] = int(current) + int(tokens)
+        state["lastUpdatedAt"] = _now_iso()
+        atomic_json_write(state_path, state, indent=2)
+    return state
+
+
+def append_event(state_path: Path, event: dict[str, Any]) -> dict[str, Any]:
+    """Phase 58 THROTTLE-02: append a structured event to the state file.
+
+    Events represent budget threshold transitions (``budget_warning`` when
+    remaining < 2× expected next call, ``budget_exceeded`` when < 1×) and
+    any other operator-relevant state transitions the round-table
+    coordinator wants persisted for post-hoc analysis.
+
+    The events array is append-only — callers MUST NOT use this helper
+    to remove or reorder past events.
+
+    Args:
+        state_path: State file path (must already exist).
+        event: Event dict. Recommended shape per CONTEXT.md decision #6::
+
+            {
+              "type": "budget_warning" | "budget_exceeded",
+              "threshold": float,          # 2.0 for warning, 1.0 for exceeded
+              "remaining_tokens": int,
+              "expected_next_tokens": int, # optional
+              "timestamp": iso_string
+            }
+
+            Callers can pass any dict shape — the helper does NOT validate
+            the schema (T-58-02-02 mitigation: atomic write guarantees no
+            partial event records).
+
+    Returns:
+        The updated state dict after the append.
+
+    Raises:
+        FileNotFoundError: state file missing.
+    """
+    lock = _get_or_create_token_lock(state_path)
+    with lock:
+        state = _read_state_sync(state_path)
+        events = state.setdefault("events", [])
+        events.append(event)
+        state["lastUpdatedAt"] = _now_iso()
+        atomic_json_write(state_path, state, indent=2)
+    return state
+
+
 def submit_round_table_result(
     state_path: Path,
     conclusion: str,
@@ -382,6 +558,12 @@ def submit_round_table_result(
 ) -> dict[str, Any]:
     """SC#2 step 3: terminal transition. Flips ``status`` to ``"completed"``
     and adds the ``submitRoundTableResult`` block.
+
+    Phase 58 THROTTLE-02: also seals the receipt fields ``tokensConsumed``
+    + ``costUsdEstimate`` at the top level of the state dict. Cost is
+    computed from ``tokensConsumed`` via the hardcoded GLM-5.2 pricing
+    formula (``MEMORY.md`` feedback-glm-5-2-only):
+    ``(tokensConsumed / 1_000_000) * 0.5 / 7.2`` USD.
 
     Idempotent: if status is not ``"open"`` (already completed / aborted /
     stalled), returns ``{"error": "round_not_open", "status": 409}`` instead
@@ -408,13 +590,25 @@ def submit_round_table_result(
         "closedAt": now_iso,
         "closedBy": closed_by,
     }
+    # Phase 58 THROTTLE-02 receipt: cost estimate at the top level so any
+    # reader (operator script, dashboard, post-hoc analysis) sees it
+    # without descending into submitRoundTableResult. Defensive .get()
+    # supports pre-Phase 58 state files that lack the field (cost=0).
+    tokens_consumed = int(state.get("tokensConsumed", 0))
+    cost_cny = (tokens_consumed / 1_000_000) * GLM_5_2_CNY_PER_1M_TOKENS
+    cost_usd = cost_cny / USD_CNY_RATE
+    state["tokensConsumed"] = tokens_consumed  # ensure present
+    state["costUsdEstimate"] = round(cost_usd, 6)
     state["lastUpdatedAt"] = now_iso
     atomic_json_write(state_path, state, indent=2)
     logger.info(
-        "round_table completed: round_id=%s closed_by=%s cited_memories=%d",
+        "round_table completed: round_id=%s closed_by=%s cited_memories=%d "
+        "tokens=%d cost_usd=%.6f",
         state.get("roundId"),
         closed_by,
         len(cited_memories),
+        tokens_consumed,
+        cost_usd,
     )
     return state
 

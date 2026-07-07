@@ -644,6 +644,17 @@ async def test_driver_runs_full_lifecycle_with_mocked_glm(tmp_path, monkeypatch)
 
     monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
 
+    # Reset _LAST_CALL_USAGE so prior test_run_screenplay_step3 / budget tests
+    # don't leak token counts into this driver lifecycle test. The driver
+    # reads get_last_call_usage() after each panelist; without reset, a stale
+    # value from a previous test accumulates across 9 panelists and may trip
+    # budget_exceeded. The real call_llm populates this via _capture_usage;
+    # our mock bypasses that path so the dict stays at whatever the last
+    # writer left.
+    agent.auxiliary_client._LAST_CALL_USAGE["prompt_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["completion_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["total_tokens"] = 0
+
     from scripts.run_screenplay_step3_roundtable import run_roundtable
 
     output_path = tmp_path / "step3-output.json"
@@ -750,6 +761,13 @@ async def test_driver_output_validates_against_hook09_schema(
 
     monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
 
+    # Reset _LAST_CALL_USAGE (see test_driver_runs_full_lifecycle_with_mocked_glm
+    # for rationale — prevents stale token counts from prior tests tripping
+    # budget_exceeded in this driver lifecycle test).
+    agent.auxiliary_client._LAST_CALL_USAGE["prompt_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["completion_tokens"] = 0
+    agent.auxiliary_client._LAST_CALL_USAGE["total_tokens"] = 0
+
     from scripts.run_screenplay_step3_roundtable import run_roundtable
 
     output_path = tmp_path / "step3-output.json"
@@ -850,13 +868,28 @@ def test_cli_config_has_auxiliary_tasks():
     )
 
     # Both must declare provider: glm (or reference glm).
-    # Find each section + verify provider within a few lines.
+    # Find each section by its actual task block (start-of-line `taskname:`
+    # or `# taskname:` commented block) + verify provider within a few lines.
+    # Phase 59 added aux-pool docs that mention task names in prose — we
+    # must skip those and find the actual task definition block.
+    import re
     for task in ("round_table_opinion", "memory_comparator"):
-        idx = cfg.index(task)
+        # Match either `  taskname:` (active) or `#   taskname:` (commented template)
+        # at the start of a line. Anchor on the task name followed by colon.
+        pattern = re.compile(
+            rf"^(?:\s+|\#+\s+){re.escape(task)}\s*:\s*$",
+            re.MULTILINE,
+        )
+        m = pattern.search(cfg)
+        assert m is not None, (
+            f"task {task!r} not defined as a YAML block in cli-config.yaml.example"
+        )
         # Look in the next 200 chars for 'provider:' + 'glm'
+        idx = m.start()
         window = cfg[idx : idx + 200]
         assert "provider:" in window, (
-            f"task {task!r} missing 'provider:' in cli-config.yaml.example"
+            f"task {task!r} missing 'provider:' in cli-config.yaml.example "
+            f"(looked in actual YAML block, not docs prose); window={window!r}"
         )
         assert "glm" in window, (
             f"task {task!r} must reference provider 'glm' "

@@ -49,7 +49,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
+
+from agent import round_table_state as _rts
 
 logger = logging.getLogger(__name__)
 
@@ -178,3 +181,114 @@ async def release_round_lock(round_id: str) -> None:
         )
         return
     lock.release()
+
+
+# ── Phase 58 THROTTLE-02: per-round-table TPM budget ────────────────────
+# The lock primitives above enforce per-roundId async serialization
+# (Phase 52 INFRA-04 SC#4). The helpers below enforce per-round-table
+# TOKEN budget — a DIFFERENT concern: a serialized round table can still
+# consume unbounded tokens if a panelist generates a 50K-token response
+# or retries inflate cost.
+#
+# Budget thresholds per .planning/phases/58-rpm-throttling/58-CONTEXT.md
+# decisions #5-#6:
+#   < 2× expected next call → budget_warning event (proceed)
+#   < 1× expected next call → budget_exceeded event (abort)
+#
+# Pricing constants + record_token_usage / append_event live in
+# ``agent.round_table_state`` (single source of truth for state-file
+# schema). These helpers are the budget DECISION layer; the state module
+# is the budget ACCOUNTING layer.
+
+DEFAULT_EXPECTED_NEXT_TOKENS: int = 5000
+"""Conservative panelist call cost (Phase 58 THROTTLE-02 default).
+
+Used by :func:`check_budget_before_turn` when the caller does not pass an
+explicit ``expected_next_tokens``. The actual cost of a panelist call
+varies (3-7K depending on prompt+response length); 5000 is the planning
+estimate per .planning/research/v11-poc-eval/smoke-test-report.md §3.1.
+"""
+
+
+def check_budget_before_turn(
+    state_path: Path,
+    expected_next_tokens: int = DEFAULT_EXPECTED_NEXT_TOKENS,
+) -> bool:
+    """Return ``True`` if the round can proceed with another panelist call.
+
+    Emits a ``budget_warning`` event to the state file's ``events`` array
+    when ``remaining < 2 × expected_next_tokens`` (caller still proceeds).
+
+    Emits a ``budget_exceeded`` event AND returns ``False`` when
+    ``remaining < expected_next_tokens`` — the caller MUST abort the round
+    (typically via ``round_table_state.abort_round_table(reason='budget_exceeded')``).
+
+    Idempotent warning emission: ``append_event`` is called every time the
+    threshold is crossed, so a round that lingers at the warning boundary
+    may emit multiple warnings. That's intentional — operators want a
+    complete threshold-crossing log for post-hoc analysis.
+
+    Args:
+        state_path: State file path (must already exist with ``tokenBudget``
+            and ``tokensConsumed`` fields — i.e. opened via
+            ``open_round_table`` post-Phase 58).
+        expected_next_tokens: Estimated cost of the next panelist call.
+            Defaults to :data:`DEFAULT_EXPECTED_NEXT_TOKENS` = 5000.
+
+    Returns:
+        True if the round can proceed; False if budget exhausted (caller
+        MUST abort).
+    """
+    state = _rts._read_state_sync(state_path)
+    budget = state.get("tokenBudget", _rts.DEFAULT_TOKEN_BUDGET)
+    consumed = state.get("tokensConsumed", 0)
+    remaining = int(budget) - int(consumed)
+    threshold_warning = 2 * expected_next_tokens
+    threshold_exceeded = expected_next_tokens
+
+    if remaining < threshold_exceeded:
+        _rts.append_event(state_path, {
+            "type": "budget_exceeded",
+            "threshold": 1.0,
+            "remaining_tokens": remaining,
+            "expected_next_tokens": expected_next_tokens,
+            "timestamp": _rts._now_iso(),
+        })
+        logger.warning(
+            "round_table budget_exceeded: budget=%d consumed=%d remaining=%d < %d",
+            int(budget), int(consumed), remaining, expected_next_tokens,
+        )
+        return False
+    if remaining < threshold_warning:
+        _rts.append_event(state_path, {
+            "type": "budget_warning",
+            "threshold": 2.0,
+            "remaining_tokens": remaining,
+            "expected_next_tokens": expected_next_tokens,
+            "timestamp": _rts._now_iso(),
+        })
+        logger.info(
+            "round_table budget_warning: budget=%d consumed=%d remaining=%d < %d",
+            int(budget), int(consumed), remaining, threshold_warning,
+        )
+    return True
+
+
+def record_panelist_tokens(state_path: Path, tokens: int) -> dict[str, Any]:
+    """Record actual token consumption for the just-completed panelist call.
+
+    Thin delegation to :func:`round_table_state.record_token_usage` (the
+    atomic read-modify-write lives there). This helper exists in the
+    executor module so call sites can pair ``check_budget_before_turn`` /
+    ``record_panelist_tokens`` for readability — both budget decisions
+    and token accounting flow through the same module at the call site.
+
+    Args:
+        state_path: State file path.
+        tokens: Total tokens (prompt + completion) consumed by the
+            just-completed call. ``0`` is a no-op.
+
+    Returns:
+        The updated state dict.
+    """
+    return _rts.record_token_usage(state_path, tokens)

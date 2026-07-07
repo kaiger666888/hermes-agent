@@ -33,10 +33,24 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-BATTERY_VERSION = "v1-screenplay-baseline"
+BATTERY_VERSION = "v1-screenplay-baseline-real"
 DEFAULT_BATTERY_DIR = Path(__file__).resolve().parents[1] / "tests" / "v11-fitness-battery" / "scenarios"
 JUDGE_TIMEOUT_SECONDS = 30.0
 JUDGE_MAX_TOKENS = 600
+
+# Phase 60 EVAL-02: real-mode agent dispatch via auxiliary_client. Per
+# CONTEXT.md decision #3, every dispatch hits the Phase 59 auxiliary pool
+# (GLM_AUX_API_KEY_1..4) so gateway never contends for keys.
+AGENT_DISPATCH_TIMEOUT_SECONDS = 60.0
+AGENT_DISPATCH_MAX_TOKENS = 2048
+
+# Ordered keys to try when extracting a user-message string from a scenario's
+# ``input`` block. Different scenario dimensions use different shapes:
+#   - screenplay/hook09:  input.storykernel (dict) → JSON-stringified
+#   - persona-drift:      input.prompt (str)
+#   - conflict-resolution: input.question (str) + mem_a/mem_b
+# The fallback builds a canonical user message that captures every input key.
+_USER_MESSAGE_KEYS = ("prompt", "user_message", "user", "question")
 
 
 # --------------------------------------------------------------------------- #
@@ -60,23 +74,132 @@ def _default_judge_llm(**kwargs: Any) -> Any:
 # --------------------------------------------------------------------------- #
 # Agent dispatch (screenplay / conflict / persona-drift)
 # --------------------------------------------------------------------------- #
-def _dispatch_agent(scenario: dict, *, shadow: bool = False) -> str:
+def _extract_user_message(scenario: dict) -> str:
+    """Build a canonical user-message string from ``scenario["input"]``.
+
+    Different scenario dimensions use different input shapes:
+      - screenplay-step3-*: ``input.storykernel`` (dict)
+      - hook09-emotion-curve-marker: ``input.storykernel`` (dict)
+      - persona-drift-probe: ``input.prompt`` (str)
+      - conflict-resolution-*: ``input.question`` + ``mem_a`` + ``mem_b``
+
+    Strategy:
+      1. If a single narrative key (``prompt`` / ``user_message`` / ``user``
+         / ``question``) is present as a string, return that string.
+      2. If a ``storykernel`` dict is present, JSON-stringify it.
+      3. Fallback: JSON-stringify the entire input block. This preserves
+         every input field so the dispatched agent / generic-LLM sees the
+         complete scenario payload.
+    """
+    input_block = scenario.get("input") or {}
+    if isinstance(input_block, dict):
+        for key in _USER_MESSAGE_KEYS:
+            value = input_block.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        if "storykernel" in input_block:
+            return json.dumps(input_block, ensure_ascii=False, default=str)
+    # Fallback: serialize the whole input block.
+    return json.dumps(input_block, ensure_ascii=False, default=str)
+
+
+def _load_persona_system_prompt(agent_name: str = "screenplay") -> str | None:
+    """Load the ``persona:`` field from ``$HERMES_HOME/agents/<name>.agent.yaml``.
+
+    Returns ``None`` if the file is missing or unparsable — the caller
+    decides whether to proceed without a persona (generic-LLM mode never
+    uses a persona anyway; persona_aligned mode falls back to an empty
+    system prompt on load failure and logs a warning).
+    """
+    try:
+        from hermes_constants import get_hermes_home
+        home = Path(get_hermes_home())
+    except Exception as exc:  # noqa: BLE001 — defensive
+        logger.warning(
+            "could not resolve HERMES_HOME for persona load (%s); "
+            "using empty persona",
+            exc,
+        )
+        return None
+    path = home / "agents" / f"{agent_name}.agent.yaml"
+    if not path.is_file():
+        logger.warning(
+            "persona YAML not found at %s; persona_aligned dispatch "
+            "will run without a system prompt",
+            path,
+        )
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("failed to read persona YAML %s: %s", path, exc)
+        return None
+    if isinstance(data, dict):
+        persona = data.get("persona")
+        if isinstance(persona, str) and persona.strip():
+            return persona
+    return None
+
+
+def _dispatch_agent(
+    scenario: dict,
+    *,
+    shadow: bool = False,
+    baseline_mode: str | None = None,
+) -> str:
     """Dispatch the agent on ``scenario["input"]``.
 
-    v1 PoC behavior:
-      - If ``shadow=True``: log a shadow-mode notice + return a fixed
-        stub string (live dispatch deferred to Phase 56 VALIDATE per
-        spec §8).
-      - Otherwise: route by scenario dimension. For screenplay + persona
-        drift, return a stub in v1 (live round-table dispatch is a
-        Phase 56 VALIDATE concern). For conflict resolution, invoke
-        ``agent.memory_arbitration.arbitrate_two_memories`` with the
-        comparator-LLM set to a GLM dispatch.
+    Dispatch modes (mutually exclusive; ``baseline_mode`` takes precedence
+    over ``shadow`` when both are set — operator-friendly):
+
+      - ``baseline_mode=None`` (default):
+          Phase 54 behavior preserved verbatim. If ``shadow=True``, return
+          a fixed stub. Otherwise, route by scenario dimension:
+          conflict-resolution → ``arbitrate_two_memories``; screenplay +
+          persona-drift → v1 stub (live round-table dispatch is a Phase 56
+          VALIDATE concern, NOT this plan's scope).
+
+      - ``baseline_mode="persona_aligned"`` (Phase 60 EVAL-02 NEW):
+          Load the screenplay agent persona from
+          ``$HERMES_HOME/agents/screenplay.agent.yaml``, prepend it as a
+          system message, and dispatch the user payload via
+          ``auxiliary_client.call_llm`` (Phase 59 aux pool). Measures how
+          the persona-equipped screenplay agent scores on the rubric.
+
+      - ``baseline_mode="generic_llm"`` (Phase 60 EVAL-02 NEW):
+          Dispatch the same user payload with NO system prompt. Measures
+          how a generic GLM-5.2 without any persona scores on the same
+          rubric. The discrimination delta is
+          ``persona_aligned_mean - generic_llm_mean``.
+
+    Args:
+        scenario: Parsed scenario dict.
+        shadow: Shadow-mode stub flag (Phase 54).
+        baseline_mode: ``"persona_aligned"`` or ``"generic_llm"`` for
+            Phase 60 EVAL-02 real-mode discrimination baseline. ``None``
+            preserves Phase 54 behavior.
+
+    Returns:
+        Agent output as a string. For real-mode dispatch, this is the
+        raw ``choices[0].message.content``. On dispatch failure, returns
+        a JSON stub with an error marker so the battery can continue.
 
     Tests override this via ``monkeypatch.setattr(fitness_battery,
-    "_dispatch_agent", stub)``.
+    "_dispatch_agent", stub)`` OR by patching ``fitness_battery._call_llm``
+    for the real-mode branches.
     """
     scenario_id = scenario.get("id", "<unknown>")
+
+    # ----- Phase 60 EVAL-02 real-mode dispatch paths -------------------- #
+    if baseline_mode in ("persona_aligned", "generic_llm"):
+        return _dispatch_real_mode(
+            scenario,
+            baseline_mode=baseline_mode,
+            scenario_id=scenario_id,
+        )
+
+    # ----- Phase 54 behavior (shadow + dimension routing) --------------- #
     if shadow:
         logger.info(
             "fitness battery shadow mode: scenario=%s — returning stub "
@@ -124,6 +247,89 @@ def _dispatch_agent(scenario: dict, *, shadow: bool = False) -> str:
         scenario_id,
     )
     return json.dumps({"stub": True, "scenario_id": scenario_id})
+
+
+def _dispatch_real_mode(
+    scenario: dict,
+    *,
+    baseline_mode: str,
+    scenario_id: str,
+) -> str:
+    """Real-mode agent dispatch via ``auxiliary_client.call_llm``.
+
+    Phase 60 EVAL-02. Both modes build the SAME user message (apples-to-
+    apples comparison). The only difference is whether a persona system
+    prompt is prepended.
+
+    Args:
+        scenario: Parsed scenario dict.
+        baseline_mode: ``"persona_aligned"`` or ``"generic_llm"``.
+        scenario_id: Pre-extracted scenario id for logging.
+
+    Returns:
+        ``choices[0].message.content`` string on success. On any
+        exception, logs a warning + returns a JSON stub with
+        ``{"real_mode_error": str(exc), "scenario_id": scenario_id}`` so
+        the battery can score it (likely low) without crashing.
+    """
+    user_message = _extract_user_message(scenario)
+    messages: list[dict] = []
+    if baseline_mode == "persona_aligned":
+        persona = _load_persona_system_prompt("screenplay")
+        if persona:
+            messages.append({"role": "system", "content": persona})
+        else:
+            logger.warning(
+                "persona_aligned dispatch for scenario=%s running WITHOUT "
+                "a persona (YAML load failed) — score will reflect "
+                "persona-less behavior",
+                scenario_id,
+            )
+    # generic_llm: no system message at all — by design.
+    messages.append({"role": "user", "content": user_message})
+
+    try:
+        response = _call_llm(
+            task="fitness_battery_agent",
+            provider="glm",  # GLM-only — MEMORY.md feedback-glm-5-2-only.md
+            messages=messages,
+            temperature=0.0,
+            max_tokens=AGENT_DISPATCH_MAX_TOKENS,
+            timeout=AGENT_DISPATCH_TIMEOUT_SECONDS,
+        )
+    except Exception as exc:  # noqa: BLE001 — dispatch failure must not crash battery
+        logger.warning(
+            "real-mode agent dispatch failed (baseline_mode=%s, "
+            "scenario=%s): %s — returning error stub",
+            baseline_mode,
+            scenario_id,
+            exc,
+        )
+        return json.dumps(
+            {
+                "real_mode_error": str(exc),
+                "scenario_id": scenario_id,
+                "baseline_mode": baseline_mode,
+            },
+            ensure_ascii=False,
+        )
+    content = _extract_content(response)
+    if not content:
+        logger.warning(
+            "real-mode dispatch returned empty content (baseline_mode=%s, "
+            "scenario=%s) — returning empty-marker stub",
+            baseline_mode,
+            scenario_id,
+        )
+        return json.dumps(
+            {
+                "real_mode_empty": True,
+                "scenario_id": scenario_id,
+                "baseline_mode": baseline_mode,
+            },
+            ensure_ascii=False,
+        )
+    return content
 
 
 # --------------------------------------------------------------------------- #
@@ -367,6 +573,7 @@ def run_battery(
     model_id: str = "glm-5.2",
     provider: str = "zai",
     shadow: bool = False,
+    baseline_mode: str | None = None,
 ) -> dict:
     """Run every scenario in ``battery_dir`` + return a summary dict.
 
@@ -377,6 +584,14 @@ def run_battery(
         model_id: Judge model id (for the trend entry).
         provider: Judge provider id (for the trend entry).
         shadow: If True, dispatch agent in shadow mode (no live calls).
+            Ignored when ``baseline_mode`` is set (real-mode dispatch
+            paths are mutually exclusive with shadow).
+        baseline_mode: Phase 60 EVAL-02 real-mode selector. ``None``
+            preserves Phase 54 behavior. ``"persona_aligned"`` runs the
+            screenplay agent with its persona system prompt.
+            ``"generic_llm"`` runs GLM-5.2 with NO system prompt. Both
+            modes dispatch sequentially via
+            ``auxiliary_client.call_llm`` (Phase 59 aux pool).
 
     Returns:
         ``{
@@ -387,6 +602,7 @@ def run_battery(
             "persona_sha256": str,
             "model_id": str,
             "provider": str,
+            "baseline_mode": str | None,  # Phase 60 EVAL-02
         }``
     """
     scenarios = _list_scenarios(Path(battery_dir))
@@ -397,7 +613,11 @@ def run_battery(
         if not isinstance(scenario, dict) or "id" not in scenario:
             logger.warning("skipping malformed scenario: %s", path)
             continue
-        agent_output = _dispatch_agent(scenario, shadow=shadow)
+        agent_output = _dispatch_agent(
+            scenario,
+            shadow=shadow,
+            baseline_mode=baseline_mode,
+        )
         score = score_scenario(scenario, agent_output, judge_llm=judge_llm)
         per_prompt_scores[str(scenario["id"])] = score
 
@@ -414,6 +634,7 @@ def run_battery(
         "persona_sha256": persona_sha256,
         "model_id": model_id,
         "provider": provider,
+        "baseline_mode": baseline_mode,
     }
 
 

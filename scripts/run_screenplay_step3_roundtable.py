@@ -48,6 +48,16 @@ CLAUDE.md compliance
 - ``except X as exc:`` with bound name; preserve chains via ``raise ... from exc``
 - NO top-level ``run_agent`` import (anti-pattern; this module imports from
   ``mcp_serve`` + ``agent.auxiliary_client`` only — all safe top-level).
+
+Phase 58 THROTTLE-01 note
+-------------------------
+v11.0 hardcoded ``asyncio.sleep(2.5)`` (between panelists) and
+``asyncio.sleep(5.0)`` (pre-synthesis) RPM pacing removed by Phase 58
+THROTTLE-01; ``agent/glm_throttle.py`` now handles pacing via a per-task
+token bucket (default 30 RPM) enforced inside
+``auxiliary_client.call_llm`` BEFORE endpoint routing runs. See
+``.planning/research/v11-poc-eval/smoke-test-report.md §3.1`` for the
+original v11.0 evidence (490s wall-clock, 5x z.ai retry storm).
 """
 
 from __future__ import annotations
@@ -72,6 +82,11 @@ if str(_ROOT) not in sys.path:
 import mcp_serve  # noqa: E402  (after sys.path insert)
 import agent.auxiliary_client  # noqa: E402  — used for call_llm lookup at call-time so monkeypatch works
 import agent.memory_arbitration  # noqa: E402  — CR-02: wire arbitrate_two_memories + append_conflict_record
+from agent.round_table_executor import (  # noqa: E402  — Phase 58 THROTTLE-02 budget wiring
+    check_budget_before_turn,
+    record_panelist_tokens,
+)
+from agent.round_table_state import abort_round_table  # noqa: E402  — budget_exceeded path
 from hermes_constants import get_hermes_home  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -184,7 +199,35 @@ async def run_roundtable(
         / "round_tables"
         / f"{round_id}-conflicts.jsonl"
     )
+    # Phase 58 THROTTLE-02: state file path used for budget checks + token
+    # accounting. Lives next to the conflicts JSONL under the same dir.
+    _state_path = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / PROJECT_SLUG
+        / "round_tables"
+        / f"{round_id}.json"
+    )
     for agent_id in PANEL_9:
+        # Phase 58 THROTTLE-02: check budget BEFORE dispatching next panelist.
+        # If False, abort with status=budget_exceeded (event persisted).
+        if not check_budget_before_turn(_state_path, expected_next_tokens=5000):
+            abort_round_table(
+                _state_path,
+                reason="budget_exceeded",
+                aborted_by="run_screenplay_step3_roundtable.py",
+            )
+            logger.error(
+                "round_table budget_exceeded before %s; aborting round %s",
+                agent_id, round_id,
+            )
+            return {
+                "error": "budget_exceeded",
+                "agent_id": agent_id,
+                "round_id": round_id,
+            }
+
         resp = await mcp_serve.get_agent_opinion(
             round_id=round_id,
             project_slug=PROJECT_SLUG,
@@ -205,6 +248,19 @@ async def run_roundtable(
             }
         opinion_text = opinion_data.get("opinion", "")
         cited_memory_ids = opinion_data.get("cited_memory_ids", []) or []
+
+        # Phase 58 THROTTLE-02: record actual token consumption from the
+        # just-completed call. auxiliary_client.get_last_call_usage() is
+        # populated by every call_llm return path (Phase 58-01).
+        _usage = agent.auxiliary_client.get_last_call_usage()
+        _tokens = _usage.get("total_tokens", 0)
+        if _tokens > 0:
+            record_panelist_tokens(_state_path, _tokens)
+            logger.info(
+                "round_table %s: panelist %s consumed %d tokens (cumulative tracked)",
+                round_id, agent_id, _tokens,
+            )
+
         current_turn = {
             "agent_id": agent_id,
             "opinion": opinion_text,
@@ -232,25 +288,46 @@ async def run_roundtable(
                 exc,
             )
 
-        # RPM pacing: GLM bursts hit 1302 if panelist calls fire back-to-back
-        # while gateway traffic shares the same 4-key pool. 2.5s sleep between
-        # panelists keeps combined RPM under ceiling. Total adds ~22s to a
-        # 9-agent round table — acceptable per SC#2 (latency budget is PER
-        # call, not total).
-        if agent_id != PANEL_9[-1]:
-            await asyncio.sleep(2.5)
-
-    # Pre-synthesis breathing room — synthesis is the 10th consecutive call
-    # and the most likely to trip RPM. 5s pause lets the rate-limit window
-    # slide forward before the heaviest call.
-    await asyncio.sleep(5.0)
+        # Phase 58 THROTTLE-01: hardcoded asyncio.sleep(2.5) removed.
+        # Per-task RPM token bucket in agent/glm_throttle.py now handles
+        # pacing automatically inside auxiliary_client.call_llm.
 
     # ------------------------------------------------------------------ #
     # Step 3 — synthesis pass (10th GLM call) → HOOK-09-valid Step 3 JSON
     # ------------------------------------------------------------------ #
+    # Phase 58 THROTTLE-02: synthesis is the heaviest single call (~10-15K
+    # tokens for 9-opinion consolidation). Check budget with a higher
+    # expected_next_tokens to avoid false-positive budget_exceeded at the
+    # final step.
+    if not check_budget_before_turn(_state_path, expected_next_tokens=15_000):
+        abort_round_table(
+            _state_path,
+            reason="budget_exceeded",
+            aborted_by="run_screenplay_step3_roundtable.py",
+        )
+        logger.error(
+            "round_table budget_exceeded before synthesis; aborting round %s",
+            round_id,
+        )
+        return {
+            "error": "budget_exceeded",
+            "agent_id": "synthesis",
+            "round_id": round_id,
+        }
+
     conclusion = await _synthesize_step3_output(
         storykernel=storykernel, panel_opinions=panel_opinions
     )
+
+    # Phase 58 THROTTLE-02: record synthesis token consumption.
+    _usage = agent.auxiliary_client.get_last_call_usage()
+    _tokens = _usage.get("total_tokens", 0)
+    if _tokens > 0:
+        record_panelist_tokens(_state_path, _tokens)
+        logger.info(
+            "round_table %s: synthesis consumed %d tokens",
+            round_id, _tokens,
+        )
 
     # ------------------------------------------------------------------ #
     # Step 4 — submit_round_table_result (terminal transition)

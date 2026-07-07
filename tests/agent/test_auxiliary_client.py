@@ -3942,3 +3942,227 @@ class TestAuxiliaryMaxTokensParam:
         ):
             assert auxiliary_max_tokens_param(4096, model="") == {"max_tokens": 4096}
             assert auxiliary_max_tokens_param(4096, model=None) == {"max_tokens": 4096}
+
+
+# ===========================================================================
+# Phase 58 THROTTLE-01 — GLM throttle wire-in + usage tracker
+# ===========================================================================
+
+
+class TestGLMThrottleIntegration:
+    """Phase 58 Task 2 — verify call_llm acquires an RPM slot before dispatch
+    + populates the module-level usage tracker for downstream budget
+    accounting (THROTTLE-02 prep).
+
+    Context: .planning/phases/58-rpm-throttling/58-CONTEXT.md decisions #8 + #3.
+    """
+
+    # ---- helpers ----------------------------------------------------------
+
+    @staticmethod
+    def _mock_response_with_usage(
+        prompt_tokens: int = 100,
+        completion_tokens: int = 50,
+    ) -> SimpleNamespace:
+        """Build a fake chat-completion response carrying .usage + .choices."""
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))],
+            usage=SimpleNamespace(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+            ),
+        )
+
+    @staticmethod
+    def _mock_response_without_usage() -> SimpleNamespace:
+        """Response lacking .usage — graceful-fallback path."""
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))],
+        )
+
+    @pytest.fixture(autouse=True)
+    def _patch_client_cache_for_throttle(self, monkeypatch):
+        """Stub _get_cached_client so call_llm never hits the network."""
+        def _fake(provider, model=None, async_mode=False, base_url=None,
+                  api_key=None, api_mode=None, main_runtime=None, task=None):
+            client = MagicMock()
+            client.base_url = base_url or "https://default.example.com/v1"
+            client.chat.completions.create.return_value = (
+                TestGLMThrottleIntegration._mock_response_with_usage()
+            )
+            return client, model
+        monkeypatch.setattr(
+            "agent.auxiliary_client._get_cached_client", _fake
+        )
+        # Force _resolve_task_provider_model to skip real provider lookup.
+        monkeypatch.setattr(
+            "agent.auxiliary_client._resolve_task_provider_model",
+            lambda *a, **kw: ("openrouter", "test-model", None, "k", "chat_completions"),
+        )
+        # Routing helper must not short-circuit the dispatch.
+        monkeypatch.setattr(
+            "agent.auxiliary_client._select_endpoint_by_prompt_length",
+            lambda *a, **kw: None,
+        )
+
+    # ---- Test 1: acquire_slot fires on every call_llm with task ------------
+
+    def test_acquire_slot_fires_on_every_call_llm_with_task(self, monkeypatch):
+        """acquire_slot is called once with the task name before dispatch."""
+        import agent.glm_throttle as _throttle_mod
+        from agent import glm_throttle
+
+        _throttle_mod.reset_for_testing()
+        captured: list[str] = []
+        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t, **kw: captured.append(t))
+
+        call_llm(task="round_table_opinion", messages=[{"role": "user", "content": "hi"}])
+
+        assert captured == ["round_table_opinion"], (
+            f"acquire_slot must be called once with task name, got {captured}"
+        )
+
+    # ---- Test 2: acquire_slot fires BEFORE Phase 57 routing -----------------
+
+    def test_acquire_slot_fires_before_phase57_routing(self, monkeypatch):
+        """Order: acquire_slot first, then _select_endpoint_by_prompt_length."""
+        import agent.glm_throttle as _throttle_mod
+        from agent import glm_throttle
+
+        _throttle_mod.reset_for_testing()
+        call_order: list[str] = []
+
+        monkeypatch.setattr(
+            glm_throttle, "acquire_slot", lambda t, **kw: call_order.append("throttle")
+        )
+        monkeypatch.setattr(
+            "agent.auxiliary_client._select_endpoint_by_prompt_length",
+            lambda *a, **kw: (call_order.append("routing") or None),
+        )
+
+        call_llm(
+            task="round_table_opinion",
+            provider="glm",
+            messages=[{"role": "user", "content": "hi"}],
+        )
+
+        assert call_order == ["throttle", "routing"], (
+            f"Throttle must run before routing, got order: {call_order}"
+        )
+
+    # ---- Test 3: no acquire when task is None ------------------------------
+
+    def test_no_acquire_when_task_is_none(self, monkeypatch):
+        """call_llm without task arg → acquire_slot NOT called (graceful skip)."""
+        import agent.glm_throttle as _throttle_mod
+        from agent import glm_throttle
+
+        _throttle_mod.reset_for_testing()
+        called: list[str] = []
+        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t, **kw: called.append(t))
+
+        call_llm(provider="openrouter", messages=[{"role": "user", "content": "hi"}])
+
+        assert called == [], (
+            f"acquire_slot must NOT fire when task is None, got {called}"
+        )
+
+    # ---- Test 4: usage tracker populated -----------------------------------
+
+    def test_usage_tracker_populated_after_call(self, monkeypatch):
+        """After a stubbed call with .usage, get_last_call_usage returns it."""
+        import agent.auxiliary_client as aux
+
+        # Reset tracker to a known-zero state, then run a call that returns
+        # a response with prompt=100, completion=50, total=150.
+        aux._LAST_CALL_USAGE.update(
+            {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        )
+
+        call_llm(
+            task="round_table_opinion",
+            provider="openrouter",
+            messages=[{"role": "user", "content": "hi"}],
+        )
+
+        usage = aux.get_last_call_usage()
+        assert usage == {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        }, f"Tracker must reflect response.usage, got {usage}"
+
+    # ---- Test 4b: usage tracker graceful when response has no .usage -------
+
+    def test_usage_tracker_handles_missing_usage_attr(self, monkeypatch):
+        """Response without .usage → tracker stays at prior values (no clobber)."""
+        import agent.auxiliary_client as aux
+
+        # Stub client to return a response with no .usage attribute.
+        def _fake(provider, model=None, async_mode=False, base_url=None,
+                  api_key=None, api_mode=None, main_runtime=None, task=None):
+            client = MagicMock()
+            client.base_url = base_url or "https://default.example.com/v1"
+            client.chat.completions.create.return_value = (
+                self._mock_response_without_usage()
+            )
+            return client, model
+        monkeypatch.setattr("agent.auxiliary_client._get_cached_client", _fake)
+
+        # Seed the tracker with a non-zero prior reading.
+        aux._LAST_CALL_USAGE.update(
+            {"prompt_tokens": 999, "completion_tokens": 0, "total_tokens": 999}
+        )
+
+        call_llm(
+            task="round_table_opinion",
+            provider="openrouter",
+            messages=[{"role": "user", "content": "hi"}],
+        )
+
+        usage = aux.get_last_call_usage()
+        # Prior reading must survive (capture_usage no-ops on missing .usage).
+        assert usage["prompt_tokens"] == 999, (
+            f"Missing .usage must not clobber prior reading, got {usage}"
+        )
+
+    # ---- Test 5: config override propagation (smoke) -----------------------
+
+    def test_config_override_propagation_through_call_llm(self, monkeypatch):
+        """If auxiliary.{task}.rpm is set, the bucket created inside
+        acquire_slot must reflect it. We verify by checking the bucket
+        capacity after call_llm dispatches."""
+        import agent.glm_throttle as _throttle_mod
+
+        _throttle_mod.reset_for_testing()
+
+        # Patch _resolve_rpm to return 60 for our test task.
+        def _fake_resolve(task: str) -> int:
+            if task == "custom_throttle_task":
+                return 60
+            return _throttle_mod.DEFAULT_RPM
+        monkeypatch.setattr(_throttle_mod, "_resolve_rpm", _fake_resolve)
+
+        call_llm(
+            task="custom_throttle_task",
+            provider="openrouter",
+            messages=[{"role": "user", "content": "hi"}],
+        )
+
+        bucket = _throttle_mod._BUCKETS.get("custom_throttle_task")
+        assert bucket is not None, "acquire_slot must lazily create the bucket"
+        assert bucket.capacity == 60, (
+            f"Bucket capacity must reflect config override, got {bucket.capacity}"
+        )
+
+    # ---- Test 6: cli-config.yaml.example documents rpm ---------------------
+
+    def test_cli_config_example_documents_rpm(self):
+        """grep -c 'rpm:' cli-config.yaml.example returns >= 1."""
+        from pathlib import Path
+        config_path = Path(__file__).parent.parent.parent / "cli-config.yaml.example"
+        content = config_path.read_text(encoding="utf-8")
+        assert "rpm:" in content, (
+            "cli-config.yaml.example must document auxiliary.{task}.rpm"
+        )
