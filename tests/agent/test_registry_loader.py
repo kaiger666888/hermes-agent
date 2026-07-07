@@ -289,3 +289,62 @@ class TestRegistryCaching:
         assert names == ["test-coordinator"], (
             f"nested YAML leaked into registry; got names={names!r}"
         )
+
+
+# --------------------------------------------------------------------------- #
+# WR-04 fix: _load_schema validates its return value
+# --------------------------------------------------------------------------- #
+
+
+class TestSchemaLoadValidation:
+    """WR-04: ``_load_schema`` MUST validate its return value before caching.
+
+    Without this guard, an empty / YAML-null schema file caches as ``None``
+    and silently poisons every subsequent load — ``Draft202012Validator(None)``
+    raises a confusing SchemaError that doesn't mention the root cause
+    (empty schema file). The fix raises a specific RegistryValidationError
+    with the path + type info so the operator can triage immediately.
+    """
+
+    def test_empty_schema_file_raises_registry_validation_error(self, monkeypatch, tmp_path):
+        """Empty file → yaml.safe_load returns None → loader rejects."""
+        from agent import registry_loader as rl
+
+        empty_schema = tmp_path / "empty.yaml"
+        empty_schema.write_text("", encoding="utf-8")
+        monkeypatch.setattr(rl, "_SCHEMA_PATH", empty_schema)
+        # Reset cache so the next _get_schema() triggers _load_schema()
+        monkeypatch.setattr(rl, "_SCHEMA_CACHE", None)
+
+        with pytest.raises(rl.RegistryValidationError) as exc_info:
+            rl._load_schema()
+        assert "not a valid object" in str(exc_info.value)
+        assert "NoneType" in str(exc_info.value)
+
+    def test_non_dict_schema_raises_registry_validation_error(self, monkeypatch, tmp_path):
+        """List-of-strings YAML → loader rejects with type info."""
+        from agent import registry_loader as rl
+
+        list_schema = tmp_path / "list.yaml"
+        list_schema.write_text("- foo\n- bar\n", encoding="utf-8")
+        monkeypatch.setattr(rl, "_SCHEMA_PATH", list_schema)
+        monkeypatch.setattr(rl, "_SCHEMA_CACHE", None)
+
+        with pytest.raises(rl.RegistryValidationError) as exc_info:
+            rl._load_schema()
+        assert "not a valid object" in str(exc_info.value)
+        assert "list" in str(exc_info.value).lower()
+
+    def test_schema_missing_type_and_dollar_schema_keys_raises(self, monkeypatch, tmp_path):
+        """Dict YAML without type/$schema keys → loader rejects."""
+        from agent import registry_loader as rl
+
+        bad_schema = tmp_path / "bad.yaml"
+        # Valid YAML object but missing both type and $schema — not a JSON Schema doc
+        bad_schema.write_text("foo: bar\nbaz: qux\n", encoding="utf-8")
+        monkeypatch.setattr(rl, "_SCHEMA_PATH", bad_schema)
+        monkeypatch.setattr(rl, "_SCHEMA_CACHE", None)
+
+        with pytest.raises(rl.RegistryValidationError) as exc_info:
+            rl._load_schema()
+        assert "missing both 'type' and '$schema'" in str(exc_info.value)

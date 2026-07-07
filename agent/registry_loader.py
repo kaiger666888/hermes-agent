@@ -115,10 +115,18 @@ def _load_schema() -> dict[str, Any]:
 
     The schema is the authoritative 18-field Draft 2020-12 contract
     (``additionalProperties: false``, 7 required fields).
+
+    WR-04 fix: validate the loaded value is a dict with the expected
+    top-level keys (``type`` or ``$schema``). Without this, an empty or
+    YAML-null file would cache as ``None`` and silently poison every
+    subsequent ``load_agent_registry`` call — ``Draft202012Validator(None)``
+    raises a confusing SchemaError that doesn't mention the actual root
+    cause (empty schema file). The validator here raises a specific
+    ``RegistryValidationError`` so the operator can triage.
     """
     try:
         with open(_SCHEMA_PATH, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
     except OSError as exc:
         # Wrap in RegistryValidationError so callers have a single
         # exception type to catch. This is unrecoverable — without the
@@ -127,6 +135,18 @@ def _load_schema() -> dict[str, Any]:
         raise RegistryValidationError(
             f"cannot load agents-schema.yaml at {_SCHEMA_PATH}: {exc}"
         ) from exc
+
+    if not isinstance(data, dict):
+        raise RegistryValidationError(
+            f"agents-schema.yaml at {_SCHEMA_PATH} is not a valid object "
+            f"(got {type(data).__name__}); expected a Draft 2020-12 JSON Schema dict"
+        )
+    if "type" not in data and "$schema" not in data:
+        raise RegistryValidationError(
+            f"agents-schema.yaml at {_SCHEMA_PATH} is missing both 'type' and "
+            f"'$schema' keys; not a valid JSON Schema document"
+        )
+    return data
 
 
 def _get_schema() -> dict[str, Any]:
