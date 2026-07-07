@@ -348,3 +348,84 @@ class TestSchemaLoadValidation:
         with pytest.raises(rl.RegistryValidationError) as exc_info:
             rl._load_schema()
         assert "missing both 'type' and '$schema'" in str(exc_info.value)
+
+
+# --------------------------------------------------------------------------- #
+# WR-06 fix: _format_json_path uses absolute_path, not message regex
+# --------------------------------------------------------------------------- #
+
+
+class TestFormatJsonPath:
+    """WR-06: ``_format_json_path`` MUST derive the path from
+    ``err.absolute_path`` / ``err.validator_value`` / ``err.instance``
+    instead of regex-parsing the human-readable ``err.message``.
+
+    The previous implementation matched against the literal English string
+    ``"'X' is a required property"`` produced by jsonschema's required
+    validator. That regex is locale- and version-fragile: a non-English
+    locale (rare but possible in containerized deployments) or a future
+    jsonschema release that tweaks the message format would silently fail
+    to match, and the path would fall back to the bare ``$``.
+    """
+
+    def test_required_error_returns_dollar_field_even_with_non_english_message(self):
+        """WR-06: even if the message locale changes, ``_format_json_path``
+        derives the path from ``validator_value`` + ``instance``, not the
+        message text. Simulate a non-English / future-version message.
+        """
+        import jsonschema
+
+        from agent.registry_loader import _format_json_path
+
+        # Build a synthetic ValidationError. jsonschema.ValidationError's
+        # constructor takes (message, validator, validator_value, instance).
+        err = jsonschema.ValidationError(
+            message="«persona» est une propriété requise",  # French locale
+            validator="required",
+            validator_value=["persona", "version", "name"],
+            instance={"version": "1.0.0", "name": "x"},  # missing persona
+        )
+        path = _format_json_path(err)
+        # The path must be $.persona (the missing field), NOT the bare $
+        # — even though the French message would never match the old regex.
+        assert path == "$.persona", (
+            f"expected $.persona (derived from absolute_path/validator_value, "
+            f"not regex), got {path!r}"
+        )
+
+    def test_required_error_with_multiple_missing_returns_first_sorted(self):
+        """WR-06: with multiple missing required fields, the path is the
+        FIRST one (sorted) — matching jsonschema's deterministic ordering.
+        """
+        import jsonschema
+
+        from agent.registry_loader import _format_json_path
+
+        err = jsonschema.ValidationError(
+            message="whatever",
+            validator="required",
+            validator_value=["name", "persona", "version"],
+            instance={},  # all three missing
+        )
+        path = _format_json_path(err)
+        # Sorted: name < persona < version → $.name
+        assert path == "$.name", f"expected $.name (first sorted), got {path!r}"
+
+    def test_non_required_error_uses_json_path_directly(self):
+        """WR-06: non-required errors use ``err.json_path`` directly
+        (which jsonschema derives from ``absolute_path``)."""
+        import jsonschema
+
+        from agent.registry_loader import _format_json_path
+
+        # Build a non-required error — e.g. a pattern violation on $.version.
+        # ``path`` is the public kwarg name (becomes ``absolute_path`` internally).
+        err = jsonschema.ValidationError(
+            message="'not-semver' does not match '^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$'",
+            validator="pattern",
+            validator_value=r"^[0-9]+\.[0-9]+\.[0-9]+$",
+            instance="not-semver",
+            path=["version"],
+        )
+        path = _format_json_path(err)
+        assert path == "$.version", f"expected $.version, got {path!r}"

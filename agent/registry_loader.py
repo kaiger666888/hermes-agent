@@ -53,7 +53,6 @@ CLAUDE.md compliance
 from __future__ import annotations
 
 import logging
-import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -164,27 +163,41 @@ def _get_schema() -> dict[str, Any]:
 # JSON path formatting helper
 # --------------------------------------------------------------------------- #
 
-# Matches the field name inside the "'X' is a required property" message
-# produced by jsonschema's required-validator. Used to synthesize a JSON
-# path like "$.persona" for missing-required errors (whose absolute_path
-# is empty, since the violation lives at the object root).
-_REQUIRED_MSG_RE = re.compile(r"^'([^']+)' is a required property$")
-
 
 def _format_json_path(err: jsonschema.ValidationError) -> str:
     """Format a jsonschema error's JSON path.
 
-    For most errors we use ``err.json_path`` directly. For ``required``
-    errors (validator == "required") the path is ``"$"`` with no field
-    suffix because the violation lives at the object root; we parse the
-    missing field name out of the message and append it (so ``$.persona``
-    instead of ``$``).
+    WR-06 fix: use ``err.absolute_path`` + ``err.validator_value`` /
+    ``err.instance`` directly instead of regex-parsing the human-readable
+    ``err.message`` (which is locale- and version-fragile).
+
+    For ``required`` errors (validator == "required"):
+        ``err.absolute_path`` is empty (the violation lives at the object
+        root), and ``err.validator_value`` is the required-field list. We
+        find the missing field via set difference on the instance's keys
+        and synthesize ``$.<missing_field>`` so callers see a specific
+        path instead of the bare ``$``.
+
+    For other errors: ``err.json_path`` (computed by jsonschema from
+        ``absolute_path``) is already specific (e.g. ``$.version``); use
+        it directly.
     """
     if err.validator == "required":
-        match = _REQUIRED_MSG_RE.match(err.message)
-        if match:
-            # Synthesize "$.<missing_field>" so callers see a specific path.
-            return f"$.{match.group(1)}"
+        # validator_value is the required-field list — find which one(s)
+        # are actually missing from the instance (jsonschema reports the
+        # FIRST missing one in its sorted order, but err.instance is the
+        # actual object so set difference is reliable).
+        required = err.validator_value or []
+        instance_keys = (
+            list(err.instance.keys()) if isinstance(err.instance, dict) else []
+        )
+        missing = [r for r in required if r not in instance_keys]
+        if missing:
+            # Sort for determinism (matches jsonschema's default ordering)
+            missing.sort()
+            return f"$.{missing[0]}"
+        # Fallback if set-difference found nothing (shouldn't happen, but
+        # defensive): use the bare json_path.
     return err.json_path
 
 
