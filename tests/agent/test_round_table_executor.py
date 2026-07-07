@@ -57,6 +57,90 @@ class TestSerialEnforcement:
         await release_round_lock("round-1")
 
     @pytest.mark.asyncio
+    async def test_toctou_race_concurrent_acquire_rejects_not_blocks(self):
+        """CR-02: true concurrent dispatch must reject (not block forever).
+
+        The previous check-then-acquire form
+        ``if lock.locked(): reject; else: await lock.acquire()`` had an await
+        point inside ``lock.acquire()`` that yielded to the event loop. Under
+        contention, two coroutines could BOTH pass the ``locked()`` check,
+        then both call ``acquire()`` — the second would block INDEFINITELY
+        instead of being rejected with 429.
+
+        This test races two coroutines that both reach the acquire attempt
+        near-simultaneously (via ``asyncio.gather``) and asserts that one
+        wins and the other is rejected in bounded time. The test fails
+        (hangs past the asyncio timeout) if the TOCTOU bug regresses.
+        """
+        from agent.round_table_executor import (
+            acquire_round_or_reject,
+            release_round_lock,
+        )
+
+        round_id = "toctou-race-round"
+
+        # Two coroutines that both try to acquire at the same instant.
+        # gather() schedules them on the event loop; without the CR-02 fix,
+        # the second coroutine's await lock.acquire() would block forever.
+        try:
+            lock1, lock2 = await asyncio.wait_for(
+                asyncio.gather(
+                    acquire_round_or_reject(round_id),
+                    acquire_round_or_reject(round_id),
+                ),
+                timeout=2.0,
+            )
+        except asyncio.TimeoutError as exc:
+            raise AssertionError(
+                "acquire_round_or_reject hung under concurrent dispatch — "
+                "TOCTOU regression: second coroutine blocked instead of rejected"
+            ) from exc
+
+        # Exactly one must win; the other MUST be rejected (None).
+        winners = [l for l in (lock1, lock2) if l is not None]
+        assert len(winners) == 1, (
+            f"expected exactly one winner, got {len(winners)} "
+            "(both acquired = bug; both rejected = setup error)"
+        )
+        rejected = [l for l in (lock1, lock2) if l is None]
+        assert len(rejected) == 1, (
+            "exactly one acquire must be rejected (None), not both, not neither"
+        )
+
+        # Cleanup
+        await release_round_lock(round_id)
+
+    @pytest.mark.asyncio
+    async def test_toctou_race_three_dispatchers_one_wins(self):
+        """CR-02: with THREE concurrent dispatchers, exactly one wins and
+        two are rejected. Stress-tests the guard-across-check+acquire fix.
+        """
+        from agent.round_table_executor import (
+            acquire_round_or_reject,
+            release_round_lock,
+        )
+
+        round_id = "toctou-three-way"
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    *[acquire_round_or_reject(round_id) for _ in range(3)]
+                ),
+                timeout=2.0,
+            )
+        except asyncio.TimeoutError as exc:
+            raise AssertionError(
+                "three-way concurrent acquire hung — TOCTOU regression"
+            ) from exc
+
+        winners = [lock for lock in results if lock is not None]
+        rejected = [lock for lock in results if lock is None]
+        assert len(winners) == 1, f"expected 1 winner, got {len(winners)}"
+        assert len(rejected) == 2, f"expected 2 rejected, got {len(rejected)}"
+
+        await release_round_lock(round_id)
+
+    @pytest.mark.asyncio
     async def test_sequential_submission_succeeds(self):
         """SC#4: after release, the same roundId can be re-acquired (lock reusable)."""
         from agent.round_table_executor import (

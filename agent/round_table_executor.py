@@ -108,11 +108,22 @@ async def acquire_round_or_reject(round_id: str) -> Optional[asyncio.Lock]:
     """Try to acquire the per-``round_id`` lock. Return ``None`` if contended.
 
     SC#4 mandates **rejection** of concurrent submissions, NOT queueing.
-    Under asyncio cooperative scheduling, the check-then-acquire pattern
-    is safe AS LONG AS no ``await`` happens between ``lock.locked()``
-    and ``await lock.acquire()`` — no other coroutine can run in that
-    window. (See RESEARCH.md Pitfall #2 "TOCTOU race in check-then-acquire
-    lock pattern".)
+
+    Implementation note (CR-02 fix): the previous check-then-acquire form
+    ``if lock.locked(): reject; else: await lock.acquire()`` was NOT atomic
+    — ``await lock.acquire()`` is itself an await point that yields to the
+    event loop, so a second coroutine could observe ``lock.locked() == False``
+    between the first coroutine's check and its actual acquisition, then
+    pass its own check and block forever on ``await lock.acquire()`` instead
+    of being rejected with 429.
+
+    The fix holds ``_ROUND_LOCKS_GUARD`` across BOTH the lookup AND the
+    ``await lock.acquire()``. ``_ROUND_LOCKS_GUARD`` serializes all
+    acquire_round_or_reject calls, so the check-and-acquire is atomic with
+    respect to other dispatchers. The guard is held only for the
+    microseconds needed to mutate the registry and acquire the per-roundId
+    lock — it does not gate any LLM/IO work — so it does not bottleneck
+    throughput.
 
     Returns:
         The acquired ``asyncio.Lock`` on success (caller MUST release it
@@ -120,17 +131,24 @@ async def acquire_round_or_reject(round_id: str) -> Optional[asyncio.Lock]:
         ``finally`` block), or ``None`` if a concurrent call already holds
         the lock for this ``round_id``.
     """
-    lock = await _get_or_create_round_lock(round_id)
-    # Check-then-acquire. No `await` between these two lines — safe under
-    # asyncio cooperative scheduling.
-    if lock.locked():
-        logger.info(
-            "round_table_executor: rejected concurrent acquire for roundId=%s",
-            round_id,
-        )
-        return None
-    await lock.acquire()
-    return lock
+    # Hold _ROUND_LOCKS_GUARD across check + acquire so the check-then-acquire
+    # is atomic w.r.t. other dispatchers. Without this, the await point inside
+    # lock.acquire() yields to the event loop and a racing coroutine can pass
+    # the lock.locked() check and then block forever (CR-02).
+    async with _ROUND_LOCKS_GUARD:
+        if round_id not in _ROUND_LOCKS:
+            _ROUND_LOCKS[round_id] = asyncio.Lock()
+        lock = _ROUND_LOCKS[round_id]
+        if lock.locked():
+            logger.info(
+                "round_table_executor: rejected concurrent acquire for roundId=%s",
+                round_id,
+            )
+            return None
+        # Inside the guard — no other coroutine can acquire this lock between
+        # the locked() check above and this acquire() call.
+        await lock.acquire()
+        return lock
 
 
 async def release_round_lock(round_id: str) -> None:
