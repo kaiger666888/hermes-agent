@@ -1,0 +1,29 @@
+{
+  "record_id": "good-multi-operator",
+  "agent_id": "screenplay",
+  "scope": "project",
+  "project_id": "demo:abcd1234",
+  "status": "active",
+  "confidence": 0.85,
+  "half_life_days": 3650,
+  "expires_at": null,
+  "verified_at": null,
+  "supersedes_memory_id": null,
+  "evidence_chain": [
+    {"source_type": "feedback", "source_id": "fb-011", "timestamp": "2026-07-07T10:00:00Z", "excerpt": "screenplay uses cold-open hooks"},
+    {"source_type": "feedback", "source_id": "fb-012", "timestamp": "2026-07-07T10:05:00Z", "excerpt": "screenplay uses cold-open hooks"}
+  ],
+  "evidence_operator_ids": ["op1", "op2"],
+  "evidence_records": [
+    {"text": "screenplay expert uses cold-open hooks for short drama first episodes"},
+    {"text": "screenplay expert uses cold-open hooks for short drama first episodes"}
+  ],
+  "text": "screenplay expert uses cold-open hooks for short drama first episodes",
+  "confidentiality": "internal",
+  "persona_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at": "2026-07-07T10:10:00Z",
+  "last_recalled_at": null,
+  "recall_count": 0,
+  "schema_version": "1.0.0",
+  "_canary_expected_failure": null
+}

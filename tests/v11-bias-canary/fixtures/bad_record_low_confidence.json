@@ -1,0 +1,29 @@
+{
+  "record_id": "bad-low-confidence",
+  "agent_id": "colorist",
+  "scope": "project",
+  "project_id": "demo:abcd1234",
+  "status": "active",
+  "confidence": 0.15,
+  "half_life_days": 90,
+  "expires_at": null,
+  "verified_at": null,
+  "supersedes_memory_id": null,
+  "evidence_chain": [
+    {"source_type": "feedback", "source_id": "fb-007", "timestamp": "2026-07-07T10:00:00Z", "excerpt": "colorist uses teal-orange grade"},
+    {"source_type": "feedback", "source_id": "fb-008", "timestamp": "2026-07-07T10:05:00Z", "excerpt": "colorist uses teal-orange grade"}
+  ],
+  "evidence_operator_ids": ["op1", "op2"],
+  "evidence_records": [
+    {"text": "colorist prefers teal and orange color grading for action scenes"},
+    {"text": "colorist prefers teal and orange color grading for action scenes"}
+  ],
+  "text": "colorist prefers teal and orange color grading for action scenes",
+  "confidentiality": "internal",
+  "persona_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at": "2026-07-07T10:10:00Z",
+  "last_recalled_at": null,
+  "recall_count": 0,
+  "schema_version": "1.0.0",
+  "_canary_expected_failure": "confidence_threshold"
+}

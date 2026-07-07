@@ -1,0 +1,29 @@
+{
+  "record_id": "bad-low-evidence",
+  "agent_id": "screenplay",
+  "scope": "project",
+  "project_id": "demo:abcd1234",
+  "status": "active",
+  "confidence": 0.8,
+  "half_life_days": 3650,
+  "expires_at": null,
+  "verified_at": null,
+  "supersedes_memory_id": null,
+  "evidence_chain": [
+    {"source_type": "feedback", "source_id": "fb-003", "timestamp": "2026-07-07T10:00:00Z", "excerpt": "deep sea creatures bioluminescence"},
+    {"source_type": "feedback", "source_id": "fb-004", "timestamp": "2026-07-07T10:05:00Z", "excerpt": "deep sea creatures bioluminescence"}
+  ],
+  "evidence_operator_ids": ["op1", "op2"],
+  "evidence_records": [
+    {"text": "deep sea creatures and bioluminescence patterns are fascinating"},
+    {"text": "deep sea creatures and bioluminescence patterns are fascinating"}
+  ],
+  "text": "FLUX 2 generates better human faces than FLUX 1 for portrait shots",
+  "confidentiality": "internal",
+  "persona_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at": "2026-07-07T10:10:00Z",
+  "last_recalled_at": null,
+  "recall_count": 0,
+  "schema_version": "1.0.0",
+  "_canary_expected_failure": "evidence_coverage"
+}
