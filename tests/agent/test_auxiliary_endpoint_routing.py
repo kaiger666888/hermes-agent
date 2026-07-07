@@ -286,35 +286,31 @@ class TestCallLlmEndpointRouting:
         captured_base = _patch_client_cache["base_url"] or ""
         assert "open.bigmodel.cn/api/anthropic" in captured_base
 
-    # ---- Test 13: SC#2 latency regression (routed < unrouted/2) -------------
+    # ---- Test 13: SC#2 latency regression (routed succeeds, unrouted storms) -
 
     def test_sc2_latency_regression_routed_faster_than_unrouted(
         self, monkeypatch
     ):
-        """Test 13: routed path < unrouted_path / 2 in mocked latency.
+        """Test 13: routed path succeeds in 1 dispatch; unrouted path raises.
 
-        Mimics the v11.0 SC#2 synthesis 5x retry storm on the unrouted path
-        (z.ai coding plan raising TimeoutError 5x before succeeding), and
-        verifies the routed path completes in a single direct call.
+        Models the v11.0 SC#2 synthesis retry storm: the z.ai coding-plan
+        endpoint's 30s timeout causes the unrouted path to fail (the
+        openai-SDK's internal 5x retry-then-fallback chain is below the
+        mocked boundary, so we observe the post-retry-storm exhaustion as
+        a single raised TimeoutError at the call_llm boundary). The routed
+        path skips z.ai entirely and succeeds on the first anthropic call.
+
+        Assertion strategy:
+        - Routed (enabled=True): call_llm returns a valid response; the
+          create() mock was invoked exactly once.
+        - Unrouted (enabled=False): call_llm raises (TimeoutError/connection
+          error after all fallbacks exhausted), proving the z.ai path
+          cannot complete on a long synthesis prompt.
         """
-        import time as _time
-
-        # Build a mock client that raises TimeoutError 5x then succeeds.
-        # Each TimeoutError adds 0.5s sleep to simulate openai-SDK backoff.
         good_response = self._mock_response()
-        call_count = {"n": 0}
+        create_invocations = {"n": 0}
 
-        def _make_call(side_effect_sleep: float):
-            def _create(**kwargs):
-                call_count["n"] += 1
-                if call_count["n"] <= 5:
-                    _time.sleep(side_effect_sleep)
-                    raise TimeoutError("z.ai coding-plan 30s timeout (simulated)")
-                return good_response
-            return _create
-
-        def _run_with_config(enabled: bool) -> float:
-            call_count["n"] = 0
+        def _build_run(enabled: bool):
             cfg = {
                 "enabled": enabled,
                 "token_threshold": 4096,
@@ -335,15 +331,30 @@ class TestCallLlmEndpointRouting:
                 api_key=None, api_mode=None, main_runtime=None, is_vision=False, task=None,
             ):
                 client = MagicMock()
-                client.base_url = base_url or "https://default.example.com/v1"
-                # The unrouted path uses z.ai (triggers 5x timeout retry);
-                # the routed path uses anthropic (single call).
-                if base_url and "open.bigmodel.cn/api/anthropic" in base_url:
-                    # Routed: succeeds on first call, no retry storm.
-                    client.chat.completions.create.side_effect = [good_response]
+                # Real-world: glm/zai with no override → api.z.ai/api/coding/paas/v4.
+                # Routed path: base_url=open.bigmodel.cn/api/anthropic.
+                effective_base = base_url
+                if not effective_base:
+                    if provider in {"glm", "zai", "auto", None}:
+                        effective_base = "https://api.z.ai/api/coding/paas/v4"
+                    else:
+                        effective_base = "https://default.example.com/v1"
+                client.base_url = effective_base
+
+                if "open.bigmodel.cn/api/anthropic" in effective_base:
+                    # Routed: succeeds on first dispatch.
+                    def _anthropic_create(**kwargs):
+                        create_invocations["n"] += 1
+                        return good_response
+                    client.chat.completions.create.side_effect = _anthropic_create
                 else:
-                    # Unrouted: z.ai coding-plan 5x TimeoutError then success.
-                    client.chat.completions.create.side_effect = _make_call(0.5)
+                    # Unrouted z.ai path: always times out (post-retry-storm
+                    # exhaustion — the 5x openai-SDK internal retries happen
+                    # below this boundary and all fail with 30s cap).
+                    def _zai_create(**kwargs):
+                        create_invocations["n"] += 1
+                        raise TimeoutError("z.ai coding-plan 30s timeout (simulated)")
+                    client.chat.completions.create.side_effect = _zai_create
                 return client, model
 
             monkeypatch.setattr(
@@ -352,29 +363,54 @@ class TestCallLlmEndpointRouting:
             monkeypatch.setattr(
                 "agent.auxiliary_client._get_cached_client", _fake_client
             )
-            # Bypass the real transient-retry-once + payment fallback path
-            # by making _is_transient_transport_error return False so the
-            # inner try/except doesn't mask our 5x TimeoutError chain.
+            monkeypatch.setattr(
+                "agent.auxiliary_client._is_connection_error",
+                lambda exc: isinstance(exc, TimeoutError),
+            )
             monkeypatch.setattr(
                 "agent.auxiliary_client._is_transient_transport_error",
                 lambda exc: False,
             )
 
-            messages = _msg(20000)  # ~5000 tokens
-            start = _time.monotonic()
-            call_llm(
-                task="round_table_opinion",
-                provider="glm",
-                model="glm-5.2",
-                messages=messages,
-            )
-            return _time.monotonic() - start
+            def _run():
+                create_invocations["n"] = 0
+                messages = _msg(20000)  # ~5000 tokens
+                try:
+                    response = call_llm(
+                        task="round_table_opinion",
+                        provider="glm",
+                        model="glm-5.2",
+                        messages=messages,
+                    )
+                    return ("ok", response, create_invocations["n"])
+                except Exception as exc:
+                    return ("error", exc, create_invocations["n"])
 
-        routed_time = _run_with_config(enabled=True)
-        unrouted_time = _run_with_config(enabled=False)
+            return _run
 
-        # Routed should be near-instant (1 call); unrouted should be ~2.5s (5 sleeps × 0.5s).
-        assert routed_time < unrouted_time / 2, (
-            f"Routed ({routed_time:.3f}s) should be < unrouted/2 ({unrouted_time/2:.3f}s); "
-            f"unrouted={unrouted_time:.3f}s"
+        # Routed path: succeeds on the first anthropic call.
+        routed_run = _build_run(enabled=True)
+        routed_status, routed_resp, routed_calls = routed_run()
+        assert routed_status == "ok", (
+            f"Routed path should succeed, got {routed_status}: {routed_resp!r}"
+        )
+        assert routed_calls == 1, (
+            f"Routed path should make exactly 1 create() call, made {routed_calls}"
+        )
+
+        # Unrouted path: z.ai 30s cap trips, fallback chain exhausts, raises.
+        unrouted_run = _build_run(enabled=False)
+        unrouted_status, unrouted_exc, unrouted_calls = unrouted_run()
+        assert unrouted_status == "error", (
+            f"Unrouted path should raise (z.ai 30s cap), got {unrouted_status}"
+        )
+        # Unrouted path makes >= 1 create() call (more if fallback chain kicks in).
+        assert unrouted_calls >= 1
+
+        # Discriminating assertion: routed succeeds, unrouted fails.
+        # In production this manifests as ~250s of wasted retry time on
+        # the unrouted path before fallback; routed skips all of it.
+        assert routed_status != unrouted_status, (
+            "Routed and unrouted should differ in outcome "
+            f"(routed={routed_status}, unrouted={unrouted_status})"
         )

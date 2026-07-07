@@ -5316,6 +5316,21 @@ def call_llm(
     Raises:
         RuntimeError: If no provider is configured.
     """
+    # Phase 57 ENDPOINT-01: route long-prompt GLM calls (synthesis,
+    # memory_compaction, memory_comparator) to open.bigmodel.cn/api/anthropic
+    # (anthropic-compat, no 30s z.ai coding-plan cap). Helper returns None
+    # when routing doesn't apply (short prompt, non-GLM provider, opt-out).
+    # See .planning/phases/57-endpoint-routing/57-CONTEXT.md decisions D-01..D-05.
+    if messages and not base_url and (provider in _ROUTABLE_PROVIDERS):
+        _route_override = _select_endpoint_by_prompt_length(messages, provider, base_url)
+        if _route_override:
+            provider = _route_override.get("provider") or provider
+            base_url = _route_override.get("base_url") or base_url
+            # api_mode plumbing: when base_url contains /anthropic, the
+            # existing _is_anthropic_compat_endpoint check (line ~5401) fires
+            # image-block conversion correctly. _resolve_task_provider_model
+            # sees base_url and returns provider="custom" + the override URL.
+
     resolved_provider, resolved_model, resolved_base_url, resolved_api_key, resolved_api_mode = _resolve_task_provider_model(
         task, provider, model, base_url, api_key)
     effective_extra_body = _get_task_extra_body(task)
