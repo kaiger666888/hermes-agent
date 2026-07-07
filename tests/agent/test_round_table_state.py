@@ -78,6 +78,13 @@ def _stale_iso(minutes_ago: int) -> str:
     ).isoformat(timespec="seconds")
 
 
+def _future_iso(minutes_ahead: int) -> str:
+    """ISO-8601 timestamp in the FUTURE (used by WR-05 test)."""
+    return (
+        datetime.now(timezone.utc) + timedelta(minutes=minutes_ahead)
+    ).isoformat(timespec="seconds")
+
+
 # --------------------------------------------------------------------------- #
 # Lifecycle — SC#2 positive round trip + idempotency contracts
 # --------------------------------------------------------------------------- #
@@ -369,6 +376,79 @@ class TestCrashRecovery:
 
         recovered = read_and_recover_state(state_path)
         assert recovered["status"] == "stalled"
+
+    def test_future_dated_lastUpdatedAt_treated_as_stale(self, tmp_path):
+        """WR-05: a future-dated lastUpdatedAt MUST NOT silently disable
+        stall detection.
+
+        Without the sanity check, a corrupt future-dated file (hand-edit,
+        clock skew, JSON corruption) would compute a hugely negative
+        age_minutes — the ``> stall_threshold_minutes`` check would always
+        fail and the round would NEVER be recovered. The fix treats any
+        lastUpdatedAt more than ``future_skew_tolerance_minutes`` ahead
+        of now as suspicious and flips status to stalled anyway.
+        """
+        state_dir = _state_dir()
+        state_path = state_dir / "round-future.json"
+        # 1 day in the future — way beyond the 5-minute tolerance
+        future_body = json.dumps({
+            "roundId": "round-future",
+            "projectId": "test-slug",
+            "question": "Q?",
+            "panelists": [],
+            "turnOrder": {"strategy": "round-robin", "currentIndex": 0},
+            "status": "open",
+            "turns": [],
+            "roundTableOpen": {
+                "caller": "cc-1",
+                "openedAt": _future_iso(1440),
+                "project": "test-slug",
+                "question": "Q?",
+            },
+            "createdAt": _future_iso(1440),
+            "lastUpdatedAt": _future_iso(1440),  # 1 day ahead
+        })
+        _write_raw_state(state_path, future_body)
+
+        recovered = read_and_recover_state(state_path)
+        assert recovered["status"] == "stalled", (
+            "future-dated lastUpdatedAt must be treated as stale, not silently "
+            "disable stall detection (WR-05)"
+        )
+
+    def test_future_dated_within_skew_tolerance_does_not_trigger_stall(self, tmp_path):
+        """WR-05 regression: small clock skew (within tolerance) must NOT
+        be treated as stale — that would false-positive on every CI run
+        with a slightly different wall clock.
+        """
+        state_dir = _state_dir()
+        state_path = state_dir / "round-skew.json"
+        # 1 minute in the future — within the 5-minute tolerance
+        skew_body = json.dumps({
+            "roundId": "round-skew",
+            "projectId": "test-slug",
+            "question": "Q?",
+            "panelists": [],
+            "turnOrder": {"strategy": "round-robin", "currentIndex": 0},
+            "status": "open",
+            "turns": [],
+            "roundTableOpen": {
+                "caller": "cc-1",
+                "openedAt": _future_iso(1),
+                "project": "test-slug",
+                "question": "Q?",
+            },
+            "createdAt": _future_iso(1),
+            "lastUpdatedAt": _future_iso(1),  # 1 minute ahead — within tolerance
+        })
+        _write_raw_state(state_path, skew_body)
+
+        recovered = read_and_recover_state(state_path)
+        # Within tolerance — must NOT be flipped to stalled
+        assert recovered["status"] == "open", (
+            "future-dated lastUpdatedAt within skew tolerance (1min < 5min) "
+            "must NOT trigger stale-flip (false positive)"
+        )
 
 
 # --------------------------------------------------------------------------- #

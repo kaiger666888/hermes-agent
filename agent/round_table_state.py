@@ -498,6 +498,7 @@ def read_and_recover_state(
     state_path: Path,
     *,
     stall_threshold_minutes: int = 30,
+    future_skew_tolerance_minutes: int = 5,
 ) -> dict[str, Any]:
     """Read a round-table state file and apply 3 failure-mode recovery per
     ``06-CROSS-REPO-IMPACT.md §6.4``:
@@ -516,6 +517,15 @@ def read_and_recover_state(
         state_path: State file path.
         stall_threshold_minutes: Stall threshold in minutes (default 30 per
             schema YAML default + ``05-POC-PLAN.md``).
+        future_skew_tolerance_minutes: Tolerance (in minutes) for accepting
+            ``lastUpdatedAt`` values that are slightly in the future. A
+            ``lastUpdatedAt`` more than this many minutes ahead of ``now``
+            is treated as corrupt/suspicious — the recovery path logs a
+            warning AND treats the round as stale anyway (CR-04/WR-05 fix:
+            without this sanity check, a corrupt future-dated file would
+            silently disable stall detection forever, since
+            ``age_minutes`` becomes hugely negative and the
+            ``> stall_threshold_minutes`` check always fails).
 
     Returns:
         The recovered state dict. May have ``status="stalled"`` if recovery
@@ -575,7 +585,25 @@ def read_and_recover_state(
             age_minutes = (
                 datetime.now(timezone.utc) - last_updated
             ).total_seconds() / 60
-            if age_minutes > stall_threshold_minutes:
+            # WR-05 fix: sanity-check against future-dated timestamps. A
+            # lastUpdatedAt far in the future (more than
+            # future_skew_tolerance_minutes ahead of now) indicates
+            # corruption (hand-edit, clock skew, JSON munging). Without
+            # this guard, age_minutes becomes hugely negative and the
+            # > stall_threshold_minutes check below ALWAYS fails — stall
+            # detection is silently disabled for that file forever.
+            if age_minutes < -future_skew_tolerance_minutes:
+                logger.warning(
+                    "round_table %s has future-dated lastUpdatedAt=%s "
+                    "(age=%dm, skew_tolerance=%dm); treating as stale",
+                    state.get("roundId"),
+                    state.get("lastUpdatedAt"),
+                    int(age_minutes),
+                    future_skew_tolerance_minutes,
+                )
+                state["status"] = RoundTableStatus.STALLED.value
+                atomic_json_write(state_path, state, indent=2)
+            elif age_minutes > stall_threshold_minutes:
                 logger.warning(
                     "round_table %s stalled (age=%dm > %dm); flipping status",
                     state.get("roundId"),
