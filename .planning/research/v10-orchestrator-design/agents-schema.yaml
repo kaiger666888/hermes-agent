@@ -140,6 +140,63 @@ properties:
         cross-project VISIBILITY at retrieve time. Two-layer isolation.
 
   # ──────────────────────────────────────────────────────────────────────
+  # §2.6.1 — Memory thresholds (P9 memory cap + P5 promotion gating + P13 runaway)
+  # ──────────────────────────────────────────────────────────────────────
+
+  memory:
+    type: object
+    description: |
+      Operator-tunable memory thresholds. Source: 05-POC-PLAN.md §4.4 + §4.5
+      (Phase 55 EVAL-04 + EVAL-05 deliverable). Initial defaults frozen at
+      v11.0 PoC baseline; tuning path documented in
+      .planning/research/v11-poc-eval/threshold-tuning.md for v12.0 operators.
+      Additive block (Phase 55) — does not alter the existing `memory_scope`
+      routing convention (§2.6); these fields govern compaction, promotion
+      gating, and evidence-chain floors.
+    default: {}
+    properties:
+      max_records:
+        type: integer
+        minimum: 10
+        default: 500
+        description: |
+          Hard cap on active memory records per agent. Above this cap,
+          compaction is triggered (lazy on next retrieve). Source:
+          05-POC-PLAN.md §4.4 + SUMMARY OQ-7. PITFALLS §P9 mitigation 1.
+          PoC baseline = 500 (generous for single-agent); v12.0 operators
+          may tune down (e.g. 100) for tighter memory pressure or up (e.g.
+          1000) for long-running sessions. Cross-criterion note (§4.5):
+          this is the same parameter referenced by §4.4 compaction trigger;
+          tuning one tunes both. DISTINCT from the §4.4 compaction-tick
+          frequency N=10 (a separate curator config field).
+      confidence_threshold_for_promotion:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        default: 0.7
+        description: |
+          Confidence floor for promoting a working-tier record to core-tier.
+          Records with confidence >= this threshold are eligible for
+          promotion during compaction or curator review. Source:
+          05-POC-PLAN.md §4.5. PoC baseline = 0.7 (conservative — curator
+          must be reasonably sure before promoting). Tuning: lower (e.g.
+          0.5) accepts more records into core-tier; higher (e.g. 0.9)
+          stagnates core-tier growth. See threshold-tuning.md §2.
+      evidence_chain_min_for_acceptance:
+        type: integer
+        minimum: 1
+        default: 3
+        description: |
+          Minimum evidence_chain length for a memory record to be accepted
+          as active. Records with shorter evidence chains are quarantined
+          pending additional corroboration. Source: 05-POC-PLAN.md §4.5 +
+          DEFAULT_AUTO_APPLY_MIN_EVIDENCE precedent (agent/curator.py:215).
+          PITFALLS §P5 mitigation 2 (evidence coverage >=3). PoC baseline
+          mirrors the v6.0 ship default of 3 (three independent sources =
+          reasonable corroboration floor).
+    additionalProperties: false
+
+  # ──────────────────────────────────────────────────────────────────────
   # §2.7 — Lineage (operator ownership, skill drift detection)
   # ──────────────────────────────────────────────────────────────────────
 
