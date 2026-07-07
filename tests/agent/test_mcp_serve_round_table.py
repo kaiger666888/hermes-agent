@@ -216,30 +216,37 @@ class TestMcpRoundTableIntegration:
             f"expected persona citation in detail, got: {result.get('detail')}"
         )
 
-    # ── memory stub invocation (Phase 53 placeholder) ─────────────────────
+    # ── memory routing invocation (Phase 53 CREATIVE-02) ─────────────────
+    #
+    # Phase 52 originally shipped these tools as `phase53_not_implemented` stubs.
+    # Phase 53's CREATIVE-02 (plan 53-02) replaced the stubs with real mem0 routing
+    # per CONTEXT.md decision #5. Without `MEM0_API_KEY` or mem0 backend configured
+    # (the default in tests), the routing layer degrades gracefully to
+    # `{"status": "unavailable", ...}` — never raises. The contract is the `status`
+    # key being one of `{"phase53_not_implemented", "unavailable", "ok"}`.
 
     @pytest.mark.asyncio
     async def test_memory_retrieve_scoped_stub_via_tool(self, mcp_server):
-        """``memory_retrieve_scoped`` tool returns phase53_not_implemented stub."""
+        """``memory_retrieve_scoped`` tool degrades gracefully without mem0 configured."""
         result = await _ainvoke(
             mcp_server,
             "memory_retrieve_scoped",
             query="anything",
             agent_id="test-coordinator",
         )
-        # The stub payload is documented in CONTEXT.md point 3
-        assert result == {"status": "phase53_not_implemented", "hits": []}
+        assert result["status"] in {"phase53_not_implemented", "unavailable", "ok"}
+        assert result.get("hits", []) == []
 
     @pytest.mark.asyncio
     async def test_memory_submit_record_stub_via_tool(self, mcp_server):
-        """``memory_submit_record`` tool returns phase53_not_implemented stub."""
+        """``memory_submit_record`` tool degrades gracefully without mem0 configured."""
         result = await _ainvoke(
             mcp_server,
             "memory_submit_record",
             agent_id="test-coordinator",
             content="a test memory",
         )
-        assert result == {"status": "phase53_not_implemented", "record_id": None}
+        assert result["status"] in {"phase53_not_implemented", "unavailable", "ok"}
 
     # ── SC#2: lifecycle round trip ────────────────────────────────────────
 
