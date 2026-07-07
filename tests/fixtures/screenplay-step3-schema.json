@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-agent.local/v11/screenplay-step3-schema.json",
+  "title": "Screenplay Step 3 Output Schema (HOOK-09 emotion_curve marker contract)",
+  "description": "JSON Schema for the output of run_screenplay_step3_roundtable.py.\nMirrors HOOK-09 emotion_curve marker contract per 05-POC-PLAN.md §3.2:\nthe screenplay Step 3 JSON must declare logline + scene_breakdown (each\nwith its own per-scene emotion_curve) + hooks + payoffs + cliffhangers\n+ a top-level emotion_curve array. Downstream hook_retention +\nscript_auditor + storyboard Step 6.5 + visual_executor Step 7 all\nconsume these arrays — losing them in transform breaks the pipeline\n(Phase 49 §2.4 HOOK-09 invariant).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["logline", "scene_breakdown", "hooks", "payoffs", "cliffhangers", "emotion_curve"],
+  "properties": {
+    "logline": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One-line story premise. minLength 10 filters placeholder/empty loglines."
+    },
+    "scene_breakdown": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-scene structural breakdown. Each scene carries its own emotion_curve array so downstream hook_retention can verify per-scene marker coverage (HOOK-09 contract per 05-POC-PLAN.md §3.2).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scene_id", "beats", "emotion_curve"],
+        "properties": {
+          "scene_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable scene identifier (e.g. 'S1', 'S2-1'). Used by payoffs.setup_scene_id + cliffhangers.scene_id cross-references."
+          },
+          "beats": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"},
+            "description": "Narrative beats (Save-the-Cat / McKee value-shift units)."
+          },
+          "emotion_curve": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Per-scene emotion curve markers (HOOK-09). Each entry pins arousal + valence at a timestamp within this scene.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["timestamp_seconds", "arousal", "valence"],
+              "properties": {
+                "timestamp_seconds": {"type": "number", "minimum": 0},
+                "arousal": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                "valence": {"type": "number", "minimum": -1.0, "maximum": 1.0}
+              }
+            }
+          }
+        }
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "description": "HOOK-09 hook markers. Each hook pins a retention event at a timestamp; type enumerates the 5 hook categories per hook_retention §2.2.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timestamp_seconds", "type", "payload"],
+        "properties": {
+          "timestamp_seconds": {"type": "number", "minimum": 0},
+          "type": {
+            "type": "string",
+            "enum": ["cold_open", "curiosity", "shock", "cliffhanger", "paywall"]
+          },
+          "payload": {
+            "type": "string",
+            "description": "Free-text description of the hook event (model-generated)."
+          }
+        }
+      }
+    },
+    "payoffs": {
+      "type": "array",
+      "description": "HOOK-09 payoff markers. Each payoff links a setup scene to its resolution scene — preserves narrative promise-fulfillment chain.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["setup_scene_id", "payoff_scene_id", "payload"],
+        "properties": {
+          "setup_scene_id": {"type": "string", "minLength": 1},
+          "payoff_scene_id": {"type": "string", "minLength": 1},
+          "payload": {"type": "string"}
+        }
+      }
+    },
+    "cliffhangers": {
+      "type": "array",
+      "description": "HOOK-09 cliffhanger markers. Each cliffhanger pins a scene-ending tension event + cut_point_seconds for editorial timing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scene_id", "tension_level", "cut_point_seconds"],
+        "properties": {
+          "scene_id": {"type": "string", "minLength": 1},
+          "tension_level": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+          "cut_point_seconds": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "emotion_curve": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Top-level emotion curve markers (HOOK-09). Distinct from per-scene emotion_curve inside scene_breakdown — this array is what hook_retention + script_auditor cross-reference against hooks/payoffs/cliffhangers for marker-coverage checks. MUST be non-empty per HOOK-09 contract.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timestamp_seconds", "arousal", "valence"],
+        "properties": {
+          "timestamp_seconds": {"type": "number", "minimum": 0},
+          "arousal": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+          "valence": {"type": "number", "minimum": -1.0, "maximum": 1.0}
+        }
+      }
+    }
+  }
+}
