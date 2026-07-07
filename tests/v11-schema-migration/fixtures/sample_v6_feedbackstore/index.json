@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "decay_window_days": 180,
+  "updated_ts": "2026-06-02T16:05:00+00:00",
+  "buckets": {
+    "cinematographer:manual:bad": {
+      "count": 3,
+      "weighted_count": 3.0,
+      "first_ts": "2026-06-02T14:05:00+00:00",
+      "last_ts": "2026-06-02T16:05:00+00:00"
+    },
+    "cinematographer:manual:good": {
+      "count": 3,
+      "weighted_count": 3.0,
+      "first_ts": "2026-06-02T07:05:00+00:00",
+      "last_ts": "2026-06-02T09:05:00+00:00"
+    },
+    "cinematographer:manual:needs_work": {
+      "count": 4,
+      "weighted_count": 4.0,
+      "first_ts": "2026-06-02T10:05:00+00:00",
+      "last_ts": "2026-06-02T13:05:00+00:00"
+    },
+    "screenplay:cli:bad": {
+      "count": 4,
+      "weighted_count": 4.0,
+      "first_ts": "2026-06-01T19:05:00+00:00",
+      "last_ts": "2026-06-01T22:05:00+00:00"
+    },
+    "screenplay:cli:good": {
+      "count": 4,
+      "weighted_count": 4.0,
+      "first_ts": "2026-06-01T11:05:00+00:00",
+      "last_ts": "2026-06-01T14:05:00+00:00"
+    },
+    "screenplay:cli:needs_work": {
+      "count": 4,
+      "weighted_count": 4.0,
+      "first_ts": "2026-06-01T15:05:00+00:00",
+      "last_ts": "2026-06-01T18:05:00+00:00"
+    },
+    "screenplay:kais_aigc:bad": {
+      "count": 2,
+      "weighted_count": 2.0,
+      "first_ts": "2026-06-02T05:05:00+00:00",
+      "last_ts": "2026-06-02T06:05:00+00:00"
+    },
+    "screenplay:kais_aigc:good": {
+      "count": 3,
+      "weighted_count": 3.0,
+      "first_ts": "2026-06-01T23:05:00+00:00",
+      "last_ts": "2026-06-02T01:05:00+00:00"
+    },
+    "screenplay:kais_aigc:needs_work": {
+      "count": 3,
+      "weighted_count": 3.0,
+      "first_ts": "2026-06-02T02:05:00+00:00",
+      "last_ts": "2026-06-02T04:05:00+00:00"
+    }
+  },
+  "by_sha256": {}
+}
