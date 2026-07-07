@@ -232,6 +232,19 @@ async def run_roundtable(
                 exc,
             )
 
+        # RPM pacing: GLM bursts hit 1302 if panelist calls fire back-to-back
+        # while gateway traffic shares the same 4-key pool. 2.5s sleep between
+        # panelists keeps combined RPM under ceiling. Total adds ~22s to a
+        # 9-agent round table — acceptable per SC#2 (latency budget is PER
+        # call, not total).
+        if agent_id != PANEL_9[-1]:
+            await asyncio.sleep(2.5)
+
+    # Pre-synthesis breathing room — synthesis is the 10th consecutive call
+    # and the most likely to trip RPM. 5s pause lets the rate-limit window
+    # slide forward before the heaviest call.
+    await asyncio.sleep(5.0)
+
     # ------------------------------------------------------------------ #
     # Step 3 — synthesis pass (10th GLM call) → HOOK-09-valid Step 3 JSON
     # ------------------------------------------------------------------ #
