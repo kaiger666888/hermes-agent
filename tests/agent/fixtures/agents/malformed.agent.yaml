@@ -1,0 +1,25 @@
+# Negative fixture: multiple schema violations, used by
+# tests/agent/test_registry_loader.py::TestMalformedYamlRejection.
+#
+# Intentional violations (the loader surfaces the FIRST one when sorted by
+# JSON path — see load_one_agent_yaml in agent/registry_loader.py):
+#   - persona: OMITTED entirely (required field; surfaces at root path "$.persona")
+#   - version: "not-semver" (violates ^[0-9]+\.[0-9]+\.[0-9]+$ pattern)
+#   - tools: "should-be-array" (string instead of array — wrong type)
+#   - memory_scope: invalid_scope (not in enum [shared, per_agent, project_scoped])
+#   - lineage.skill_sha256: "short" (violates ^[a-f0-9]{64}$ pattern)
+#
+# Schema authority: .planning/research/v10-orchestrator-design/agents-schema.yaml
+name: malformed
+description: |
+  Negative fixture exercising every common schema-violation flavor so the
+  loader's first-error-sorted-by-path behavior is well-defined.
+version: "not-semver"
+# persona deliberately OMITTED — the first sorted error cites "$.persona".
+tools: "should-be-array"
+memory_scope: invalid_scope
+lineage:
+  derived_from_skill_id: malformed-skill
+  derived_from_repo: tests
+  transform_date: "2026-07-07"
+  skill_sha256: "short"
