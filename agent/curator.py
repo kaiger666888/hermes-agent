@@ -1939,10 +1939,17 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
 def run_curator_review(
     on_summary: Optional[Callable[[str], None]] = None,
     synchronous: bool = False,
-    dry_run: bool = False,
+    dry_run: bool = True,
     consolidate: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Execute a single curator review pass.
+
+    Default is **dry_run=True** (dry-run-first invariant per
+    ``05-POC-PLAN.md §4.6`` + planning_context contract #4). Callers MUST
+    pass ``dry_run=False`` explicitly to perform live writes. The previous
+    default of ``False`` (live writes) was flipped in EVAL-06 (Phase 55-03)
+    as P5 mitigation: a caller omitting the kwarg or passing ``None`` must
+    NOT trigger live writes.
 
     Steps:
       1. Apply automatic state transitions (pure, no LLM).
@@ -1962,18 +1969,30 @@ def run_curator_review(
     the deterministic inactivity prune runs and the forked aux-model review is
     skipped entirely (no aux-model cost).
 
-    If *dry_run* is True, the automatic stale/archive transitions are SKIPPED
-    and the LLM review pass is instructed to produce a report only — no
-    skill_manage mutations, no terminal archive moves. The REPORT.md still
-    gets written and ``state.last_report_path`` still records it so users
-    can read what the curator WOULD have done. A dry-run also honors
-    *consolidate*: when consolidation is off, the preview only reports the
-    deterministic prune candidates.
+    If *dry_run* is True (the new default), the automatic stale/archive
+    transitions are SKIPPED and the LLM review pass is instructed to produce
+    a report only — no skill_manage mutations, no terminal archive moves. The
+    REPORT.md still gets written and ``state.last_report_path`` still records
+    it so users can read what the curator WOULD have done. A dry-run also
+    honors *consolidate*: when consolidation is off, the preview only reports
+    the deterministic prune candidates.
     """
     if consolidate is None:
         consolidate = get_consolidate()
+    # EVAL-06 dry-run-first invariant (per 05-POC-PLAN.md §4.6 + planning_context
+    # contract #4): default is dry_run=True. None/missing args are treated as
+    # True (defense-in-depth — caller cannot accidentally trigger live writes
+    # by passing None or by omitting the kwarg).
+    if dry_run is None:
+        dry_run = True
     start = datetime.now(timezone.utc)
     if dry_run:
+        logger.info(CURATOR_DRY_RUN_BANNER)
+        if on_summary is not None:
+            try:
+                on_summary(CURATOR_DRY_RUN_BANNER)
+            except Exception:
+                pass
         # Count candidates without mutating state.
         try:
             report = skill_usage.agent_created_report()

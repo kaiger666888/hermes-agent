@@ -465,7 +465,9 @@ def test_run_review_records_state(curator_env):
     _write_skill(skills_dir, "a")
     u.mark_agent_created("a")
 
-    result = c.run_curator_review(synchronous=True)
+    # EVAL-06 (Phase 55-03): default is dry_run=True; live writes require
+    # explicit dry_run=False.
+    result = c.run_curator_review(synchronous=True, dry_run=False)
     assert "started_at" in result
     state = c.load_state()
     assert state["last_run_at"] is not None
@@ -630,7 +632,11 @@ def test_run_review_skips_llm_when_consolidate_off(curator_env, monkeypatch):
     )
 
     captured = []
-    c.run_curator_review(on_summary=lambda s: captured.append(s), synchronous=True)
+    # EVAL-06 (Phase 55-03): default is dry_run=True; this test asserts the
+    # run is recorded (last_run_at set) which only happens in live mode.
+    c.run_curator_review(
+        on_summary=lambda s: captured.append(s), synchronous=True, dry_run=False
+    )
 
     assert calls == []  # LLM consolidation fork not invoked
     assert any("consolidation off" in s for s in captured)

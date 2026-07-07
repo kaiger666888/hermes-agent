@@ -286,7 +286,9 @@ def test_real_run_takes_pre_snapshot(backup_env, monkeypatch):
         lambda now=None: {"checked": 1, "marked_stale": 0, "archived": 0, "reactivated": 0},
     )
 
-    curator.run_curator_review(synchronous=True)
+    # EVAL-06 (Phase 55-03): default is dry_run=True; snapshots only happen
+    # in live mode (the pre-mutation snapshot guards real writes).
+    curator.run_curator_review(synchronous=True, dry_run=False)
     # Pre-run snapshot should exist
     rows = cb.list_backups()
     assert any(r.get("reason") == "pre-curator-run" for r in rows), (
