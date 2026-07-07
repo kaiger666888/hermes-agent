@@ -76,7 +76,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 52-03-PLAN.md — INFRA-02 7 MCP Tools Wire-up (FastMCP closures in mcp_serve.py + memory_arbitration stub)
+- [x] 52-03-PLAN.md — INFRA-02 7 MCP Tools Wire-up (FastMCP closures in mcp_serve.py + memory_arbitration stub)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. INFRA-FOUNDATION | 2/4 | In Progress|  |
+| 52. INFRA-FOUNDATION | 3/4 | In Progress|  |
 | 53. CREATIVE-SLICE | 0/TBD | Not started | - |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
