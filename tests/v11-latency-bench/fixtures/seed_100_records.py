@@ -21,10 +21,25 @@ from pathlib import Path
 # has hyphens). We sys.path-inject the parent test dir so we can import
 # the FakeBackend from conftest.py.
 _PARENT = Path(__file__).resolve().parent.parent
-if str(_PARENT) not in sys.path:
-    sys.path.insert(0, str(_PARENT))
 
-from conftest import FakeBackend  # noqa: E402
+
+def _load_fake_backend():
+    """Load FakeBackend from sibling conftest.py by file path.
+
+    Avoids 'from conftest import X' ambiguity when multiple conftest.py
+    files exist in sys.path (e.g., tests/v11-bias-canary/conftest.py
+    being loaded first).
+    """
+    import importlib.util as _ilu
+    fp = _PARENT / 'conftest.py'
+    spec = _ilu.spec_from_file_location('_v11_latency_bench_conftest', fp)
+    assert spec is not None and spec.loader is not None, f'cannot load {fp}'
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.FakeBackend
+
+
+FakeBackend = _load_fake_backend()
 
 #: Total record count this fixture preloads.
 RECORD_COUNT: int = 100

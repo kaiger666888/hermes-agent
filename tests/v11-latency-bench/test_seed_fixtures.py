@@ -24,8 +24,22 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 _FIXTURES_DIR = _REPO_ROOT / "tests" / "v11-latency-bench" / "fixtures"
-if str(_FIXTURES_DIR) not in sys.path:
-    sys.path.insert(0, str(_FIXTURES_DIR))
+
+
+def _load_fixture_module(name: str):
+    """Load a fixture module by file path to avoid sys.path ambiguity.
+
+    pytest's auto-conftest discovery + multiple test directories can leave
+    `sys.modules` with stale entries or have path-ordering issues. Loading
+    by file path (importlib.util) is unambiguous.
+    """
+    import importlib.util as _ilu
+    fp = _FIXTURES_DIR / f"{name}.py"
+    spec = _ilu.spec_from_file_location(f"_v11_fixture_{name}", fp)
+    assert spec is not None and spec.loader is not None, f"cannot load {fp}"
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # ── Test 1: seed fixtures return correct record counts ──────────────────────
@@ -35,27 +49,27 @@ class TestSeedFixtures:
     """All 3 seed modules build a backend with the claimed record count."""
 
     def test_seed_100_records(self):
-        import seed_100_records as m
+        m = _load_fixture_module("seed_100_records")
         backend = m.build_fixture_backend()
         assert len(backend) == 100
         # All records belong to the same agent_id (scoped filter target).
         assert all(r["agent_id"] == "ag1" for r in backend.records)
 
     def test_seed_500_records(self):
-        import seed_500_records as m
+        m = _load_fixture_module("seed_500_records")
         backend = m.build_fixture_backend()
         assert len(backend) == 500
         assert all(r["agent_id"] == "ag1" for r in backend.records)
 
     def test_seed_1000_records(self):
-        import seed_1000_records as m
+        m = _load_fixture_module("seed_1000_records")
         backend = m.build_fixture_backend()
         assert len(backend) == 1000
         assert all(r["agent_id"] == "ag1" for r in backend.records)
 
     def test_fixtures_are_deterministic(self):
         """Two builds of the same fixture must produce identical record lists."""
-        import seed_500_records as m
+        m = _load_fixture_module("seed_500_records")
         b1 = m.build_fixture_backend()
         b2 = m.build_fixture_backend()
         assert (

@@ -32,13 +32,18 @@ import pytest
 # import. pytest still discovers ``conftest.py`` automatically (fixtures
 # become injectable by name), but for direct class access in test bodies
 # (we instantiate FakeBackend explicitly so we can inject failure modes),
-# we load the module by file path. This mirrors the same trick the
-# benchmark script uses (``importlib`` per 54-02-PLAN.md Task 2 action note).
+# we load the conftest module by file path. This avoids the ambiguity of
+# `from conftest import X` when multiple conftest.py files exist in sys.path
+# (which happens when running tests across multiple directories).
 _TESTS_DIR = Path(__file__).resolve().parent
-if str(_TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_TESTS_DIR))
+_CONFTEST_PATH = _TESTS_DIR / "conftest.py"
 
-from conftest import FakeBackend  # noqa: E402  (sys.path-injected)
+import importlib.util as _importlib_util
+_spec = _importlib_util.spec_from_file_location("_v11_latency_bench_conftest", _CONFTEST_PATH)
+assert _spec is not None and _spec.loader is not None, f"cannot load {_CONFTEST_PATH}"
+_conftest_module = _importlib_util.module_from_spec(_spec)
+_spec.loader.exec_module(_conftest_module)
+FakeBackend = _conftest_module.FakeBackend
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
