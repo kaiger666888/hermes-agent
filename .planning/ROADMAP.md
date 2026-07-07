@@ -64,7 +64,7 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   2. v11.0 SC#2 smoke test latency drops from 490s to <240s.
   3. All v11.0 + v12.0 unit tests pass.
 **Plans**:
-- [ ] 57-01-PLAN.md — Add prompt-length-aware endpoint routing (helper + wire-in + tests + config docs)
+- [x] 57-01-PLAN.md — Add prompt-length-aware endpoint routing (helper + wire-in + tests + config docs)
 
 ### Phase 58: RPM-THROTTLING
 
