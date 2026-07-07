@@ -1,0 +1,29 @@
+{
+  "record_id": "bad-no-operator-id",
+  "agent_id": "editor",
+  "scope": "project",
+  "project_id": "demo:abcd1234",
+  "status": "active",
+  "confidence": 0.8,
+  "half_life_days": 3650,
+  "expires_at": null,
+  "verified_at": null,
+  "supersedes_memory_id": null,
+  "evidence_chain": [
+    {"source_type": "feedback", "source_id": "fb-009", "timestamp": "2026-07-07T10:00:00Z", "excerpt": "editor prefers jump cuts"},
+    {"source_type": "feedback", "source_id": "fb-010", "timestamp": "2026-07-07T10:05:00Z", "excerpt": "editor prefers jump cuts"}
+  ],
+  "evidence_operator_ids": [],
+  "evidence_records": [
+    {"text": "editor prefers fast jump cuts for action sequences"},
+    {"text": "editor prefers fast jump cuts for action sequences"}
+  ],
+  "text": "editor prefers fast jump cuts for action sequences",
+  "confidentiality": "internal",
+  "persona_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at": "2026-07-07T10:10:00Z",
+  "last_recalled_at": null,
+  "recall_count": 0,
+  "schema_version": "1.0.0",
+  "_canary_expected_failure": "operator_diversity"
+}

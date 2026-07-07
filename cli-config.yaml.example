@@ -512,6 +512,18 @@ prompt_caching:
 #     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
 #     model: glm-5.2         # Phase 54 EVAL-01 fitness battery judge
 #     timeout: 30            # T-54-03 mitigation (max_tokens clamp also applied)
+#
+#   # ----- Phase 54 v11.0 bias canary claim-check (EVAL-03) -----
+#   # MEMORY.md feedback-glm-5-2-only.md mandates GLM-only for the LLM
+#   # claim-support pass in agent/curator_bias_canary.py. The canary runs
+#   # in dry-run (default mode uses a mock LLM; --smoke invokes real GLM).
+#   # Serial lock via glm_concurrency_guard.acquire_glm_slot wraps every
+#   # dispatch — MEMORY.md feedback-glm-overload-reduce-concurrency.md.
+#   # See .planning/phases/54-eval-harness-1/54-03-PLAN.md.
+#   bias_canary_claim_check:
+#     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
+#     model: glm-5.2         # Phase 54 EVAL-03 bias canary claim-check
+#     timeout: 30            # T-54-08 mitigation (fail-safe default on malformed response)
 
 # =============================================================================
 # Persistent Memory
