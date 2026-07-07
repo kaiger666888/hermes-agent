@@ -1,0 +1,63 @@
+{
+  "scenarios": [
+    {
+      "name": "session_vs_global",
+      "question": "Should the ending of this short-drama be bittersweet or tragic?",
+      "memory_a": {
+        "record_id": "mem-A-001",
+        "content": "For THIS specific round, the panel agreed on bittersweet ending.",
+        "scope": "session",
+        "confidence": 0.78,
+        "evidence_chain": [
+          {"source_type": "round_table", "source_id": "rt-prior-001"},
+          {"source_type": "operator_edit", "source_id": "op-kai-2026-07-01"}
+        ],
+        "evidence_operator_ids": ["kai", "reviewer-1"],
+        "agent_id": "screenplay"
+      },
+      "memory_b": {
+        "record_id": "mem-B-001",
+        "content": "Tragedy endings test 23% better across all projects historically.",
+        "scope": "global",
+        "confidence": 0.95,
+        "evidence_chain": [
+          {"source_type": "ab_test", "source_id": "ab-2025q4"}
+        ],
+        "evidence_operator_ids": ["data-pipeline"],
+        "agent_id": "theory_critic"
+      },
+      "panelist_a": "screenplay",
+      "panelist_b": "theory_critic",
+      "expected_resolution": "A-wins"
+    },
+    {
+      "name": "same_scope_tie",
+      "question": "Should the protagonist's motivation be revenge or redemption?",
+      "memory_a": {
+        "record_id": "mem-A-002",
+        "content": "Volvo project's audience prefers redemption arcs.",
+        "scope": "project",
+        "confidence": 0.93,
+        "evidence_chain": [
+          {"source_type": "audience_survey", "source_id": "survey-volvo-001"}
+        ],
+        "evidence_operator_ids": ["kai"],
+        "agent_id": "screenplay"
+      },
+      "memory_b": {
+        "record_id": "mem-B-002",
+        "content": "Volvo project's prior A/B test favored revenge framing.",
+        "scope": "project",
+        "confidence": 0.91,
+        "evidence_chain": [
+          {"source_type": "ab_test", "source_id": "ab-volvo-002"}
+        ],
+        "evidence_operator_ids": ["data-pipeline"],
+        "agent_id": "theory_critic"
+      },
+      "panelist_a": "screenplay",
+      "panelist_b": "theory_critic",
+      "expected_resolution": "deferred-to-operator"
+    }
+  ]
+}
