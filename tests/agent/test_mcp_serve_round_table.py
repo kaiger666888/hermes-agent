@@ -161,6 +161,61 @@ class TestMcpRoundTableIntegration:
         assert result.get("error") == "agent_not_found"
         assert result.get("name") == "nonexistent"
 
+    # ── WR-02 fix: typed registry_validation_failed responses ────────────
+
+    def test_agents_list_returns_typed_400_on_malformed_fixture(self, monkeypatch, tmp_path):
+        """WR-02: when registry_loader raises RegistryValidationError, the
+        MCP closure returns a typed 400 ``registry_validation_failed``
+        response with structured ``json_path`` + ``invalid_field`` instead
+        of collapsing the schema violation into a generic 500 ``open_failed``.
+
+        Test strategy: drop the existing ``malformed.agent.yaml`` fixture
+        (which omits ``persona`` — surfaces at ``$.persona``) into the
+        redirected HERMES_HOME, force-reload the registry, and assert the
+        typed error response. The fixture is already shipped under
+        ``tests/agent/fixtures/agents/``.
+        """
+        # Build a fresh server fixture with the malformed YAML staged in
+        # — mirror the mcp_server fixture but ADD the malformed file.
+        from hermes_constants import get_hermes_home
+        from mcp_serve import create_mcp_server, EventBridge
+
+        agents_dir = get_hermes_home() / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(VALID_FIXTURE, agents_dir / "test-coordinator.agent.yaml")
+        shutil.copyfile(FIXTURES_DIR / "malformed.agent.yaml", agents_dir / "malformed.agent.yaml")
+
+        # Force registry_loader to reload
+        try:
+            from agent import registry_loader
+            monkeypatch.setattr(registry_loader, "_REGISTRY_CACHE", None)
+        except Exception:
+            pass
+
+        bridge = EventBridge()
+        server = create_mcp_server(event_bridge=bridge)
+
+        result = _sinvoke(server, "agents_list")
+        # WR-02 load-bearing assertions
+        assert result.get("status") == 400, (
+            f"expected 400 for malformed registry, got {result}"
+        )
+        assert result.get("error") == "registry_validation_failed", (
+            f"expected error=registry_validation_failed, got {result.get('error')}"
+        )
+        # Structured fields (json_path + invalid_field) must be present so
+        # callers don't have to regex the human-readable message.
+        assert result.get("json_path") is not None, (
+            "json_path MUST be present so callers can locate the schema violation"
+        )
+        assert result.get("invalid_field") is not None, (
+            "invalid_field MUST be present so callers know which field failed"
+        )
+        # The malformed fixture omits persona — first sorted error cites $.persona
+        assert "persona" in result.get("detail", ""), (
+            f"expected persona citation in detail, got: {result.get('detail')}"
+        )
+
     # ── memory stub invocation (Phase 53 placeholder) ─────────────────────
 
     @pytest.mark.asyncio

@@ -72,7 +72,26 @@ logger = logging.getLogger(__name__)
 
 
 class RegistryValidationError(Exception):
-    """Raised when an agent YAML fails schema validation or filename invariant."""
+    """Raised when an agent YAML fails schema validation or filename invariant.
+
+    WR-02 fix: optional structured fields ``json_path`` and ``invalid_field``
+    let MCP closures return typed 400 responses that preserve the
+    schema-violation specifics instead of collapsing them into a generic
+    ``open_failed`` string. Callers (e.g. ``mcp_serve.round_table_open``)
+    can read these attributes to surface the field-level error to the MCP
+    client; older callers that just stringify the exception still work.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        json_path: str | None = None,
+        invalid_field: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.json_path = json_path
+        self.invalid_field = invalid_field
 
 
 # --------------------------------------------------------------------------- #
@@ -195,8 +214,13 @@ def load_one_agent_yaml(yaml_path: Path) -> dict[str, Any]:
     if errors:
         first = errors[0]
         path = _format_json_path(first)
+        # WR-02: surface structured json_path + invalid_field so MCP closures
+        # can return typed 400 responses preserving schema-violation specifics.
+        invalid_field = path.lstrip("$.") if path.startswith("$.") else None
         raise RegistryValidationError(
-            f"{yaml_path}: schema violation at {path}: {first.message}"
+            f"{yaml_path}: schema violation at {path}: {first.message}",
+            json_path=path,
+            invalid_field=invalid_field,
         )
 
     # 3. Filename invariant (T-52-03 spoofing mitigation): the YAML's

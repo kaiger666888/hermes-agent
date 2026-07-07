@@ -900,14 +900,32 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             tag: Optional tag filter; matches any tag in the agent's
                 ``tags`` list (agents-schema.yaml §2.9).
         """
-        from agent.registry_loader import load_agent_registry
+        from agent.registry_loader import (
+            RegistryValidationError,
+            load_agent_registry,
+        )
 
         try:
             entries = load_agent_registry()
+        except RegistryValidationError as exc:
+            # WR-02: surface typed 400 with json_path / invalid_field so
+            # callers can debug schema violations without parsing the
+            # human-readable message.
+            logger.warning("agents_list: registry validation failed: %s", exc)
+            return json.dumps(
+                {
+                    "error": "registry_validation_failed",
+                    "status": 400,
+                    "detail": str(exc),
+                    "json_path": exc.json_path,
+                    "invalid_field": exc.invalid_field,
+                },
+                indent=2,
+            )
         except Exception as exc:
             logger.warning("agents_list: registry load failed: %s", exc)
             return json.dumps(
-                {"error": "registry_load_failed", "detail": str(exc)},
+                {"error": "registry_load_failed", "status": 500, "detail": str(exc)},
                 indent=2,
             )
 
@@ -949,14 +967,30 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             name: The agent's ``name`` field (must match a filename stem
                 under ``~/.hermes/agents/``).
         """
-        from agent.registry_loader import load_agent_registry
+        from agent.registry_loader import (
+            RegistryValidationError,
+            load_agent_registry,
+        )
 
         try:
             entries = load_agent_registry()
+        except RegistryValidationError as exc:
+            # WR-02: surface typed 400 with structured fields.
+            logger.warning("agent_describe: registry validation failed: %s", exc)
+            return json.dumps(
+                {
+                    "error": "registry_validation_failed",
+                    "status": 400,
+                    "detail": str(exc),
+                    "json_path": exc.json_path,
+                    "invalid_field": exc.invalid_field,
+                },
+                indent=2,
+            )
         except Exception as exc:
             logger.warning("agent_describe: registry load failed: %s", exc)
             return json.dumps(
-                {"error": "registry_load_failed", "detail": str(exc)},
+                {"error": "registry_load_failed", "status": 500, "detail": str(exc)},
                 indent=2,
             )
 
@@ -1033,6 +1067,7 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             )
 
         from hermes_constants import get_hermes_home
+        from agent.registry_loader import RegistryValidationError
         from agent.round_table_state import open_round_table
 
         state_dir = (
@@ -1051,12 +1086,29 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
                 panelist_agent_ids=panelist_agent_ids,
                 caller=caller,
             )
+        except RegistryValidationError as exc:
+            # WR-02 fix: surface typed 400 with the structured json_path /
+            # invalid_field so callers can debug schema violations without
+            # parsing the human-readable message.
+            logger.warning(
+                "round_table_open: registry validation failed: %s", exc
+            )
+            return json.dumps(
+                {
+                    "error": "registry_validation_failed",
+                    "status": 400,
+                    "detail": str(exc),
+                    "json_path": exc.json_path,
+                    "invalid_field": exc.invalid_field,
+                },
+                indent=2,
+            )
         except Exception as exc:
             logger.warning(
                 "round_table_open: open_round_table failed: %s", exc
             )
             return json.dumps(
-                {"error": "open_failed", "detail": str(exc)},
+                {"error": "open_failed", "status": 500, "detail": str(exc)},
                 indent=2,
             )
 
