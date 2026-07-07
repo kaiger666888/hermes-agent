@@ -120,11 +120,17 @@ Plans:
   2. A user can run the latency benchmark and observe `memory_retrieve_scoped` MCP tool p95 latency **< 500ms** across 100 sequential retrievals on a populated 500-record memory store (excluding LLM call); the benchmark is instrumented in code, produces a results JSON + `.planning/research/v11-poc-eval/latency-baseline.md` documenting baseline + bottleneck analysis.
   3. A user can run `scripts/run_bias_canary.py` and observe that 4/5 known-bad synthetic memory records (low `evidence_chain`, low `confidence`, unsupported claims) are flagged by the curator `_memory_evolution_phase` in dry-run mode; the bias canary is wired as an extension of `agent/curator.py` and emits a canary report.
 
-**Plans**: TBD
+**Plans**: 3 plans across 2 waves — Wave 1 (54-01 + 54-02 parallel, no file overlap) + Wave 2 (54-03 depends on 54-01 for LLM-judge pattern)
 
 Plans:
+**Wave 1** (parallel — no file overlap)
 
-- [ ] 54-01: TBD
+- [ ] 54-01-PLAN.md — EVAL-01 Fitness Battery (8 scenario YAMLs + agent/fitness_battery.py runner + run_fitness_battery.py CLI + tests)
+- [ ] 54-02-PLAN.md — EVAL-02 Latency SLO Benchmark (memory_scoped_retrieval.py timing wrapper + 3 seed fixtures + run_latency_benchmark.py + latency-baseline.md)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 54-03-PLAN.md — EVAL-03 Bias Canary (curator_bias_canary.py with 3 checks + 6 fixtures + run_bias_canary.py + tests)
 
 ---
 
@@ -221,7 +227,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 |-------|----------------|--------|-----------|
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
-| 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
+| 54. EVAL-HARNESS-1 | 0/3 | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
 
