@@ -1,0 +1,48 @@
+id: conflict-resolution-confidence-voting
+description: >
+  Same-scope tie: two project-scoped memories disagree. Runner must
+  break the tie via confidence-weighted voting + evidence_chain depth
+  (Phase 53 apply_tie_break contract). Higher confidence + deeper
+  evidence_chain wins.
+input:
+  question: "Should the protagonist's motivation be revenge or redemption?"
+  mem_a:
+    record_id: "mem-A-002"
+    content: "Volvo project's audience prefers redemption arcs."
+    scope: "project"
+    confidence: 0.93
+    evidence_chain:
+      - {source_type: "audience_survey", source_id: "survey-volvo-001"}
+      - {source_type: "operator_edit", source_id: "op-kai-2026-06-15"}
+      - {source_type: "ab_test", source_id: "ab-volvo-pilot"}
+    evidence_operator_ids: ["kai", "reviewer-1"]
+    agent_id: "screenplay"
+  mem_b:
+    record_id: "mem-B-002"
+    content: "Volvo project's prior A/B test favored revenge framing."
+    scope: "project"
+    confidence: 0.91
+    evidence_chain:
+      - {source_type: "ab_test", source_id: "ab-volvo-002"}
+    evidence_operator_ids: ["data-pipeline"]
+    agent_id: "theory_critic"
+expected_output:
+  feature: >
+    Arbitration either (a) declares winner == "a" by confidence +
+    evidence_chain depth (mem-a: 0.93 conf, 3-piece chain vs mem-b:
+    0.91 conf, 1-piece chain), OR (b) declares a tie and defers to
+    operator (deferred-to-operator is a valid outcome per
+    memory-conflict-2conflict.json fixture when confidence delta <
+    threshold). Either path is acceptable; what is NOT acceptable is
+    picking "b" outright.
+  rationale: >
+    Tie-break logic must be principled (confidence + evidence depth +
+    operator evidence count). Arbitrary picks or "first writer wins"
+    would let any panelist override better-evidenced records.
+scoring_rubric:
+  - criterion: "Either winner == 'a' OR outcome deferred-to-operator (NOT winner == 'b')"
+    weight: 0.50
+  - criterion: "Reason references confidence + evidence_chain depth (not arbitrary)"
+    weight: 0.30
+  - criterion: "Scope comparison correctly identifies both as 'project' (same scope)"
+    weight: 0.20

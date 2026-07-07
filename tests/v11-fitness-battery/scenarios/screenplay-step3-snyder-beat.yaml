@@ -1,0 +1,38 @@
+id: screenplay-step3-snyder-beat
+description: >
+  Screenplay Step 3 must obey Blake Snyder's Save-the-Cat 15-beat
+  structure (Opening Image, Theme Stated, Set-Up, Catalyst, Debate,
+  Break into Two, B Story, Fun and Games, Midpoint, Bad Guys Close In,
+  All Is Lost, Dark Night of the Soul, Break into Three, Finale, Final
+  Image). Referenced in screenplay SKILL.md refs as the dominant
+  structural framework for short-drama pacing.
+input:
+  storykernel:
+    title: "Beats"
+    genre: "short-drama"
+    logline: "A dismissed chef opens a midnight pop-up that becomes the city's worst-kept secret."
+    target_scene_count: 5
+    duration_seconds: 240
+expected_output:
+  feature: >
+    Output's scene_breakdown covers >=10 of the 15 Snyder beats
+    (compressed for short-form — some beats collapse into the same
+    scene). Catalyst, Midpoint, All Is Lost, and Finale MUST be
+    present and identifiable. Each beat is named in scene beat text
+    or in a clearly demarcated structural label.
+  rationale: >
+    Snyder pacing is the canonical hook-retention framework for
+    short-drama — missing the load-bearing beats (Catalyst, Midpoint,
+    All Is Lost, Finale) predicts audience drop-off per hook_retention
+    SKILL.md.
+scoring_rubric:
+  - criterion: "Catalyst beat present and identifiable"
+    weight: 0.20
+  - criterion: "Midpoint beat present and identifiable"
+    weight: 0.20
+  - criterion: "All Is Lost beat present and identifiable"
+    weight: 0.20
+  - criterion: "Finale beat present and identifiable"
+    weight: 0.20
+  - criterion: ">=10 of 15 Snyder beats covered (allowing short-form compression)"
+    weight: 0.20
