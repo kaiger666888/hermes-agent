@@ -58,10 +58,13 @@ v10.0 (design-only milestone) shipped 2026-07-07 — Hermes-Agent orchestrator +
   2. A Claude Code (or other MCP client) round trip through `round_table_open` → 1 `get_agent_opinion` → `submit_round_table_result` lifecycle completes end-to-end against a single synthetic agent; the lifecycle is atomic (interrupted submit does not leave `status: in_progress`).
   3. A `round_table_open` invocation that crashes mid-turn (3 failure modes: partial-write, mid-turn crash, orphaned session) recovers on next access — the state machine transitions cleanly to `closed` or `error` without operator hand-intervention.
   4. A concurrent second `get_agent_opinion` submission against the same `roundId` is **rejected** with a clear serial-violation error (cites `feedback-glm-overload-reduce-concurrency.md`); a single sequential submission proceeds and returns the panelist opinion successfully.
-**Plans**: TBD
+**Plans**: 4 plans across 3 waves (Wave 1: 52-01; Wave 2: 52-02 + 52-03 parallel; Wave 3: 52-04)
 
 Plans:
-- [ ] 52-01: TBD
+- [ ] 52-01-PLAN.md — INFRA-01 Agent Registry YAML Loader (registry_loader.py + jsonschema validation + lazy cache)
+- [ ] 52-02-PLAN.md — INFRA-03 Round Table State Machine (open/append/submit + atomic writes + 3 crash-recovery modes)
+- [ ] 52-03-PLAN.md — INFRA-02 7 MCP Tools Wire-up (FastMCP closures in mcp_serve.py + memory_arbitration stub)
+- [ ] 52-04-PLAN.md — INFRA-04 Serial Execution Enforcement (per-roundId asyncio.Lock + 429 + MEMORY.md citation)
 
 ---
 
