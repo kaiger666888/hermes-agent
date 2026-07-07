@@ -48,6 +48,16 @@ CLAUDE.md compliance
 - ``except X as exc:`` with bound name; preserve chains via ``raise ... from exc``
 - NO top-level ``run_agent`` import (anti-pattern; this module imports from
   ``mcp_serve`` + ``agent.auxiliary_client`` only — all safe top-level).
+
+Phase 58 THROTTLE-01 note
+-------------------------
+v11.0 hardcoded ``asyncio.sleep(2.5)`` (between panelists) and
+``asyncio.sleep(5.0)`` (pre-synthesis) RPM pacing removed by Phase 58
+THROTTLE-01; ``agent/glm_throttle.py`` now handles pacing via a per-task
+token bucket (default 30 RPM) enforced inside
+``auxiliary_client.call_llm`` BEFORE endpoint routing runs. See
+``.planning/research/v11-poc-eval/smoke-test-report.md §3.1`` for the
+original v11.0 evidence (490s wall-clock, 5x z.ai retry storm).
 """
 
 from __future__ import annotations
@@ -232,18 +242,9 @@ async def run_roundtable(
                 exc,
             )
 
-        # RPM pacing: GLM bursts hit 1302 if panelist calls fire back-to-back
-        # while gateway traffic shares the same 4-key pool. 2.5s sleep between
-        # panelists keeps combined RPM under ceiling. Total adds ~22s to a
-        # 9-agent round table — acceptable per SC#2 (latency budget is PER
-        # call, not total).
-        if agent_id != PANEL_9[-1]:
-            await asyncio.sleep(2.5)
-
-    # Pre-synthesis breathing room — synthesis is the 10th consecutive call
-    # and the most likely to trip RPM. 5s pause lets the rate-limit window
-    # slide forward before the heaviest call.
-    await asyncio.sleep(5.0)
+        # Phase 58 THROTTLE-01: hardcoded asyncio.sleep(2.5) removed.
+        # Per-task RPM token bucket in agent/glm_throttle.py now handles
+        # pacing automatically inside auxiliary_client.call_llm.
 
     # ------------------------------------------------------------------ #
     # Step 3 — synthesis pass (10th GLM call) → HOOK-09-valid Step 3 JSON
