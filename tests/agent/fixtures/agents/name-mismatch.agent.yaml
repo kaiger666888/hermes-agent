@@ -1,0 +1,33 @@
+# Negative fixture: schema-valid YAML whose `name` field does NOT match the
+# filename stem. Used by tests/agent/test_registry_loader.py::TestNameFilenameMismatch.
+#
+# The schema authority (.planning/research/v10-orchestrator-design/agents-schema.yaml
+# §2.1) requires `name` to match the filename stem; load_one_agent_yaml in
+# agent/registry_loader.py enforces this AFTER schema validation passes.
+#
+# Filename stem: "name-mismatch"
+# `name` field:  "wrong-name"   ← mismatch
+#
+# This fixture MUST pass schema validation so the name==stem invariant is the
+# ONLY reason it gets rejected. If this fixture starts failing with a JSON path
+# like "$.tools" or "$.version", the schema has drifted — fix the fixture to
+# match the new schema, do NOT loosen the assertion.
+name: wrong-name
+description: |
+  Schema-valid agent whose `name` field deliberately disagrees with its
+  filename stem. Used to verify the filename invariant fires AFTER schema
+  validation rather than masking it.
+version: "1.0.0"
+persona: |
+  I am a fixture for the filename-stem invariant. My YAML is otherwise valid
+  per agents-schema.yaml; only the name field is wrong. If the loader raises
+  RegistryValidationError citing "does not match filename stem", the
+  invariant is enforced correctly.
+tools:
+  - read_file
+memory_scope: per_agent
+lineage:
+  derived_from_skill_id: name-mismatch-skill
+  derived_from_repo: tests
+  transform_date: 2026-07-07
+  skill_sha256: "0000000000000000000000000000000000000000000000000000000000000000"

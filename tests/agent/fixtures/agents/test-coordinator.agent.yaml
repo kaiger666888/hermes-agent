@@ -1,0 +1,25 @@
+# Minimal valid synthetic agent fixture for INFRA-01 SC#1 testing.
+# Consumed by tests/agent/test_registry_loader.py::TestValidYamlLoading.
+# Source: 52-PATTERNS.md (planned) / 52-RESEARCH.md §"Code Examples §YAML Loader Pattern".
+# Schema: .planning/research/v10-orchestrator-design/agents-schema.yaml (18 fields, Draft 2020-12).
+name: test-coordinator
+description: |
+  Synthetic test fixture coordinator agent used by INFRA-01 SC#1 unit tests.
+  Exercises every required field with the minimum acceptable content; no
+  optional fields beyond `tags` are populated.
+version: "1.0.0"
+persona: |
+  I am the test coordinator. I sequence test fixtures through the registry
+  loader so that schema violations and filename invariants surface with a
+  specific JSON path. I exist only inside the test suite — do not invoke
+  me from production code.
+tools:
+  - read_file
+memory_scope: per_agent
+lineage:
+  derived_from_skill_id: test-coordinator-skill
+  derived_from_repo: tests
+  transform_date: 2026-07-07
+  skill_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+tags:
+  - test-fixture
