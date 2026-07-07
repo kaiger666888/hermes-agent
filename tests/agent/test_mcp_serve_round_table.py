@@ -431,6 +431,64 @@ class TestMcpRoundTableIntegration:
         assert result.get("status") == 400
         assert result.get("error") == "invalid_round_id"
 
+    # ── WR-03 fix: panelist_agent_ids item-level validation ──────────────
+
+    @pytest.mark.asyncio
+    async def test_round_table_open_rejects_invalid_panelist_id_pattern(self, mcp_server):
+        """WR-03: each panelist_agent_ids item MUST match ``^[a-z0-9_-]+$``.
+
+        Without this, items like ``"Agent A"`` (uppercase + space) or
+        ``"../etc"`` would silently land on disk via open_round_table's
+        panelists[].agentId + turnOrder.seed writes.
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "round_table_open",
+            round_id=uuid.uuid4().hex,
+            project_slug="test-slug",
+            question="Q?",
+            panelist_agent_ids=["valid-id", "Bad ID"],  # uppercase + space
+            caller="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_panelist_id"
+
+    @pytest.mark.asyncio
+    async def test_round_table_open_rejects_non_string_panelist_id(self, mcp_server):
+        """WR-03: each panelist_agent_ids item MUST be a non-empty string.
+
+        Without this, None / integer items would slip through and break
+        open_round_table's panelists[].agentId write later.
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "round_table_open",
+            round_id=uuid.uuid4().hex,
+            project_slug="test-slug",
+            question="Q?",
+            panelist_agent_ids=["valid-id", None],  # None is not a string
+            caller="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "invalid_panelist_id"
+
+    @pytest.mark.asyncio
+    async def test_round_table_open_rejects_duplicate_panelist_ids(self, mcp_server):
+        """WR-03: duplicate panelist IDs would create a 2-element list that
+        violates the 'different panelists' spirit of minItems=2. Reject.
+        """
+        result = await _ainvoke(
+            mcp_server,
+            "round_table_open",
+            round_id=uuid.uuid4().hex,
+            project_slug="test-slug",
+            question="Q?",
+            panelist_agent_ids=["same-id", "same-id"],  # duplicates
+            caller="test-runner",
+        )
+        assert result.get("status") == 400
+        assert result.get("error") == "duplicate_panelist_id"
+
     @pytest.mark.asyncio
     async def test_submit_round_table_result_idempotent(self, mcp_server):
         """Second submit on a completed round returns 409 Conflict."""

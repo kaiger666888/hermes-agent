@@ -1066,6 +1066,37 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
                 indent=2,
             )
 
+        # WR-03 fix: item-level validation. The previous check only verified
+        # "is a list of length >= 2" — it did NOT verify each item is a
+        # non-empty string matching the agent-id pattern, nor that the list
+        # has no duplicates. Without this, None / empty-string / duplicate
+        # IDs silently land on disk via open_round_table's
+        # panelists[].agentId + turnOrder.seed writes (and the loader does
+        # NOT re-validate persisted state against the schema).
+        import re as _panel_re
+        _AGENT_ID_RE = _panel_re.compile(r"^[a-z0-9_-]+$")
+        for pid in panelist_agent_ids:
+            if not isinstance(pid, str) or not pid:
+                return json.dumps(
+                    {"error": "invalid_panelist_id", "status": 400,
+                     "detail": "panelist_agent_ids items must be non-empty strings"},
+                    indent=2,
+                )
+            if not _AGENT_ID_RE.fullmatch(pid):
+                return json.dumps(
+                    {"error": "invalid_panelist_id", "status": 400,
+                     "detail": f"panelist_agent_ids item {pid!r} must match ^[a-z0-9_-]+$",
+                     "invalid_value": pid},
+                    indent=2,
+                )
+        if len(set(panelist_agent_ids)) != len(panelist_agent_ids):
+            return json.dumps(
+                {"error": "duplicate_panelist_id", "status": 400,
+                 "detail": "panelist_agent_ids must be unique — duplicates would "
+                           "violate the 'different panelists' contract of minItems=2"},
+                indent=2,
+            )
+
         from hermes_constants import get_hermes_home
         from agent.registry_loader import RegistryValidationError
         from agent.round_table_state import open_round_table
