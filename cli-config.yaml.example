@@ -483,6 +483,22 @@ prompt_caching:
 #                           # reasoning controls:
 #                           # extra_body:
 #                           #   enable_thinking: false
+#
+#   # ----- Phase 53 v11.0 round-table auxiliary tasks -----
+#   # MEMORY.md feedback-glm-5-2-only.md mandates GLM-only for both of
+#   # these tasks (no auto-fallback to OpenRouter). The driver script
+#   # scripts/run_screenplay_step3_roundtable.py + the comparator LLM in
+#   # agent/memory_arbitration.py both pass explicit provider="glm" —
+#   # these entries make the contract operator-visible.
+#   # See .planning/phases/53-creative-slice/53-CONTEXT.md decision #2.
+#   round_table_opinion:
+#     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
+#     model: glm-5.2         # Phase 53 CREATIVE-01 panelist opinion calls
+#     timeout: 30            # SC#2 latency budget (<30s per call)
+#   memory_comparator:
+#     provider: glm          # GLM-only — same policy
+#     model: glm-5.2         # Phase 53 CREATIVE-02 conflict arbitration
+#     timeout: 30
 
 # =============================================================================
 # Persistent Memory
