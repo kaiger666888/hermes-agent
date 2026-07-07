@@ -4015,7 +4015,7 @@ class TestGLMThrottleIntegration:
 
         _throttle_mod.reset_for_testing()
         captured: list[str] = []
-        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t: captured.append(t))
+        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t, **kw: captured.append(t))
 
         call_llm(task="round_table_opinion", messages=[{"role": "user", "content": "hi"}])
 
@@ -4034,7 +4034,7 @@ class TestGLMThrottleIntegration:
         call_order: list[str] = []
 
         monkeypatch.setattr(
-            glm_throttle, "acquire_slot", lambda t: call_order.append("throttle")
+            glm_throttle, "acquire_slot", lambda t, **kw: call_order.append("throttle")
         )
         monkeypatch.setattr(
             "agent.auxiliary_client._select_endpoint_by_prompt_length",
@@ -4060,7 +4060,7 @@ class TestGLMThrottleIntegration:
 
         _throttle_mod.reset_for_testing()
         called: list[str] = []
-        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t: called.append(t))
+        monkeypatch.setattr(glm_throttle, "acquire_slot", lambda t, **kw: called.append(t))
 
         call_llm(provider="openrouter", messages=[{"role": "user", "content": "hi"}])
 

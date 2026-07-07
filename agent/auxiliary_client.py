@@ -570,28 +570,63 @@ def _to_openai_base_url(base_url: str) -> str:
     return url
 
 
-def _select_pool_entry(provider: str) -> Tuple[bool, Optional[Any]]:
-    """Return (pool_exists_for_provider, selected_entry)."""
+def _select_pool_entry(
+    provider: str, pool_name: str = "default"
+) -> Tuple[bool, Optional[Any]]:
+    """Return (pool_exists_for_provider, selected_entry).
+
+    Phase 59 POOL-01: when ``pool_name == "default"`` (the backward-compat
+    default), loads the default pool via ``load_pool(provider)``. When
+    ``pool_name != "default"`` (e.g. ``"auxiliary"``), loads the named pool
+    via ``load_named_pool(pool_name, provider)`` so auxiliary callers
+    rotate through their own keys, isolated from gateway/main pool
+    exhaustion.
+    """
     try:
-        pool = load_pool(provider)
+        if pool_name == "default":
+            pool = load_pool(provider)
+        else:
+            from agent.credential_pool import load_named_pool
+
+            pool = load_named_pool(pool_name, provider)
     except Exception as exc:
-        logger.debug("Auxiliary client: could not load pool for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not load pool %s for %s: %s",
+            pool_name, provider, exc,
+        )
         return False, None
     if not pool or not pool.has_credentials():
         return False, None
     try:
         return True, pool.select()
     except Exception as exc:
-        logger.debug("Auxiliary client: could not select pool entry for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not select pool entry for %s/%s: %s",
+            provider, pool_name, exc,
+        )
         return True, None
 
 
-def _peek_pool_entry(provider: str) -> Optional[Any]:
-    """Best-effort current/next pool entry without mutating selection order."""
+def _peek_pool_entry(
+    provider: str, pool_name: str = "default"
+) -> Optional[Any]:
+    """Best-effort current/next pool entry without mutating selection order.
+
+    Phase 59 POOL-01: ``pool_name`` kwarg mirrors :func:`_select_pool_entry`.
+    Default ``"default"`` preserves all existing callers.
+    """
     try:
-        pool = load_pool(provider)
+        if pool_name == "default":
+            pool = load_pool(provider)
+        else:
+            from agent.credential_pool import load_named_pool
+
+            pool = load_named_pool(pool_name, provider)
     except Exception as exc:
-        logger.debug("Auxiliary client: could not load pool for %s (peek): %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not load pool %s for %s (peek): %s",
+            pool_name, provider, exc,
+        )
         return None
     if not pool or not pool.has_credentials():
         return None
@@ -605,7 +640,10 @@ def _peek_pool_entry(provider: str) -> Optional[Any]:
         if callable(peek_fn):
             return peek_fn()
     except Exception as exc:
-        logger.debug("Auxiliary client: could not peek pool entry for %s: %s", provider, exc)
+        logger.debug(
+            "Auxiliary client: could not peek pool entry for %s/%s: %s",
+            provider, pool_name, exc,
+        )
     return None
 
 
@@ -5389,13 +5427,18 @@ def call_llm(
     # endpoint routing so both z.ai (short prompt) and open.bigmodel.cn/api/
     # anthropic (long prompt) routes count against the same per-task bucket.
     # See .planning/phases/58-rpm-throttling/58-CONTEXT.md decision #8.
+    #
+    # Phase 59 POOL-01: pool_name="auxiliary" documents that auxiliary callers
+    # target the dedicated aux pool (GLM_AUX_API_KEY_1..4 or GLM_API_KEY
+    # fallback). The metadata is informational — actual pool selection happens
+    # in _select_pool_entry / _peek_pool_entry downstream.
     if task:
         # Lazy import: glm_throttle lazy-imports _get_auxiliary_task_config
         # from this module, so a top-level import would deadlock on the
         # first auxiliary call. Matches the _ra() lazy-indirection pattern
         # used throughout agent/* (see CLAUDE.md "Forwarder shim pattern").
         from agent.glm_throttle import acquire_slot
-        acquire_slot(task)
+        acquire_slot(task, pool_name="auxiliary")
 
     # Phase 57 ENDPOINT-01: route long-prompt GLM calls (synthesis,
     # memory_compaction, memory_comparator) to open.bigmodel.cn/api/anthropic

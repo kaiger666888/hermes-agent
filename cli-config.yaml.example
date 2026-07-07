@@ -417,6 +417,31 @@ prompt_caching:
   cache_ttl: "5m" # use "1h" for long sessions with pauses between turns
 
 # =============================================================================
+# Auxiliary Credential Pool (Phase 59 POOL-01 — GLM isolation)
+# =============================================================================
+# Hermes isolates the auxiliary pool (round_table_opinion, memory_compaction,
+# fitness_judge, bias_canary_claim_check, memory_comparator) from the main
+# agent/gateway pool so a gateway burst cannot exhaust all 4 GLM keys and
+# starve the round table halfway through a 9-panelist session.
+#
+# Set GLM_AUX_API_KEY_1..4 in ~/.hermes/.env (or your shell environment) to
+# give the auxiliary pool its own dedicated keys. When NONE of these are set,
+# the auxiliary pool transparently reuses GLM_API_KEY so single-key operators
+# are not broken (no config breaking change).
+#
+# .env example (dedicated aux keys — strict isolation):
+#   GLM_AUX_API_KEY_1=glm-aux-key-1
+#   GLM_AUX_API_KEY_2=glm-aux-key-2
+#   GLM_AUX_API_KEY_3=glm-aux-key-3
+#   GLM_AUX_API_KEY_4=glm-aux-key-4
+#
+# .env example (single-key fallback — aux pool reuses the main key):
+#   GLM_API_KEY=your-only-glm-key
+#
+# Audit: `hermes auth list` shows both pools. Aux entries appear under the
+# "auxiliary:zai" storage namespace, separate from the default "zai" pool.
+
+# =============================================================================
 # Auxiliary Models (Advanced — Experimental)
 # =============================================================================
 # Hermes uses lightweight "auxiliary" models for side tasks: image analysis,

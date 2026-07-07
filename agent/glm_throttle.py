@@ -178,7 +178,7 @@ def _get_or_create_bucket(task: str) -> TokenBucket:
     return bucket
 
 
-def acquire_slot(task: str) -> None:
+def acquire_slot(task: str, pool_name: str = "auxiliary") -> None:
     """Blocking RPM acquire for *task*.
 
     Refills the bucket based on elapsed wall time, then tries to take a
@@ -188,6 +188,14 @@ def acquire_slot(task: str) -> None:
     effect.
 
     Used by ``auxiliary_client.call_llm`` (Phase 58 wire-in).
+
+    Phase 59 POOL-01: ``pool_name`` is informational metadata for logging
+    and audit trails. ``glm_throttle`` does NOT itself touch the credential
+    pool — it is purely a token-bucket rate limiter. The actual pool
+    selection happens in ``auxiliary_client._select_pool_entry``, which
+    reads this metadata via its own ``pool_name`` kwarg. The default
+    ``"auxiliary"`` is correct for all current aux callers (round table,
+    memory_compaction, fitness_judge, etc.).
     """
     bucket = _get_or_create_bucket(task)
     while True:
@@ -207,13 +215,17 @@ def acquire_slot(task: str) -> None:
         time.sleep(sleep_seconds)
 
 
-def try_acquire_slot(task: str) -> bool:
+def try_acquire_slot(task: str, pool_name: str = "auxiliary") -> bool:
     """Non-blocking RPM acquire for *task*.
 
     Same refill-then-try semantics as :func:`acquire_slot`, but returns
     ``False`` immediately when the bucket is empty (no sleep). Used by
     ``round_table_open`` (Phase 58-02 plan) to fail-fast when quota is
     exhausted rather than blocking the round-table dispatcher.
+
+    Phase 59 POOL-01: ``pool_name`` is informational metadata (see
+    :func:`acquire_slot` docstring). Backward-compatible: callers that omit
+    it default to ``"auxiliary"``.
     """
     bucket = _get_or_create_bucket(task)
     bucket.refill(time.monotonic())
