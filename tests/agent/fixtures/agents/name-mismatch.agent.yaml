@@ -29,5 +29,5 @@ memory_scope: per_agent
 lineage:
   derived_from_skill_id: name-mismatch-skill
   derived_from_repo: tests
-  transform_date: 2026-07-07
+  transform_date: "2026-07-07"
   skill_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
