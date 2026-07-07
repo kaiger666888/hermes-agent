@@ -1,0 +1,371 @@
+{
+  "screenplay": {
+    "expert": "screenplay",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/screenplay/SKILL.md",
+    "source_sha256": "2045286cbde10288a3949abf67e893fca1938d3904dfbb19a70e2abbca70e8c1",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.4 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "style_genome",
+      "editor",
+      "audio_pipeline",
+      "compliance_gate",
+      "hook_retention",
+      "cinematographer",
+      "theory_critic",
+      "animation_studio",
+      "documentary_maker"
+    ],
+    "emitted_related_agents": [
+      "style_genome",
+      "editor",
+      "audio_pipeline",
+      "hook_retention",
+      "cinematographer",
+      "theory_critic"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files",
+      "write_file",
+      "patch"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; SKILL preserved as fallback. HOOK-09 emotion_curve marker arrays remain contract-load"
+  },
+  "cinematographer": {
+    "expert": "cinematographer",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/cinematographer/SKILL.md",
+    "source_sha256": "b4bcc9c69163899d2a3d069c54d8a2a6a8d651a4fe76c256a397ec0cdc875244",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.7 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "screenplay",
+      "visual_executor",
+      "editor",
+      "continuity_auditor",
+      "hook_retention",
+      "production",
+      "theory_critic",
+      "documentary_maker",
+      "prompt_injector"
+    ],
+    "emitted_related_agents": [
+      "screenplay",
+      "editor",
+      "continuity_auditor",
+      "hook_retention",
+      "theory_critic"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; visual-DNA role absorbed from legacy scene_builder (Phase 17 absorption per 04-MIGRAT"
+  },
+  "hook_retention": {
+    "expert": "hook_retention",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/hook_retention/SKILL.md",
+    "source_sha256": "6823b9da0e7e65acaa4545a517fee01a3c01ffaedbe909feca8d75505240cc05",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.2 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "screenplay",
+      "editor",
+      "compliance_gate",
+      "audio_pipeline",
+      "cinematographer"
+    ],
+    "emitted_related_agents": [
+      "screenplay",
+      "editor",
+      "audio_pipeline",
+      "cinematographer"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; 5 hook categories + per-platform 爆款公式 branching surfaced (Phase 49 §2.2). HOOK-09 mar"
+  },
+  "theory_critic": {
+    "expert": "theory_critic",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/theory_critic/SKILL.md",
+    "source_sha256": "f926cc2c232ee57d0f241a04569dbb6f2b68b487041f32e78a2dfaf2b0ebca43",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.16 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "style_genome",
+      "screenplay",
+      "cinematographer",
+      "editor",
+      "colorist",
+      "compliance_gate"
+    ],
+    "emitted_related_agents": [
+      "style_genome",
+      "screenplay",
+      "cinematographer",
+      "editor"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; soft-gate-only framing per Phase 49 §2.16 (theory_critic is advisory, NOT a hard gate"
+  },
+  "editor": {
+    "expert": "editor",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/editor/SKILL.md",
+    "source_sha256": "bd5bf4a113eb70485d8774f85ee29e663632a18edcc5540cbe6668691d760f77",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.13 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "screenplay",
+      "visual_executor",
+      "audio_pipeline",
+      "continuity_auditor",
+      "compliance_gate",
+      "hook_retention",
+      "cinematographer",
+      "theory_critic",
+      "documentary_maker"
+    ],
+    "emitted_related_agents": [
+      "screenplay",
+      "audio_pipeline",
+      "continuity_auditor",
+      "hook_retention",
+      "cinematographer",
+      "theory_critic"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; FxRxT 3D editing matrix + cut_density metric + cut-follows-intent principle surfaced "
+  },
+  "character_designer": {
+    "expert": "character_designer",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/character_designer/SKILL.md",
+    "source_sha256": "c45ad8d1964d5d38fe3e9973465a8942f05fd1a13d34fb651c6f6bb24d175bb3",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.6 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "style_genome",
+      "screenplay",
+      "visual_executor",
+      "continuity_auditor",
+      "audio_pipeline",
+      "production"
+    ],
+    "emitted_related_agents": [
+      "style_genome",
+      "screenplay",
+      "continuity_auditor",
+      "audio_pipeline"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "write_file"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; L1-L4 layered asset specs + 4D-Anchor multi-view surfaced (Phase 49 §2.6). Renamed fr"
+  },
+  "continuity_auditor": {
+    "expert": "continuity_auditor",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/continuity_auditor/SKILL.md",
+    "source_sha256": "a1e821f8da9deabc2a56a043ef6da548182110945cd0962924a491be46d8bdb4",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.11 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "visual_executor",
+      "colorist",
+      "style_genome",
+      "screenplay",
+      "cinematographer",
+      "production"
+    ],
+    "emitted_related_agents": [
+      "style_genome",
+      "screenplay",
+      "cinematographer"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; 4-dimension hard gate (face/wardrobe/color/object) + eyeline + 180° axis + screen dir"
+  },
+  "audio_pipeline": {
+    "expert": "audio_pipeline",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/SKILL.md",
+    "source_sha256": "fe59f7fa9684086ef5116472d38fb56a5c85b8dc2b3f7936e11630708bea3da9",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.12 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "screenplay",
+      "editor",
+      "production",
+      "visual_executor",
+      "continuity_auditor",
+      "style_genome",
+      "character_designer",
+      "cinematographer",
+      "prompt_injector"
+    ],
+    "emitted_related_agents": [
+      "screenplay",
+      "editor",
+      "continuity_auditor",
+      "style_genome",
+      "character_designer",
+      "cinematographer"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "dreamina_cli",
+      "read_file",
+      "write_file"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; 6-sub-step atomicity (voicer/lip_sync/composer/foley/mixer/spatial_audio) surfaced (P"
+  },
+  "style_genome": {
+    "expert": "style_genome",
+    "source_path": "/data/workspace/kais-hermes-skills/skills/movie-experts/style_genome/SKILL.md",
+    "source_sha256": "8dd6fde9052a149cb32cd5ea9928a8398415a851de0b8d3ab4aba8bee0f6943d",
+    "frontmatter_mappings": {
+      "description": "from frontmatter.description (verbatim)",
+      "tags": "from metadata.hermes.tags — filtered to schema pattern ^[a-z0-9-]+$ (non-ASCII tags like `镜头语言` dropped)",
+      "expert_id": "from metadata.hermes.expert_id (verbatim, FOUND-08)",
+      "metrics": "from metadata.hermes.metrics (verbatim)",
+      "related_agents": "from metadata.hermes.related_skills — canonicalized via LEGACY_NAME_MAP, filtered to PANEL_9",
+      "prerequisites": "from frontmatter.prerequisites (verbatim)",
+      "platforms": "from frontmatter.platforms (verbatim or default)",
+      "tools": "from Phase 49 §2.8 default",
+      "persona": "rewritten first-person from SKILL body — see _persona_* builder",
+      "lineage.skill_sha256": "computed: SHA-256 of LF-normalized source SKILL.md bytes",
+      "lineage.transform_notes": "verbatim from _transform_notes() per Phase 49 §2.x"
+    },
+    "frontmatter_related_skills": [
+      "screenplay",
+      "visual_executor",
+      "colorist",
+      "editor",
+      "audio_pipeline",
+      "character_designer",
+      "continuity_auditor",
+      "compliance_gate",
+      "theory_critic",
+      "animation_studio",
+      "documentary_maker"
+    ],
+    "emitted_related_agents": [
+      "screenplay",
+      "editor",
+      "audio_pipeline",
+      "character_designer",
+      "continuity_auditor",
+      "theory_critic"
+    ],
+    "emitted_tools": [
+      "hermes_llm",
+      "read_file",
+      "search_files"
+    ],
+    "transform_notes_excerpt": "Persona rewritten from SKILL body; 5D director/genre parametric encoding + Cross-Module Alignment metric surfaced (Phase"
+  }
+}
