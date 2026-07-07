@@ -100,6 +100,7 @@ class _OpenAIProxy:
 OpenAI = _OpenAIProxy()  # module-level name, resolves lazily on call/isinstance
 
 from agent.credential_pool import load_pool
+from agent.model_metadata import estimate_messages_tokens_rough
 from hermes_cli.config import get_hermes_home
 from hermes_constants import OPENROUTER_BASE_URL
 from utils import base_url_host_matches, base_url_hostname, model_forces_max_completion_tokens, normalize_proxy_env_vars
@@ -4868,6 +4869,117 @@ def _resolve_task_provider_model(
         return "auto", resolved_model, None, None, resolved_api_mode
 
     return "auto", resolved_model, None, None, resolved_api_mode
+
+
+# ---------------------------------------------------------------------------
+# Phase 57 ENDPOINT-ROUTING: prompt-length-aware endpoint selection
+# ---------------------------------------------------------------------------
+
+# Default long-prompt override target: the Anthropic-compat endpoint exposed by
+# Zhipu (open.bigmodel.cn/api/anthropic). The z.ai coding-plan endpoint
+# (api.z.ai/api/coding/paas/v4) has a 30s request timeout that trips
+# synthesis calls (~5K input tokens), causing the openai-SDK 5x retry storm
+# observed in v11.0 SC#2 smoke (smoke-test-report.md §3.1).
+# See .planning/phases/57-endpoint-routing/57-CONTEXT.md decisions D-01..D-05.
+_DEFAULT_LONG_PROMPT_OVERRIDE: Dict[str, str] = {
+    "provider": "zhipu-anthropic",
+    "base_url": "https://open.bigmodel.cn/api/anthropic",
+    "api_mode": "chat_completions",
+}
+
+# Providers where routing is permitted. None means "auto" — the auxiliary
+# layer defaults to GLM when GLM_API_KEY is set (per MEMORY.md
+# feedback-glm-5-2-only.md), so the override still applies.
+_ROUTABLE_PROVIDERS = frozenset({"glm", "zai", None})
+
+
+def _select_endpoint_by_prompt_length(
+    messages: list,
+    provider: Optional[str],
+    base_url: Optional[str],
+) -> Optional[Dict[str, str]]:
+    """Return a long-prompt endpoint override dict, or None when routing doesn't apply.
+
+    Routing logic (per CONTEXT.md locked decisions D-01..D-05):
+
+    1. Empty ``messages`` -> no routing decision (return None).
+    2. ``enabled: false`` in ``auxiliary.endpoint_routing`` config -> opt-out (None).
+    3. Estimated input tokens < ``token_threshold`` (default 4096) -> short
+       prompt, stay on default endpoint (None).
+    4. Caller already routed (provider == "zhipu-anthropic" or base_url
+       contains ``/anthropic``) -> no double-override (None).
+    5. Caller provider not in {glm, zai, None} -> out of scope, do not touch
+       non-GLM providers (None). MEMORY.md feedback-glm-5-2-only.md honored.
+    6. Otherwise -> return deep copy of the configured ``long_prompt`` block
+       (default: zhipu-anthropic + open.bigmodel.cn/api/anthropic).
+
+    Token estimation delegates to
+    :func:`agent.model_metadata.estimate_messages_tokens_rough` (char count
+    // 4 with image cost) — same heuristic the context_compressor trusts.
+
+    Args:
+        messages: Chat messages list (may be empty).
+        provider: Caller's provider arg (None means auto).
+        base_url: Caller's base_url arg (None means use provider default).
+
+    Returns:
+        Override dict with keys {provider, base_url, api_mode} when routing
+        applies; None otherwise. Caller owns applying the override.
+    """
+    if not messages or len(messages) == 0:
+        return None
+
+    config = _get_auxiliary_task_config("endpoint_routing")
+    if not isinstance(config, dict):
+        return None
+    if not config.get("enabled", True):
+        return None
+
+    # Token threshold (default 4096 per D-01). Coerce to int with fallback.
+    raw_threshold = config.get("token_threshold", 4096)
+    try:
+        token_threshold = int(raw_threshold)
+    except (ValueError, TypeError):
+        logger.warning(
+            "Endpoint routing: invalid token_threshold=%r, falling back to 4096",
+            raw_threshold,
+        )
+        token_threshold = 4096
+
+    # Top-level import (agent.model_metadata has no circular dep — it imports
+    # only stdlib + utils + hermes_constants + requests/yaml).
+    estimated_tokens = estimate_messages_tokens_rough(messages)
+
+    if estimated_tokens < token_threshold:
+        return None
+
+    # Caller already routed? Don't double-override.
+    if provider == "zhipu-anthropic":
+        return None
+    if base_url and "/anthropic" in base_url:
+        return None
+
+    # Only override GLM/zai coding-plan routes (and the auto/None case which
+    # resolves to GLM when GLM_API_KEY is set).
+    if provider not in _ROUTABLE_PROVIDERS:
+        return None
+
+    long_prompt_cfg = config.get("long_prompt")
+    if not isinstance(long_prompt_cfg, dict):
+        long_prompt_cfg = {}
+    override: Dict[str, str] = {}
+    for key, default_val in _DEFAULT_LONG_PROMPT_OVERRIDE.items():
+        override[key] = str(long_prompt_cfg.get(key, default_val))
+
+    logger.debug(
+        "Endpoint routing: %d estimated tokens >= threshold %d; "
+        "overriding provider=%s -> %s",
+        estimated_tokens,
+        token_threshold,
+        provider,
+        override.get("provider"),
+    )
+    return override
 
 
 _DEFAULT_AUX_TIMEOUT = 30.0
