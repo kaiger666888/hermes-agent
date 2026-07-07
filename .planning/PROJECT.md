@@ -8,13 +8,44 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current State (v10.0 SHIPPED 2026-07-07)
+## Current State (v11.0 SHIPPED 2026-07-07)
 
-v10.0 SHIPPED + closed 2026-07-07(tag `v10.0`,phases 归档至 `.planning/milestones/v10.0-ROADMAP.md` + `.planning/milestones/v10.0-REQUIREMENTS.md`)。v10.0 是**设计型** milestone,零代码改动,产出 7 design docs + 3 schemas + 1 lint script + 1 audit report,作为 v11.0 PoC 的实施蓝本。9/9 reqs satisfied, 8/8 phases verified `passed`,audit status `passed`。
+v11.0 SHIPPED + closed 2026-07-07 (tag `v11.0`, phases archived to `.planning/milestones/v11.0-ROADMAP.md` + `.planning/milestones/v11.0-REQUIREMENTS.md`). v11.0 is the **implementation milestone** for the v10.0 design suite — 5 phases (52-56) · 12 plans · 15/15 reqs verified · 317 automated tests green · audit verdict `passed` with 5 operator-action handoffs deferred per VALIDATE-01 spec.
 
-**Next:** v11.0 PoC —— 按 `.planning/research/v10-orchestrator-design/05-POC-PLAN.md` §3 vertical slice 选 1 creative phase + 1 infra phase 实施,验收条件 12 person-days 估算。
+**v11.0 shipped:**
+- INFRA-01..04: agent registry YAML loader + 7 MCP tools + round table state machine (3-mode crash recovery) + per-roundId asyncio.Lock serial enforcement
+- CREATIVE-01..02 + MIGR-01: 9 sample agent YAMLs (HOOK-09 invariant) + screenplay Step 3 round table driver + 5-mechanism memory conflict arbitration runtime
+- EVAL-01..07: fitness battery (8 scenarios) + latency SLO wrapper + bias canary (3-check) + memory compaction (3-tier) + threshold tuning doc + dry-run-first invariant (curator + migration) + schema migration dry-run (P14 zero silent drops)
+- VALIDATE-01: milestone audit + smoke test report + 5 operator-action runbook
 
-**v10.0 paradigm shift:** 与 v1-v9 把 movie-experts 当 SKILL 用法不同,v10.0 设计**新的 agent 形态**(YAML + persona + memory_scope + lineage),per-agent 跨项目自进化,CC 仅做场地+协调员+结构化助手。SKILL 形态作 fallback 保留。v11.0 PoC 把这套设计落地为运行时代码。
+**Next:** Not yet planned. Run `/gsd:new-milestone` to start the next milestone. Candidates: (a) v12.0 production hardening — 15-expert full transform + live GLM smoke tests + threshold tuning with prod data; (b) operator smoke tests on v11.0 deferred items first.
+
+**v10.0 paradigm shift** (locked in design, v11.0 implemented): agents are Hermes-side YAML entities with per-agent memory + self-evolution; CC is场地+协调员+结构化助手; SKILL form preserved as fallback (`default_invocation: skill_fallback`).
+
+## Previous Milestone: v11.0 — Hermes-Native Expert Agents PoC Implementation ✅ SHIPPED 2026-07-07
+
+**Stats:** 5 phases (52-56) · 12 plans · 128 commits · 149 files · 39,256 insertions · 15/15 reqs ✓ · Tag `v11.0` · Audit `passed`
+
+**Goal:** Implemented the v10.0 design suite as runtime code — agent registry + 7 MCP tools + round table state machine + serial executor + 9 sample agent YAMLs + screenplay Step 3 driver + memory conflict arbitration + 7 acceptance criteria.
+
+**Phases:**
+- Phase 52: INFRA-FOUNDATION — agent registry + 7 MCP tools + state machine + serial enforcement (4 plans)
+- Phase 53: CREATIVE-SLICE — 9 agent YAMLs + Step 3 round table + conflict arbitration (3 plans)
+- Phase 54: EVAL-HARNESS-1 — fitness battery + latency SLO + bias canary (3 plans)
+- Phase 55: EVAL-HARNESS-2 — compaction + threshold tuning + dry-run-first + schema migration (4 plans)
+- Phase 56: VALIDATE — milestone audit + smoke test report (1 plan)
+
+**Code review:** 4 BLOCKER + 6 WARNING fixed in Phase 52 iter 1; 4 BLOCKER + 7 WARNING fixed in Phase 53 iter 1.
+
+**Operator-action handoffs (5):** documented in `.planning/research/v11-poc-eval/smoke-test-report.md §3` — runtime validations of code already verified by 339+ automated tests.
+
+See `.planning/milestones/v11.0-MILESTONE-AUDIT.md` for the full audit (status: passed, 15/15 reqs).
+
+## Previous Milestone: v10.0 — Hermes-Agent 编排架构第一性原理推导(设计型)✅ SHIPPED 2026-07-07
+
+v10.0 SHIPPED + closed 2026-07-07 (tag `v10.0`). v10.0 是**设计型** milestone,零代码改动,产出 7 design docs + 3 schemas + 1 lint script + 1 audit report,作为 v11.0 PoC 的实施蓝本。9/9 reqs satisfied, 8/8 phases verified `passed`,audit status `passed`。
+
+See `.planning/milestones/v10.0-ROADMAP.md` for full archive.
 
 **v9.0 scope (6 phases 38-43):**
 - 平台母版切片 (Step 14)
@@ -24,20 +55,9 @@ v10.0 SHIPPED + closed 2026-07-07(tag `v10.0`,phases 归档至 `.planning/milest
 - 数据收敛 (Step 15 平台 API → FeedbackStore → formula tuning)
 - 集成验证 + close-out
 
-## Current Milestone: v11.0 — Hermes-Native Expert Agents PoC Implementation
+## Previous Milestone: v9.0 — kais-movie-pipeline 闭环深化 ✅ SHIPPED 2026-06-27
 
-**Goal:** 按 v10.0 设计套件实施 vertical slice(1 creative phase + 1 infra phase),验证三层架构 runtime 可行性。**v11.0 是 v10.0 设计的实施 milestone** —— 不再产出设计文档,而是把 `00-FIRST-PRINCIPLES` 到 `06-CROSS-REPO-IMPACT` 的设计落地为 Python 代码 + agent YAML + mem0 extensions。
-
-**Vertical slice (per `05-POC-PLAN.md` §3):**
-- **Creative slice:** screenplay Step 3 round table(9-agent HOOK-09 edge case)
-- **Infra slice:** agent registry + 1 round table invocation(7 MCP tool wire-up)
-
-**Acceptance criteria (12 person-days total per `05-POC-PLAN.md` §4):**
-1. Fitness battery design (3d)
-2. Latency SLO p95 < 500ms (2d)
-3. Bias canary (2d)
-4. Compaction pass (1d)
-5. Threshold tuning (1d)
+(See archived `.planning/milestones/v9.0-ROADMAP.md` for full details.)
 6. Dry-run-first invariant (1d)
 7. Schema migration dry-run (2d)
 
