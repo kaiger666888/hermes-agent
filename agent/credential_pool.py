@@ -9,9 +9,9 @@ import threading
 import time
 import uuid
 import re
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple
 
 from hermes_constants import OPENROUTER_BASE_URL
 from hermes_cli.config import load_env
@@ -125,6 +125,18 @@ CUSTOM_POOL_PREFIX = "custom:"
 # take the form 'auxiliary:<provider>' (e.g. 'auxiliary:zai').
 AUX_POOL_PREFIX = "auxiliary:"
 
+# Phase 59 POOL-02: GLM per-key TPM (tokens-per-minute) cap.
+# Hardcoded per CONTEXT.md deferred list:
+#   "Configurable per-key TPM cap — hardcode at GLM 200K/key for v12.0".
+# GLM-5.2 single-key TPM ceiling. Configurable in v13+.
+TPM_CAP_PER_KEY_GLM: int = 200_000
+
+# Sliding-window length (seconds) for per-key TPM tracking.
+# Matches the GLM upstream RPM window (60s). Uses ``time.monotonic`` per the
+# Phase 58 TokenBucket precedent + CONTEXT.md decision #3 (wall clock can
+# jump on NTP sync, breaking the window logic).
+TPM_WINDOW_SECONDS: float = 60.0
+
 # Dedicated env vars for the auxiliary pool. Operators who set these get
 # strict isolation from the main agent/gateway pool. When NONE are set,
 # ``_seed_aux_env`` falls back to ``GLM_API_KEY`` (single-key operators —
@@ -170,6 +182,13 @@ class PooledCredential:
     agent_key_expires_at: Optional[str] = None
     request_count: int = 0
     extra: Dict[str, Any] = None  # type: ignore[assignment]
+    # Phase 59 POOL-02: per-key TPM sliding-window state. Optional + None
+    # default so default-pool entries deserialized from auth.json (which
+    # don't carry these fields) load cleanly. Both fields lazy-init on the
+    # first ``record_usage`` call. TPM tracking is aux-pool-only — the
+    # default ``select()`` does NOT consult these fields.
+    tokens_this_minute: Optional[int] = None
+    window_start: Optional[float] = None
 
     def __post_init__(self):
         if self.extra is None:
@@ -245,6 +264,59 @@ class PooledCredential:
         if self.provider == "nous":
             return self.inference_base_url or self.base_url
         return self.base_url
+
+
+@dataclass
+class TpmWindow:
+    """Phase 59 POOL-02: lightweight sliding-window TPM tracker.
+
+    Holds the in-window consumed-token count and the monotonic timestamp
+    at which the current window opened. The window slides when
+    ``now - window_start >= TPM_WINDOW_SECONDS`` (60s) — the next
+    :meth:`record` resets the counter instead of accumulating.
+
+    Used by :meth:`CredentialPool.record_usage` to attribute consumed
+    tokens to the aux-pool key that produced them. Defensive against
+    negative inputs (T-59-08-T mitigation): clamps to ``>= 0``.
+    """
+
+    tokens_consumed: int
+    window_start: float
+
+    TPM_WINDOW_SECONDS: ClassVar[float] = TPM_WINDOW_SECONDS
+
+    @classmethod
+    def fresh(cls) -> "TpmWindow":
+        """Start a new window at the current monotonic time, zero tokens."""
+        return cls(tokens_consumed=0, window_start=time.monotonic())
+
+    def remaining(self, cap: int) -> int:
+        """Return ``max(0, cap - tokens_consumed)`` — never negative."""
+        return max(0, cap - max(0, self.tokens_consumed))
+
+    def remaining_fraction(self, cap: int) -> float:
+        """Return ``remaining(cap) / cap`` — in ``[0.0, 1.0]``."""
+        if cap <= 0:
+            return 0.0
+        return self.remaining(cap) / float(cap)
+
+    def window_remaining_seconds(self, now: float) -> float:
+        """Seconds until the current window slides (clamped >= 0)."""
+        return max(0.0, self.TPM_WINDOW_SECONDS - (now - self.window_start))
+
+    def record(self, tokens: int, now: float) -> None:
+        """Add ``tokens`` to the window, sliding it if expired.
+
+        Negative inputs are clamped to zero (T-59-08-T: hand-edited
+        auth.json with a negative value must not corrupt state).
+        """
+        safe_tokens = max(0, int(tokens))
+        if now - self.window_start >= self.TPM_WINDOW_SECONDS:
+            # Window slid — start a fresh count at this timestamp.
+            self.tokens_consumed = safe_tokens
+            self.window_start = now
+        else:
+            self.tokens_consumed += safe_tokens
 
 
 def label_from_token(token: str, fallback: str) -> str:
@@ -1390,6 +1462,151 @@ class CredentialPool:
         entry = available[0]
         self._current_id = entry.id
         return entry
+
+    # ── Phase 59 POOL-02: per-key TPM selection ───────────────────────────
+    #
+    # ``select_freshest_tpm`` is a PARALLEL selection path to
+    # ``_select_unlocked``. It bypasses the configured strategy
+    # (``fill_first`` / ``round_robin`` / etc.) and picks the entry with the
+    # MOST remaining TPM. Used only by the TPM-aware throttle layer
+    # (``agent.glm_throttle``) for the auxiliary pool — default-pool callers
+    # go through ``select()`` unchanged.
+    #
+    # Both ``select_freshest_tpm`` and ``record_usage`` are NO-OPs on entries
+    # whose ``tokens_this_minute is None`` (the default state). They lazy-init
+    # the ``TpmWindow`` on first use.
+
+    def select_freshest_tpm(
+        self, cap: int = TPM_CAP_PER_KEY_GLM
+    ) -> Optional[PooledCredential]:
+        """Return the entry with the most remaining TPM.
+
+        Bypasses the configured strategy (``fill_first`` etc.) — when TPM
+        tracking is active, the aux pool ALWAYS picks the freshest key per
+        CONTEXT.md decision #4 ("acquire_slot picks the key with most
+        remaining TPM"). Used by the TPM-aware throttle layer for the
+        auxiliary pool. Default-pool callers go through ``select()``.
+
+        Returns ``None`` when the pool is empty. Ties broken by priority
+        (stable sort preserves ``_entries`` order, which is priority-sorted
+        in ``__init__``).
+        """
+        with self._lock:
+            if not self._entries:
+                return None
+            now = time.monotonic()
+
+            def _remaining_for(entry: PooledCredential) -> int:
+                # Lazy-init: a fresh entry (tokens_this_minute=None) has the
+                # full cap available. We do NOT mutate the entry here — that
+                # happens in record_usage. This keeps selection side-effect-free.
+                if entry.tokens_this_minute is None or entry.window_start is None:
+                    return cap
+                # If the window has slid since last record, the entry effectively
+                # has full cap available again (next record_usage will reset it).
+                if now - entry.window_start >= TPM_WINDOW_SECONDS:
+                    return cap
+                return max(0, cap - max(0, entry.tokens_this_minute))
+
+            # Stable sort by descending remaining (max first). Ties keep
+            # priority order (lowest priority first = highest in the
+            # ``_entries`` list, since __init__ sorts ascending).
+            entries_by_remaining = sorted(
+                self._entries,
+                key=lambda e: (-_remaining_for(e), e.priority),
+            )
+            return entries_by_remaining[0] if entries_by_remaining else None
+
+    def record_usage(self, entry_id: str, tokens: int) -> None:
+        """Post-call hook: subtract ``tokens`` from the entry's TPM window.
+
+        Looks up the entry by id. If not found, debug-log + return (no-op).
+        If found: lazy-init ``TpmWindow`` from the entry's current
+        ``tokens_this_minute`` / ``window_start`` (when both present) OR
+        start a fresh window (when either is None). Then call
+        ``window.record(tokens, now)`` and persist back to the entry.
+
+        Persists the updated entry to ``auth.json`` via :meth:`_persist` so
+        a long-running gateway process and a parallel CLI round-table driver
+        see consistent TPM state (T-59-09-R mitigation). One write per aux
+        call — acceptable because aux calls are ~30 RPM/task (Phase 58
+        default), not high-frequency.
+        """
+        if not entry_id:
+            logger.debug("record_usage: empty entry_id, no-op")
+            return
+        with self._lock:
+            entry = next(
+                (e for e in self._entries if e.id == entry_id), None
+            )
+            if entry is None:
+                logger.debug(
+                    "record_usage: entry_id=%s not in pool, no-op", entry_id
+                )
+                return
+
+            now = time.monotonic()
+            # Lazy-init the TpmWindow from entry state.
+            if (
+                entry.tokens_this_minute is not None
+                and entry.window_start is not None
+            ):
+                window = TpmWindow(
+                    tokens_consumed=entry.tokens_this_minute,
+                    window_start=entry.window_start,
+                )
+            else:
+                window = TpmWindow.fresh()
+            window.record(tokens, now)
+
+            updated = replace(
+                entry,
+                tokens_this_minute=window.tokens_consumed,
+                window_start=window.window_start,
+            )
+            self._replace_entry(entry, updated)
+            self._persist()
+
+    def pool_tpm_status(
+        self, cap: int = TPM_CAP_PER_KEY_GLM
+    ) -> Dict[str, Dict[str, float]]:
+        """Return per-entry TPM status for diagnostics + throttle decisions.
+
+        Shape: ``{entry_id: {"remaining_tokens": int, "window_remaining_s":
+        float, "remaining_fraction": float, "tokens_consumed": int}}``.
+
+        Lazy-inits the TpmWindow on each entry (does NOT mutate state — the
+        status is a read-only snapshot). Used by ``agent.glm_throttle`` to
+        decide whether to emit a ``tpm_warning`` log.
+        """
+        now = time.monotonic()
+        status: Dict[str, Dict[str, float]] = {}
+        with self._lock:
+            for entry in self._entries:
+                if (
+                    entry.tokens_this_minute is None
+                    or entry.window_start is None
+                ):
+                    consumed = 0
+                    window_start = now
+                else:
+                    consumed = entry.tokens_this_minute
+                    window_start = entry.window_start
+                # If window slid, treat as fresh for status purposes.
+                if now - window_start >= TPM_WINDOW_SECONDS:
+                    consumed = 0
+                    window_start = now
+                remaining = max(0, cap - max(0, consumed))
+                fraction = (remaining / float(cap)) if cap > 0 else 0.0
+                status[entry.id] = {
+                    "remaining_tokens": remaining,
+                    "window_remaining_s": max(
+                        0.0, TPM_WINDOW_SECONDS - (now - window_start)
+                    ),
+                    "remaining_fraction": fraction,
+                    "tokens_consumed": consumed,
+                }
+        return status
 
     def peek(self) -> Optional[PooledCredential]:
         current = self.current()
