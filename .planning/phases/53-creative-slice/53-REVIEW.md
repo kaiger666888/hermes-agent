@@ -20,7 +20,11 @@ findings:
   warning: 9
   info: 6
   total: 19
-status: issues_found
+status: fixed
+fixed_findings: [CR-01, CR-02, CR-03, CR-04, WR-01, WR-02, WR-03, WR-04, WR-06, WR-07, WR-08]
+deferred_findings: [WR-05, WR-09, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06]
+fixed_at: 2026-07-07T14:50:00Z
+fixed_by: gsd-code-fixer (iteration 1)
 ---
 
 # Phase 53: Code Review Report
