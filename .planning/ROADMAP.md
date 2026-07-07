@@ -125,8 +125,8 @@ Plans:
 Plans:
 **Wave 1** (parallel — no file overlap)
 
-- [ ] 54-01-PLAN.md — EVAL-01 Fitness Battery (8 scenario YAMLs + agent/fitness_battery.py runner + run_fitness_battery.py CLI + tests)
-- [ ] 54-02-PLAN.md — EVAL-02 Latency SLO Benchmark (memory_scoped_retrieval.py timing wrapper + 3 seed fixtures + run_latency_benchmark.py + latency-baseline.md)
+- [x] 54-01-PLAN.md — EVAL-01 Fitness Battery (8 scenario YAMLs + agent/fitness_battery.py runner + run_fitness_battery.py CLI + tests)
+- [x] 54-02-PLAN.md — EVAL-02 Latency SLO Benchmark (memory_scoped_retrieval.py timing wrapper + 3 seed fixtures + run_latency_benchmark.py + latency-baseline.md)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -227,7 +227,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 |-------|----------------|--------|-----------|
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
 | 53. CREATIVE-SLICE | 3/3 | Complete    | 2026-07-07 |
-| 54. EVAL-HARNESS-1 | 0/3 | Not started | - |
+| 54. EVAL-HARNESS-1 | 2/3 | In Progress|  |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
 
