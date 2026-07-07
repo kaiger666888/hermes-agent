@@ -176,6 +176,16 @@ class TestRoundTableLifecycle:
         assert result["status"] == "completed"
         assert result["submitRoundTableResult"]["closedBy"] == "cc-1"
         assert result["submitRoundTableResult"]["conclusion"] == "ship after consensus"
+        # WR-01 fix: pin the contract that lastUpdatedAt == closedAt — both
+        # are computed from a single _now_iso() call in submit_round_table_result.
+        # This pinning guards against future refactors that compute them
+        # separately and let them drift (which would let a freshly-completed
+        # round trip stall detection in read_and_recover_state during the
+        # narrow read-vs-write window).
+        assert result["lastUpdatedAt"] == result["submitRoundTableResult"]["closedAt"], (
+            "submit_round_table_result MUST set lastUpdatedAt and closedAt from "
+            "the same _now_iso() call so they never drift apart"
+        )
 
     def test_second_submit_returns_409_conflict(self):
         state_dir = _state_dir()
