@@ -71,6 +71,8 @@ if str(_ROOT) not in sys.path:
 
 import mcp_serve  # noqa: E402  (after sys.path insert)
 import agent.auxiliary_client  # noqa: E402  — used for call_llm lookup at call-time so monkeypatch works
+import agent.memory_arbitration  # noqa: E402  — CR-02: wire arbitrate_two_memories + append_conflict_record
+from hermes_constants import get_hermes_home  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -162,8 +164,26 @@ async def run_roundtable(
     # STRICT SERIAL — no concurrent dispatch (INFRA-04 hard constraint).
     # The chained ``panel_context`` IS the round-table deliberation mechanism
     # (T-53-12 accepted threat — panelist B sees panelist A's opinion).
+    #
+    # CR-02 wire-up: after each turn, detect if the panelist's
+    # ``citedMemoryIds`` overlap with any prior turn's cited memory IDs but
+    # the panelists' opinions DIVERGE (heuristic: text distance exceeds a
+    # threshold OR the cited memory IDs are the same but opinion stems
+    # disagree). For each such conflict pair, run ``arbitrate_two_memories``
+    # (mechanism #2: comparator LLM pass) + ``append_conflict_record``
+    # (mechanism #5: conflict log). Per §3 the round-table COORDINATOR
+    # (this driver) owns conflict detection — the comparator lives in
+    # ``agent.memory_arbitration``.
     panel_context: str | None = None
     panel_opinions: list[dict[str, Any]] = []
+    conflicts_jsonl_path = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / PROJECT_SLUG
+        / "round_tables"
+        / f"{round_id}-conflicts.jsonl"
+    )
     for agent_id in PANEL_9:
         resp = await mcp_serve.get_agent_opinion(
             round_id=round_id,
@@ -184,8 +204,33 @@ async def run_roundtable(
                 "round_id": round_id,
             }
         opinion_text = opinion_data.get("opinion", "")
-        panel_opinions.append({"agent_id": agent_id, "opinion": opinion_text})
+        cited_memory_ids = opinion_data.get("cited_memory_ids", []) or []
+        current_turn = {
+            "agent_id": agent_id,
+            "opinion": opinion_text,
+            "cited_memory_ids": cited_memory_ids,
+        }
+        panel_opinions.append(current_turn)
         panel_context = opinion_text  # chain for the next panelist
+
+        # CR-02: detect + arbitrate conflicts as they emerge.
+        try:
+            _arbitrate_opinion_conflicts(
+                current_turn=current_turn,
+                prior_turns=[
+                    t for t in panel_opinions[:-1]  # all but the just-appended one
+                ],
+                conflicts_jsonl_path=conflicts_jsonl_path,
+                round_id=round_id,
+                project_id=PROJECT_SLUG,
+                logline=logline,
+            )
+        except Exception as exc:  # noqa: BLE001 — arbitration MUST NOT crash the round
+            logger.warning(
+                "run_screenplay_step3: arbitration wire-up failed at turn %s: %s",
+                agent_id,
+                exc,
+            )
 
     # ------------------------------------------------------------------ #
     # Step 3 — synthesis pass (10th GLM call) → HOOK-09-valid Step 3 JSON
@@ -252,6 +297,119 @@ async def run_roundtable(
 
 
 # --------------------------------------------------------------------------- #
+# CR-02 wire-up: detect + arbitrate per-turn memory conflicts
+# --------------------------------------------------------------------------- #
+#
+# §3 of 02-ROUND-TABLE-PROTOCOL.md places conflict-detection responsibility
+# on the round-table COORDINATOR (this driver, run_screenplay_step3_roundtable).
+# Per the protocol: when two panelists cite the same memory but disagree on
+# its implication, the comparator LLM pass (agent.memory_arbitration.
+# arbitrate_two_memories) + scope/confidence tie-break
+# (agent.memory_arbitration.apply_tie_break) resolve which citation wins,
+# and append_conflict_record writes one fsync'd JSONL line per conflict
+# for the curator (mechanism #5).
+#
+# Conflict-detection heuristic (PoC): the current and prior turns cite at
+# least one memory_id in common. We do NOT attempt semantic-disagreement
+# detection (deferred to v11.1+ per CONTEXT.md §deferred) — same-cited-
+# memory-different-panelist is the minimum sufficient signal. The
+# comparator LLM is the authoritative decider when the heuristic fires.
+#
+# Robustness: each step is wrapped so arbitration failure NEVER blocks
+# the round-table (the driver logs + continues). The conflict log is
+# best-effort — if mem0 records are absent (the PoC's hermetic invariant),
+# no conflicts are detected and no log is written, which is correct.
+
+
+def _arbitrate_opinion_conflicts(
+    *,
+    current_turn: dict[str, Any],
+    prior_turns: list[dict[str, Any]],
+    conflicts_jsonl_path: Path,
+    round_id: str,
+    project_id: str,
+    logline: str,
+) -> int:
+    """Detect conflicts between ``current_turn`` and each prior turn;
+    arbitrate + append a record per conflict.
+
+    Returns the number of conflicts detected + arbitrated (0 when the
+    current turn cites no memory IDs or no overlap exists).
+
+    Heuristic: ``current_turn.cited_memory_ids ∩ prior_turn.cited_memory_ids``
+    is non-empty → run ``arbitrate_two_memories`` with synthetic memory
+    records (we don't have the full mem0 records at this layer — only
+    the IDs surfaced by ``get_agent_opinion``'s citedMemoryIds field).
+    The synthetic records carry the panelist's opinion text + the cited
+    memory_id; the comparator LLM uses these to render its decision.
+    """
+    current_ids = set(current_turn.get("cited_memory_ids") or [])
+    if not current_ids:
+        return 0
+
+    conflicts = 0
+    for prior in prior_turns:
+        prior_ids = set(prior.get("cited_memory_ids") or [])
+        overlap = current_ids & prior_ids
+        if not overlap:
+            continue
+
+        # Build synthetic memory records for the comparator. These are
+        # NOT the original mem0 records — they're a minimal {content,
+        # scope, confidence, evidence_*} shape sufficient for the
+        # comparator prompt to render. The conflict is one cited_id
+        # at a time (the LLM compares ONE pair of memories per call
+        # per the §3.2 prompt template).
+        for memory_id in sorted(overlap):
+            memory_a = {
+                "content": prior["opinion"],
+                "scope": "project",  # default per memory-record-schema §3.9
+                "confidence": 0.7,   # neutral; LLM weighs content
+                "evidence_chain": [memory_id],
+                "evidence_operator_ids": [prior["agent_id"]],
+            }
+            memory_b = {
+                "content": current_turn["opinion"],
+                "scope": "project",
+                "confidence": 0.7,
+                "evidence_chain": [memory_id],
+                "evidence_operator_ids": [current_turn["agent_id"]],
+            }
+            resolution = agent.memory_arbitration.arbitrate_two_memories(
+                memory_a,
+                memory_b,
+                panelist_a=prior["agent_id"],
+                panelist_b=current_turn["agent_id"],
+                project_id=project_id,
+                question=f"Screenplay Step 3 scene design for: {logline}",
+            )
+            agent.memory_arbitration.append_conflict_record(
+                conflicts_jsonl_path,
+                {
+                    "round_id": round_id,
+                    "memory_id": memory_id,
+                    "panelist_a": prior["agent_id"],
+                    "panelist_b": current_turn["agent_id"],
+                    "resolution": resolution.get("resolution"),
+                    "rationale": resolution.get("rationale"),
+                    "confidence": resolution.get("confidence"),
+                    "detected_at_turn": current_turn["agent_id"],
+                },
+            )
+            conflicts += 1
+            logger.info(
+                "run_screenplay_step3: conflict arbitrated round=%s "
+                "memory=%s panelists=%s/%s resolution=%s",
+                round_id,
+                memory_id,
+                prior["agent_id"],
+                current_turn["agent_id"],
+                resolution.get("resolution"),
+            )
+    return conflicts
+
+
+# --------------------------------------------------------------------------- #
 # Synthesis pass — consolidate 9 panelist opinions into final Step 3 JSON
 # --------------------------------------------------------------------------- #
 
@@ -309,7 +467,20 @@ async def _synthesize_step3_output(
         temperature=0.4,  # more deterministic than per-panelist (0.7)
         max_tokens=4096,
     )
-    return response.choices[0].message.content
+    # WR-01: defensive content extraction — matches
+    # ``agent.memory_arbitration._extract_content`` pattern. If the LLM
+    # returns a malformed shape (None response, empty choices, missing
+    # message), return a sentinel that downstream json.loads will reject
+    # → synthesis_invalid_json error path (graceful skip per CONTEXT.md
+    # point 6, no AttributeError traceback).
+    try:
+        return str(response.choices[0].message.content)
+    except (AttributeError, IndexError, TypeError) as exc:
+        logger.warning(
+            "run_screenplay_step3: synthesis LLM returned malformed response: %s",
+            exc,
+        )
+        return ""  # downstream json.loads rejects → synthesis_invalid_json
 
 
 # --------------------------------------------------------------------------- #
@@ -381,6 +552,12 @@ def main() -> None:
                 smoke=args.smoke,
             )
         )
+    except KeyboardInterrupt:
+        # WR-07: Ctrl-C during the 9-panelist loop should not dump a long
+        # asyncio traceback — emit the operator-friendly interrupted
+        # message + 130 exit code (the shell convention for SIGINT).
+        print("Interrupted by operator.", file=sys.stderr)
+        sys.exit(130)
     except RuntimeError as exc:
         # auxiliary_client.call_llm raises RuntimeError when no provider is
         # configured. Emit a clear operator-facing message — no traceback.

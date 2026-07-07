@@ -157,7 +157,18 @@ async def test_phase52_submit_stub_returns_phase53_marker(tmp_path, monkeypatch)
         agent_id="y", content="x", scope="per_agent", confidence=0.5
     )
     assert result["status"] in {"phase53_not_implemented", "unavailable", "ok"}
-    assert result.get("record_id") is None or "record_id" not in result or result.get("record_id")
+    # WR-03 fix: original assertion was tautological —
+    # ``(record_id is None) OR (key absent) OR (record_id truthy)`` is true
+    # for ANY value. The real contract per memory_arbitration.py:494 is:
+    # unavailable → record_id is None; ok → record_id is a truthy string ID.
+    if result["status"] == "unavailable":
+        assert result.get("record_id") is None, (
+            f"unavailable status must carry record_id=None; got {result.get('record_id')!r}"
+        )
+    elif result["status"] == "ok":
+        assert result.get("record_id"), (
+            f"ok status must carry a truthy record_id; got {result.get('record_id')!r}"
+        )
 
 
 # --------------------------------------------------------------------------- #

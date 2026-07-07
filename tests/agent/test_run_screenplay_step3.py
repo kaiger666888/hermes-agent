@@ -863,3 +863,159 @@ def test_cli_config_has_auxiliary_tasks():
             f"(MEMORY.md feedback-glm-5-2-only.md); window={window!r}"
         )
 
+
+# --------------------------------------------------------------------------- #
+# Test 12 — CR-02: arbitration wire-up end-to-end (2-conflict scenario)
+# --------------------------------------------------------------------------- #
+#
+# Phase 53's CREATIVE-02 contract per 53-CONTEXT.md decision #2 mandates
+# the full 5-mechanism arbitration runtime. CR-02 in 53-REVIEW.md flagged
+# that arbitrate_two_memories + append_conflict_record were dead code —
+# never invoked from any production path. The fix wires them into the
+# driver: after each ``get_agent_opinion`` turn, the driver detects
+# overlapping cited_memory_ids against prior turns and runs arbitration
+# for each conflict pair, appending to a per-round conflicts.jsonl.
+#
+# This test seeds a scenario where 2 pairs of panelists cite the same
+# memory_id, then verifies:
+#  (a) 2 conflicts are detected + arbitrated
+#  (b) 2 lines appear in conflicts.jsonl
+#  (c) each line carries resolution + panelist_a/b + memory_id
+
+
+@pytest.mark.asyncio
+async def test_driver_arbitration_wire_up_writes_conflicts_jsonl(tmp_path, monkeypatch):
+    """CR-02: arbitration runtime is no longer dead code.
+
+    Two panelists cite the same memory_id → 1 conflict arbitrated + 1
+    line appended to {round_id}-conflicts.jsonl. Repeat for a second
+    pair → 2 conflicts total.
+    """
+    import sys
+    import agent.auxiliary_client
+    from agent import memory_arbitration
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    _seed_panel_9_agent_yamls(tmp_path)
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    # Memory routing stub: ``get_agent_opinion``'s call to
+    # ``memory_retrieve_scoped`` returns ``status=ok`` with hits carrying
+    # the cited memory_ids we want. We patch through mcp_serve's imported
+    # reference so the production code sees our values.
+    # Map agent_id → the memory_ids that agent should "cite".
+    cited_map = {
+        "screenplay": ["mem-A"],            # first turn, no overlap yet
+        "cinematographer": ["mem-A"],       # OVERLAP with screenplay → conflict #1
+        "hook_retention": ["mem-B"],        # new id
+        "theory_critic": ["mem-B"],         # OVERLAP with hook_retention → conflict #2
+        "editor": [],                       # no citations
+        "character_designer": [],
+        "continuity_auditor": [],
+        "audio_pipeline": [],
+        "style_genome": [],
+    }
+
+    async def _fake_memory_retrieve(*args, **kwargs):
+        agent_id = kwargs.get("agent_id", "unknown")
+        ids = cited_map.get(agent_id, [])
+        return {
+            "status": "ok",
+            "hits": [{"record_id": mid, "content": f"memory {mid}"} for mid in ids],
+        }
+
+    # Patch the symbol that mcp_serve imports (deferred import inside the
+    # function body — but mcp_serve imports the module name not the symbol).
+    monkeypatch.setattr(
+        "agent.memory_arbitration.memory_retrieve_scoped",
+        _fake_memory_retrieve,
+    )
+
+    # Mock GLM: panelist opinions return their own name (so we can verify
+    # the conflict log captured both panelists per pair); the synthesis
+    # pass returns HOOK-09-valid Step 3 JSON. We discriminate by the
+    # ``task`` kwarg because arbitration also calls call_llm with
+    # task="memory_comparator" — counting calls positionally would misfire
+    # since arbitration injects extra calls between panelist opinions.
+    opinion_call_count = {"n": 0}
+
+    def _mock_call_llm(*args, **kwargs):
+        task = kwargs.get("task") or (args[0] if args else None)
+        if task == "memory_comparator":
+            # Arbitration LLM pass — return a valid resolution JSON.
+            return _MockResponse(
+                '{"resolution": "A-wins", "rationale": "test", "confidence": 0.8}'
+            )
+        # round_table_opinion — panelist (calls 1-9) + synthesis (call 10).
+        opinion_call_count["n"] += 1
+        if opinion_call_count["n"] == 10:
+            return _MockResponse(json.dumps(_step3_output_fixture()))
+        agent_index = (opinion_call_count["n"] - 1) % 9
+        agent_name = _PANEL_9[agent_index]
+        return _MockResponse(f"opinion from {agent_name}")
+
+    monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
+
+    # The comparator LLM (arbitrate_two_memories calls call_llm with
+    # task="memory_comparator") — return A-wins for all conflicts. This
+    # is the SAME mock as _mock_call_llm because there's only one call_llm
+    # symbol; the task kwarg distinguishes them. Our mock above already
+    # handles both — it returns "opinion from X" for non-synthesis calls,
+    # which is non-JSON, so _parse_llm_json falls back to deferred-to-
+    # operator. That's fine — the test only verifies the WIRE-UP, not the
+    # resolution quality (the tie-break tests in test_memory_arbitration.py
+    # cover the comparator logic).
+
+    from scripts.run_screenplay_step3_roundtable import run_roundtable
+
+    output_path = tmp_path / "step3-output.json"
+    summary = await run_roundtable(
+        storykernel_path=repo_root / "tests" / "fixtures" / "storykernel-sample.json",
+        output_path=output_path,
+        smoke=False,
+    )
+
+    # (a) Driver succeeded.
+    assert "error" not in summary, f"driver returned error: {summary}"
+
+    # (b) conflicts.jsonl exists at the canonical path + has 2 lines.
+    from hermes_constants import get_hermes_home
+
+    round_id = summary["round_id"]
+    conflicts_jsonl = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / "screenplay-step3-poc"
+        / "round_tables"
+        / f"{round_id}-conflicts.jsonl"
+    )
+    assert conflicts_jsonl.exists(), (
+        f"CR-02 wire-up failed: conflicts.jsonl missing at {conflicts_jsonl}"
+    )
+    lines = conflicts_jsonl.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 2, (
+        f"expected 2 conflict records (mem-A pair + mem-B pair); "
+        f"got {len(lines)}: {lines!r}"
+    )
+
+    # (c) Each line carries the load-bearing fields + correct memory_id.
+    parsed_records = [json.loads(ln) for ln in lines]
+    memory_ids_logged = sorted(r["memory_id"] for r in parsed_records)
+    assert memory_ids_logged == ["mem-A", "mem-B"], (
+        f"conflict log memory_ids must be {['mem-A', 'mem-B']}; "
+        f"got {memory_ids_logged}"
+    )
+    for rec in parsed_records:
+        assert rec["round_id"] == round_id
+        assert rec["panelist_a"] in _PANEL_9
+        assert rec["panelist_b"] in _PANEL_9
+        assert rec["panelist_a"] != rec["panelist_b"]
+        assert "resolution" in rec
+        assert "rationale" in rec
+        assert "confidence" in rec
+
+

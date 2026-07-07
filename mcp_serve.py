@@ -864,7 +864,28 @@ async def get_agent_opinion(
                 temperature=0.7,
                 max_tokens=2048,
             )
-            opinion_text = response.choices[0].message.content
+            # WR-02: defensive content extraction — same pattern as
+            # ``agent.memory_arbitration._extract_content`` + driver's
+            # synthesis pass. If the LLM returns a malformed shape (None
+            # response, empty choices, missing message), return a structured
+            # JSON error rather than propagating AttributeError up through
+            # the asyncio task (which would crash the MCP server / daemon).
+            try:
+                opinion_text = str(response.choices[0].message.content)
+            except (AttributeError, IndexError, TypeError) as exc:
+                logger.warning(
+                    "get_agent_opinion: malformed LLM response for %s: %s",
+                    agent_id,
+                    exc,
+                )
+                return json.dumps(
+                    {
+                        "error": "llm_malformed_response",
+                        "agent_id": agent_id,
+                        "detail": str(exc),
+                    },
+                    indent=2,
+                )
 
             # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
             turn = {
