@@ -89,8 +89,8 @@ v11.0 (Hermes-Native Expert Agents PoC) shipped 2026-07-07 — implemented the v
   2. Per-key TPM in sliding 60s window; auto-pick freshest key.
   3. Test verifies pool isolation.
 **Plans**:
-- [ ] 59-01-PLAN.md — Named pools (POOL-01): load_aux_pool + load_named_pool + _seed_aux_env (GLM_AUX_API_KEY_1..4 + GLM_API_KEY fallback) + isolation tests
-- [ ] 59-02-PLAN.md — Per-key TPM tracking (POOL-02): sliding 60s window + select_freshest_tpm + record_usage + tpm_warning emission in acquire_slot
+- [x] 59-01-PLAN.md — Named pools (POOL-01): load_aux_pool + load_named_pool + _seed_aux_env (GLM_AUX_API_KEY_1..4 + GLM_API_KEY fallback) + isolation tests
+- [x] 59-02-PLAN.md — Per-key TPM tracking (POOL-02): sliding 60s window + select_freshest_tpm + record_usage + tpm_warning emission in acquire_slot
 
 ### Phase 60: LIVE-EVAL
 
