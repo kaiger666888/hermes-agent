@@ -573,6 +573,23 @@ prompt_caching:
 #   #   rpm: 20              # Compaction is bursty; lower ceiling
 #   # fitness_judge:
 #   #   rpm: 30
+#
+#   # ----- Phase 58 v12.0 cost estimate (THROTTLE-02 receipt) -----
+#   # Per-round-table receipt includes tokensConsumed + costUsdEstimate.
+#   # Pricing hardcoded at GLM-5.2 rates (MEMORY.md feedback-glm-5-2-only.md).
+#   # Configurable in v13+ when real pricing API lands.
+#   # See .planning/phases/58-rpm-throttling/58-CONTEXT.md decision #7.
+#   cost_estimate:
+#     glm_5_2_cny_per_1m_tokens: 0.5    # GLM-5.2 published CNY pricing
+#     usd_cny_rate: 7.2                 # Approximate conversion; configurable
+#     # costUsdEstimate = (tokensConsumed / 1_000_000)
+#     #                   * glm_5_2_cny_per_1m_tokens / usd_cny_rate
+#     # NOTE: These values are DOCUMENTATION ONLY in v12.0 — the actual
+#     # constants used by submit_round_table_result live in
+#     # agent/round_table_state.py (DEFAULT_TOKEN_BUDGET,
+#     # GLM_5_2_CNY_PER_1M_TOKENS, USD_CNY_RATE). Wiring these to read
+#     # from cli-config.yaml is a v13+ enhancement per 58-CONTEXT.md
+#     # deferred items.
 
 # =============================================================================
 # Persistent Memory
