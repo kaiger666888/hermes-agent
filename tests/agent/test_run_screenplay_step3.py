@@ -516,3 +516,350 @@ async def test_get_agent_opinion_appends_turn_with_opinion(tmp_path, monkeypatch
     )
     assert turns[0]["opinion"] != "[phase52_placeholder]"
     assert turns[0]["panelistId"] == "screenplay"
+
+
+# --------------------------------------------------------------------------- #
+# Task 2 tests — driver script + 9-agent lifecycle + HOOK-09 schema validation
+# --------------------------------------------------------------------------- #
+#
+# Plan 53-03 Task 2: scripts/run_screenplay_step3_roundtable.py orchestrates
+# the 9-agent serial round table end-to-end. Coverage:
+#
+# 1. test_driver_runs_full_lifecycle_with_mocked_glm — mocked GLM returns
+#    distinct opinions per panelist + a HOOK-09-valid final Step 3 JSON;
+#    driver succeeds and state file shows 9 turns + status=completed.
+# 2. test_driver_strict_serial_no_asyncio_gather — grep the driver source;
+#    asyncio.gather must NOT appear (INFRA-04 hard constraint).
+# 3. test_driver_output_validates_against_hook09_schema — driver output
+#    passes jsonschema validation against screenplay-step3-schema.json.
+# 4. test_driver_skips_gracefully_when_glm_unavailable — when call_llm
+#    raises RuntimeError, driver exits with non-zero status + clear message
+#    (no traceback).
+# 5. test_cli_config_has_auxiliary_tasks — cli-config.yaml.example
+#    documents round_table_opinion + memory_comparator with provider: glm.
+
+
+_PANEL_9 = [
+    "screenplay", "cinematographer", "hook_retention", "theory_critic",
+    "editor", "character_designer", "continuity_auditor",
+    "audio_pipeline", "style_genome",
+]
+
+
+def _seed_panel_9_agent_yamls(hermes_home: Path) -> None:
+    """Drop minimal YAMLs for all 9 panelists at {hermes_home}/agents/."""
+    agents_dir = hermes_home / "agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    # Reuse the screenplay template + emit generic stubs for the other 8.
+    (agents_dir / "screenplay.agent.yaml").write_text(
+        _SCREENPLAY_AGENT_YAML, encoding="utf-8"
+    )
+    for name in _PANEL_9[1:]:
+        yaml_text = _SCREENPLAY_AGENT_YAML.replace(
+            'name: screenplay', f'name: {name}'
+        ).replace(
+            'expert_id: screenplay', f'expert_id: {name}'
+        )
+        (agents_dir / f"{name}.agent.yaml").write_text(yaml_text, encoding="utf-8")
+
+
+def _step3_output_fixture() -> dict:
+    """A minimal HOOK-09-valid Step 3 JSON for the synthesizer to emit."""
+    return {
+        "logline": (
+            "A young sous-chef returns to her coastal hometown after her "
+            "mother's death, only to discover the family restaurant hides "
+            "a generations-old secret recipe."
+        ),
+        "scene_breakdown": [
+            {
+                "scene_id": "S1",
+                "beats": ["cold-open in Shanghai kitchen", "phone rings"],
+                "emotion_curve": [
+                    {"timestamp_seconds": 0.0, "arousal": 0.3, "valence": 0.0},
+                    {"timestamp_seconds": 30.0, "arousal": 0.6, "valence": -0.4},
+                ],
+            },
+        ],
+        "hooks": [
+            {
+                "timestamp_seconds": 5.0,
+                "type": "cold_open",
+                "payload": "Lin receives the death-news voicemail",
+            }
+        ],
+        "payoffs": [
+            {
+                "setup_scene_id": "S1",
+                "payoff_scene_id": "S1",
+                "payload": "test payoff",
+            }
+        ],
+        "cliffhangers": [
+            {
+                "scene_id": "S1",
+                "tension_level": 0.7,
+                "cut_point_seconds": 85.0,
+            }
+        ],
+        "emotion_curve": [
+            {"timestamp_seconds": 0.0, "arousal": 0.3, "valence": 0.0},
+            {"timestamp_seconds": 30.0, "arousal": 0.6, "valence": -0.4},
+        ],
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Test 7 — driver runs the full 9-agent lifecycle with mocked GLM
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_driver_runs_full_lifecycle_with_mocked_glm(tmp_path, monkeypatch):
+    """Driver: open → 9 get_agent_opinion → submit + HOOK-09 output."""
+    import sys
+    import agent.auxiliary_client
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    _seed_panel_9_agent_yamls(tmp_path)
+
+    # Make 'scripts' importable so 'from scripts.run_screenplay_step3_roundtable
+    # import run_roundtable' resolves under pytest.
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    # Track opinion calls — give each panelist a unique opinion string.
+    call_count = {"n": 0}
+
+    def _mock_call_llm(*args, **kwargs):
+        call_count["n"] += 1
+        # The 10th call is the synthesis pass — return a HOOK-09-valid JSON.
+        if call_count["n"] == 10:
+            return _MockResponse(json.dumps(_step3_output_fixture()))
+        return _MockResponse(
+            f"opinion-{call_count['n']} from panelist "
+            f"{_PANEL_9[(call_count['n'] - 1) % 9]}"
+        )
+
+    monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
+
+    from scripts.run_screenplay_step3_roundtable import run_roundtable
+
+    output_path = tmp_path / "step3-output.json"
+    summary = await run_roundtable(
+        storykernel_path=repo_root / "tests" / "fixtures" / "storykernel-sample.json",
+        output_path=output_path,
+        smoke=False,
+    )
+
+    # (a) round_table_open succeeded (no error key in summary)
+    assert "error" not in summary
+    assert summary["panelist_count"] == 9
+
+    # (b) state file shows 9 turns + status=completed
+    from hermes_constants import get_hermes_home
+    from agent.round_table_state import read_and_recover_state
+
+    state_dir = (
+        get_hermes_home()
+        / "agents"
+        / ".runtime"
+        / "screenplay-step3-poc"
+        / "round_tables"
+    )
+    state_files = list(state_dir.glob("*.json"))
+    assert len(state_files) == 1, (
+        f"expected 1 state file, got {len(state_files)}"
+    )
+    state = read_and_recover_state(state_files[0])
+    assert state["status"] == "completed"
+    assert len(state["turns"]) == 9
+
+    # (c) output file contains HOOK-09-valid JSON
+    assert output_path.exists()
+    output = json.loads(output_path.read_text(encoding="utf-8"))
+    for field in (
+        "logline", "scene_breakdown", "hooks",
+        "payoffs", "cliffhangers", "emotion_curve",
+    ):
+        assert field in output, f"output missing HOOK-09 field: {field}"
+
+
+# --------------------------------------------------------------------------- #
+# Test 8 — driver source contains NO asyncio.gather (INFRA-04 hard constraint)
+# --------------------------------------------------------------------------- #
+
+
+def test_driver_strict_serial_no_asyncio_gather():
+    """grep the driver source: asyncio.gather must NOT appear."""
+    import sys
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    driver_path = repo_root / "scripts" / "run_screenplay_step3_roundtable.py"
+    assert driver_path.exists(), f"driver script missing at {driver_path}"
+    source = driver_path.read_text(encoding="utf-8")
+    assert "asyncio.gather" not in source, (
+        "INFRA-04 violation: asyncio.gather found in driver source — "
+        "strict serial is the hard constraint (Phase 52 SC#4 + "
+        "MEMORY.md feedback-glm-overload-reduce-concurrency.md)."
+    )
+
+    # And the strict-serial pattern must be present: a 'for agent_id in'
+    # loop wrapping an 'await get_agent_opinion' call.
+    assert "for agent_id in" in source, (
+        "strict serial pattern 'for agent_id in PANEL_9' missing"
+    )
+    assert "await mcp_serve.get_agent_opinion" in source or (
+        "await get_agent_opinion" in source
+    ), "driver must call get_agent_opinion via 'await' inside the for loop"
+
+
+# --------------------------------------------------------------------------- #
+# Test 9 — driver output validates against HOOK-09 schema
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_driver_output_validates_against_hook09_schema(
+    tmp_path, monkeypatch
+):
+    """Driver output passes jsonschema validation against HOOK-09 schema."""
+    import sys
+    import jsonschema
+    import agent.auxiliary_client
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    _seed_panel_9_agent_yamls(tmp_path)
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    call_count = {"n": 0}
+
+    def _mock_call_llm(*args, **kwargs):
+        call_count["n"] += 1
+        if call_count["n"] == 10:
+            return _MockResponse(json.dumps(_step3_output_fixture()))
+        return _MockResponse(f"panelist-opinion-{call_count['n']}")
+
+    monkeypatch.setattr(agent.auxiliary_client, "call_llm", _mock_call_llm)
+
+    from scripts.run_screenplay_step3_roundtable import run_roundtable
+
+    output_path = tmp_path / "step3-output.json"
+    await run_roundtable(
+        storykernel_path=repo_root / "tests" / "fixtures" / "storykernel-sample.json",
+        output_path=output_path,
+        smoke=False,
+    )
+
+    schema = json.loads(
+        (repo_root / "tests" / "fixtures" / "screenplay-step3-schema.json")
+        .read_text(encoding="utf-8")
+    )
+    output = json.loads(output_path.read_text(encoding="utf-8"))
+
+    # MUST not raise — HOOK-09 contract verbatim.
+    jsonschema.Draft202012Validator(schema).validate(output)
+
+
+# --------------------------------------------------------------------------- #
+# Test 10 — driver skips gracefully when GLM is unavailable
+# --------------------------------------------------------------------------- #
+
+
+def test_driver_skips_gracefully_when_glm_unavailable(tmp_path, monkeypatch):
+    """When call_llm raises RuntimeError, driver exits cleanly (no traceback)."""
+    import sys
+    import subprocess
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+
+    # Run the driver in a SUBPROCESS so we can capture stderr + exit code.
+    env = {
+        **dict(__import__("os").environ),
+        "HERMES_HOME": str(tmp_path),
+        # Strip GLM keys so the auxiliary_client auto-chain fails.
+        "GLM_API_KEY": "",
+        "ZAI_API_KEY": "",
+        "OPENROUTER_API_KEY": "",
+    }
+    # Use the SAME python interpreter so all deps resolve.
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "scripts" / "run_screenplay_step3_roundtable.py"),
+            "--storykernel",
+            str(repo_root / "tests" / "fixtures" / "storykernel-sample.json"),
+            "--output",
+            str(tmp_path / "step3-output.json"),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=30,
+        cwd=str(repo_root),
+    )
+
+    # Non-zero exit is required (clean exit, not a crash).
+    assert result.returncode != 0, (
+        f"driver must exit non-zero on GLM-unavailable; got rc=0; "
+        f"stdout={result.stdout!r}"
+    )
+    # And it MUST NOT dump a Python traceback to stderr.
+    assert "Traceback (most recent call last)" not in result.stderr, (
+        f"driver must not crash with traceback; stderr={result.stderr!r}"
+    )
+    # And the helpful message must mention GLM_API_KEY + cli-config.
+    stderr_lower = result.stderr.lower() + result.stdout.lower()
+    assert "glm" in stderr_lower, (
+        f"driver stderr must mention GLM; got stderr={result.stderr!r}"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Test 11 — cli-config.yaml.example documents auxiliary tasks
+# --------------------------------------------------------------------------- #
+
+
+def test_cli_config_has_auxiliary_tasks():
+    """cli-config.yaml.example documents round_table_opinion + memory_comparator.
+
+    Per MEMORY.md feedback-glm-5-2-only.md + RESEARCH Pitfall 6, these two
+    auxiliary task entries must be present in the example config with
+    ``provider: glm`` so operators copy the GLM-only contract.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    cfg = (repo_root / "cli-config.yaml.example").read_text(encoding="utf-8")
+
+    # Both task names must be present.
+    assert "round_table_opinion" in cfg, (
+        "cli-config.yaml.example missing 'round_table_opinion' task entry"
+    )
+    assert "memory_comparator" in cfg, (
+        "cli-config.yaml.example missing 'memory_comparator' task entry"
+    )
+
+    # Both must declare provider: glm (or reference glm).
+    # Find each section + verify provider within a few lines.
+    for task in ("round_table_opinion", "memory_comparator"):
+        idx = cfg.index(task)
+        # Look in the next 200 chars for 'provider:' + 'glm'
+        window = cfg[idx : idx + 200]
+        assert "provider:" in window, (
+            f"task {task!r} missing 'provider:' in cli-config.yaml.example"
+        )
+        assert "glm" in window, (
+            f"task {task!r} must reference provider 'glm' "
+            f"(MEMORY.md feedback-glm-5-2-only.md); window={window!r}"
+        )
+
