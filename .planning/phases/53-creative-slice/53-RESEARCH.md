@@ -720,24 +720,26 @@ def test_skill_sha256_lf_normalized():
 | A7 | `auxiliary_client.call_llm` is synchronous (returns response object directly, not coroutine) | Pattern 2, Pattern 4 | LOW — verified at `agent/auxiliary_client.py:5168` (`def call_llm`, not `async def`). For async alternative, see `async_call_llm` at line 5697. Driver script should use `call_llm` from within `asyncio.to_thread` or rely on the auxiliary_client's internal ThreadPoolExecutor. |
 | A8 | `transform_skill_to_agent.py` lives in `scripts/` (per CONTEXT.md Claude's Discretion #2), not `agent/` | Project Structure | LOW — verified convention: existing `scripts/analyze_livetest.py`, `scripts/build_skills_index.py` etc. all live in `scripts/`. One-shot utilities, not runtime imports. |
 
-## Open Questions
+## Open Questions (RESOLVED 2026-07-07 — addressed in PLAN.md files)
 
-1. **`mcp_serve.py` tool decoration: callable directly or wrapped?**
+> All 4 OQs below were addressed during planning. Resolutions propagated to PLAN.md tasks.
+
+1. **`mcp_serve.py` tool decoration: callable directly or wrapped?** ✅ RESOLVED: Wave 0 contract smoke test (53-01 Task 1, `test_phase52_contract.py`) probes all 7 MCP tool symbols. If wrapped, driver script falls back to calling `agent/round_table_state.py` + `agent/memory_arbitration.py` functions directly (documented in 53-03 Task 2 action).
    - What we know: 7 MCP tools were registered with `@mcp.tool()` decorator in Phase 52.
    - What's unclear: whether `mcp_serve.round_table_open(...)` (the decorated object) can be called directly as `await mcp_serve.round_table_open(round_id=..., ...)`, OR whether it's a FastMCP `Tool` wrapper requiring `.call()` / `.fn()`.
    - Recommendation: Wave 0 includes a smoke test (`test_phase52_contract.py`) that imports + awaits each tool with synthetic args. If wrapped, switch driver script to call the underlying `agent/round_table_state.py` functions directly (bypassing MCP tool layer — acceptable for v11.0 PoC since driver is a Python script, not an external MCP client).
 
-2. **Dual conflict storage (state["conflicts"] + conflicts.jsonl)**
+2. **Dual conflict storage (state["conflicts"] + conflicts.jsonl)** ✅ RESOLVED: Per 53-02 Task 2 + 53-03 success_criteria — `conflicts.jsonl` is canonical append-only log; `state["conflicts"]` populated from JSONL read at `submit_round_table_result` time, then both sealed.
    - What we know: v10.0 schema says `state["conflicts"]` is sealed at submit. CONTEXT.md decision #5 says runtime appends go to `conflicts.jsonl`.
    - What's unclear: are these two copies of the same data, or distinct (one for runtime log, one for sealed snapshot)?
    - Recommendation: Treat `conflicts.jsonl` as canonical runtime append-only log (per CONTEXT.md decision #5); at `submit_round_table_result` time, read JSONL, write contents into `state["conflicts"]` array, seal both. Document in PLAN.md.
 
-3. **Does driver script run real GLM in unit tests, or only in smoke test?**
+3. **Does driver script run real GLM in unit tests, or only in smoke test?** ✅ RESOLVED: Per 53-03 Task 1+2 — unit tests mock `auxiliary_client.call_llm` via `monkeypatch.setattr`; smoke test (`--smoke` flag) calls real GLM; SC#2 verification recorded in VERIFICATION.md as `human_needed` if GLM unavailable.
    - What we know: SC#2 mandates real GLM API call with <30s latency. Unit tests should not depend on GLM (slow, flaky).
    - What's unclear: where's the line?
    - Recommendation: Unit tests mock `auxiliary_client.call_llm` (via `monkeypatch.setattr`). Smoke test (`scripts/run_screenplay_step3_roundtable.py` invoked manually with `--smoke` flag) calls real GLM. SC#2 verification = manual smoke test result recorded in VERIFICATION.md.
 
-4. **Comparator LLM task name registration**
+4. **Comparator LLM task name registration** ✅ RESOLVED: Per 53-03 Task 2 — `cli-config.yaml.example` adds `auxiliary.round_table_opinion` + `auxiliary.memory_comparator` entries with `provider: glm`, `model: glm-5.2`, `timeout: 30`.
    - What we know: `auxiliary_client.call_llm(task="...")` reads `auxiliary.{task}.{provider,model}` from `cli-config.yaml`.
    - What's unclear: are `task="round_table_opinion"` and `task="memory_comparator"` already registered as valid task names, or do they need new entries in `cli-config.yaml.example`?
    - Recommendation: Add both to `cli-config.yaml.example` with `provider: glm`, `model: glm-5.2`, `timeout: 30`. Document in VERIFICATION.md.
