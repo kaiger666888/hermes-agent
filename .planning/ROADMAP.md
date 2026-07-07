@@ -100,8 +100,8 @@ Plans:
 Plans:
 **Wave 1** (parallel — no file overlap)
 
-- [ ] 53-01-PLAN.md — MIGR-01 9-Agent YAML Transform (Wave 0 contract test + transform_skill_to_agent.py + 9 YAMLs + HOOK-09 invariant)
-- [ ] 53-02-PLAN.md — CREATIVE-02 Conflict Arbitration Runtime (5-mechanism memory_arbitration.py + comparator prompt + conflicts.jsonl writer + 2-conflict test)
+- [x] 53-01-PLAN.md — MIGR-01 9-Agent YAML Transform (Wave 0 contract test + transform_skill_to_agent.py + 9 YAMLs + HOOK-09 invariant)
+- [x] 53-02-PLAN.md — CREATIVE-02 Conflict Arbitration Runtime (5-mechanism memory_arbitration.py + comparator prompt + conflicts.jsonl writer + 2-conflict test)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -220,7 +220,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 (no decimal inse
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 52. INFRA-FOUNDATION | 4/4 | Complete    | 2026-07-07 |
-| 53. CREATIVE-SLICE | 0/3 | Not started | - |
+| 53. CREATIVE-SLICE | 2/3 | In Progress|  |
 | 54. EVAL-HARNESS-1 | 0/TBD | Not started | - |
 | 55. EVAL-HARNESS-2 | 0/TBD | Not started | - |
 | 56. VALIDATE | 0/TBD | Not started | - |
