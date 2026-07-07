@@ -538,6 +538,25 @@ prompt_caching:
 #     provider: glm          # GLM-only — MEMORY.md feedback-glm-5-2-only.md
 #     model: glm-5.2         # Phase 55 EVAL-04 memory compaction summarizer
 #     timeout: 30            # T-55-02 mitigation (fail-safe to deterministic merge on malformed response)
+#
+#   # ----- Phase 57 v12.0 endpoint routing (ENDPOINT-01) -----
+#   # Long-prompt GLM calls (synthesis, memory_compaction, memory_comparator)
+#   # auto-route to open.bigmodel.cn/api/anthropic (anthropic-compat, no 30s
+#   # cap) when the estimated input tokens exceed token_threshold. Short
+#   # prompts (panelists, vision) stay on the cheaper z.ai coding plan.
+#   # Eliminates the v11.0 SC#2 synthesis 5x retry storm (490s -> <240s).
+#   # See .planning/phases/57-endpoint-routing/57-CONTEXT.md.
+#   endpoint_routing:
+#     enabled: true                   # Operator opt-out (set false to disable)
+#     token_threshold: 4096           # Prompts >= this many estimated tokens route to long_prompt
+#                                      # Default 4096; raise to 8000 if anthropic endpoint cost is a concern
+#     short_prompt:
+#       provider: glm                 # Routes via existing zai alias (z.ai coding plan)
+#       # base_url omitted -> uses provider default (api.z.ai/api/coding/paas/v4)
+#     long_prompt:
+#       provider: zhipu-anthropic     # Anthropic-compat endpoint
+#       base_url: "https://open.bigmodel.cn/api/anthropic"
+#       api_mode: chat_completions    # OpenAI SDK talks to /chat/completions on this URL
 
 # =============================================================================
 # Persistent Memory
