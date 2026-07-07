@@ -581,7 +581,15 @@ def _select_pool_entry(
     via ``load_named_pool(pool_name, provider)`` so auxiliary callers
     rotate through their own keys, isolated from gateway/main pool
     exhaustion.
+
+    Phase 59 POOL-02: when ``pool_name == "auxiliary"`` AND a non-None
+    entry is selected, records the entry's ``id`` in
+    ``_LAST_SELECTED_AUX_ENTRY_ID`` so ``_capture_usage`` can attribute
+    consumed tokens to that entry via ``record_usage``. Cleared on
+    default-pool calls (T-59-11-E mitigation: default-pool calls must
+    never touch aux-pool TPM).
     """
+    global _LAST_SELECTED_AUX_ENTRY_ID
     try:
         if pool_name == "default":
             pool = load_pool(provider)
@@ -598,13 +606,22 @@ def _select_pool_entry(
     if not pool or not pool.has_credentials():
         return False, None
     try:
-        return True, pool.select()
+        selected = pool.select()
     except Exception as exc:
         logger.debug(
             "Auxiliary client: could not select pool entry for %s/%s: %s",
             provider, pool_name, exc,
         )
         return True, None
+
+    # Phase 59 POOL-02: track the aux-pool entry id for post-call TPM
+    # attribution. Default-pool calls clear the tracker so prior aux state
+    # never bleeds into a subsequent default-pool call's _capture_usage.
+    if pool_name == "auxiliary" and selected is not None:
+        _LAST_SELECTED_AUX_ENTRY_ID = getattr(selected, "id", None)
+    elif pool_name == "default":
+        _LAST_SELECTED_AUX_ENTRY_ID = None
+    return True, selected
 
 
 def _peek_pool_entry(
@@ -5036,6 +5053,15 @@ _LAST_CALL_USAGE: Dict[str, int] = {
     "total_tokens": 0,
 }
 
+# Phase 59 POOL-02: id of the aux-pool entry that was selected for the
+# current call. Set by _select_pool_entry when ``pool_name == "auxiliary"``
+# and consumed by _capture_usage to attribute consumed tokens to that entry
+# via ``credential_pool.record_usage``. Cleared to ``None`` on default-pool
+# calls so default-pool usage never accidentally decrements aux-pool TPM
+# (T-59-11-E mitigation). Single-writer (_select_pool_entry) + single-reader
+# (_capture_usage) within the gateway process.
+_LAST_SELECTED_AUX_ENTRY_ID: Optional[str] = None
+
 
 def get_last_call_usage() -> Dict[str, int]:
     """Return a COPY of the last call_llm response's token usage.
@@ -5062,6 +5088,14 @@ def _capture_usage(response: Any) -> None:
     Handles OpenAI-style ``usage.prompt_tokens`` AND Anthropic-style
     ``usage.input_tokens`` field naming. No-op when the response lacks a
     ``usage`` attribute (some custom adapters skip it).
+
+    Phase 59 POOL-02: also decrement TPM on the aux-pool entry that was
+    selected for this call (tracked via
+    ``_LAST_SELECTED_AUX_ENTRY_ID``). Default-pool calls leave that tracker
+    ``None`` so default-pool usage never touches aux-pool TPM state
+    (T-59-11-E mitigation). Best-effort: any failure in the TPM
+    attribution path is logged at debug and swallowed — the existing
+    usage-tracker semantics must not be disturbed.
     """
     usage = getattr(response, "usage", None)
     if usage is None:
@@ -5082,6 +5116,23 @@ def _capture_usage(response: Any) -> None:
     _LAST_CALL_USAGE["prompt_tokens"] = int(prompt)
     _LAST_CALL_USAGE["completion_tokens"] = int(completion)
     _LAST_CALL_USAGE["total_tokens"] = int(total)
+
+    # Phase 59 POOL-02: attribute consumed tokens to the aux-pool entry
+    # that was selected for this call. Best-effort — failure here must NOT
+    # crash the validator path or disturb _LAST_CALL_USAGE (which downstream
+    # budget accounting depends on).
+    aux_entry_id = _LAST_SELECTED_AUX_ENTRY_ID
+    if not aux_entry_id:
+        return
+    try:
+        from agent.credential_pool import load_named_pool
+
+        pool = load_named_pool("auxiliary", "zai")
+        total_int = int(total)
+        if total_int > 0:
+            pool.record_usage(aux_entry_id, total_int)
+    except Exception as exc:  # noqa: BLE001 — TPM attribution must not crash callers
+        logger.debug("TPM record_usage failed: %s", exc)
 
 
 def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:

@@ -538,8 +538,20 @@ DEFAULT_MAX_CONCURRENT_PER_CREDENTIAL = 1
 
 
 class CredentialPool:
-    def __init__(self, provider: str, entries: List[PooledCredential]):
+    def __init__(
+        self,
+        provider: str,
+        entries: List[PooledCredential],
+        *,
+        storage_key: Optional[str] = None,
+    ):
         self.provider = provider
+        # Phase 59 POOL-02: ``storage_key`` is the auth.json credential_pool
+        # namespace this pool persists to. Defaults to ``provider`` for
+        # backward compat (default pool). Named pools (e.g. ``auxiliary:zai``)
+        # pass the explicit pool_key so ``_persist`` writes to the correct
+        # namespace instead of clobbering the default pool's storage.
+        self._storage_key = storage_key or provider
         self._entries = sorted(entries, key=lambda entry: entry.priority)
         self._current_id: Optional[str] = None
         self._strategy = get_pool_strategy(provider)
@@ -571,7 +583,7 @@ class CredentialPool:
 
     def _persist(self) -> None:
         write_credential_pool(
-            self.provider,
+            self._storage_key,
             [entry.to_dict() for entry in self._entries],
         )
 
@@ -2675,7 +2687,7 @@ def load_named_pool(name: str, provider: str) -> CredentialPool:
             pool_key,
             [entry.to_dict() for entry in sorted(entries, key=lambda item: item.priority)],
         )
-    return CredentialPool(provider, entries)
+    return CredentialPool(provider, entries, storage_key=pool_key)
 
 
 def load_aux_pool(provider: str) -> CredentialPool:

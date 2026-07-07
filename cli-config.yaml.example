@@ -440,6 +440,21 @@ prompt_caching:
 #
 # Audit: `hermes auth list` shows both pools. Aux entries appear under the
 # "auxiliary:zai" storage namespace, separate from the default "zai" pool.
+#
+# Phase 59 POOL-02: per-key TPM (tokens-per-minute) tracking. Each aux-pool
+# key tracks its consumed tokens in a sliding 60s window (hardcoded cap
+# 200_000/key — GLM-5.2 single-key ceiling). Before each aux call, the
+# pool picks the freshest key (most remaining TPM). When ALL aux keys drop
+# below the warning threshold, acquire_slot emits a tpm_warning log +
+# brief sleep until the soonest window slides.
+#
+# auxiliary.tpm_warning_threshold (default 0.1 = 10%): emit tpm_warning
+# when all aux pool keys are below this fraction of the TPM cap. Range
+# [0.0, 1.0]. Set to 0.0 to disable the warning; set to 0.2 for stricter
+# pre-emptive pacing. Must be set under the top-level `auxiliary:` block:
+#
+# auxiliary:
+#   tpm_warning_threshold: 0.1    # Phase 59-02 — 10% default
 
 # =============================================================================
 # Auxiliary Models (Advanced — Experimental)
