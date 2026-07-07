@@ -322,6 +322,110 @@ class TestMcpRoundTableIntegration:
         assert sub2.get("error") == "round_not_open"
 
 
+# ── Serial enforcement (INFRA-04 / SC#4) via MCP tool surface ──────────────
+
+
+class TestSerialEnforcementMcpIntegration:
+    """SC#4 integration: concurrent ``get_agent_opinion`` for the same
+    ``roundId`` is rejected with 429 + MEMORY.md citation when routed
+    through the MCP tool surface (not just at the lock-primitive level).
+
+    These tests complement ``tests/agent/test_round_table_executor.py``
+    (which exercises ``acquire_round_or_reject`` directly) by verifying
+    the lock is correctly wired INSIDE the ``get_agent_opinion`` closure.
+    """
+
+    @pytest.mark.asyncio
+    async def test_concurrent_get_agent_opinion_rejected_with_429(self, mcp_server):
+        """SC#4: when the per-roundId lock is already held, the MCP
+        ``get_agent_opinion`` tool returns the 429 serial-violation
+        response citing ``feedback-glm-overload-reduce-concurrency.md``.
+
+        Test strategy: pre-acquire the lock via the public
+        ``acquire_round_or_reject`` API (deterministic — guarantees the
+        MCP tool call sees a held lock on its very first line). Then
+        invoke ``get_agent_opinion`` and verify the rejection response.
+        Release the lock at the end so the registry is clean for
+        subsequent tests.
+        """
+        from agent.round_table_executor import (
+            acquire_round_or_reject,
+            release_round_lock,
+        )
+
+        # Open a fresh round table so the MCP tool would otherwise succeed.
+        round_id = uuid.uuid4().hex
+        project_slug = "test-slug"
+        open_r = await _ainvoke(
+            mcp_server, "round_table_open",
+            round_id=round_id, project_slug=project_slug,
+            question="Concurrent test?",
+            panelist_agent_ids=["test-coordinator", "screenplay"],
+            caller="test-runner",
+        )
+        assert open_r["status"] == "open"
+
+        # Pre-acquire the per-roundId lock so the MCP tool call sees a
+        # held lock on its very first line (deterministic race avoidance).
+        held_lock = await acquire_round_or_reject(round_id)
+        assert held_lock is not None, "test setup: pre-acquire must succeed"
+
+        try:
+            # Now invoke the MCP tool — must hit the rejection path
+            # before any state file mutation.
+            result = await _ainvoke(
+                mcp_server, "get_agent_opinion",
+                round_id=round_id, project_slug=project_slug,
+                agent_id="test-coordinator", topic="concurrent test",
+            )
+
+            # SC#4 load-bearing assertions
+            assert result.get("error") == "serial_violation", (
+                f"expected serial_violation, got {result}"
+            )
+            assert result.get("status") == 429, (
+                f"expected status=429, got {result}"
+            )
+            # Literal MEMORY.md policy citation — load-bearing per SC#4
+            message = result.get("message", "")
+            assert "feedback-glm-overload-reduce-concurrency.md" in message, (
+                f"429 message must cite MEMORY.md policy file; got: {message}"
+            )
+        finally:
+            # Cleanup so subsequent tests see a clean lock registry.
+            await release_round_lock(round_id)
+
+    @pytest.mark.asyncio
+    async def test_get_agent_opinion_happy_path_unaffected_by_lock(self, mcp_server):
+        """Regression: lock wiring must NOT break the happy path.
+
+        The ``test_lifecycle_round_trip`` test in ``TestMcpRoundTableIntegration``
+        already exercises ``get_agent_opinion`` end-to-end, so this test
+        is technically redundant — but locking changes are subtle enough
+        to warrant a focused regression that calls ``get_agent_opinion``
+        once and confirms the response still reports ``status: ok`` with
+        the placeholder opinion intact.
+        """
+        round_id = uuid.uuid4().hex
+        project_slug = "test-slug"
+        open_r = await _ainvoke(
+            mcp_server, "round_table_open",
+            round_id=round_id, project_slug=project_slug,
+            question="Happy path?",
+            panelist_agent_ids=["test-coordinator", "screenplay"],
+            caller="test-runner",
+        )
+        assert open_r["status"] == "open"
+
+        opinion_r = await _ainvoke(
+            mcp_server, "get_agent_opinion",
+            round_id=round_id, project_slug=project_slug,
+            agent_id="test-coordinator", topic="happy path",
+        )
+        assert opinion_r["status"] == "ok", f"happy path broken: {opinion_r}"
+        assert opinion_r["opinion"] == "[phase52_placeholder]"
+
+
 # ── Tool registration census — guard against name drift ────────────────────
 
 

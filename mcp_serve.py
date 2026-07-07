@@ -1086,6 +1086,17 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             topic: Topic/question this turn addresses.
             panel_context: Optional prior-turn context for the panelist.
         """
+        # INFRA-04 (Phase 52-04): per-roundId asyncio.Lock serializes
+        # get_agent_opinion so concurrent calls for the same roundId are
+        # REJECTED with 429 + MEMORY.md citation (NOT queued). This is the
+        # GLM concurrency safety layer — queueing would violate the 4-key
+        # rotation compatibility constraint locked by user-memory policy
+        # feedback-glm-overload-reduce-concurrency.md.
+        from agent.round_table_executor import (
+            _serial_violation_response,
+            acquire_round_or_reject,
+            release_round_lock,
+        )
         from hermes_constants import get_hermes_home
         from agent.round_table_state import (
             _now_iso as _state_now_iso,
@@ -1093,91 +1104,102 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             read_and_recover_state,
         )
 
-        state_path = (
-            get_hermes_home()
-            / "agents"
-            / ".runtime"
-            / project_slug
-            / "round_tables"
-            / f"{round_id}.json"
-        )
-
-        if not state_path.exists():
-            return json.dumps(
-                {
-                    "error": "round_not_found",
-                    "status": 404,
-                    "round_id": round_id,
-                },
-                indent=2,
-            )
+        lock = await acquire_round_or_reject(round_id)
+        if lock is None:
+            return _serial_violation_response(round_id)
 
         try:
-            state = read_and_recover_state(state_path)
-        except FileNotFoundError:
-            return json.dumps(
-                {
-                    "error": "round_not_found",
-                    "status": 404,
-                    "round_id": round_id,
-                },
-                indent=2,
-            )
-        except Exception as exc:
-            logger.warning(
-                "get_agent_opinion: state read failed for %s: %s",
-                round_id,
-                exc,
-            )
-            return json.dumps(
-                {"error": "state_read_failed", "detail": str(exc)},
-                indent=2,
+            state_path = (
+                get_hermes_home()
+                / "agents"
+                / ".runtime"
+                / project_slug
+                / "round_tables"
+                / f"{round_id}.json"
             )
 
-        if state.get("status") != "open":
-            return json.dumps(
-                {
-                    "error": "round_not_open",
-                    "status": 409,
-                    "round_id": round_id,
-                    "current_status": state.get("status"),
-                },
-                indent=2,
-            )
+            if not state_path.exists():
+                return json.dumps(
+                    {
+                        "error": "round_not_found",
+                        "status": 404,
+                        "round_id": round_id,
+                    },
+                    indent=2,
+                )
 
-        # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
-        # Phase 52: opinion is a fixed placeholder; Phase 53 swaps in the
-        # real GLM call result.
-        turn = {
-            "turnIndex": len(state.get("turns", [])) + 1,
-            "panelistId": agent_id,
-            "opinion": "[phase52_placeholder]",
-            "citedMemoryIds": [],
-            "submittedAt": _state_now_iso(),
-        }
+            try:
+                state = read_and_recover_state(state_path)
+            except FileNotFoundError:
+                return json.dumps(
+                    {
+                        "error": "round_not_found",
+                        "status": 404,
+                        "round_id": round_id,
+                    },
+                    indent=2,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "get_agent_opinion: state read failed for %s: %s",
+                    round_id,
+                    exc,
+                )
+                return json.dumps(
+                    {"error": "state_read_failed", "detail": str(exc)},
+                    indent=2,
+                )
 
-        try:
-            append_turn(state_path, turn)
-        except Exception as exc:
-            logger.warning(
-                "get_agent_opinion: append_turn failed for %s: %s",
-                round_id,
-                exc,
-            )
-            return json.dumps(
-                {"error": "append_turn_failed", "detail": str(exc)},
-                indent=2,
-            )
+            if state.get("status") != "open":
+                return json.dumps(
+                    {
+                        "error": "round_not_open",
+                        "status": 409,
+                        "round_id": round_id,
+                        "current_status": state.get("status"),
+                    },
+                    indent=2,
+                )
 
-        return json.dumps(
-            {
-                "round_id": round_id,
-                "agent_id": agent_id,
+            # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
+            # Phase 52: opinion is a fixed placeholder; Phase 53 swaps in the
+            # real GLM call result.
+            turn = {
+                "turnIndex": len(state.get("turns", [])) + 1,
+                "panelistId": agent_id,
                 "opinion": "[phase52_placeholder]",
-                "status": "ok",
-            },
-            indent=2,
-        )
+                "citedMemoryIds": [],
+                "submittedAt": _state_now_iso(),
+            }
+
+            try:
+                append_turn(state_path, turn)
+            except Exception as exc:
+                logger.warning(
+                    "get_agent_opinion: append_turn failed for %s: %s",
+                    round_id,
+                    exc,
+                )
+                return json.dumps(
+                    {"error": "append_turn_failed", "detail": str(exc)},
+                    indent=2,
+                )
+
+            return json.dumps(
+                {
+                    "round_id": round_id,
+                    "agent_id": agent_id,
+                    "opinion": "[phase52_placeholder]",
+                    "status": "ok",
+                },
+                indent=2,
+            )
+        finally:
+            # T-52-15 (DoS): lock MUST be released on every path — happy,
+            # error, AND asyncio.CancelledError. Without finally, an
+            # exception in read_and_recover_state or append_turn would
+            # permanently block that roundId.
+            await release_round_lock(round_id)
 
     # -- submit_round_table_result ------------------------------------------
 
