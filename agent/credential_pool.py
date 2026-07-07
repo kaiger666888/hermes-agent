@@ -117,6 +117,25 @@ EXHAUSTED_TTL_DEFAULT_SECONDS = 60 * 60      # 1 hour
 # custom_providers name: 'custom:<normalized_name>'.
 CUSTOM_POOL_PREFIX = "custom:"
 
+# Pool key prefix for the auxiliary credential pool (Phase 59 POOL-01).
+# Auxiliary traffic (round_table_opinion, memory_compaction, fitness_judge,
+# bias_canary_claim_check, memory_comparator) reads its keys from a SEPARATE
+# pool so a gateway burst cannot exhaust all 4 GLM keys and starve the
+# round table halfway through a 9-panelist session. Named-pool storage keys
+# take the form 'auxiliary:<provider>' (e.g. 'auxiliary:zai').
+AUX_POOL_PREFIX = "auxiliary:"
+
+# Dedicated env vars for the auxiliary pool. Operators who set these get
+# strict isolation from the main agent/gateway pool. When NONE are set,
+# ``_seed_aux_env`` falls back to ``GLM_API_KEY`` (single-key operators —
+# CONTEXT.md decision #2 + decision #6).
+_AUX_ENV_VARS: tuple[str, ...] = (
+    "GLM_AUX_API_KEY_1",
+    "GLM_AUX_API_KEY_2",
+    "GLM_AUX_API_KEY_3",
+    "GLM_AUX_API_KEY_4",
+)
+
 
 # Fields that are only round-tripped through JSON — never used for logic as attributes.
 _EXTRA_KEYS = frozenset({
@@ -2290,3 +2309,169 @@ def load_pool(provider: str) -> CredentialPool:
             [entry.to_dict() for entry in sorted(entries, key=lambda item: item.priority)],
         )
     return CredentialPool(provider, entries)
+
+
+# ── Phase 59: Named auxiliary pool (POOL-01) ───────────────────────────────
+#
+# The default ``load_pool`` seeds a single pool per provider from auth.json +
+# env vars + singletons. Phase 59 adds a SEPARATE auxiliary pool so gateway
+# bursts cannot starve round-table calls (v11.0 smoke-test §3.1 fix).
+#
+# Design (CONTEXT.md decisions #1, #2, #5, #6):
+# - Named-pool storage key: ``auxiliary:<provider>`` (e.g. ``auxiliary:zai``).
+# - Dedicated env vars: ``GLM_AUX_API_KEY_1..4``. When NONE are set, the
+#   aux pool transparently reuses ``GLM_API_KEY`` so single-key operators
+#   are not broken (no config breaking change).
+# - The default ``load_pool`` is untouched — named-pool code path is additive.
+
+
+def _seed_aux_env(provider: str, entries: List[PooledCredential]) -> Tuple[bool, Set[str]]:
+    """Seed the auxiliary pool from ``GLM_AUX_API_KEY_1..4`` + ``GLM_API_KEY``.
+
+    Structural twin of :func:`_seed_from_env` but reads the dedicated aux
+    env var list (hardcoded per CONTEXT.md decision #2) instead of
+    ``PROVIDER_REGISTRY[provider].api_key_env_vars``.
+
+    Seeding rules (matches plan Test 1-4):
+    1. For each ``GLM_AUX_API_KEY_<N>`` that is set, upsert one entry with
+       ``source=f"env:GLM_AUX_API_KEY_<N>"``.
+    2. Additionally, if ``GLM_API_KEY`` is set, upsert one entry with
+       ``source="env:GLM_API_KEY"`` so single-key operators still have a
+       usable aux pool. This is the no-breaking-change path (CONTEXT.md
+       decision #6).
+    3. If NEITHER aux vars NOR ``GLM_API_KEY`` are set, return ``(False, set())``
+       — pool stays empty until the operator configures keys.
+
+    The base URL is resolved via :func:`_resolve_zai_base_url` for ``zai``
+    (matching ``_seed_from_env``'s behavior) and falls back to the provider's
+    ``inference_base_url`` for other providers.
+
+    Returns ``(changed, active_sources)`` matching ``_seed_from_env``
+    semantics so ``_prune_stale_seeded_entries`` works unchanged.
+    """
+    changed = False
+    active_sources: Set[str] = set()
+
+    def _get_env_prefer_dotenv(key: str) -> str:
+        env_file = load_env()
+        val = env_file.get(key) or os.environ.get(key) or ""
+        return val.strip()
+
+    try:
+        from hermes_cli.auth import is_source_suppressed as _is_source_suppressed
+    except ImportError:
+        def _is_source_suppressed(_p, _s):  # type: ignore[misc]
+            return False
+
+    pconfig = PROVIDER_REGISTRY.get(provider)
+    if not pconfig or pconfig.auth_type != AUTH_TYPE_API_KEY:
+        # No provider config → can't resolve base_url. Still allow aux vars
+        # for unknown providers? Per CONTEXT.md decision #2 the aux pool is
+        # GLM-specific, so we bail for unknown providers.
+        return changed, active_sources
+
+    def _resolve_base_url(token: str) -> str:
+        env_url = ""
+        if pconfig.base_url_env_var:
+            env_url = _get_env_prefer_dotenv(pconfig.base_url_env_var).rstrip("/")
+        if provider == "zai":
+            return _resolve_zai_base_url(token, pconfig.inference_base_url, env_url)
+        return env_url or pconfig.inference_base_url
+
+    def _env_payload(env_var: str, token: str, base_url: str) -> Dict[str, Any]:
+        return {
+            "source": f"env:{env_var}",
+            "auth_type": AUTH_TYPE_API_KEY,
+            "access_token": token,
+            "base_url": base_url,
+            "label": env_var,
+        }
+
+    # 1. Dedicated aux env vars (GLM_AUX_API_KEY_1..4).
+    for env_var in _AUX_ENV_VARS:
+        token = _get_env_prefer_dotenv(env_var)
+        if not token:
+            continue
+        source = f"env:{env_var}"
+        if _is_source_suppressed(f"{AUX_POOL_PREFIX}{provider}", source):
+            continue
+        active_sources.add(source)
+        changed |= _upsert_entry(
+            entries,
+            provider,
+            source,
+            _env_payload(env_var, token, _resolve_base_url(token)),
+        )
+
+    # 2. GLM_API_KEY fallback (additive — never suppresses the main key).
+    main_token = _get_env_prefer_dotenv("GLM_API_KEY")
+    if main_token:
+        source = "env:GLM_API_KEY"
+        if not _is_source_suppressed(f"{AUX_POOL_PREFIX}{provider}", source):
+            active_sources.add(source)
+            changed |= _upsert_entry(
+                entries,
+                provider,
+                source,
+                _env_payload("GLM_API_KEY", main_token, _resolve_base_url(main_token)),
+            )
+
+    return changed, active_sources
+
+
+def load_named_pool(name: str, provider: str) -> CredentialPool:
+    """Generic named-pool loader.
+
+    Storage key format: ``<name>:<provider>`` (e.g. ``auxiliary:zai``,
+    ``custom-foo:zai``). Used by :func:`load_aux_pool` for the specialized
+    auxiliary-pool case AND available as the extension point for future
+    named pools without changing this code.
+
+    For ``name == "auxiliary"``: delegates env seeding to :func:`_seed_aux_env`
+    (reads ``GLM_AUX_API_KEY_1..4`` + ``GLM_API_KEY`` fallback).
+
+    For other names: no env seeding (operator-managed via ``hermes auth add``);
+    the loader just reads whatever is in auth.json and returns the pool.
+    """
+    name = (name or "").strip().lower()
+    provider = (provider or "").strip().lower()
+    pool_key = f"{name}:{provider}"
+
+    raw_entries = read_credential_pool(pool_key)
+    entries = [PooledCredential.from_dict(provider, payload) for payload in raw_entries]
+    changed = False
+    active_sources: Set[str] = set()
+
+    if name == "auxiliary":
+        aux_changed, aux_sources = _seed_aux_env(provider, entries)
+        changed = aux_changed
+        active_sources = aux_sources
+
+    # Always prune stale seeded entries so auth.json doesn't accumulate
+    # dangling sources (T-59-06-E mitigation: keep the prune path symmetric
+    # with the default ``load_pool``).
+    if active_sources:
+        changed |= _prune_stale_seeded_entries(entries, active_sources)
+
+    if changed:
+        write_credential_pool(
+            pool_key,
+            [entry.to_dict() for entry in sorted(entries, key=lambda item: item.priority)],
+        )
+    return CredentialPool(provider, entries)
+
+
+def load_aux_pool(provider: str) -> CredentialPool:
+    """Load the auxiliary credential pool for ``provider``.
+
+    Specialized wrapper over :func:`load_named_pool` for the ``"auxiliary"``
+    name. Reads ``GLM_AUX_API_KEY_1..4`` (with fallback to ``GLM_API_KEY``
+    when none are set — CONTEXT.md decision #2/#6) and persists entries under
+    the ``auxiliary:<provider>`` storage key.
+
+    Returns a :class:`CredentialPool` that owns its entries list. The pool
+    is isolated from the default ``load_pool(provider)`` at the storage
+    namespace level, so exhausting the default pool does NOT affect aux
+    pool selection (verified by ``test_aux_pool_isolation_*``).
+    """
+    return load_named_pool("auxiliary", provider)
