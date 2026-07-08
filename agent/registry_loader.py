@@ -128,6 +128,38 @@ def _check_required_experts(loaded_names: set[str]) -> list[str]:
     return sorted(REQUIRED_DAG_EXPERTS - loaded_names)
 
 
+def _emit_missing_expert_warnings(
+    missing: list[str], *, agents_dir: Path, loaded_count: int
+) -> None:
+    """Emit one operator-visible ``logger.warning`` per missing required expert.
+
+    CR-01 fix: this helper is invoked on BOTH the cache-miss AND cache-hit
+    paths of ``_load_with_warnings``. Without it, the very first call to
+    ``load_agent_registry_with_warnings()`` after process start logs every
+    missing expert, but every subsequent call (Phase 67 OBSRV-01 collector
+    poll, MCP ``agents_list`` tool, dashboard health endpoint) silently
+    returns the structured warnings list without writing to ``agent.log``,
+    defeating log-based alerting for any consumer that calls the loader
+    more than once per process.
+
+    Args:
+        missing: sorted list of required DAG expert IDs absent from the
+            registry (the return value of ``_check_required_experts``).
+        agents_dir: the agents directory inspected (for the log message).
+        loaded_count: number of entries in the loaded registry (0 when
+            the agents dir is missing/empty).
+    """
+    for name in missing:
+        logger.warning(
+            "registry_loader: required expert %r missing from %s "
+            "(loaded %d agents, expected %d required DAG experts)",
+            name,
+            agents_dir,
+            loaded_count,
+            len(REQUIRED_DAG_EXPERTS),
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Public exceptions
 # --------------------------------------------------------------------------- #
@@ -410,9 +442,15 @@ def _load_with_warnings(
 
     Cache semantics: the ``entries`` list is cached in ``_REGISTRY_CACHE``
     (list only — NOT the tuple). The warnings list is recomputed on every
-    ``force_reload=True`` call (cheap set difference on ≤21 names) so
-    operators who temporarily rename a YAML see the alarm fire without
-    needing to invalidate the entries cache separately.
+    call — both cache-hit (``force_reload=False``) and cache-miss
+    (``force_reload=True``) paths invoke ``_check_required_experts`` and
+    ``_emit_missing_expert_warnings`` so callers always see fresh warnings
+    AND the operator-visible ``logger.warning`` alarm fires on EVERY call
+    (CR-01 regression: previously the cache-hit path returned the structured
+    list silently, breaking log-based alerting for any consumer that polls
+    the loader more than once per process). The entries list alone is
+    cached; re-walking the YAML directory (the expensive part) only happens
+    on cache miss or ``force_reload=True``.
 
     Args:
         force_reload: bypass the entries cache.
@@ -426,16 +464,29 @@ def _load_with_warnings(
     global _REGISTRY_CACHE
     if _REGISTRY_CACHE is not None and not force_reload:
         # Entries cached; recompute warnings from the cache for the
-        # structured-return path (force_reload bypass re-runs this below).
+        # structured-return path AND re-emit logger.warning (CR-01 fix).
         cached = _REGISTRY_CACHE
         loaded_names = {e["name"] for e in cached}
-        return cached, _check_required_experts(loaded_names)
+        missing = _check_required_experts(loaded_names)
+        _emit_missing_expert_warnings(
+            missing,
+            agents_dir=get_hermes_home() / "agents",
+            loaded_count=len(cached),
+        )
+        return cached, missing
 
     with _REGISTRY_CACHE_LOCK:
         if _REGISTRY_CACHE is not None and not force_reload:
+            # Double-checked-locking cache-hit path — same CR-01 fix.
             cached = _REGISTRY_CACHE
             loaded_names = {e["name"] for e in cached}
-            return cached, _check_required_experts(loaded_names)
+            missing = _check_required_experts(loaded_names)
+            _emit_missing_expert_warnings(
+                missing,
+                agents_dir=get_hermes_home() / "agents",
+                loaded_count=len(cached),
+            )
+            return cached, missing
 
         agents_dir = get_hermes_home() / "agents"
         if not agents_dir.is_dir():
@@ -444,14 +495,9 @@ def _load_with_warnings(
             logger.debug("registry_loader: agents dir %s does not exist", agents_dir)
             # All 15 required experts are missing — surface the warning.
             missing = _check_required_experts(set())
-            for name in missing:
-                logger.warning(
-                    "registry_loader: required expert %r missing from %s "
-                    "(loaded 0 agents, expected %d required DAG experts)",
-                    name,
-                    agents_dir,
-                    len(REQUIRED_DAG_EXPERTS),
-                )
+            _emit_missing_expert_warnings(
+                missing, agents_dir=agents_dir, loaded_count=0
+            )
             return [], missing
 
         entries: list[dict[str, Any]] = []
@@ -474,13 +520,7 @@ def _load_with_warnings(
         # for the Phase 67 OBSRV-01 collector.
         loaded_names = {e["name"] for e in entries}
         missing = _check_required_experts(loaded_names)
-        for name in missing:
-            logger.warning(
-                "registry_loader: required expert %r missing from %s "
-                "(loaded %d agents, expected %d required DAG experts)",
-                name,
-                agents_dir,
-                len(entries),
-                len(REQUIRED_DAG_EXPERTS),
-            )
+        _emit_missing_expert_warnings(
+            missing, agents_dir=agents_dir, loaded_count=len(entries)
+        )
         return entries, missing
