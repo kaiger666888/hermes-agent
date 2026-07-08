@@ -302,8 +302,14 @@ def _cmd_evolve(args) -> int:
         if not passed:
             # G4 locked: exit code 2 + structured BIAS_CANARY_FAILED message
             # to stderr (grep-friendly for runbook automation).
+            # WR-01 (Phase 65 review): threshold + fixture count come from
+            # agent.curator public constants — never hardcode the literals
+            # here, or the message silently drifts when the fixture file
+            # grows or the threshold is retuned.
             print(
-                f"BIAS_CANARY_FAILED: caught {caught}/5 (threshold: 4); "
+                f"BIAS_CANARY_FAILED: caught {caught}/"
+                f"{curator.BIAS_CANARY_FIXTURE_COUNT} "
+                f"(threshold: {curator.BIAS_CANARY_THRESHOLD}); "
                 f"live tick aborted; run 'hermes curator evolve' "
                 f"(no --live) for dry-run preview",
                 file=sys.stderr,
@@ -1433,7 +1439,9 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
     p_evolve.add_argument(
         "--live", dest="live", action="store_true",
         help="Perform LIVE memory writes (default: dry-run preview). "
-             "Runs bias canary pre-check; aborts on <4/5 catch rate "
+             "Runs bias canary pre-check; aborts when caught count is "
+             "below the required threshold "
+             "(see agent.curator.BIAS_CANARY_THRESHOLD) "
              "(exit code 2 + BIAS_CANARY_FAILED message).",
     )
     p_evolve.add_argument(

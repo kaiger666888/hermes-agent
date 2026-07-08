@@ -1948,6 +1948,23 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
 #: redesigning record #5 to fail a deterministic check.
 _BIAS_CANARY_THRESHOLD: int = 4
 
+#: Public alias (WR-01 Phase 65 review): CLI/UI surfaces consume this
+#: threshold to render operator-visible messages. Importing the underscore-
+#: prefixed name from outside agent.curator is brittle (private-by-
+#: convention); re-export as BIAS_CANARY_THRESHOLD so downstream code
+#: (hermes_cli/curator.py BIAS_CANARY_FAILED message, --help text, runbook
+#: automation) has a stable public symbol. Both names point at the same int
+#: — never edit one without the other.
+BIAS_CANARY_THRESHOLD: int = _BIAS_CANARY_THRESHOLD
+
+#: Number of records bundled in the known-bad fixture JSONL. Synchronized
+#: with tests/fixtures/curator_bias_canary/known_bad_records.jsonl. Used by
+#: CLI message rendering (denominator in 'caught N/M'). If the fixture file
+#: grows or shrinks, update this constant to match — run_bias_canary_pre_check
+#: logs the runtime count via ``total`` but the operator-facing message
+#: bakes the expected denominator in for grep-stability.
+BIAS_CANARY_FIXTURE_COUNT: int = 5
+
 
 def _bias_canary_fixtures_path() -> Path:
     """Resolve the path to the bundled known-bad fixture JSONL.
