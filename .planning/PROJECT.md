@@ -8,9 +8,21 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval
+## Current Milestone: Awaiting next milestone (v13.0 SHIPPED 2026-07-08)
 
-**Goal:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(达成 15/15 active expert 覆盖)+ 跑 v12.0 deferred 的 3 个 operator smoke tests 收集真实 prod baseline + curator self-evolution 从 dry-run 切 live + 新增 operator dashboard 把 round table / agent registry / memory backend 可观测化。**完成后 v10.0-v13.0 四 milestone 弧线收官。**
+v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`, phases archived to `.planning/milestones/v13.0-ROADMAP.md` + `.planning/milestones/v13.0-REQUIREMENTS.md`). v13.0 是 **v10.0 Design Suite Full Rollout & Live Eval** milestone —— 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff per VALIDATE-01 spec) · audit verdict `tech_debt` · 6 operator-action handoffs deferred.
+
+**v13.0 shipped (4 tracks):**
+- **EXPERT-COMPLETION** (P62 + P63): 12 expert agent YAMLs transform (15/15 active coverage via 21 total agents) + 21-agent registry load + missing-expert alarm + visual_executor round table smoke (mock-mode authoritative)
+- **CURATOR-LIVE-GUARDS** (P65): `hermes curator evolve --live` opt-in flag (default dry-run preserved) + bias canary pre-check (4/5 catch rate) + audit `tick_mode` extension
+- **OBSERVABILITY** (P67 + P68): 3 metrics collectors (agent registry + round table + memory backend) + FastAPI `/orchestrator/agents/status` endpoint (auth-gated) + `agent/observability/` package (MetricsBuffer + 3 collector modules) + CLI `hermes orchestrator status` (rich tables + `--json` flag) + dashboard `/orchestrator` panel (client-side fetch + 30s auto-refresh)
+
+**Operator-action handoffs (6, deferred per VALIDATE-01 spec):**
+- Phase 64 LIVE-EVAL-EXEC (4 reqs EVAL-01..04): 3 EVAL smokes (GLM/mem0 keys needed) + report aggregation
+- Phase 66 CURATOR-LIVE-TICK (2 reqs CURATE-04/05): 1st actual live tick + runbook
+- 3 manual UAT deferrals from Phases 62/63/67 (non-blocking, mock/TestClient authoritative)
+
+**Next:** Operator review of handoffs → `/gsd:new-milestone` for v14.0 (物理分区 decision? INFRA-04 async lift? 15-expert production tuning? — driven by Phase 64 live-eval data)
 
 **Target features (4 tracks):**
 
@@ -58,19 +70,29 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 - **SKILL.md read-only:** kais-hermes-skills repo 的 SKILL.md 不动(per Phase 48-49 lineage invariants L1-L6)
 - **Single repo 收敛:** 全部在 hermes-agent repo + `~/.hermes/`,不创建新 repo
 
-## Current State (v13.0 AUDIT COMPLETE — Phase 69 ✓ 2026-07-08, verdict: tech_debt)
+## Current State (v13.0 SHIPPED 2026-07-08, awaiting next milestone)
 
-v13.0 milestone IN PROGRESS. **Phases 62 + 63 + 65 + 67 + 68 ✓ shipped 2026-07-08** (Phases 64 + 66 deferred — operator-secrets / live-tick risk). Phase 62 transformed 12 active expert agent YAMLs (15/15 active coverage via 21 total agents). Phase 63 wired missing-expert alarm + visual_executor round table smoke. Phase 65 shipped curator live-tick safety guards (`--live` opt-in + bias canary pre-check + audit tick_mode extension). Phase 67 shipped observability backend: 3 metrics collectors (agent registry + round table + memory backend) + FastAPI `/orchestrator/agents/status` endpoint with auth gate + `agent/observability/` package (MetricsBuffer + 3 collector modules). Phase 68 shipped observability presentation: `hermes orchestrator status` CLI (3 rich tables + `--json` flag) + `/orchestrator` dashboard panel (auth-gated, client-side fetch + 30s auto-refresh). 17 plans across 15 waves total · 16/16 Phase 68 tests green · review verdict PASSED. **Phase 69 VALIDATE complete:** audit verdict `tech_debt` — 13/20 reqs satisfied + 1 this-audit (VALIDATE-01) + 6 operator-handoff. Ready for `/gsd:complete-milestone v13.0`. See `.planning/milestones/v13.0-MILESTONE-AUDIT.md`.
+v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`, phases archived to `.planning/milestones/v13.0-ROADMAP.md` + `.planning/milestones/v13.0-REQUIREMENTS.md`). v13.0 是 **v10.0 Design Suite Full Rollout & Live Eval** milestone —— 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff per VALIDATE-01 spec) · audit verdict `tech_debt` · 6 operator-action handoffs deferred.
 
-Prior: v12.0 SHIPPED + closed 2026-07-08 (tag `v12.0`, phases archived to `.planning/milestones/v12.0-ROADMAP.md` + `.planning/milestones/v12.0-REQUIREMENTS.md`). v12.0 是 **Production Hardening** milestone —— 5 phases (57-61) · 9 plans · 8/8 reqs verified · 586+ automated tests green · audit verdict `passed` · 3 operator-action handoffs deferred per VALIDATE-01 spec.
+**v13.0 shipped (4 tracks):**
+- EXPERT-COMPLETION (P62 + P63): 12 expert agent YAMLs transform + 21-agent registry + missing-expert alarm + visual_executor round table smoke
+- CURATOR-LIVE-GUARDS (P65): `hermes curator evolve --live` opt-in flag + bias canary pre-check + audit tick_mode extension
+- OBSERVABILITY (P67 + P68): 3 metrics collectors + FastAPI `/orchestrator/agents/status` endpoint + CLI `hermes orchestrator status` + dashboard `/orchestrator` panel
 
-**v12.0 shipped(4 hardening gaps closed):**
-- ENDPOINT-ROUTING (P57): long-prompt endpoint routing(z.ai/anthropic-compat split)
-- RPM-THROTTLING (P58): per-task RPM token bucket + per-round-table TPM budget
-- AUX-POOL-ISOLATION (P59): separate auxiliary credential pool + per-key TPM tracking
-- LIVE-EVAL (P60): mem0 backend adapter + fitness battery real-mode infrastructure(operator run deferred)
+**Operator-action handoffs (6, deferred per VALIDATE-01):**
+- Phase 64 LIVE-EVAL-EXEC: 3 EVAL smokes (GLM/mem0 keys needed)
+- Phase 66 CURATOR-LIVE-TICK: 1st actual live tick
+- Manual UAT deferrals from Phases 62/63/67
 
-**v11.0 paradigm shift** (locked in design, v11.0 implemented, v12.0 hardened): agents are Hermes-side YAML entities with per-agent memory + self-evolution; CC is场地+协调员+结构化助手; SKILL form preserved as fallback (`default_invocation: skill_fallback`).
+**Next:** Operator review of handoffs → `/gsd:new-milestone` for v14.0 (physical partition decision? INFRA-04 async lift? 15-expert production tuning? — driven by Phase 64 live-eval data)
+
+## Previous Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval ✅ SHIPPED 2026-07-08
+
+**Stats:** 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff) · Tag `v13.0` · Audit `tech_debt`
+
+**Goal:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(达成 15/15 active expert 覆盖)+ 跑 v12.0 deferred 的 3 个 operator smoke tests + curator self-evolution 从 dry-run 切 live + 新增 operator dashboard 把 round table / agent registry / memory backend 可观测化。**完成后 v10.0-v13.0 四 milestone 弧线收官。**
+
+See `.planning/milestones/v13.0-MILESTONE-AUDIT.md` for the full audit (verdict: tech_debt, 13/20 satisfied + 1 audit + 6 operator-handoff).
 
 ## Previous Milestone: v12.0 — Production Hardening ✅ SHIPPED 2026-07-08
 
@@ -245,9 +267,9 @@ v9.0 shipped 后,候选方向:
 
 ### Active
 
-<!-- v13.0 in planning — REQ-IDs assigned after step 9 of /gsd-new-milestone. See REQUIREMENTS.md. -->
+<!-- v13.0 SHIPPED + archived 2026-07-08. Next milestone TBD via /gsd:new-milestone. -->
 
-Milestone **v13.0 — v10.0 Design Suite Full Rollout & Live Eval** is being scoped. 4 tracks: EXPERT-COMPLETION (12 active expert YAMLs) + LIVE-EVAL-EXEC (3 deferred operator smoke tests) + CURATOR-LIVE (curator self-evolution dry-run → live) + OBSERVABILITY (operator dashboard). Requirements TBD via this workflow; see `.planning/REQUIREMENTS.md` once written.
+v13.0 SHIPPED 2026-07-08. Awaiting next milestone via `/gsd:new-milestone`. v14+ scope candidates: physical partition decision (driven by Phase 64 EVAL-02 mem0 p95 data) / INFRA-04 async concurrency lift (driven by Phase 64 EVAL-03 fitness battery) / 15-expert production tuning.
 
 ### Deferred to operator (acknowledged at v1 close)
 
@@ -569,4 +591,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — v13.0 IN PROGRESS. Phase 62 (EXPERT-YAML-TRANSFORM) ✓ shipped: 12 new agent YAMLs at `~/.hermes/agents/` (21 total = 9 shipped v11.0 + 12 new), 15/15 active expert coverage achieved. Next: Phase 63 (EXPERT-REGISTRY-INTEGRATION). 4 tracks locked: EXPERT-COMPLETION (12 active expert YAMLs to reach 15/15 active coverage — Phase 62 ✓) + LIVE-EVAL-EXEC (3 deferred operator smoke tests with prod secrets) + CURATOR-LIVE (curator dry-run → live tick with safety guards) + OBSERVABILITY (operator dashboard: round table metrics + agent registry health + memory backend status).*
+*Last updated: 2026-07-08 — v13.0 milestone SHIPPED + closed (tag `v13.0`). v10.0-v13.0 四 milestone 架构弧线收官。Phases 62/63/65/67/68 ✓ shipped; Phases 64/66 deferred (operator-handoff per VALIDATE-01 spec). Next: operator review of 6 handoffs → `/gsd:new-milestone` for v14.0.*

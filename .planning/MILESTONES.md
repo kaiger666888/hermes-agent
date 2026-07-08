@@ -1,5 +1,42 @@
 # Milestones
 
+## v13.0 v10.0 Design Suite Full Rollout & Live Eval (Shipped: 2026-07-08)
+
+**Phases shipped:** 8 phases (62-69) · **Plans:** 17 (in shipped phases — 62:4 + 63:4 + 65:3 + 67:4 + 68:2) · **Requirements:** 20 / 20 mapped (13 satisfied + 1 audit + 6 operator-handoff)
+**Tag:** `v13.0`
+**Audit:** [`milestones/v13.0-MILESTONE-AUDIT.md`](./milestones/v13.0-MILESTONE-AUDIT.md) — verdict: `tech_debt` (13/20 fully satisfied + 1 audit + 6 operator-handoff per VALIDATE-01 spec)
+
+**One sentence:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(达成 15/15 active expert 覆盖,21 total agents)+ curator self-evolution live-tick 安全护栏(opt-in `--live` flag + bias canary pre-check + audit log)+ 3 维 observability surface(agent registry + round table + memory backend)wired 到 FastAPI endpoint + CLI + dashboard panel。
+
+**Key accomplishments:**
+
+- **P62 EXPERT-YAML-TRANSFORM (12 → 21 agents):** 12 个 active expert SKILL.md → `~/.hermes/agents/{name}.agent.yaml` 全量 transform per v10.0 `04-MIGRATION-PATH.md §2` 75-cell table。15/15 active expert coverage achieved。全部 byte-pass `jsonschema.Draft202012Validator.validate()`。Lineage fields populated(source_sha + transform_rule_id + transform_timestamp)。4 plans
+- **P63 EXPERT-REGISTRY-INTEGRATION (21-agent load + smoke):** Agent registry 启动时加载 21 agents 无 schema/lifecycle 错误。REQUIRED_DAG_EXPERTS frozenset + `_check_required_experts` sibling wired(preserves existing signature)。Missing-expert 告警 fires for known-absent expert_id。`visual_executor` round table smoke produces non-empty synthesis(mock-mode authoritative,live GLM operator-deferred)。4 plans
+- **P65 CURATOR-LIVE-GUARDS (live-tick safety scaffolding):** `hermes curator evolve --live` opt-in flag(默认仍 dry-run per EVAL-06)。Pre-tick bias canary catches ≥ 4/5 known-bad records per v12.0 EVAL-03 baseline。Post-tick audit log emits sha256-tagged memory writes with timestamp(supports operator 24h review + manual rollback)。3 plans
+- **P67 OBSERVABILITY-BACKEND (3 metrics collectors):** `agent/observability/` package(MetricsBuffer ring buffer + `agent_registry_metrics.py` + `round_table_metrics.py` + `memory_backend_metrics.py`)。All 4 grey areas resolved(G1 in-memory ring buffer · G2 pull model · G3 count-based window · G4 per-round-table summary)。INFRA-04 serial constraint preserved(sync `@contextmanager` only,zero `asyncio.gather`)。FastAPI `/orchestrator/agents/status` endpoint auth-gated。4 plans
+- **P68 OBSERVABILITY-PRESENTATION (CLI + dashboard):** `hermes orchestrator status` CLI(3 rich tables + `--json` flag)。`/orchestrator` dashboard panel(auth-gated,client-side fetch + 30s auto-refresh)。Both surfaces consume same metrics source(no drift)。16/16 tests green。2 plans
+- **P69 VALIDATE (audit + close-out):** `.planning/milestones/v13.0-MILESTONE-AUDIT.md` authored。Verdict `tech_debt`(13/20 satisfied + 1 audit + 6 operator-handoff)。5/5 cross-phase integration links verified WIRED end-to-end in live codebase
+
+**Operator-action-handoffs (6, deferred per VALIDATE-01 spec):**
+
+- Phase 64 LIVE-EVAL-EXEC (4 reqs EVAL-01..04): 3 operator smoke tests(GLM latency + mem0 p95 + fitness battery real-mode)+ report aggregation. Needs `GLM_API_KEY`, `MEM0_API_KEY`, `GLM_AUX_API_KEY_1..4`.
+- Phase 66 CURATOR-LIVE-TICK (2 reqs CURATE-04/05): 1st actual live tick + runbook. Operator decision pending on live memory mutation risk.
+- 3 manual UAT deferrals from Phases 62/63/67(non-blocking,mock/TestClient authoritative).
+
+**v10.0-v13.0 milestone arc closure:** v10.0 design suite(8 phases,9 reqs,zero code)→ v11.0 PoC implementation(5 phases,15 reqs,vertical slice)→ v12.0 production hardening(5 phases,8 reqs,4 hardening gaps closed)→ v13.0 full rollout(8 phases,20 reqs,15/15 active expert coverage + observability surface + curator live guards). The four-milestone arc is now structurally complete. v14+ decisions wait on v13 Phase 64 live-eval data.
+
+**Cross-repo invariant preserved:** kais-hermes-skills repo SKILL.md read-only(Lineage invariants L1-L6 from Phase 48-49 preserved)v13.0 transforms SKILL.md → agent YAML at `~/.hermes/agents/` without modifying source.
+
+**Hard constraints preserved:**
+
+- INFRA-04 serial execution NOT lifted(Phase 67 collectors sync only)
+- EVAL-06 dry-run-first NOT changed(Phase 65 `--live` opt-in, default dry-run)
+- SKILL.md read-only invariant L1-L6(Phase 48-49)
+
+See `.planning/milestones/v13.0-ROADMAP.md` for full archive + `.planning/milestones/v13.0-REQUIREMENTS.md` for archived requirements with traceability.
+
+---
+
 ## v9.0 kais-movie-pipeline 闭环深化 (Shipped: 2026-06-27)
 
 **Phases completed:** 6 phases (38-43) · **Plans:** 13 · **Requirements:** 22 / 22 ✓
