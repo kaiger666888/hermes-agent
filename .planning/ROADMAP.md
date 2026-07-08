@@ -207,7 +207,7 @@ Plans:
 Plans:
 **Wave 0** (foundation — unblocks Waves 1+2)
 
-- [ ] 67-01-PLAN.md — Shared MetricsBuffer primitive + OBSRV-01 collector (`agent/observability/` package + `_ring_buffer.py` + `agent_registry_metrics.py` + unit tests)
+- [x] 67-01-PLAN.md — Shared MetricsBuffer primitive + OBSRV-01 collector (`agent/observability/` package + `_ring_buffer.py` + `agent_registry_metrics.py` + unit tests)
 
 **Wave 1** (parallel — independent collectors + instrumentation, no file overlap)
 
@@ -263,7 +263,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 3/3 | Complete    | 2026-07-08 |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
-| 67. OBSERVABILITY-BACKEND | 0/4 | Not started | - |
+| 67. OBSERVABILITY-BACKEND | 1/4 | In Progress|  |
 | 68. OBSERVABILITY-PRESENTATION | 0/TBD | Not started | - |
 | 69. VALIDATE | 0/TBD | Not started | - |
 
