@@ -24,9 +24,9 @@
 
 ### CURATE — CURATOR-LIVE (curator self-evolution dry-run → live)
 
-- [ ] **CURATE-01**: 给 curator self-evolution CLI 加 `--live` opt-in flag(**默认仍 dry-run** per v11.0 EVAL-06 invariant)
-- [ ] **CURATE-02**: Pre-tick bias canary check —— 必须 catch ≥ 4/5 known-bad records(per v12.0 EVAL-03 baseline);canary fail 时 abort live tick,记录原因
-- [ ] **CURATE-03**: Post-tick 审计日志 —— 记录每个 live tick 的所有 memory writes(sha256-tagged),支持 operator 手工 rollback(不要求自动 rollback —— 太复杂,operator 24h 内 review)
+- [x] **CURATE-01**: 给 curator self-evolution CLI 加 `--live` opt-in flag(**默认仍 dry-run** per v11.0 EVAL-06 invariant)
+- [x] **CURATE-02**: Pre-tick bias canary check —— 必须 catch ≥ 4/5 known-bad records(per v12.0 EVAL-03 baseline);canary fail 时 abort live tick,记录原因
+- [x] **CURATE-03**: Post-tick 审计日志 —— 记录每个 live tick 的所有 memory writes(sha256-tagged),支持 operator 手工 rollback(不要求自动 rollback —— 太复杂,operator 24h 内 review)
 - [ ] **CURATE-04**: 1st live tick 端到端跑通 —— capture before/after memory diff + bias canary 结果 + token cost,作为 v14+ live-tick baseline
 - [ ] **CURATE-05**: Live-tick operator runbook + safety policy 文档(`.planning/research/v13-live-eval/curator-live-runbook.md`)—— 何时用 live、何时保留 dry-run、operator 监控 checklist
 
@@ -74,9 +74,9 @@
 | EVAL-02 | Phase 64 | Pending |
 | EVAL-03 | Phase 64 | Pending |
 | EVAL-04 | Phase 64 | Pending |
-| CURATE-01 | Phase 65 | Pending |
-| CURATE-02 | Phase 65 | Pending |
-| CURATE-03 | Phase 65 | Pending |
+| CURATE-01 | Phase 65 | Complete |
+| CURATE-02 | Phase 65 | Complete |
+| CURATE-03 | Phase 65 | Complete |
 | CURATE-04 | Phase 66 | Pending |
 | CURATE-05 | Phase 66 | Pending |
 | OBSRV-01 | Phase 67 | Pending |
