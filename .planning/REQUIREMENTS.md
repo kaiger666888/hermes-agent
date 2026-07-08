@@ -7,11 +7,11 @@
 
 ### EXPERT — EXPERT-COMPLETION (12 active expert agent YAML 全量 transform)
 
-- [ ] **EXPERT-01**: 12 active expert SKILL.md → `~/.hermes/agents/{name}.agent.yaml` 全量 transform,严格按 v10.0 `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` §2 75-cell table 规则
+- [x] **EXPERT-01**: 12 active expert SKILL.md → `~/.hermes/agents/{name}.agent.yaml` 全量 transform,严格按 v10.0 `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` §2 75-cell table 规则
   - 待转(12): `animation_studio / colorist / compliance_gate / creative_source / documentary_maker / performer / production / prompt_injector / scene_builder / script_auditor / storyboard_designer / visual_executor`
   - SKILL.md 在 kais-hermes-skills repo,**只读**(per Phase 48-49 lineage invariants L1-L6)
-- [ ] **EXPERT-02**: 12 个新 YAML 全部 byte-pass `agents-schema.yaml` Draft 2020-12 验证(`jsonschema.Draft202012Validator.validate()`)
-- [ ] **EXPERT-03**: 12 个新 YAML lineage 字段必须 populated(source SHA + transform rule ID + timestamp),支持审计回溯到原 SKILL.md
+- [x] **EXPERT-02**: 12 个新 YAML 全部 byte-pass `agents-schema.yaml` Draft 2020-12 验证(`jsonschema.Draft202012Validator.validate()`)
+- [x] **EXPERT-03**: 12 个新 YAML lineage 字段必须 populated(source SHA + transform rule ID + timestamp),支持审计回溯到原 SKILL.md
 - [ ] **EXPERT-04**: Agent registry 启动时加载 21 agents(9 已 ship + 12 新增)无 schema/lifecycle 错误,missing-expert 告警逻辑就绪
 - [ ] **EXPERT-05**: 至少 1 个新 agent(选 `visual_executor` —— 最复杂,带 sub_steps)通过 7 MCP tools 中的 `open_round_table` 实际调用并产生非空响应
 
@@ -65,9 +65,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXPERT-01 | Phase 62 | Pending |
-| EXPERT-02 | Phase 62 | Pending |
-| EXPERT-03 | Phase 62 | Pending |
+| EXPERT-01 | Phase 62 | Complete |
+| EXPERT-02 | Phase 62 | Complete |
+| EXPERT-03 | Phase 62 | Complete |
 | EXPERT-04 | Phase 63 | Pending |
 | EXPERT-05 | Phase 63 | Pending |
 | EVAL-01 | Phase 64 | Pending |
