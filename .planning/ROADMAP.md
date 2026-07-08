@@ -104,7 +104,7 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
 Plans:
 **Wave 1**
 
-- [ ] 62-01-PLAN.md — Wave 0 validation infra (scripts/validate_phase62_yamls.py — jsonschema Draft202012Validator batch gate)
+- [x] 62-01-PLAN.md — Wave 0 validation infra (scripts/validate_phase62_yamls.py — jsonschema Draft202012Validator batch gate)
 - [ ] 62-02-PLAN.md — Wave 1 Batch A (6 simpler experts: animation_studio/colorist/compliance_gate/creative_source/documentary_maker/performer)
 - [ ] 62-03-PLAN.md — Wave 1 Batch B (6 edge-case experts: production/prompt_injector/scene_builder/script_auditor/storyboard_designer/visual_executor — parallel with 02)
 
@@ -217,7 +217,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. EXPERT-YAML-TRANSFORM | 0/4 | Not started | - |
+| 62. EXPERT-YAML-TRANSFORM | 1/4 | In Progress|  |
 | 63. EXPERT-REGISTRY-INTEGRATION | 0/TBD | Not started | - |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 0/TBD | Not started | - |
