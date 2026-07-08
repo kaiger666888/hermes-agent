@@ -11,11 +11,23 @@ Public exports
     Walk ``~/.hermes/agents/`` (FLAT glob — no subdirs, see Pitfall #8 in
     52-RESEARCH.md), parse + validate each YAML, return the list. Cached at
     module level for cheap repeat access; ``force_reload=True`` bypasses.
-    An empty/missing agents dir returns ``[]``.
+    An empty/missing agents dir returns ``[]``. Return type is preserved
+    as ``list[dict]`` for backward compatibility with all v11.0 callers
+    (e.g. ``mcp_serve.agents_list`` at line 1541); callers needing the
+    missing-expert warnings use ``load_agent_registry_with_warnings``.
+- ``load_agent_registry_with_warnings(*, force_reload=False) -> tuple[list[dict], list[str]]``
+    NEW sibling (Phase 63). Returns ``(entries, missing_expert_warnings)``
+    where ``missing_expert_warnings`` is the list of required DAG expert
+    IDs absent from the loaded registry. Phase 67 OBSRV-01 collector
+    consumer. Does NOT change ``load_agent_registry`` return type.
 - ``load_one_agent_yaml(yaml_path: Path) -> dict``
     Parse + validate a single agent YAML. Raises ``RegistryValidationError``
     with a specific JSON path on schema violation, or with the filename-stem
     invariant text on a name mismatch.
+- ``REQUIRED_DAG_EXPERTS``
+    Module-level ``frozenset[str]`` of 15 active DAG expert IDs that MUST
+    be present in the registry (v10.0 §6.2 verbatim). Source of the
+    missing-expert alarm set.
 - ``RegistryValidationError``
     Raised when an agent YAML fails schema validation or the filename
     invariant (``name`` field must match filename stem).
@@ -63,6 +75,57 @@ import yaml
 from hermes_constants import get_hermes_home
 
 logger = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Required DAG expert set (Phase 63 — missing-expert alarm foundation)
+# --------------------------------------------------------------------------- #
+# Source: v10.0 design doc 01-AGENT-REGISTRY-SCHEMA.md §6.2 (verbatim from
+# ARCHITECTURE §2 lines 128-144). The 15 active DAG experts — load-bearing
+# for the collaboration graph (related_agents closure). The other 6 agents
+# in the 21-agent registry (animation_studio, documentary_maker, performer,
+# production, scene_builder, storyboard_designer) are supporting/non-DAG
+# and are NOT required — their absence is not an alarm condition.
+# Hard-coded (G1 Option A) rather than config-driven or graph-closure-
+# derived: the set is stable since v10.0 (2026-07-06) and auditable as a
+# module-level constant with this docstring citing §6.2.
+REQUIRED_DAG_EXPERTS: frozenset[str] = frozenset({
+    "hook_retention",
+    "creative_source",
+    "screenplay",
+    "script_auditor",
+    "character_designer",
+    "cinematographer",
+    "style_genome",
+    "prompt_injector",
+    "visual_executor",
+    "continuity_auditor",
+    "audio_pipeline",
+    "editor",
+    "colorist",
+    "compliance_gate",
+    "theory_critic",
+})
+
+
+def _check_required_experts(loaded_names: set[str]) -> list[str]:
+    """Return the sorted list of required DAG experts missing from ``loaded_names``.
+
+    Pure function — no side effects, no I/O, no logging. The caller decides
+    whether to log, raise, or surface via structured return. Keeping this
+    isolated makes it trivially testable (the Phase 63 canary test calls
+    this directly with a controlled input set).
+
+    Args:
+        loaded_names: the set of ``name`` fields from the loaded agent
+            YAMLs (any subset of the 21-agent registry).
+
+    Returns:
+        Sorted list (deterministic ordering) of required expert IDs that
+        are NOT in ``loaded_names``. Empty list when all 15 required
+        experts are present.
+    """
+    return sorted(REQUIRED_DAG_EXPERTS - loaded_names)
 
 
 # --------------------------------------------------------------------------- #
@@ -288,26 +351,108 @@ def load_agent_registry(*, force_reload: bool = False) -> list[dict[str, Any]]:
     Returns:
         List of validated agent dicts (one per discovered YAML). Empty
         list if ``~/.hermes/agents/`` does not exist or is empty.
+        Return type is ``list[dict]`` (NOT a tuple) — preserved for
+        backward compatibility with all v11.0 callers. Callers needing
+        the missing-expert warnings should use
+        ``load_agent_registry_with_warnings`` instead.
 
     Raises:
         RegistryValidationError: if any YAML in the directory fails schema
             validation or the filename invariant. The error propagates
             (the caller — typically an MCP tool — handles it).
+
+    Note:
+        Missing-expert warnings are emitted via ``logger.warning`` inside
+        the shared implementation (``_load_with_warnings``) but NOT
+        returned by this function. Use ``load_agent_registry_with_warnings``
+        to obtain the structured warnings list (Phase 67 OBSRV-01 path).
+    """
+    entries, _warnings = _load_with_warnings(force_reload=force_reload)
+    return entries
+
+
+def load_agent_registry_with_warnings(
+    *, force_reload: bool = False
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Discover + validate agents AND return missing-expert warnings.
+
+    NEW sibling (Phase 63) — same discovery + validation behavior as
+    ``load_agent_registry``, but returns the structured warnings list so
+    downstream consumers (Phase 67 OBSRV-01 collector) don't need to
+    scrape ``logger.warning`` records.
+
+    Args:
+        force_reload: bypass the cache and re-walk the directory.
+
+    Returns:
+        Tuple of ``(entries, missing_expert_warnings)`` where
+        ``missing_expert_warnings`` is the sorted list of required DAG
+        expert IDs absent from the loaded registry (empty when all 15
+        required experts are present). The entries list is the same
+        cached object ``load_agent_registry`` would return.
+
+    Raises:
+        RegistryValidationError: if any YAML in the directory fails schema
+            validation or the filename invariant.
+    """
+    return _load_with_warnings(force_reload=force_reload)
+
+
+def _load_with_warnings(
+    *, force_reload: bool
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Shared implementation for both public loader entry points.
+
+    Does the existing FLAT-glob + ``yaml.safe_load`` + ``Draft202012Validator``
+    + filename-invariant work, THEN computes the missing-expert warnings
+    via ``_check_required_experts`` and emits one ``logger.warning`` per
+    missing required DAG expert.
+
+    Cache semantics: the ``entries`` list is cached in ``_REGISTRY_CACHE``
+    (list only — NOT the tuple). The warnings list is recomputed on every
+    ``force_reload=True`` call (cheap set difference on ≤21 names) so
+    operators who temporarily rename a YAML see the alarm fire without
+    needing to invalidate the entries cache separately.
+
+    Args:
+        force_reload: bypass the entries cache.
+
+    Returns:
+        Tuple of ``(entries, missing_expert_warnings)``.
+
+    Raises:
+        RegistryValidationError: propagated from ``load_one_agent_yaml``.
     """
     global _REGISTRY_CACHE
     if _REGISTRY_CACHE is not None and not force_reload:
-        return _REGISTRY_CACHE
+        # Entries cached; recompute warnings from the cache for the
+        # structured-return path (force_reload bypass re-runs this below).
+        cached = _REGISTRY_CACHE
+        loaded_names = {e["name"] for e in cached}
+        return cached, _check_required_experts(loaded_names)
 
     with _REGISTRY_CACHE_LOCK:
         if _REGISTRY_CACHE is not None and not force_reload:
-            return _REGISTRY_CACHE
+            cached = _REGISTRY_CACHE
+            loaded_names = {e["name"] for e in cached}
+            return cached, _check_required_experts(loaded_names)
 
         agents_dir = get_hermes_home() / "agents"
         if not agents_dir.is_dir():
             # Missing agents dir is not an error — treat as "no agents".
             _REGISTRY_CACHE = []
             logger.debug("registry_loader: agents dir %s does not exist", agents_dir)
-            return _REGISTRY_CACHE
+            # All 15 required experts are missing — surface the warning.
+            missing = _check_required_experts(set())
+            for name in missing:
+                logger.warning(
+                    "registry_loader: required expert %r missing from %s "
+                    "(loaded 0 agents, expected %d required DAG experts)",
+                    name,
+                    agents_dir,
+                    len(REQUIRED_DAG_EXPERTS),
+                )
+            return [], missing
 
         entries: list[dict[str, Any]] = []
         # FLAT glob — no recursion (Pitfall #8). sorted() for deterministic
@@ -321,4 +466,21 @@ def load_agent_registry(*, force_reload: bool = False) -> list[dict[str, Any]]:
             len(entries),
             agents_dir,
         )
-        return _REGISTRY_CACHE
+
+        # Phase 63: missing-expert alarm — required DAG expert set
+        # difference. Pure helper computes the list; we emit one
+        # logger.warning per missing expert (operator-visible in
+        # ~/.hermes/logs/agent.log) AND surface the structured list
+        # for the Phase 67 OBSRV-01 collector.
+        loaded_names = {e["name"] for e in entries}
+        missing = _check_required_experts(loaded_names)
+        for name in missing:
+            logger.warning(
+                "registry_loader: required expert %r missing from %s "
+                "(loaded %d agents, expected %d required DAG experts)",
+                name,
+                agents_dir,
+                len(entries),
+                len(REQUIRED_DAG_EXPERTS),
+            )
+        return entries, missing
