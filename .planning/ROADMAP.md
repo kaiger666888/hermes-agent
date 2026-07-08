@@ -177,7 +177,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 65-03-PLAN.md — Wave 2 integration smoke (end-to-end SC#1/SC#2/SC#3 evidence + 65-SMOKE.md)
+- [x] 65-03-PLAN.md — Wave 2 integration smoke (end-to-end SC#1/SC#2/SC#3 evidence + 65-SMOKE.md)
 
 ### Phase 66: CURATOR-LIVE-TICK
 
@@ -242,7 +242,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 62. EXPERT-YAML-TRANSFORM | 4/4 | Complete    | 2026-07-08 |
 | 63. EXPERT-REGISTRY-INTEGRATION | 4/4 | Complete    | 2026-07-08 |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
-| 65. CURATOR-LIVE-GUARDS | 2/3 | In Progress|  |
+| 65. CURATOR-LIVE-GUARDS | 3/3 | Complete   | 2026-07-08 |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
 | 67. OBSERVABILITY-BACKEND | 0/TBD | Not started | - |
 | 68. OBSERVABILITY-PRESENTATION | 0/TBD | Not started | - |
