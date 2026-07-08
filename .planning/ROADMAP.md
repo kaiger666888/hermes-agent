@@ -132,11 +132,11 @@ Plans:
 **Wave 0**
 
 - [x] 63-01-PLAN.md — missing-expert alarm scaffolding (REQUIRED_DAG_EXPERTS frozenset + _check_required_experts + load_agent_registry_with_warnings sibling, signature preserved)
-- [ ] 63-02-PLAN.md — canary test (TestMissingExpertAlarm: alarm fires when screenplay missing + alarm silent when all 15 present)
+- [x] 63-02-PLAN.md — canary test (TestMissingExpertAlarm: alarm fires when screenplay missing + alarm silent when all 15 present)
 
 **Wave 1** *(blocked on 63-01)*
 
-- [ ] 63-03-PLAN.md — visual_executor round table smoke (mock-mode SC#3 authoritative + opt-in live GLM)
+- [x] 63-03-PLAN.md — visual_executor round table smoke (mock-mode SC#3 authoritative + opt-in live GLM)
 
 **Wave 2** *(blocked on 63-02 + 63-03)*
 
@@ -231,7 +231,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 62. EXPERT-YAML-TRANSFORM | 4/4 | Complete    | 2026-07-08 |
-| 63. EXPERT-REGISTRY-INTEGRATION | 1/4 | In Progress|  |
+| 63. EXPERT-REGISTRY-INTEGRATION | 3/4 | In Progress|  |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 0/TBD | Not started | - |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
