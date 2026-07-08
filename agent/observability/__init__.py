@@ -1,22 +1,26 @@
-"""Phase 67 observability package.
+"""Phase 67 observability package — operator metrics collectors.
 
-Wave 0 (Plan 67-01) ships the shared ring-buffer primitive and the OBSRV-01
-agent-registry collector. Plans 67-02/67-03 add the round-table and
-memory-backend collectors, which will append their re-exports here.
+Re-exports the 3 getter functions consumed by the ``/orchestrator/agents/status``
+FastAPI endpoint (Plan 67-04) and the Phase 68 CLI/dashboard.
 
-Re-export surface (Wave 0):
-    get_agent_registry_metrics  -- from agent_registry_metrics.py
+Re-export surface:
+    get_agent_registry_metrics   -- from agent_registry_metrics.py (Plan 01)
+    get_round_table_metrics      -- from round_table_metrics.py (Plan 02)
+    get_memory_backend_metrics   -- from memory_backend_metrics.py (Plan 03)
 
-Re-export surface (future, Plans 02/03):
-    get_round_table_metrics     -- from round_table_metrics.py
-    get_memory_backend_metrics  -- from memory_backend_metrics.py
+Plans 67-02 and 67-03 deliberately did NOT touch this file to avoid Wave 1
+sibling-overlap; Plan 67-04 (Wave 2) consolidates all 3 re-exports here so
+the endpoint can do a single ``from agent.observability import ...`` statement.
 """
 
 from __future__ import annotations
 
-# Wave 0 re-export. Relative import so the package works under editable
-# installs and wheel installs alike. Consumers (Plan 67-04 FastAPI endpoint,
-# Phase 68 CLI) do ``from agent.observability import get_agent_registry_metrics``.
 from agent.observability.agent_registry_metrics import get_agent_registry_metrics
+from agent.observability.memory_backend_metrics import get_memory_backend_metrics
+from agent.observability.round_table_metrics import get_round_table_metrics
 
-__all__ = ["get_agent_registry_metrics"]
+__all__ = [
+    "get_agent_registry_metrics",
+    "get_memory_backend_metrics",
+    "get_round_table_metrics",
+]

@@ -1992,6 +1992,56 @@ async def get_system_stats():
 
 
 # ---------------------------------------------------------------------------
+# Phase 67 OBSRV-01/02/03 — operator observability endpoint.
+#
+# Read-only snapshot of agent registry health + round table metrics + memory
+# backend metrics. Single URL the dashboard SPA (Phase 68) and operators curl
+# to inspect orchestrator health. Handler is plain ``def`` (Pitfall 4 —
+# threadpool dispatch; never blocks the event loop with sync file I/O).
+# ---------------------------------------------------------------------------
+
+
+@app.get("/orchestrator/agents/status")
+def get_orchestrator_agents_status(request: Request):
+    """Phase 67 OBSRV-01/02/03: operator observability endpoint.
+
+    Read-only snapshot of agent registry health + round table metrics +
+    memory backend metrics. Computed on-demand from in-memory ring buffers
+    plus a live registry load. The path is NOT in ``PUBLIC_API_PATHS``
+    (RESEARCH Pitfall 5) — agent names + lineage SHAs + missing-expert list
+    are operator-sensitive recon material.
+    """
+    _require_token(request)
+
+    # Lazy imports inside the handler body (RESEARCH Pitfall 6 — avoids any
+    # module-load cycle between web_server and agent.observability).
+    from agent.observability import (
+        get_agent_registry_metrics,
+        get_round_table_metrics,
+        get_memory_backend_metrics,
+    )
+    from agent.registry_loader import load_agent_registry_with_warnings
+    from agent.round_table_state import _now_iso as _state_now_iso
+
+    # OBSRV-01: live registry snapshot (loader caches internally so this is
+    # microseconds on cache hit). V7 error handling: never crash the endpoint
+    # — degrade to schema_validation_ok=False on registry failure.
+    try:
+        entries, missing = load_agent_registry_with_warnings()
+        schema_ok = True
+    except Exception as exc:
+        _log.warning("orchestrator status: registry load failed: %s", exc)
+        entries, missing, schema_ok = [], [], False
+
+    return {
+        "agent_registry": get_agent_registry_metrics(entries, missing, schema_ok),
+        "round_table": get_round_table_metrics(),
+        "memory_backend": get_memory_backend_metrics(),
+        "snapshot_at": _state_now_iso(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Curator endpoints — background skill-maintenance status + controls.
 #
 # The curator periodically reviews skills (archive stale, prune, pin).  The
