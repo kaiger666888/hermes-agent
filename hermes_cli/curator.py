@@ -247,6 +247,136 @@ def _cmd_run(args) -> int:
     return 0
 
 
+def _cmd_evolve(args) -> int:
+    """``hermes curator evolve [--live] [--skip-canary] [--sync]``.
+
+    Phase 65 (CURATE-LIVE-GUARDS) — operator-facing surface for live
+    curator self-evolution. Default path is a dry-run preview (mirrors
+    ``run --dry-run`` but with a distinct verb so operators can grep
+    audit logs for explicit evolve invocations). ``--live`` is the
+    explicit opt-in for actual memory writes, gated by a deterministic
+    bias canary pre-check (Plan 01 primitive). ``--skip-canary`` is the
+    operator-only escape hatch; every use is audit-logged with
+    ``canary_pass=None`` so Phase 66's 24h operator review can grep for
+    bypass attempts (V4 access control per RESEARCH Pitfall 5).
+
+    Exit codes:
+        0 — dry-run preview completed, OR live tick completed successfully.
+        1 — curator disabled via config, OR unexpected runtime error.
+        2 — ``--live`` requested AND bias canary pre-check caught <4/5
+            (G4 locked: structured ``BIAS_CANARY_FAILED`` message to stderr).
+    """
+    from agent import curator
+    if not curator.is_enabled():
+        print("curator: disabled via config; enable with `curator.enabled: true`")
+        return 1
+
+    live = bool(getattr(args, "live", False))
+    skip_canary = bool(getattr(args, "skip_canary", False))
+    synchronous = bool(getattr(args, "synchronous", False))
+
+    def _print_summary(msg: str) -> None:
+        print(msg)
+
+    # ── DRY-RUN PATH (default; EVAL-06 invariant preserved) ──────────
+    if not live:
+        print("curator evolve: running DRY-RUN preview (no mutations)")
+        # Pitfall 2: ALWAYS pass explicit dry_run=True boolean — never None.
+        # EVAL-06 treats None as True (silent dry-run); explicit True keeps
+        # the invariant readable at the call site.
+        curator.run_curator_review(
+            on_summary=_print_summary,
+            synchronous=synchronous,
+            dry_run=True,
+        )
+        print(
+            "dry-run: no changes applied. Re-run with --live to perform "
+            "actual memory writes (gated by bias canary pre-check)."
+        )
+        return 0
+
+    # ── LIVE PATH (--live opt-in) ────────────────────────────────────
+    caught: int | None
+    if not skip_canary:
+        passed, caught, _failed_ids = curator.run_bias_canary_pre_check()
+        if not passed:
+            # G4 locked: exit code 2 + structured BIAS_CANARY_FAILED message
+            # to stderr (grep-friendly for runbook automation).
+            print(
+                f"BIAS_CANARY_FAILED: caught {caught}/5 (threshold: 4); "
+                f"live tick aborted; run 'hermes curator evolve' "
+                f"(no --live) for dry-run preview",
+                file=sys.stderr,
+            )
+            return 2
+        canary_pass_for_audit: bool | None = True
+    else:
+        # --skip-canary escape hatch: canary did not run, so we have no
+        # caught count to log. Pitfall 5: pass canary_pass=None (NOT False)
+        # so the audit entry is distinct from "canary ran and failed".
+        caught = None
+        canary_pass_for_audit = None
+
+    skip_marker = " SKIPPED" if skip_canary else ""
+    caught_label = "—" if caught is None else str(caught)
+    print(
+        f"curator evolve: running LIVE tick "
+        f"(canary: {caught_label}/5 caught{skip_marker})"
+    )
+    # Pitfall 2: explicit dry_run=False boolean (never None).
+    result = curator.run_curator_review(
+        on_summary=_print_summary,
+        synchronous=synchronous,
+        dry_run=False,
+    )
+
+    # ── POST-TICK AUDIT (best-effort per RESEARCH A4 / T-65-09) ──────
+    # Best-effort: a failed audit append MUST NOT mask a successful tick.
+    # The operator can investigate the WARNING; the live writes already
+    # happened and cannot be rolled back from here (Phase 66 runbook
+    # covers manual rollback).
+    try:
+        from agent.curator_audit import append_audit
+        # Build mutation_summary from the result dict — auto_transitions
+        # is the deterministic stale/archive/reactivate count. Wrap in
+        # try/except KeyError for forward-compat (RESEARCH: mutation_summary
+        # is free-form so Phase 66 can evolve keys without audit-module edit).
+        try:
+            auto = result.get("auto_transitions", {}) or {}
+            mutation_summary = {
+                "checked": auto.get("checked", 0),
+                "archived": auto.get("archived", 0),
+                "marked_stale": auto.get("marked_stale", 0),
+                "reactivated": auto.get("reactivated", 0),
+            }
+        except (AttributeError, TypeError) as exc:
+            logger.warning(
+                "mutation_summary extraction failed: %s", exc,
+            )
+            mutation_summary = {}
+
+        from datetime import datetime as _dt
+        ts = _dt.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        append_audit(
+            action="auto_apply",
+            patch_id=f"live-tick-{ts}",
+            skill_id="<live-tick>",
+            operator=_get_operator(),
+            tick_mode="live",
+            canary_pass=canary_pass_for_audit,
+            caught_count=caught,
+            mutation_summary=mutation_summary,
+        )
+    except (OSError, ValueError) as exc:
+        # OSError = disk full / IO error; ValueError = schema validation.
+        # Both are operator-investigable; the tick already succeeded.
+        logger.warning(
+            "post-tick audit append failed (tick succeeded): %s", exc,
+        )
+
+    return 0
+
+
 def _cmd_pause(args) -> int:
     from agent import curator
     curator.set_paused(True)
@@ -1268,6 +1398,35 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
              "run is prune-only unless `curator.consolidate: true` is set.",
     )
     p_run.set_defaults(func=_cmd_run)
+
+    # ── Phase 65 (CURATE-LIVE-GUARDS) — `hermes curator evolve` ──────
+    # Distinct from ``run`` per CONTEXT.md G1: ``run`` is the legacy
+    # dry-run-or-live review trigger; ``evolve`` is the explicit
+    # self-evolution verb with bias canary pre-check gating the live path.
+    # Do NOT overload ``run`` with ``--live`` — operators grep audit logs
+    # for the ``evolve`` verb to find self-evolution events.
+    p_evolve = subs.add_parser(
+        "evolve",
+        help="Run curator self-evolution (default: dry-run preview; "
+             "--live performs actual memory writes with bias canary pre-check)",
+    )
+    p_evolve.add_argument(
+        "--live", dest="live", action="store_true",
+        help="Perform LIVE memory writes (default: dry-run preview). "
+             "Runs bias canary pre-check; aborts on <4/5 catch rate "
+             "(exit code 2 + BIAS_CANARY_FAILED message).",
+    )
+    p_evolve.add_argument(
+        "--skip-canary", dest="skip_canary", action="store_true",
+        help="DANGEROUS: skip bias canary pre-check. Operator-only escape "
+             "hatch; every use is audit-logged with canary_pass=None for "
+             "Phase 66 operator 24h review.",
+    )
+    p_evolve.add_argument(
+        "--sync", "--synchronous", dest="synchronous", action="store_true",
+        help="Wait for the LLM pass to finish (default for manual runs)",
+    )
+    p_evolve.set_defaults(func=_cmd_evolve)
 
     p_pause = subs.add_parser("pause", help="Pause the curator until resumed")
     p_pause.set_defaults(func=_cmd_pause)
