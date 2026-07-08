@@ -231,7 +231,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 62. EXPERT-YAML-TRANSFORM | 4/4 | Complete    | 2026-07-08 |
-| 63. EXPERT-REGISTRY-INTEGRATION | 4/4 | Complete   | 2026-07-08 |
+| 63. EXPERT-REGISTRY-INTEGRATION | 4/4 | Complete    | 2026-07-08 |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 0/TBD | Not started | - |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |

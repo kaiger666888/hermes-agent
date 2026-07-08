@@ -12,8 +12,8 @@
   - SKILL.md 在 kais-hermes-skills repo,**只读**(per Phase 48-49 lineage invariants L1-L6)
 - [x] **EXPERT-02**: 12 个新 YAML 全部 byte-pass `agents-schema.yaml` Draft 2020-12 验证(`jsonschema.Draft202012Validator.validate()`)
 - [x] **EXPERT-03**: 12 个新 YAML lineage 字段必须 populated(source SHA + transform rule ID + timestamp),支持审计回溯到原 SKILL.md
-- [ ] **EXPERT-04**: Agent registry 启动时加载 21 agents(9 已 ship + 12 新增)无 schema/lifecycle 错误,missing-expert 告警逻辑就绪
-- [ ] **EXPERT-05**: 至少 1 个新 agent(选 `visual_executor` —— 最复杂,带 sub_steps)通过 7 MCP tools 中的 `open_round_table` 实际调用并产生非空响应
+- [x] **EXPERT-04**: Agent registry 启动时加载 21 agents(9 已 ship + 12 新增)无 schema/lifecycle 错误,missing-expert 告警逻辑就绪
+- [x] **EXPERT-05**: 至少 1 个新 agent(选 `visual_executor` —— 最复杂,带 sub_steps)通过 7 MCP tools 中的 `open_round_table` 实际调用并产生非空响应
 
 ### EVAL — LIVE-EVAL-EXEC (3 deferred operator smoke tests)
 
@@ -68,8 +68,8 @@
 | EXPERT-01 | Phase 62 | Complete |
 | EXPERT-02 | Phase 62 | Complete |
 | EXPERT-03 | Phase 62 | Complete |
-| EXPERT-04 | Phase 63 | Pending |
-| EXPERT-05 | Phase 63 | Pending |
+| EXPERT-04 | Phase 63 | Complete |
+| EXPERT-05 | Phase 63 | Complete |
 | EVAL-01 | Phase 64 | Pending |
 | EVAL-02 | Phase 64 | Pending |
 | EVAL-03 | Phase 64 | Pending |
