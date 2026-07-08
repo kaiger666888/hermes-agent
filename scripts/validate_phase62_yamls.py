@@ -22,13 +22,12 @@ Threat mitigations:
     repo-relative SCHEMA_PATH; jsonschema error messages contain no
     secrets.
   - T-62-SC (supply chain): zero new package installs — PyYAML + jsonschema
-    + hashlib all pre-existing in pyproject.toml core deps.
+    both pre-existing in pyproject.toml core deps.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib  # reserved: Plan 04 SHA spot-check import compat (do not remove)
 import sys
 from pathlib import Path
 
