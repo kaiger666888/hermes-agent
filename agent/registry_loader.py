@@ -344,7 +344,16 @@ def load_one_agent_yaml(yaml_path: Path) -> dict[str, Any]:
         path = _format_json_path(first)
         # WR-02: surface structured json_path + invalid_field so MCP closures
         # can return typed 400 responses preserving schema-violation specifics.
-        invalid_field = path.lstrip("$.") if path.startswith("$.") else None
+        # WR-02 fix (review): use str.removeprefix("$.") instead of
+        # str.lstrip("$."). The lstrip version strips ANY combination of
+        # '$' and '.' chars from the left (over-strips edge cases like a
+        # hypothetical '$._internal' field that happens to start with '.');
+        # removeprefix strips the literal '$.' prefix only. For the bare
+        # root path '$', invalid_field stays None (no specific field).
+        if path.startswith("$."):
+            invalid_field = path.removeprefix("$.")
+        else:
+            invalid_field = None
         raise RegistryValidationError(
             f"{yaml_path}: schema violation at {path}: {first.message}",
             json_path=path,
