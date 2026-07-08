@@ -2037,7 +2037,26 @@ def run_bias_canary_pre_check(
                     )
                     continue
                 total += 1
-                report = check_record(record)
+                # CR-01 (Phase 65 review): per-record check_record can raise
+                # AttributeError/TypeError on malformed fixtures (e.g.
+                # ``{"text": 123}`` → ``.lower()``, ``{"confidence": []}`` →
+                # ``float()``). The docstring promises "never raises" — treat
+                # any per-record crash as "not flagged" (conservative: never
+                # let a buggy fixture line grant a false PASS by reducing the
+                # denominator). Broad ``Exception`` is fail-safe by design;
+                # noqa BLE001 because the load-bearing contract is "never
+                # propagate", and future field-type additions must not silently
+                # turn into CLI tracebacks on the live-tick pre-check path.
+                try:
+                    report = check_record(record)
+                except Exception as exc:  # noqa: BLE001 — fail-safe per "never raises"
+                    logger.warning(
+                        "bias canary check_record crashed on line %d "
+                        "(record_id=%s), treating as not-flagged: %s",
+                        total, record.get("record_id", "<missing>"), exc,
+                    )
+                    not_caught.append(record.get("record_id", "<crashed>"))
+                    continue
                 if report.flagged:
                     caught += 1
                 else:
