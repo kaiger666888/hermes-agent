@@ -105,8 +105,8 @@ Plans:
 **Wave 1**
 
 - [x] 62-01-PLAN.md — Wave 0 validation infra (scripts/validate_phase62_yamls.py — jsonschema Draft202012Validator batch gate)
-- [ ] 62-02-PLAN.md — Wave 1 Batch A (6 simpler experts: animation_studio/colorist/compliance_gate/creative_source/documentary_maker/performer)
-- [ ] 62-03-PLAN.md — Wave 1 Batch B (6 edge-case experts: production/prompt_injector/scene_builder/script_auditor/storyboard_designer/visual_executor — parallel with 02)
+- [x] 62-02-PLAN.md — Wave 1 Batch A (6 simpler experts: animation_studio/colorist/compliance_gate/creative_source/documentary_maker/performer)
+- [x] 62-03-PLAN.md — Wave 1 Batch B (6 edge-case experts: production/prompt_injector/scene_builder/script_auditor/storyboard_designer/visual_executor — parallel with 02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -217,7 +217,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. EXPERT-YAML-TRANSFORM | 1/4 | In Progress|  |
+| 62. EXPERT-YAML-TRANSFORM | 3/4 | In Progress|  |
 | 63. EXPERT-REGISTRY-INTEGRATION | 0/TBD | Not started | - |
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 0/TBD | Not started | - |
