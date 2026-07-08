@@ -953,8 +953,21 @@ async def get_agent_opinion(
                 # Phase 67 OBSRV-02: happy path -- read token cost
                 # IMMEDIATELY after call_llm (RESEARCH Pitfall 3 -- the
                 # global _LAST_CALL_USAGE dict is shared mutable; reading
-                # it before any further await prevents race with a
-                # concurrent coroutine overwriting the value).
+                # it before any further await narrows the race window).
+                #
+                # WR-03 known limitation: the race is narrowed, NOT
+                # eliminated. INFRA-04 serializes turns WITHIN a single
+                # roundId, but two concurrent ``get_agent_opinion``
+                # coroutines on DIFFERENT roundIds can interleave at the
+                # ``await call_llm`` resolution point — the bytecode
+                # window between call_llm returning and line below
+                # executing could let a cross-roundId coroutine overwrite
+                # ``_LAST_CALL_USAGE`` first. Impact: ``token_cost`` is
+                # BEST-EFFORT; under cross-roundId concurrency it may be
+                # attributed to the wrong turn. Within-roundId attribution
+                # is reliable (INFRA-04 serial). A proper fix would have
+                # ``call_llm`` return the usage dict inline (e.g. as a
+                # ``(response, usage)`` tuple) — out of Phase 67 scope.
                 from agent.auxiliary_client import get_last_call_usage
                 cap.token_cost = int(get_last_call_usage().get("total_tokens", 0))
                 cap.status = "ok"
