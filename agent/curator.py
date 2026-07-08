@@ -1936,6 +1936,124 @@ def _feedback_scan_phase(start: datetime) -> Dict[str, Any]:
     return {"scanned": len(hot_skills), "proposed": proposed}
 
 
+# --------------------------------------------------------------------------- #
+# Phase 65 (CURATE-LIVE-GUARDS) — bias canary pre-check
+# --------------------------------------------------------------------------- #
+
+#: v12.0 EVAL-03 baseline threshold (frozen per CURATE-02). The pre-check
+#: must catch at least this many of the 5 known-bad fixtures to allow a
+#: live tick to proceed. Record #5 is LLM-only by design (deterministic
+#: ``check_record`` cannot catch it — see RESEARCH Pattern 4 + Pitfall 3),
+#: so the practical maximum is 4. Do not raise above 4 without first
+#: redesigning record #5 to fail a deterministic check.
+_BIAS_CANARY_THRESHOLD: int = 4
+
+
+def _bias_canary_fixtures_path() -> Path:
+    """Resolve the path to the bundled known-bad fixture JSONL.
+
+    Lives at ``<repo-root>/tests/fixtures/curator_bias_canary/known_bad_records.jsonl``
+    so the pre-check works when operators run ``hermes`` from a repo checkout.
+    For wheel-install use cases (no ``tests/`` dir), Phase 66 runbook covers
+    bundling fixtures as package data (RESEARCH Assumption A4).
+    """
+    return (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "curator_bias_canary"
+        / "known_bad_records.jsonl"
+    )
+
+
+def run_bias_canary_pre_check(
+    *,
+    fixtures_path: Path | None = None,
+    threshold: int = _BIAS_CANARY_THRESHOLD,
+) -> tuple[bool, int, list[str]]:
+    """Pre-tick bias canary gate (CURATE-02).
+
+    Loads the JSONL fixture file (one record per line; ``#`` comment lines
+    and blank lines skipped), runs :func:`agent.curator_bias_canary.check_record`
+    on each, and counts how many are flagged. **Deterministic and sync** — no
+    LLM call, no network, safe to invoke from the CLI handler thread. The
+    async LLM ``claim_support`` pass lives only in
+    :func:`agent.curator_bias_canary.run_bias_canary` and is intentionally
+    NOT part of this pre-check (RESEARCH Anti-Pattern: "Calling
+    run_bias_canary in the pre-check").
+
+    Args:
+        fixtures_path: Override path to a fixture JSONL. Defaults to the
+            repo-bundled file at
+            ``tests/fixtures/curator_bias_canary/known_bad_records.jsonl``.
+            Override exists primarily for test injection; production callers
+            pass ``None`` and use the bundled path.
+        threshold: Minimum catch count required to pass. Defaults to
+            :data:`_BIAS_CANARY_THRESHOLD` (4 per v12.0 EVAL-03 baseline).
+            Setting this above 4 will fail because record #5 is LLM-only and
+            cannot be caught deterministically.
+
+    Returns:
+        ``(passed, caught_count, failed_record_ids)`` where:
+
+        * ``passed`` — True iff ``caught_count >= threshold``
+        * ``caught_count`` — N of 5 records flagged by ``check_record``
+        * ``failed_record_ids`` — record_ids of records NOT flagged
+          (canary false-negatives). Expected to be ``["bad-unsupported-claim"]``
+          in normal operation; ``["<fixtures-missing>"]`` when the fixture
+          file is absent (fail-safe); ``["<read-error>"]`` on ``OSError``.
+
+    Fail-safe behavior: when ``fixtures_path`` does not exist or cannot be
+    read, returns ``(False, 0, ["<fixtures-missing>"])`` (or
+    ``["<read-error>"]``) — never raises. Operators relying on the canary
+    gate must never get a green light because the fixture file was deleted.
+    """
+    from agent.curator_bias_canary import check_record  # lazy import
+
+    path = fixtures_path or _bias_canary_fixtures_path()
+    if not path.exists():
+        logger.warning(
+            "bias canary fixtures not found at %s — failing safe", path,
+        )
+        return False, 0, ["<fixtures-missing>"]
+
+    caught = 0
+    not_caught: list[str] = []
+    total = 0
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                # Skip blank lines and comment lines (RESEARCH: header
+                # comment documents the LLM-only caveat for record #5).
+                if not line or line.startswith("#"):
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    logger.warning(
+                        "bias canary fixture line unparseable, skipping: %s",
+                        exc,
+                    )
+                    continue
+                total += 1
+                report = check_record(record)
+                if report.flagged:
+                    caught += 1
+                else:
+                    not_caught.append(report.record_id)
+    except OSError as exc:
+        logger.warning("bias canary fixtures read failed: %s", exc)
+        return False, 0, ["<read-error>"]
+
+    passed = caught >= threshold
+    logger.info(
+        "bias canary pre-check: caught %d/%d (threshold: %d) — %s",
+        caught, total, threshold, "PASS" if passed else "FAIL",
+    )
+    return passed, caught, not_caught
+
+
 def run_curator_review(
     on_summary: Optional[Callable[[str], None]] = None,
     synchronous: bool = False,

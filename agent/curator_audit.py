@@ -164,6 +164,15 @@ def append_audit(
     feedback_ids: list[str] | None = None,
     eval_score: dict[str, Any] | None = None,
     commit_sha: str | None = None,
+    # ── Phase 65 (CURATE-03) extensions ──────────────────────────────────
+    # All optional with None defaults — legacy v6 callers (feedback-scan,
+    # approve wrappers, bias canary summary) pass no new args and produce
+    # entries with these fields ABSENT (preserving backward-compat byte
+    # format). ``tick_mode`` marks entries from live curator ticks.
+    tick_mode: str | None = None,
+    canary_pass: bool | None = None,
+    caught_count: int | None = None,
+    mutation_summary: dict[str, Any] | None = None,
 ) -> str:
     """Append one entry to the audit log and return its ``entry_id``.
 
@@ -180,18 +189,57 @@ def append_audit(
         feedback_ids: FeedbackRecord IDs cited as evidence (for propose).
         eval_score: Gate result snapshot (verdict, mean_delta, ...).
         commit_sha: Git sha set on apply/rollback entries; None otherwise.
+        tick_mode: Phase 65 — ``"live"`` for actual memory writes via
+            ``hermes curator evolve --live``, ``"dry_run"`` for a dry-run
+            tick that wrote no mutations but logged for visibility, or
+            ``None`` (default) for legacy entries unrelated to a live tick.
+            Must be one of ``{"live", "dry_run"}`` when not None.
+        canary_pass: Phase 65 — bias canary pre-check result for this tick.
+            ``True`` requires ``tick_mode="live"`` (consistency invariant:
+            a live write implies a passing canary gate). ``False`` or
+            ``None`` (not set) is always acceptable. ``None`` is used for
+            entries written via ``--skip-canary`` (operator escape hatch).
+        caught_count: Phase 65 — how many of the 5 known-bad fixtures the
+            canary pre-check flagged (0..5). ``None`` for legacy entries.
+        mutation_summary: Phase 65 — free-form dict summarizing the
+            mutations performed in this tick (e.g.
+            ``{"skills_archived": [...], "feedback_patches_proposed": N}``).
+            Mirrors the free-form precedent of ``eval_score``: no schema
+            enforcement so Phase 66's runbook can evolve the keys without
+            an audit-module edit.
 
     Returns:
         The new entry's ``entry_id`` (uuid4 hex string).
 
     Raises:
-        ValueError: if ``action`` is not in :data:`ACTION_VALUES`.
+        ValueError: if ``action`` is not in :data:`ACTION_VALUES`; if
+            ``tick_mode`` is not in ``{"live", "dry_run", None}``; or if
+            ``canary_pass=True`` is combined with ``tick_mode != "live"``.
         AuditChainError: if the existing log's final line is malformed
             JSON (refuses to chain from a broken tail).
+
+    Backward compatibility:
+        Existing callers that omit the Phase 65 kwargs produce entries
+        with those fields ABSENT (not ``null``). This preserves the
+        legacy byte-format so :func:`verify_chain` recomputes the same
+        sha256 as before; readers treat absence as "legacy / not from a
+        live tick".
     """
     if action not in ACTION_VALUES:
         raise ValueError(
             f"action must be one of {sorted(ACTION_VALUES)}, got {action!r}"
+        )
+    # Phase 65 (CURATE-03) — V5 input validation for the tick_mode enum
+    # (RESEARCH Pattern 3 + Pitfall 4: validate ONLY tick_mode + the
+    # canary_pass/tick_mode consistency invariant; leave mutation_summary
+    # free-form like eval_score).
+    if tick_mode is not None and tick_mode not in ("live", "dry_run"):
+        raise ValueError(
+            f"tick_mode must be 'live' or 'dry_run', got {tick_mode!r}"
+        )
+    if canary_pass is True and tick_mode != "live":
+        raise ValueError(
+            f"canary_pass=True requires tick_mode='live', got {tick_mode!r}"
         )
 
     path = _audit_log_path()
@@ -226,6 +274,18 @@ def append_audit(
         "eval_score": eval_score or {},
         "commit_sha": commit_sha,
     }
+    # Phase 65 (CURATE-03) — conditional field inclusion: omit the key
+    # entirely when the value is None so legacy entries retain their
+    # original byte-format (preserves sha256 chain for existing entries
+    # and keeps the JSON compact for the common case).
+    if tick_mode is not None:
+        entry["tick_mode"] = tick_mode
+    if canary_pass is not None:
+        entry["canary_pass"] = canary_pass
+    if caught_count is not None:
+        entry["caught_count"] = caught_count
+    if mutation_summary is not None:
+        entry["mutation_summary"] = mutation_summary
     entry["entry_sha256"] = _compute_entry_sha256(prev_sha256, entry)
 
     with path.open("a", encoding="utf-8") as f:
