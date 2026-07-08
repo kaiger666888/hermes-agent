@@ -216,7 +216,7 @@ Plans:
 
 **Wave 2** (blocked on Waves 0+1 — endpoint consumes all 3 collectors)
 
-- [ ] 67-04-PLAN.md — FastAPI `/orchestrator/agents/status` endpoint + integration tests (TestClient) + auth-gate invariant test
+- [x] 67-04-PLAN.md — FastAPI `/orchestrator/agents/status` endpoint + integration tests (TestClient) + auth-gate invariant test
 
 **Cross-cutting constraints:**
 
@@ -263,7 +263,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 3/3 | Complete    | 2026-07-08 |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
-| 67. OBSERVABILITY-BACKEND | 3/4 | In Progress|  |
+| 67. OBSERVABILITY-BACKEND | 4/4 | Complete   | 2026-07-08 |
 | 68. OBSERVABILITY-PRESENTATION | 0/TBD | Not started | - |
 | 69. VALIDATE | 0/TBD | Not started | - |
 
