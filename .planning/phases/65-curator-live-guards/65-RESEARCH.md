@@ -687,7 +687,7 @@ def append_audit(
 | A3 | `run_curator_review(dry_run=False)` performs the live mutation path correctly (snapshot + transitions + LLM pass + feedback-scan) | Standard Stack | If wrong, Phase 66 live tick fails. Mitigation: this function has been refined across v6→v11 with 30+ test files covering it; risk is low. Phase 65 does NOT modify this function. |
 | A4 | The repo-root-relative path resolution for fixtures (`Path(__file__).resolve().parents[1] / "tests" / "fixtures" / ...`) works in operator's checkout | Pattern 2 | If operator runs `hermes` from a wheel install (no `tests/` dir), pre-check fails with "fixtures not found". Mitigation: Phase 65 documents "run from repo checkout"; Phase 66 runbook covers wheel-install case (bundle fixtures as package data). `[ASSUMED — based on CONTEXT.md not mentioning wheel-install support]` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `run_bias_canary_pre_check` live in `agent/curator.py` or a new `agent/curator_live_guards.py` module?**
    - What we know: `agent/curator.py` is already 2486 lines. Adding ~50 lines for pre-check is marginal but adds to file length.
