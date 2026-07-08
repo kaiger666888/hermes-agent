@@ -407,10 +407,15 @@ class TestVisualExecutorSmoke:
         Proves the idempotent open contract from round_table_state.py:339
         — ``state_path.exists()`` guard short-circuits to a 409 dict
         instead of raising or overwriting.
+
+        WR-05 fix (review): no _seed_visual_executor_yamls call here —
+        open_round_table only writes the state file (round_table_state.py:404
+        state_dir.mkdir), it does NOT read persona YAMLs. The seed was
+        wasted I/O and introduced a hard dependency on Kai's home dir
+        (per WR-01) for no functional reason. The state dir is created
+        on-demand by open_round_table itself.
         """
         from agent.round_table_state import open_round_table
-
-        _seed_visual_executor_yamls(tmp_path)
 
         round_id = str(uuid.uuid4())
         state_dir = _compute_state_dir()
