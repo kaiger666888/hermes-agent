@@ -46,6 +46,7 @@ class TestRegisterCliPreservesExistingSubcommands:
     )
     NEW_V6_SUBCOMMANDS = (
         "queue", "approve", "reject", "audit-log", "auto-apply-eligible",
+        "evolve",
     )
 
     def test_existing_subcommands_still_resolve(self):
