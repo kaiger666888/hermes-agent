@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes Orchestrator — Observability</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --fg: #c9d1d9;
+    --card-bg: #161b22;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --err: #f85149;
+    --muted: #8b949e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  button.refresh {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.refresh:hover { filter: brightness(1.1); }
+  .last-refresh {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .card th, .card td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card th {
+    color: var(--muted);
+    font-weight: 500;
+    width: 55%;
+  }
+  .card td {
+    font-variant-numeric: tabular-nums;
+  }
+  .bool-yes { color: var(--ok); font-weight: 600; }
+  .bool-no  { color: var(--err); font-weight: 600; }
+  .empty    { color: var(--muted); font-style: italic; }
+  .error    { color: var(--err); }
+  #agent-names {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+  <h1>Hermes Orchestrator Observability</h1>
+  <div class="subtitle">
+    Phase 68 OBSRV-04/05 — operator snapshot of agent registry, round table,
+    and memory backend health. Auto-refreshes every 30 seconds.
+  </div>
+
+  <div class="toolbar">
+    <button class="refresh" id="refresh-btn" type="button">Refresh now</button>
+    <span class="last-refresh" id="last-refresh">never refreshed</span>
+  </div>
+
+  <div class="grid">
+    <!-- Dimension 1: Agent Registry (OBSRV-01) -->
+    <section class="card" id="agent-registry">
+      <h2>Agent Registry (OBSRV-01)</h2>
+      <table>
+        <tbody>
+          <tr><th>agents_loaded</th><td data-field="agents_loaded">—</td></tr>
+          <tr><th>schema_validation_ok</th><td data-field="schema_validation_ok">—</td></tr>
+          <tr><th>lineage_integrity_ok</th><td data-field="lineage_integrity_ok">—</td></tr>
+          <tr><th>missing_experts</th><td data-field="missing_experts">—</td></tr>
+          <tr><th>snapshot_at_iso</th><td data-field="snapshot_at_iso">—</td></tr>
+        </tbody>
+      </table>
+      <div id="agent-names"></div>
+    </section>
+
+    <!-- Dimension 2: Round Table (OBSRV-02) -->
+    <section class="card" id="round-table">
+      <h2>Round Table (OBSRV-02)</h2>
+      <table>
+        <tbody>
+          <tr><th>count</th><td data-field="count">—</td></tr>
+          <tr><th>p50_latency_ms</th><td data-field="p50_latency_ms">—</td></tr>
+          <tr><th>p95_latency_ms</th><td data-field="p95_latency_ms">—</td></tr>
+          <tr><th>total_token_cost</th><td data-field="total_token_cost">—</td></tr>
+          <tr><th>avg_token_cost</th><td data-field="avg_token_cost">—</td></tr>
+          <tr><th>serial_lock_wait_p95_ms</th><td data-field="serial_lock_wait_p95_ms">—</td></tr>
+          <tr><th>early_stop_rate</th><td data-field="early_stop_rate">—</td></tr>
+          <tr><th>status_distribution</th><td data-field="status_distribution">—</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Dimension 3: Memory Backend (OBSRV-03) -->
+    <section class="card" id="memory-backend">
+      <h2>Memory Backend (OBSRV-03)</h2>
+      <table>
+        <tbody>
+          <tr><th>search_count</th><td data-field="search_count">—</td></tr>
+          <tr><th>add_count</th><td data-field="add_count">—</td></tr>
+          <tr><th>search_p95_ms</th><td data-field="search_p95_ms">—</td></tr>
+          <tr><th>add_p95_ms</th><td data-field="add_p95_ms">—</td></tr>
+          <tr><th>error_rate</th><td data-field="error_rate">—</td></tr>
+          <tr><th>conflict_count</th><td data-field="conflict_count">—</td></tr>
+          <tr><th>compaction_triggers</th><td data-field="compaction_triggers">—</td></tr>
+          <tr><th>status</th><td data-field="status">—</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Resolve the session token for the auth gate.
+  // Loopback mode: SPA injects window.__HERMES_SESSION_TOKEN__.
+  // OAuth mode: cookie middleware authenticates the fetch automatically.
+  // Fallback: ?token=xxx query param (operator-only convenience).
+  function resolveToken() {
+    if (typeof window !== "undefined" && window.__HERMES_SESSION_TOKEN__) {
+      return window.__HERMES_SESSION_TOKEN__;
+    }
+    var params = new URLSearchParams(window.location.search);
+    return params.get("token") || "";
+  }
+
+  function buildHeaders(token) {
+    var headers = { "Accept": "application/json" };
+    if (token) {
+      headers["X-Hermes-Session-Token"] = token;
+    }
+    return headers;
+  }
+
+  // textContent-only setter (threat T-68-02-xss mitigation — never innerHTML).
+  function setText(el, text) {
+    if (el) { el.textContent = text; }
+  }
+
+  function setBool(el, value) {
+    if (!el) { return; }
+    el.textContent = value ? "✓ yes" : "✗ no";
+    el.className = value ? "bool-yes" : "bool-no";
+  }
+
+  function setMs(el, value) {
+    setText(el, (Number(value) || 0).toFixed(2) + " ms");
+  }
+
+  function setPct(el, value) {
+    setText(el, (Number(value) * 100).toFixed(2) + "%");
+  }
+
+  function setScalar(el, value) {
+    setText(el, String(value));
+  }
+
+  function setStatusDistribution(el, dist) {
+    if (!el) { return; }
+    if (!dist || typeof dist !== "object") {
+      setText(el, "(none)");
+      return;
+    }
+    var keys = Object.keys(dist).sort();
+    if (keys.length === 0) {
+      setText(el, "(none)");
+      return;
+    }
+    setText(el, keys.map(function (k) { return k + "=" + dist[k]; }).join(", "));
+  }
+
+  function setMissingExperts(el, list) {
+    if (!el) { return; }
+    if (!Array.isArray(list) || list.length === 0) {
+      setText(el, "(none)");
+      return;
+    }
+    setText(el, list.join(", "));
+  }
+
+  function populateAgentRegistry(data) {
+    var section = document.getElementById("agent-registry");
+    if (!section || !data) { return; }
+    setScalar(section.querySelector('[data-field="agents_loaded"]'), data.agents_loaded);
+    setBool(section.querySelector('[data-field="schema_validation_ok"]'), data.schema_validation_ok);
+    setBool(section.querySelector('[data-field="lineage_integrity_ok"]'), data.lineage_integrity_ok);
+    setMissingExperts(section.querySelector('[data-field="missing_experts"]'), data.missing_experts);
+    setScalar(section.querySelector('[data-field="snapshot_at_iso"]'), data.snapshot_at_iso);
+    var names = data.agent_names || [];
+    var namesEl = document.getElementById("agent-names");
+    setText(namesEl, names.length ? ("agents: " + names.join(", ")) : "");
+  }
+
+  function populateRoundTable(data) {
+    var section = document.getElementById("round-table");
+    if (!section || !data) { return; }
+    setScalar(section.querySelector('[data-field="count"]'), data.count);
+    setMs(section.querySelector('[data-field="p50_latency_ms"]'), data.p50_latency_ms);
+    setMs(section.querySelector('[data-field="p95_latency_ms"]'), data.p95_latency_ms);
+    setScalar(section.querySelector('[data-field="total_token_cost"]'), data.total_token_cost);
+    setScalar(section.querySelector('[data-field="avg_token_cost"]'), (Number(data.avg_token_cost) || 0).toFixed(2));
+    setMs(section.querySelector('[data-field="serial_lock_wait_p95_ms"]'), data.serial_lock_wait_p95_ms);
+    setPct(section.querySelector('[data-field="early_stop_rate"]'), data.early_stop_rate);
+    setStatusDistribution(section.querySelector('[data-field="status_distribution"]'), data.status_distribution);
+  }
+
+  function populateMemoryBackend(data) {
+    var section = document.getElementById("memory-backend");
+    if (!section || !data) { return; }
+    setScalar(section.querySelector('[data-field="search_count"]'), data.search_count);
+    setScalar(section.querySelector('[data-field="add_count"]'), data.add_count);
+    setMs(section.querySelector('[data-field="search_p95_ms"]'), data.search_p95_ms);
+    setMs(section.querySelector('[data-field="add_p95_ms"]'), data.add_p95_ms);
+    setPct(section.querySelector('[data-field="error_rate"]'), data.error_rate);
+    setScalar(section.querySelector('[data-field="conflict_count"]'), data.conflict_count);
+    setScalar(section.querySelector('[data-field="compaction_triggers"]'), data.compaction_triggers);
+    setScalar(section.querySelector('[data-field="status"]'), data.status);
+  }
+
+  function formatTimestamp(iso) {
+    if (!iso) { return ""; }
+    try {
+      var d = new Date(iso);
+      return d.toLocaleTimeString();
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function markRefresh(snapshotAt) {
+    var el = document.getElementById("last-refresh");
+    setText(el, "last refreshed " + formatTimestamp(snapshotAt) + " (auto-refresh 30s)");
+  }
+
+  function fetchData() {
+    var token = resolveToken();
+    var headers = buildHeaders(token);
+    fetch("/orchestrator/agents/status", { headers: headers })
+      .then(function (resp) {
+        if (!resp.ok) {
+          throw new Error("HTTP " + resp.status);
+        }
+        return resp.json();
+      })
+      .then(function (payload) {
+        populateAgentRegistry(payload.agent_registry);
+        populateRoundTable(payload.round_table);
+        populateMemoryBackend(payload.memory_backend);
+        markRefresh(payload.snapshot_at);
+      })
+      .catch(function (err) {
+        var el = document.getElementById("last-refresh");
+        setText(el, "fetch failed: " + err.message);
+      });
+  }
+
+  // Wire refresh button.
+  document.getElementById("refresh-btn").addEventListener("click", fetchData);
+
+  // Initial fetch on page load.
+  fetchData();
+
+  // Auto-refresh every 30 seconds (CONTEXT.md G4 — minimal JS).
+  setInterval(fetchData, 30000);
+})();
+</script>
+</body>
+</html>

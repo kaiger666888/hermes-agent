@@ -105,6 +105,11 @@ except ImportError:
         )
 
 WEB_DIST = Path(os.environ["HERMES_WEB_DIST"]) if "HERMES_WEB_DIST" in os.environ else Path(__file__).parent / "web_dist"
+# Phase 68 OBSRV-05: directory for server-rendered HTML panels (orchestrator
+# observability, etc.). Distinct from WEB_DIST (the built SPA bundle) — these
+# are hand-authored static HTML files served via FileResponse. Read-only at
+# runtime; no env override needed.
+WEB_TEMPLATE_DIR = Path(__file__).parent / "web_templates"
 _log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -1999,6 +2004,34 @@ async def get_system_stats():
 # to inspect orchestrator health. Handler is plain ``def`` (Pitfall 4 —
 # threadpool dispatch; never blocks the event loop with sync file I/O).
 # ---------------------------------------------------------------------------
+
+
+@app.get("/orchestrator")
+def get_orchestrator_panel(request: Request):
+    """Phase 68 OBSRV-05: dashboard observability panel (HTML shell).
+
+    Serves a minimal static HTML page at ``/orchestrator`` that
+    client-side fetches ``/orchestrator/agents/status`` on load + every
+    30s and populates 3 dimension sections (agent registry, round table,
+    memory backend). The page itself is operator-only (it surfaces agent
+    names + lineage SHAs via the embedded fetch) — auth-gated via
+    ``_require_token`` exactly like the data endpoint.
+
+    Auth modes:
+        * **Loopback / --insecure:** operator passes the session token
+          via ``?token=xxx`` query param (the SPA's link to this panel
+          appends it). The template's JS reads it and sets the
+          ``X-Hermes-Session-Token`` header on the fetch.
+        * **OAuth / cookie:** the cookie middleware authenticates the
+          fetch automatically; no token query param needed.
+
+    The route is registered BEFORE the ``mount_spa()`` catchall
+    (declared at module load, while ``mount_spa(app)`` runs at line
+    ~12322) so FastAPI's route-ordering matches this handler first.
+    """
+    _require_token(request)
+    panel_path = WEB_TEMPLATE_DIR / "orchestrator.html"
+    return FileResponse(panel_path, media_type="text/html")
 
 
 @app.get("/orchestrator/agents/status")
