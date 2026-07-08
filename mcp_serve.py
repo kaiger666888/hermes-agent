@@ -1092,9 +1092,21 @@ async def submit_round_table_result(
             return json.dumps(result, indent=2)
 
         # Phase 67 OBSRV-02: happy path -- populate the round-level totals
-        # from the result dict. The state module sets tokensConsumed +
-        # costUsdEstimate + turns + events unconditionally on the
-        # completed transition (verified at round_table_state.py:597-601).
+        # from the post-submit result dict. WR-04 note: the state module
+        # (verified at round_table_state.py:597-601) unconditionally sets
+        # ONLY ``tokensConsumed``, ``costUsdEstimate``, and ``lastUpdatedAt``
+        # on the completed transition. ``turns`` and ``events`` are pre-
+        # existing lists in the state dict — they are NOT created or reset
+        # by ``submit_round_table_result``. For any state file that lacks
+        # ``turns``/``events`` keys (e.g. pre-Phase-58 files), the
+        # ``.get(default=[])`` below yields empty and the metric reports
+        # ``turn_count=0`` and ``early_stop_triggered=False`` (defensive,
+        # no crash, but the value is misleading for legacy state). Acceptable
+        # because pre-Phase-58 state files are rare in production and the
+        # ``.get(default)`` pattern prevents KeyError crashes on the metric
+        # path. To enforce presence, push a guarantee into
+        # ``round_table_state.submit_round_table_result`` that ``turns`` is
+        # always initialized post-transition (out of Phase 67 scope).
         cap.token_cost = int(result.get("tokensConsumed", 0))
         cap.cost_usd = float(result.get("costUsdEstimate", 0.0))
         cap.turn_count = len(result.get("turns", []))
