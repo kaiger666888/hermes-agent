@@ -58,9 +58,9 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 - **SKILL.md read-only:** kais-hermes-skills repo 的 SKILL.md 不动(per Phase 48-49 lineage invariants L1-L6)
 - **Single repo 收敛:** 全部在 hermes-agent repo + `~/.hermes/`,不创建新 repo
 
-## Current State (v13.0 IN PROGRESS — Phase 62 ✓ SHIPPED 2026-07-08)
+## Current State (v13.0 IN PROGRESS — Phase 63 ✓ SHIPPED 2026-07-08)
 
-v13.0 milestone IN PROGRESS. **Phase 62 (EXPERT-YAML-TRANSFORM) ✓ shipped 2026-07-08** — 12 active expert agent YAMLs transformed from kais-hermes-skills SKILL.md to `~/.hermes/agents/` (15/15 active expert coverage via 21 total agents = 9 shipped v11.0 + 12 new). 4 plans across 3 waves · 21/21 byte-pass schema · 14/14 pytest green · 0 BLOCKER / 4 WARNING fixed / 5 INFO tech_debt · 3 manual UAT items deferred to `/gsd:audit-uat`. **Next: Phase 63 (EXPERT-REGISTRY-INTEGRATION) — 21-agent registry load + visual_executor round table smoke.**
+v13.0 milestone IN PROGRESS. **Phase 62 + 63 ✓ shipped 2026-07-08**. Phase 62 transformed 12 active expert agent YAMLs (15/15 active coverage via 21 total agents). Phase 63 wired missing-expert alarm into `agent.registry_loader` (REQUIRED_DAG_EXPERTS frozenset + `load_agent_registry_with_warnings` sibling; existing signature UNCHANGED) + canary test (4 tests covering fire/silent/sorted/cache-hit regression) + visual_executor round table smoke (mock-mode authoritative, live opt-in via `HERMES_PHASE63_LIVE_SMOKE=1`). 8 plans across 6 waves total · 36+ automated tests green · 1 BLOCKER + 10 WARNING fixed across both phases · 2 manual UAT items deferred to `/gsd:audit-uat`. **Next: Phase 64 (LIVE-EVAL-EXEC) — operator secrets track; or Phase 65 (CURATOR-LIVE-GUARDS) — code-work track.**
 
 Prior: v12.0 SHIPPED + closed 2026-07-08 (tag `v12.0`, phases archived to `.planning/milestones/v12.0-ROADMAP.md` + `.planning/milestones/v12.0-REQUIREMENTS.md`). v12.0 是 **Production Hardening** milestone —— 5 phases (57-61) · 9 plans · 8/8 reqs verified · 586+ automated tests green · audit verdict `passed` · 3 operator-action handoffs deferred per VALIDATE-01 spec.
 
