@@ -84,7 +84,7 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
 - [ ] **Phase 66: CURATOR-LIVE-TICK** - 1st live tick end-to-end + operator runbook + safety policy
 - [x] **Phase 67: OBSERVABILITY-BACKEND** ✓ 2026-07-08 - 3 metrics collectors (agent registry / round table / memory backend) + FastAPI /orchestrator/agents/status endpoint
 - [x] **Phase 68: OBSERVABILITY-PRESENTATION** ✓ 2026-07-08 - `hermes orchestrator status` CLI (rich tables + `--json`) + `/orchestrator` dashboard panel
-- [ ] **Phase 69: VALIDATE** - v13.0 milestone audit + close-out report(strictly LAST)
+- [x] **Phase 69: VALIDATE** ✓ 2026-07-08 - v13.0 milestone audit (verdict: tech_debt, 13/20 fully satisfied + 1 audit + 6 operator-handoff)
 
 ## Phase Details
 
@@ -265,7 +265,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
 | 67. OBSERVABILITY-BACKEND | 4/4 | Complete    | 2026-07-08 |
 | 68. OBSERVABILITY-PRESENTATION | 2/2 | Complete    | 2026-07-08 |
-| 69. VALIDATE | 0/TBD | Not started | - |
+| 69. VALIDATE | 0/0 | Complete    | 2026-07-08 |
 
 ---
 
