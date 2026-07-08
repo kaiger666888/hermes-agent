@@ -306,14 +306,39 @@ def _cmd_evolve(args) -> int:
             # agent.curator public constants — never hardcode the literals
             # here, or the message silently drifts when the fixture file
             # grows or the threshold is retuned.
-            print(
-                f"BIAS_CANARY_FAILED: caught {caught}/"
-                f"{curator.BIAS_CANARY_FIXTURE_COUNT} "
-                f"(threshold: {curator.BIAS_CANARY_THRESHOLD}); "
-                f"live tick aborted; run 'hermes curator evolve' "
-                f"(no --live) for dry-run preview",
-                file=sys.stderr,
+            # WR-04 (Phase 65 review): when failed_ids is exactly
+            # ["<fixtures-missing>"], the canary did not RUN (fixture file
+            # absent) rather than run-and-underperform. Wheel-install users
+            # (pip install hermes-agent) hit this because tests/ is not
+            # packaged. Surface a distinct BIAS_CANARY_FIXTURES_MISSING
+            # marker so operators can distinguish install-method issue
+            # (copy fixtures manually or run from repo checkout) from a
+            # genuine canary regression.
+            fixtures_missing = (
+                list(_failed_ids) == ["<fixtures-missing>"]
             )
+            if fixtures_missing:
+                fixture_path = curator._bias_canary_fixtures_path()
+                print(
+                    f"BIAS_CANARY_FIXTURES_MISSING: bias canary fixture "
+                    f"file not found at {fixture_path}; live tick "
+                    f"aborted. This usually means hermes was installed "
+                    f"via pip/wheel (tests/ dir not bundled). Either "
+                    f"run from a repo checkout, copy the fixtures dir "
+                    f"manually, or wait for Phase 66 fixture-bundling. "
+                    f"See agent/curator.py:_bias_canary_fixtures_path "
+                    f"docstring.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"BIAS_CANARY_FAILED: caught {caught}/"
+                    f"{curator.BIAS_CANARY_FIXTURE_COUNT} "
+                    f"(threshold: {curator.BIAS_CANARY_THRESHOLD}); "
+                    f"live tick aborted; run 'hermes curator evolve' "
+                    f"(no --live) for dry-run preview",
+                    file=sys.stderr,
+                )
             return 2
         canary_pass_for_audit: bool | None = True
     else:
