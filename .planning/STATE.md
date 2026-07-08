@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: v10.0 Design Suite Full Rollout & Live Eval
-status: planning
-last_updated: "2026-07-08T00:00:00.000Z"
-last_activity: 2026-07-08
+status: executing
+last_updated: "2026-07-08T00:06:38.008Z"
+last_activity: 2026-07-08 -- Phase 62 planning complete
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -30,8 +30,8 @@ progress:
 
 Phase: 62 (EXPERT-YAML-TRANSFORM) — first v13.0 phase
 Plan: —
-Status: Ready to plan (roadmap just created)
-Last activity: 2026-07-08 — v13.0 ROADMAP created (8 phases 62-69, 20/20 reqs mapped)
+Status: Ready to execute
+Last activity: 2026-07-08 -- Phase 62 planning complete
 
 ### Progress
 
@@ -84,16 +84,19 @@ Phase 67 (OBSRV-BACKEND)   ──▶ Phase 68 (OBSRV-PRESENTATION) ────�
 ```
 
 **Critical path (must-hold dependencies):**
+
 - 62 → 63 (12 new YAMLs before 21-agent registry smoke)
 - 65 → 66 (`--live` flag + guards before 1st live tick)
 - 67 → 68 (collectors before CLI/dashboard)
 - 69 strictly LAST (all others complete)
 
 **Parallel tracks:**
+
 - Phase 64 (LIVE-EVAL-EXEC) needs operator secrets — runs in parallel with code-work tracks 62-63, 65-68; does not block them
 - Code-work tracks can interleave: 62→63 / 65→66 / 67→68 are 3 independent chains
 
 **Hard constraints preserved (carry-forward from v10.0-v12.0):**
+
 - INFRA-04 serial execution NOT lifted (GLM capacity gate — v14+ decision, deferred pending v13 live data)
 - EVAL-06 dry-run-first NOT changed (CURATE-01 only adds opt-in `--live` flag)
 - SKILL.md in kais-hermes-skills repo stays read-only (EXPERT-01..03 transform without modifying source)
