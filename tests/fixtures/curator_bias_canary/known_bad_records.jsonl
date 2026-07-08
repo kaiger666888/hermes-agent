@@ -1,0 +1,15 @@
+# Phase 65 (CURATE-02) bias canary pre-check fixtures — 5 known-bad records.
+# Records #1-4 each trigger one deterministic check_record() failure mode:
+#   confidence_threshold, operator_diversity, operator_diversity, evidence_coverage.
+# Record #5 (bad-unsupported-claim) is LLM-ONLY by design: its 3 deterministic
+# checks all pass, and it is only flagged by the async LLM claim_support pass in
+# run_bias_canary() (NOT by check_record). Per v12.0 EVAL-03 baseline the
+# run_bias_canary_pre_check() threshold is frozen at >=4/5, so the deterministic
+# catches on records #1-4 suffice. Do NOT redesign record #5 to fail
+# deterministically — its LLM-only nature documents the gap between the sync
+# pre-check and the async full canary. See RESEARCH Pattern 4 + Pitfall 3.
+{"record_id":"bad-low-confidence","agent_id":"colorist","confidence":0.15,"evidence_operator_ids":["op1","op2"],"evidence_records":[{"text":"colorist prefers teal and orange color grading for action scenes"},{"text":"colorist prefers teal and orange color grading for action scenes"}],"text":"colorist prefers teal and orange color grading for action scenes","_canary_expected_failure":"confidence_threshold"}
+{"record_id":"bad-single-operator","agent_id":"screenplay","confidence":0.8,"evidence_operator_ids":["op1","op1"],"evidence_records":[{"text":"screenplay expert prefers three-act structure for short dramas"},{"text":"screenplay expert prefers three-act structure for short dramas"}],"text":"screenplay expert prefers three-act structure for short dramas","_canary_expected_failure":"operator_diversity"}
+{"record_id":"bad-no-operator-id","agent_id":"scene_builder","confidence":0.8,"evidence_operator_ids":[],"evidence_records":[{"text":"scene builder prefers wide establishing shots"},{"text":"scene builder prefers wide establishing shots"}],"text":"scene builder prefers wide establishing shots","_canary_expected_failure":"operator_diversity"}
+{"record_id":"bad-low-evidence","agent_id":"editor","confidence":0.8,"evidence_operator_ids":["op1","op2"],"evidence_records":[{"text":"recipe calls for two cups of flour and pinch of salt"},{"text":"preheat oven to 350 degrees and bake 30 minutes"}],"text":"editor uses jump cuts for tension in action sequences","_canary_expected_failure":"evidence_coverage"}
+{"record_id":"bad-unsupported-claim","agent_id":"storyboard_designer","confidence":0.8,"evidence_operator_ids":["op1","op2"],"evidence_records":[{"text":"storyboard expert uses three-act structure for plot beats"},{"text":"storyboard expert uses three-act structure for plot beats"}],"text":"storyboard expert applies anamorphic-lens rule for cinematic framing","_canary_expected_failure":"claim_support"}
