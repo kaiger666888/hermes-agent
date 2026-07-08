@@ -202,9 +202,12 @@ Plan 04 (Wave 2) will need:
 - Phase 63 (agent registry load + round table smoke) will load all 21 YAMLs — Batch A's 6 are registry-ready (schema-valid, lineage-populated, FOUND-08 preserved)
 - Zero blockers from Batch A
 
-## Self-Check: PENDING
+## Self-Check: PASSED
 
-(File-existence and commit-hash self-check will be appended after this SUMMARY is committed, since the YAMLs live outside the repo and the SUMMARY is the only repo-tracked file in this plan.)
+- All 6 created YAMLs exist on disk at `/home/kai/.hermes/agents/{animation_studio,colorist,compliance_gate,creative_source,documentary_maker,performer}.agent.yaml` (FOUND ×6)
+- SUMMARY.md committed at `b858894dc` (found in `git log --oneline`)
+- `python3 scripts/validate_phase62_yamls.py --batch A` exits 0 with `OK: 6/6`
+- Working tree clean post-commit (only the SUMMARY was repo-tracked; YAMLs are HERMES_HOME runtime artifacts)
 
 ---
 *Phase: 62-expert-yaml-transform*
