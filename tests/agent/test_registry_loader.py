@@ -476,8 +476,18 @@ def _stage_required_experts(exclude: set[str] | None = None) -> None:
             home (defensive — Phase 62 shipped all 21, but the canary
             should fail gracefully if the operator's home is incomplete).
     """
-    # RED stub — implementation lands in GREEN.
-    raise NotImplementedError("RED stub — implemented in GREEN step")
+    from agent.registry_loader import REQUIRED_DAG_EXPERTS
+
+    exclude = exclude or set()
+    agents_dir = _agents_dir()  # redirected ~/.hermes/agents/ (Pitfall #2)
+    for expert_id in REQUIRED_DAG_EXPERTS:
+        if expert_id in exclude:
+            continue
+        src = _REAL_AGENTS_DIR / f"{expert_id}.agent.yaml"
+        if not src.is_file():
+            pytest.skip(f"source YAML missing: {src}")
+        dst = agents_dir / f"{expert_id}.agent.yaml"
+        shutil.copyfile(src, dst)
 
 
 def _capture_missing_warnings() -> list[str]:
@@ -486,8 +496,11 @@ def _capture_missing_warnings() -> list[str]:
     Pitfall #6 mitigation: always resets the module-level cache before
     loading so the staging done by _stage_required_experts is observed.
     """
-    # RED stub — implementation lands in GREEN.
-    raise NotImplementedError("RED stub — implemented in GREEN step")
+    _reset_registry_cache()
+    from agent.registry_loader import load_agent_registry_with_warnings
+
+    _entries, warnings = load_agent_registry_with_warnings(force_reload=True)
+    return warnings
 
 
 class TestMissingExpertAlarm:
