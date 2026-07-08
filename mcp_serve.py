@@ -770,10 +770,17 @@ async def get_agent_opinion(
             return _serial_violation_response(round_id)
 
     # Phase 67 OBSRV-02: wrap the turn body so every exit path records
-    # a metric entry. The outer ``finally: release_round_lock`` stays
-    # OUTSIDE the context manager so the lock is released AFTER the
-    # metric entry is finalized (correct ordering: the metric includes
-    # the lock-wait but not the release).
+    # a metric entry. WR-02 note: the ``finally: release_round_lock`` is
+    # currently NESTED INSIDE the ``with _turn_capture`` block (release
+    # occurs before the metric entry is finalized), so each per-turn
+    # ``duration_ms`` sample includes the lock-release await time. This
+    # is a documented bias — accepted for now because hoisting the
+    # release outside would require removing the redundant inner try
+    # (a ~190-line dedent), and the bias is uniform across samples so
+    # p50/p95 *deltas* remain meaningful for trend analysis. To unbias,
+    # restructure as: ``try: with _turn_capture: ... finally:
+    # release_round_lock`` (release_lock at 4-space indent, outside the
+    # ``with`` block).
     with _turn_capture(round_id) as cap:
         cap.serial_lock_wait_ms = serial_lock_wait_ms
         try:
