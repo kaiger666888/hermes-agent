@@ -17,18 +17,18 @@
 
 ### EVAL — LIVE-EVAL-EXEC (3 deferred operator smoke tests)
 
-- [ ] **EVAL-01**: 跑 Phase 57 SC#2 live GLM synthesis endpoint latency smoke —— 真实 GLM API key 链路,捕获 p50/p95 latency;验证 ENDPOINT-01 routing(long-prompt → anthropic-compat)在 live load 下工作
-- [ ] **EVAL-02**: 跑 Phase 60 EVAL-01 live mem0 p95 benchmark(`MEM0_API_KEY`)—— 捕获 read/write p95;produce decision feed for v14 物理分区 evaluation(per v10.0 OQ-12 threshold check)
-- [ ] **EVAL-03**: 跑 Phase 60 EVAL-02 real-mode fitness battery(`GLM_AUX_API_KEY_1..4`)—— 8 scenarios × real GLM calls;capture production-grade accuracy + latency numbers
-- [ ] **EVAL-04**: 3 smoke 结果聚合到 `.planning/research/v13-live-eval/live-eval-report.md`,显式触发或不触发 v14 决策条件(物理分区 / 异步并发)
+- [ ] **EVAL-01** [operator-handoff]: 跑 Phase 57 SC#2 live GLM synthesis endpoint latency smoke —— 真实 GLM API key 链路,捕获 p50/p95 latency;验证 ENDPOINT-01 routing(long-prompt → anthropic-compat)在 live load 下工作
+- [ ] **EVAL-02** [operator-handoff]: 跑 Phase 60 EVAL-01 live mem0 p95 benchmark(`MEM0_API_KEY`)—— 捕获 read/write p95;produce decision feed for v14 物理分区 evaluation(per v10.0 OQ-12 threshold check)
+- [ ] **EVAL-03** [operator-handoff]: 跑 Phase 60 EVAL-02 real-mode fitness battery(`GLM_AUX_API_KEY_1..4`)—— 8 scenarios × real GLM calls;capture production-grade accuracy + latency numbers
+- [ ] **EVAL-04** [operator-handoff]: 3 smoke 结果聚合到 `.planning/research/v13-live-eval/live-eval-report.md`,显式触发或不触发 v14 决策条件(物理分区 / 异步并发)
 
 ### CURATE — CURATOR-LIVE (curator self-evolution dry-run → live)
 
 - [x] **CURATE-01**: 给 curator self-evolution CLI 加 `--live` opt-in flag(**默认仍 dry-run** per v11.0 EVAL-06 invariant)
 - [x] **CURATE-02**: Pre-tick bias canary check —— 必须 catch ≥ 4/5 known-bad records(per v12.0 EVAL-03 baseline);canary fail 时 abort live tick,记录原因
 - [x] **CURATE-03**: Post-tick 审计日志 —— 记录每个 live tick 的所有 memory writes(sha256-tagged),支持 operator 手工 rollback(不要求自动 rollback —— 太复杂,operator 24h 内 review)
-- [ ] **CURATE-04**: 1st live tick 端到端跑通 —— capture before/after memory diff + bias canary 结果 + token cost,作为 v14+ live-tick baseline
-- [ ] **CURATE-05**: Live-tick operator runbook + safety policy 文档(`.planning/research/v13-live-eval/curator-live-runbook.md`)—— 何时用 live、何时保留 dry-run、operator 监控 checklist
+- [ ] **CURATE-04** [operator-handoff]: 1st live tick 端到端跑通 —— capture before/after memory diff + bias canary 结果 + token cost,作为 v14+ live-tick baseline
+- [ ] **CURATE-05** [operator-handoff]: Live-tick operator runbook + safety policy 文档(`.planning/research/v13-live-eval/curator-live-runbook.md`)—— 何时用 live、何时保留 dry-run、operator 监控 checklist
 
 ### OBSRV — OBSERVABILITY (operator dashboard)
 
@@ -40,7 +40,7 @@
 
 ### VALIDATE — Close-out
 
-- [ ] **VALIDATE-01**: v13.0 milestone audit + close-out report at `.planning/milestones/v13.0-MILESTONE-AUDIT.md`,包含 4-track traceability + 3 operator-action handoffs 状态 + verdict(pass / tech_debt / fail)。**Strictly LAST phase**(mirror v11.0 P56 / v12.0 P61 single-phase close-out pattern)
+- [x] **VALIDATE-01**: v13.0 milestone audit + close-out report at `.planning/milestones/v13.0-MILESTONE-AUDIT.md` (verdict: `tech_debt`, 13/20 satisfied + 1 this-audit + 6 operator-handoff) + close-out report at `.planning/milestones/v13.0-MILESTONE-AUDIT.md`,包含 4-track traceability + 3 operator-action handoffs 状态 + verdict(pass / tech_debt / fail)。**Strictly LAST phase**(mirror v11.0 P56 / v12.0 P61 single-phase close-out pattern)
 
 ## v2+ Requirements (Deferred)
 
@@ -70,21 +70,21 @@
 | EXPERT-03 | Phase 62 | Complete |
 | EXPERT-04 | Phase 63 | Complete |
 | EXPERT-05 | Phase 63 | Complete |
-| EVAL-01 | Phase 64 | Pending |
-| EVAL-02 | Phase 64 | Pending |
-| EVAL-03 | Phase 64 | Pending |
-| EVAL-04 | Phase 64 | Pending |
+| EVAL-01 | Phase 64 | [operator-handoff] |
+| EVAL-02 | Phase 64 | [operator-handoff] |
+| EVAL-03 | Phase 64 | [operator-handoff] |
+| EVAL-04 | Phase 64 | [operator-handoff] |
 | CURATE-01 | Phase 65 | Complete |
 | CURATE-02 | Phase 65 | Complete |
 | CURATE-03 | Phase 65 | Complete |
-| CURATE-04 | Phase 66 | Pending |
-| CURATE-05 | Phase 66 | Pending |
+| CURATE-04 | Phase 66 | [operator-handoff] |
+| CURATE-05 | Phase 66 | [operator-handoff] |
 | OBSRV-01 | Phase 67 | Complete |
 | OBSRV-02 | Phase 67 | Complete |
 | OBSRV-03 | Phase 67 | Complete |
 | OBSRV-04 | Phase 68 | Complete |
 | OBSRV-05 | Phase 68 | Complete |
-| VALIDATE-01 | Phase 69 | Pending |
+| VALIDATE-01 | Phase 69 | Complete (v13.0-MILESTONE-AUDIT.md) |
 
 **Coverage:**
 - v13.0 requirements: 20 total
@@ -106,4 +106,4 @@
 
 ---
 *Requirements defined: 2026-07-08*
-*Last updated: 2026-07-08 — traceability filled by roadmapper. 8 phases (62-69), 20/20 reqs mapped, VALIDATE-01 strictly LAST.*
+*Last updated: 2026-07-08 — post-audit: 13/20 reqs satisfied at code level, 1 satisfied by audit doc (VALIDATE-01), 6/20 operator-handoff (EVAL-01..04 + CURATE-04/05). Verdict: `tech_debt`. See `.planning/milestones/v13.0-MILESTONE-AUDIT.md`.*
