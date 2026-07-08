@@ -168,7 +168,11 @@ Plans:
   2. Pre-tick bias canary check wired —— must catch ≥ 4/5 known-bad records per v12.0 EVAL-03 baseline;canary fail 时 abort live tick with explicit error reason logged(operator can run the canary against 5 seeded bad records and verify ≥4 are flagged + live tick aborts)
   3. Post-tick 审计日志 emits sha256-tagged memory writes for every live tick —— operator can inspect `~/.hermes/skills/.audit/log.jsonl` (or equivalent) and see per-write sha256 + timestamp;supports manual rollback search within 24h window
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 65-01-PLAN.md — Wave 0 foundation (5 known-bad fixture records + run_bias_canary_pre_check helper + append_audit tick_mode extension + Wave 0 tests)
+- [ ] 65-02-PLAN.md — Wave 1 CLI wiring (_cmd_evolve handler + evolve subparser with --live/--skip-canary/--sync flags + exit code 2 + BIAS_CANARY_FAILED message + regression guard)
+- [ ] 65-03-PLAN.md — Wave 2 integration smoke (end-to-end SC#1/SC#2/SC#3 evidence + 65-SMOKE.md)
 
 ### Phase 66: CURATOR-LIVE-TICK
 
