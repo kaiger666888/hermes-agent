@@ -490,19 +490,6 @@ def _stage_required_experts(exclude: set[str] | None = None) -> None:
         shutil.copyfile(src, dst)
 
 
-def _capture_missing_warnings() -> list[str]:
-    """Reset cache + load registry, returning only the missing-expert warnings.
-
-    Pitfall #6 mitigation: always resets the module-level cache before
-    loading so the staging done by _stage_required_experts is observed.
-    """
-    _reset_registry_cache()
-    from agent.registry_loader import load_agent_registry_with_warnings
-
-    _entries, warnings = load_agent_registry_with_warnings(force_reload=True)
-    return warnings
-
-
 class TestMissingExpertAlarm:
     """SC#2 canary: missing-expert alarm fires/silences correctly.
 
