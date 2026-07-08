@@ -58,9 +58,11 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 - **SKILL.md read-only:** kais-hermes-skills repo 的 SKILL.md 不动(per Phase 48-49 lineage invariants L1-L6)
 - **Single repo 收敛:** 全部在 hermes-agent repo + `~/.hermes/`,不创建新 repo
 
-## Current State (v12.0 SHIPPED 2026-07-08)
+## Current State (v13.0 IN PROGRESS — Phase 62 ✓ SHIPPED 2026-07-08)
 
-v12.0 SHIPPED + closed 2026-07-08 (tag `v12.0`, phases archived to `.planning/milestones/v12.0-ROADMAP.md` + `.planning/milestones/v12.0-REQUIREMENTS.md`). v12.0 是 **Production Hardening** milestone —— 5 phases (57-61) · 9 plans · 8/8 reqs verified · 586+ automated tests green · audit verdict `passed` · 3 operator-action handoffs deferred per VALIDATE-01 spec.
+v13.0 milestone IN PROGRESS. **Phase 62 (EXPERT-YAML-TRANSFORM) ✓ shipped 2026-07-08** — 12 active expert agent YAMLs transformed from kais-hermes-skills SKILL.md to `~/.hermes/agents/` (15/15 active expert coverage via 21 total agents = 9 shipped v11.0 + 12 new). 4 plans across 3 waves · 21/21 byte-pass schema · 14/14 pytest green · 0 BLOCKER / 4 WARNING fixed / 5 INFO tech_debt · 3 manual UAT items deferred to `/gsd:audit-uat`. **Next: Phase 63 (EXPERT-REGISTRY-INTEGRATION) — 21-agent registry load + visual_executor round table smoke.**
+
+Prior: v12.0 SHIPPED + closed 2026-07-08 (tag `v12.0`, phases archived to `.planning/milestones/v12.0-ROADMAP.md` + `.planning/milestones/v12.0-REQUIREMENTS.md`). v12.0 是 **Production Hardening** milestone —— 5 phases (57-61) · 9 plans · 8/8 reqs verified · 586+ automated tests green · audit verdict `passed` · 3 operator-action handoffs deferred per VALIDATE-01 spec.
 
 **v12.0 shipped(4 hardening gaps closed):**
 - ENDPOINT-ROUTING (P57): long-prompt endpoint routing(z.ai/anthropic-compat split)
@@ -567,4 +569,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — v13.0 v10.0 Design Suite Full Rollout & Live Eval milestone started. v12.0 closed (tag `v12.0` @ 8ea0b2eec). 4 tracks locked: EXPERT-COMPLETION (12 active expert YAMLs to reach 15/15 active coverage) + LIVE-EVAL-EXEC (3 deferred operator smoke tests with prod secrets) + CURATOR-LIVE (curator dry-run → live tick with safety guards) + OBSERVABILITY (operator dashboard: round table metrics + agent registry health + memory backend status).*
+*Last updated: 2026-07-08 — v13.0 IN PROGRESS. Phase 62 (EXPERT-YAML-TRANSFORM) ✓ shipped: 12 new agent YAMLs at `~/.hermes/agents/` (21 total = 9 shipped v11.0 + 12 new), 15/15 active expert coverage achieved. Next: Phase 63 (EXPERT-REGISTRY-INTEGRATION). 4 tracks locked: EXPERT-COMPLETION (12 active expert YAMLs to reach 15/15 active coverage — Phase 62 ✓) + LIVE-EVAL-EXEC (3 deferred operator smoke tests with prod secrets) + CURATOR-LIVE (curator dry-run → live tick with safety guards) + OBSERVABILITY (operator dashboard: round table metrics + agent registry health + memory backend status).*
