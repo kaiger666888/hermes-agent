@@ -30,6 +30,7 @@ the implementation.
 
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,12 @@ from typing import Any
 import pytest
 
 from hermes_constants import get_hermes_home
+
+# Phase 63 canary (TestMissingExpertAlarm): real YAML source dir for staging.
+# READ-ONLY access — canary copies from here into the redirected _agents_dir().
+# Pitfall #2 mitigation: this constant is a SOURCE only; all writes go through
+# _agents_dir() (which honors the redirected HERMES_HOME via get_hermes_home()).
+_REAL_AGENTS_DIR = Path("/home/kai/.hermes/agents")
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "agents"
 VALID_FIXTURE = FIXTURES_DIR / "test-coordinator.agent.yaml"
@@ -429,3 +436,134 @@ class TestFormatJsonPath:
         )
         path = _format_json_path(err)
         assert path == "$.version", f"expected $.version, got {path!r}"
+
+
+# --------------------------------------------------------------------------- #
+# Phase 63: Missing-expert alarm canary (EXPERT-04 SC#2)
+# --------------------------------------------------------------------------- #
+# Source: 63-02-PLAN.md — adds TestMissingExpertAlarm class proving the
+# missing-expert alarm fires when a known-required expert_id is absent
+# from ~/.hermes/agents/. Two helpers (_stage_required_experts +
+# _capture_missing_warnings) stage 15 real DAG-expert YAMLs from the
+# READ-ONLY _REAL_AGENTS_DIR into the redirected _agents_dir(), optionally
+# omitting one or more, then invoke load_agent_registry_with_warnings
+# after a cache reset.
+#
+# Pitfall mitigations (per 63-RESEARCH.md):
+#   #2 — canary NEVER touches real /home/kai/.hermes/agents/. All writes
+#        go through _agents_dir() which calls get_hermes_home().
+#   #5 — stages only the 15 required DAG experts (REQUIRED_DAG_EXPERTS),
+#        NOT all 21. The 6 supporting agents are deliberately omitted.
+#   #6 — _capture_missing_warnings calls _reset_registry_cache() before
+#        loading, so prior-test cache cannot poison the current test.
+
+
+def _stage_required_experts(exclude: set[str] | None = None) -> None:
+    """Stage the 15 required DAG expert YAMLs into the redirected agents dir.
+
+    Copies each YAML in ``REQUIRED_DAG_EXPERTS`` (minus the ``exclude`` set)
+    from the real ``/home/kai/.hermes/agents/{name}.agent.yaml`` to the
+    redirected ``_agents_dir() / "{name}.agent.yaml"``. READ-ONLY access
+    to the real home; writes always land in the redirected tmp_path.
+
+    Args:
+        exclude: set of required expert IDs to OMIT from staging. Missing
+            experts trigger the missing-expert alarm when the registry
+            is subsequently loaded.
+
+    Raises:
+        pytest.skip: if a required source YAML is missing from the real
+            home (defensive — Phase 62 shipped all 21, but the canary
+            should fail gracefully if the operator's home is incomplete).
+    """
+    # RED stub — implementation lands in GREEN.
+    raise NotImplementedError("RED stub — implemented in GREEN step")
+
+
+def _capture_missing_warnings() -> list[str]:
+    """Reset cache + load registry, returning only the missing-expert warnings.
+
+    Pitfall #6 mitigation: always resets the module-level cache before
+    loading so the staging done by _stage_required_experts is observed.
+    """
+    # RED stub — implementation lands in GREEN.
+    raise NotImplementedError("RED stub — implemented in GREEN step")
+
+
+class TestMissingExpertAlarm:
+    """SC#2 canary: missing-expert alarm fires/silences correctly.
+
+    Two polarities:
+      - fires: 14-of-15 staged (screenplay omitted) → warnings list
+        includes 'screenplay' AND a logger.warning citing screenplay
+        is captured by caplog.
+      - silent: 15-of-15 staged → warnings list is empty AND no
+        missing-expert logger.warning is captured.
+    Optional 3rd test: 2 missing → warnings sorted alphabetically.
+    """
+
+    def test_alarm_fires_when_screenplay_missing(self, caplog: pytest.LogCaptureFixture):
+        """Alarm lists 'screenplay' + emits logger.warning when screenplay YAML absent."""
+        _reset_registry_cache()
+        _stage_required_experts(exclude={"screenplay"})
+
+        from agent.registry_loader import load_agent_registry_with_warnings
+
+        with caplog.at_level(logging.WARNING, logger="agent.registry_loader"):
+            _entries, warnings = load_agent_registry_with_warnings(force_reload=True)
+
+        # Structural return path: screenplay in the warnings list.
+        assert "screenplay" in warnings, (
+            f"expected 'screenplay' in warnings list, got: {warnings!r}"
+        )
+        # Logger emission path: at least one WARNING record cites screenplay
+        # AND the word 'missing' (operator-visible alarm in agent.log).
+        assert any(
+            "screenplay" in record.getMessage()
+            and "missing" in record.getMessage().lower()
+            for record in caplog.records
+        ), (
+            f"expected a logger.warning citing 'screenplay' as missing; "
+            f"got records: {[r.getMessage() for r in caplog.records]!r}"
+        )
+
+    def test_alarm_silent_when_all_15_present(self, caplog: pytest.LogCaptureFixture):
+        """With all 15 required DAG experts staged, warnings list is empty + no warning logged."""
+        _reset_registry_cache()
+        _stage_required_experts(exclude=set())
+
+        from agent.registry_loader import load_agent_registry_with_warnings
+
+        with caplog.at_level(logging.WARNING, logger="agent.registry_loader"):
+            _entries, warnings = load_agent_registry_with_warnings(force_reload=True)
+
+        # Silent path: warnings list must be empty.
+        assert warnings == [], (
+            f"expected empty warnings list when all 15 staged, got: {warnings!r}"
+        )
+        # And no missing-expert logger.warning should have fired.
+        assert not any(
+            "required expert" in record.getMessage().lower()
+            and "missing" in record.getMessage().lower()
+            for record in caplog.records
+        ), (
+            f"expected NO missing-expert warning; got records: "
+            f"{[r.getMessage() for r in caplog.records]!r}"
+        )
+
+    def test_alarm_warnings_sorted_when_multiple_missing(self):
+        """When 2 required experts are missing, warnings list is sorted alphabetically.
+
+        Mirrors _check_required_experts's sorted(set - loaded) return contract
+        (Plan 01). 'hook_retention' (h) sorts before 'screenplay' (s).
+        """
+        _reset_registry_cache()
+        _stage_required_experts(exclude={"screenplay", "hook_retention"})
+
+        from agent.registry_loader import load_agent_registry_with_warnings
+
+        _entries, warnings = load_agent_registry_with_warnings(force_reload=True)
+
+        assert warnings == ["hook_retention", "screenplay"], (
+            f"expected ['hook_retention', 'screenplay'] (sorted), got: {warnings!r}"
+        )
