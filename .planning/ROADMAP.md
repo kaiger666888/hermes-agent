@@ -80,7 +80,7 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
 - [x] **Phase 62: EXPERT-YAML-TRANSFORM** ✓ 2026-07-08 - 12 expert agent YAML 全量 transform(15/15 active coverage · 21/21 schema PASS · human UAT deferred)
 - [x] **Phase 63: EXPERT-REGISTRY-INTEGRATION** ✓ 2026-07-08 - 21-agent registry load + missing-expert alarm + visual_executor round table smoke (mock-mode authoritative; live smoke operator-deferred)
 - [ ] **Phase 64: LIVE-EVAL-EXEC** - 3 deferred operator smoke tests + live-eval-report.md(v14 decision feed)
-- [ ] **Phase 65: CURATOR-LIVE-GUARDS** - `--live` opt-in flag + pre-tick bias canary + post-tick audit log
+- [x] **Phase 65: CURATOR-LIVE-GUARDS** ✓ 2026-07-08 - `--live` opt-in flag + bias canary pre-check (4/5 catch) + audit tick_mode extension
 - [ ] **Phase 66: CURATOR-LIVE-TICK** - 1st live tick end-to-end + operator runbook + safety policy
 - [ ] **Phase 67: OBSERVABILITY-BACKEND** - 3 metrics collectors(agent registry / round table / mem0 backend)
 - [ ] **Phase 68: OBSERVABILITY-PRESENTATION** - CLI `hermes orchestrator status` + dashboard web view
