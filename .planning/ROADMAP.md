@@ -203,7 +203,26 @@ Plans:
   2. Round table metrics collector wired into round table executor —— emits latency p50/p95 · token cost · state transitions · serial-lock wait time · early-stop trigger rate per round table execution(metrics observable in metrics log or state file after a round table run)
   3. Memory backend metrics collector wired into mem0 backend adapter —— emits mem0 p95 read/write · conflict arbitration rate · compaction trigger rate · error rate(metrics observable after running a memory operation)
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 0** (foundation — unblocks Waves 1+2)
+
+- [ ] 67-01-PLAN.md — Shared MetricsBuffer primitive + OBSRV-01 collector (`agent/observability/` package + `_ring_buffer.py` + `agent_registry_metrics.py` + unit tests)
+
+**Wave 1** (parallel — independent collectors + instrumentation, no file overlap)
+
+- [ ] 67-02-PLAN.md — OBSRV-02 round table metrics collector + `mcp_serve.get_agent_opinion` + `submit_round_table_result` instrumentation + unit tests
+- [ ] 67-03-PLAN.md — OBSRV-03 memory backend metrics collector + `_BackendAdapter.search` / `.add` + `append_conflict_record` instrumentation + unit tests
+
+**Wave 2** (blocked on Waves 0+1 — endpoint consumes all 3 collectors)
+
+- [ ] 67-04-PLAN.md — FastAPI `/orchestrator/agents/status` endpoint + integration tests (TestClient) + auth-gate invariant test
+
+**Cross-cutting constraints:**
+
+- All 4 grey areas resolved (G1 in-memory ring buffer · G2 pull model · G3 count-based window · G4 per-round-table summary)
+- All 6 RESEARCH pitfalls mitigated (StatisticsError · thread safety · token-cost race · sync def handler · auth gate · lazy imports)
+- INFRA-04 serial constraint preserved (sync context managers only — no new asyncio tasks)
 
 ### Phase 68: OBSERVABILITY-PRESENTATION
 
@@ -244,7 +263,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 3/3 | Complete    | 2026-07-08 |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
-| 67. OBSERVABILITY-BACKEND | 0/TBD | Not started | - |
+| 67. OBSERVABILITY-BACKEND | 0/4 | Not started | - |
 | 68. OBSERVABILITY-PRESENTATION | 0/TBD | Not started | - |
 | 69. VALIDATE | 0/TBD | Not started | - |
 
