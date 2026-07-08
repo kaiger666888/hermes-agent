@@ -294,6 +294,59 @@ class TestEvolveCommand:
         # Tick succeeded; audit failure was a warning, not fatal
         assert rc == 0
 
+    def test_audit_chain_corruption_does_not_crash_tick(self, monkeypatch, tmp_path):
+        """WR-03 (Phase 65 review): AuditChainError path regression.
+
+        CR-02 fixed that append_audit raises AuditChainError when the audit
+        log tail is corrupt (truncated final line, interrupted flush — see
+        agent/curator_audit.py:79-87, :255-260). The pre-fix except clause
+        only caught (OSError, ValueError); issubclass(AuditChainError,
+        OSError|ValueError) is False, so a corrupted tail would crash the
+        CLI AFTER the live memory writes already succeeded — the exact
+        inversion of the documented best-effort guarantee.
+
+        This is the regression test that would have caught CR-02.
+        """
+        from agent.curator_audit import AuditChainError
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        from hermes_cli import curator as curator_cli
+
+        monkeypatch.setattr("agent.curator.is_enabled", lambda: True)
+        monkeypatch.setattr(
+            "agent.curator.run_bias_canary_pre_check",
+            lambda **kw: (True, 4, []),
+        )
+        # Mock run_curator_review to verify the live tick DID complete
+        # (dry_run=False called) — proving the audit failure did not
+        # roll back the successful tick.
+        review = MagicMock(return_value={"auto_transitions": {}})
+        monkeypatch.setattr("agent.curator.run_curator_review", review)
+        monkeypatch.setattr(
+            "agent.curator_audit.append_audit",
+            MagicMock(
+                side_effect=AuditChainError(
+                    "audit log tail is malformed — prev_sha256 chain broken"
+                ),
+            ),
+        )
+
+        args = argparse.Namespace(
+            live=True, skip_canary=False, synchronous=False,
+        )
+        rc = curator_cli._cmd_evolve(args)
+        # CR-02 contract: tick succeeded despite AuditChainError; CLI must
+        # return 0 (not crash with traceback).
+        assert rc == 0, (
+            "AuditChainError from corrupted audit log tail must NOT crash "
+            "_cmd_evolve — the live tick already completed and the audit "
+            "append is documented best-effort. Got rc=%d" % rc
+        )
+        # The live tick (dry_run=False) was actually invoked — proving the
+        # audit failure did not prevent the memory mutation from running.
+        review.assert_called_once()
+        assert review.call_args.kwargs["dry_run"] is False
+
     def test_audit_failure_on_skip_canary_does_not_crash(self, monkeypatch, tmp_path):
         """Same best-effort audit guarantee for the --skip-canary path."""
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))
