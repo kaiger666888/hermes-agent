@@ -2645,6 +2645,59 @@ def _seed_aux_env(provider: str, entries: List[PooledCredential]) -> Tuple[bool,
                 _env_payload("GLM_API_KEY", main_token, _resolve_base_url(main_token)),
             )
 
+    # 3. custom-pool fallback (Option A — operator-configured multi-key rotation).
+    # When no dedicated aux env vars are set, also surface entries from any
+    # GLM-flavored ``custom:*`` pool the operator populated via `hermes auth add`.
+    # Common case: operator ran `hermes auth add custom:zhipu-anthropic` 4 times
+    # to set up 4-key rotation, but the aux pool (named "auxiliary:zai") never
+    # sees those entries without this fallback. Base_url from the custom pool
+    # entry is preserved — operator's intent overrides provider defaults.
+    aux_env_set = any(_get_env_prefer_dotenv(v) for v in _AUX_ENV_VARS)
+    if not aux_env_set:
+        # Candidate custom-pool keys: the operator may have stored GLM keys
+        # under any of these names depending on which `hermes auth` command
+        # they used. All target the same Zhipu backend (anthropic endpoint).
+        candidate_pool_keys = [
+            f"{CUSTOM_POOL_PREFIX}{provider}",          # e.g., custom:zai
+            f"{CUSTOM_POOL_PREFIX}zhipu-anthropic",     # explicit Anthropic-compat
+            f"{CUSTOM_POOL_PREFIX}zai",                 # explicit ZAI endpoint
+        ]
+        seen_tokens = {(getattr(e, "runtime_api_key", None) or "") for e in entries}
+        for custom_pool_key in candidate_pool_keys:
+            try:
+                custom_entries = read_credential_pool(custom_pool_key)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("aux custom-pool fallback read %s failed: %s", custom_pool_key, exc)
+                continue
+            for payload in custom_entries:
+                if not isinstance(payload, dict):
+                    continue
+                token = (payload.get("access_token") or payload.get("api_key") or "").strip()
+                if not token or token in seen_tokens:
+                    continue
+                # Generate unique source label per entry so _upsert_entry
+                # (which dedupes BY source) doesn't collapse multiple keys
+                # from the same custom pool into a single entry. Prefer the
+                # entry's label when present; fall back to token suffix.
+                raw_label = (payload.get("label") or "").strip() or f"key{len(seen_tokens)}"
+                src_label = f"custom:{raw_label}"
+                if _is_source_suppressed(f"{AUX_POOL_PREFIX}{provider}", src_label):
+                    continue
+                seen_tokens.add(token)
+                active_sources.add(src_label)
+                changed |= _upsert_entry(
+                    entries,
+                    provider,
+                    src_label,
+                    {
+                        "source": src_label,
+                        "auth_type": AUTH_TYPE_API_KEY,
+                        "access_token": token,
+                        "base_url": (payload.get("base_url") or "").strip().rstrip("/") or _resolve_base_url(token),
+                        "label": raw_label,
+                    },
+                )
+
     return changed, active_sources
 
 
