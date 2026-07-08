@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: v10.0 Design Suite Full Rollout & Live Eval
-status: ready_to_plan
-last_updated: 2026-07-08T06:04:57.821Z
-last_activity: 2026-07-08 -- Phase 67 planning complete
+status: in_progress
+last_updated: 2026-07-08T06:25:00Z
+last_activity: 2026-07-08 -- Phase 68 complete (2/2)
 progress:
   total_phases: 8
-  completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
-  percent: 38
-stopped_at: Phase 67 complete (4/4) — ready to discuss Phase 68
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 17
+  percent: 50
+stopped_at: Phase 68 complete (2/2) — ready to plan Phase 69 (VALIDATE)
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -25,11 +25,11 @@ stopped_at: Phase 67 complete (4/4) — ready to discuss Phase 68
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 68 — observability presentation
+**Current focus:** Phase 69 — milestone audit + close-out (strictly LAST)
 
 ## Current Position
 
-Phase: 68
+Phase: 69
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-07-08
@@ -66,7 +66,7 @@ v13.0 v10.0 Design Suite Full Rollout & Live Eval — IN PLANNING:
 | 65 | CURATOR-LIVE-GUARDS — `--live` flag + bias canary + audit log | **Not started** | CURATE-01..03. Hard constraint: EVAL-06 dry-run-first invariant — `--live` is opt-in, default still dry-run. |
 | 66 | CURATOR-LIVE-TICK — 1st live tick end-to-end + runbook | **Not started** | CURATE-04..05. Depends on Phase 65 (`--live` flag + guards must be in place). Produces v14+ live-tick baseline. |
 | 67 | OBSERVABILITY-BACKEND — 3 metrics collectors | **Not started** | OBSRV-01..03. Soft dependency on Phase 63 (registry must load 21 agents for health check meaningful). 3 collectors wired into `/orchestrator/agents/status` endpoint + round table executor + mem0 adapter. |
-| 68 | OBSERVABILITY-PRESENTATION — CLI + dashboard web view | **Not started** | OBSRV-04..05. Depends on Phase 67 (collectors must emit data first). Mirrors v6.0 P33 OBS-01 pattern (`hermes curator stats` rich tables + `--json`). |
+| 68 | OBSERVABILITY-PRESENTATION — CLI + dashboard web view | **Complete** ✓ 2026-07-08 | OBSRV-04..05. `hermes orchestrator status` CLI (rich tables + `--json`) + `/orchestrator` dashboard panel. 2/2 plans, 11 new tests, 16/16 cross-phase regression pass. Review verdict PASSED. |
 | 69 | VALIDATE — milestone audit + close-out | **Not started** | VALIDATE-01. **Strictly LAST**, mirror v11.0 P56 / v12.0 P61 single-phase close-out pattern. Cross-20-req audit + 3+ operator-action handoffs. |
 
 ### Critical Path

@@ -35,8 +35,8 @@
 - [x] **OBSRV-01**: Agent registry health collector —— 21 agents loaded · schema validation status · missing-expert 告警 · lineage integrity check;wire 进 `hermes dashboard` FastAPI server `/orchestrator/agents/status` endpoint
 - [x] **OBSRV-02**: Round table metrics collector —— latency p50/p95 · token cost · state transitions · serial-lock wait time · early-stop trigger rate;wire 进现有 round table executor(`agent/open_round_table.py` 或同等模块)
 - [x] **OBSRV-03**: Memory backend metrics collector —— mem0 p95 read/write · conflict arbitration rate · compaction trigger rate · error rate;wire 进 mem0 backend adapter(v12.0 Phase 60 shipped)
-- [ ] **OBSRV-04**: CLI 命令 `hermes orchestrator status` —— rich tables 展示 3 个维度(mirrors v6.0 P33 OBS-01 pattern);支持 `--json` flag 给脚本消费
-- [ ] **OBSRV-05**: Dashboard web view —— minimal Jinja2 panel surface 3 个维度的实时状态(基于现有 `hermes dashboard` FastAPI server 扩展,不引入新框架)
+- [x] **OBSRV-04**: CLI 命令 `hermes orchestrator status` —— rich tables 展示 3 个维度(mirrors v6.0 P33 OBS-01 pattern);支持 `--json` flag 给脚本消费
+- [x] **OBSRV-05**: Dashboard web view —— minimal Jinja2 panel surface 3 个维度的实时状态(基于现有 `hermes dashboard` FastAPI server 扩展,不引入新框架)
 
 ### VALIDATE — Close-out
 
@@ -82,8 +82,8 @@
 | OBSRV-01 | Phase 67 | Complete |
 | OBSRV-02 | Phase 67 | Complete |
 | OBSRV-03 | Phase 67 | Complete |
-| OBSRV-04 | Phase 68 | Pending |
-| OBSRV-05 | Phase 68 | Pending |
+| OBSRV-04 | Phase 68 | Complete |
+| OBSRV-05 | Phase 68 | Complete |
 | VALIDATE-01 | Phase 69 | Pending |
 
 **Coverage:**
