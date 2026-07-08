@@ -733,6 +733,9 @@ async def get_agent_opinion(
         set_scoped_agent_id,
     )
     from agent.auxiliary_client import call_llm
+    # Phase 67 OBSRV-02: lazy import (avoids module-load cycle per
+    # RESEARCH Pitfall 6). Sync context manager preserves INFRA-04.
+    from agent.observability.round_table_metrics import _turn_capture
 
     # CR-01 fix: validate BOTH inputs before they touch the filesystem.
     # Order matters — reject before acquiring the lock so a rejected
@@ -750,187 +753,226 @@ async def get_agent_opinion(
             indent=2,
         )
 
+    # Phase 67 OBSRV-02: serial-lock-wait timer starts BEFORE the await.
+    # The await is the queue point — the delta captures how long this
+    # task waited for any prior turn on the same roundId to release.
+    t_lock_req = time.perf_counter()
     lock = await acquire_round_or_reject(round_id)
+    t_lock_acquired = time.perf_counter()
+    serial_lock_wait_ms = (t_lock_acquired - t_lock_req) * 1000.0
     if lock is None:
-        return _serial_violation_response(round_id)
+        # Phase 67 OBSRV-02: record serial_violation with the lock-wait
+        # delta captured above. The _turn_capture context finalizes the
+        # entry on exit (try/finally -- Pitfall 2 mitigation).
+        with _turn_capture(round_id) as _cap:
+            _cap.serial_lock_wait_ms = serial_lock_wait_ms
+            _cap.status = "serial_violation"
+            return _serial_violation_response(round_id)
 
-    try:
-        state_path = (
-            get_hermes_home()
-            / "agents"
-            / ".runtime"
-            / project_slug
-            / "round_tables"
-            / f"{round_id}.json"
-        )
-
-        if not state_path.exists():
-            return json.dumps(
-                {
-                    "error": "round_not_found",
-                    "status": 404,
-                    "round_id": round_id,
-                },
-                indent=2,
-            )
-
+    # Phase 67 OBSRV-02: wrap the turn body so every exit path records
+    # a metric entry. The outer ``finally: release_round_lock`` stays
+    # OUTSIDE the context manager so the lock is released AFTER the
+    # metric entry is finalized (correct ordering: the metric includes
+    # the lock-wait but not the release).
+    with _turn_capture(round_id) as cap:
+        cap.serial_lock_wait_ms = serial_lock_wait_ms
         try:
-            state = read_and_recover_state(state_path)
-        except FileNotFoundError:
-            return json.dumps(
-                {
-                    "error": "round_not_found",
-                    "status": 404,
-                    "round_id": round_id,
-                },
-                indent=2,
-            )
-        except Exception as exc:
-            logger.warning(
-                "get_agent_opinion: state read failed for %s: %s",
-                round_id,
-                exc,
-            )
-            return json.dumps(
-                {"error": "state_read_failed", "detail": str(exc)},
-                indent=2,
+            state_path = (
+                get_hermes_home()
+                / "agents"
+                / ".runtime"
+                / project_slug
+                / "round_tables"
+                / f"{round_id}.json"
             )
 
-        if state.get("status") != "open":
-            return json.dumps(
-                {
-                    "error": "round_not_open",
-                    "status": 409,
-                    "round_id": round_id,
-                    "current_status": state.get("status"),
-                },
-                indent=2,
-            )
-
-        # Phase 53: real GLM dispatch + scoped memory retrieval.
-        #
-        # Nested try/finally: the OUTER finally releases the per-roundId
-        # lock (T-52-15 DoS mitigation preserved verbatim from Phase 52).
-        # The INNER finally clears ``_scoped_agent_id`` so the ContextVar
-        # does not leak into the next panelist's turn (RESEARCH Pitfall 5).
-        set_scoped_agent_id(agent_id)
-        try:
-            # memory_retrieve_scoped honors the ContextVar we just set; it
-            # falls back to the explicit agent_id if the ContextVar is unset
-            # (defensive — never blocks the round on missing scope).
-            try:
-                mem_result = await memory_retrieve_scoped(
-                    query=topic, agent_id=agent_id, top_k=5,
-                )
-            except Exception as exc:  # noqa: BLE001 — memory degrade, never crash
-                logger.warning(
-                    "get_agent_opinion: memory_retrieve_scoped failed for %s: %s",
-                    agent_id,
-                    exc,
-                )
-                mem_result = {"status": "unavailable", "hits": []}
-
-            memory_context = _format_memory_context(mem_result.get("hits", []))
-            cited_memory_ids = _extract_cited_memory_ids(mem_result.get("hits", []))
-
-            persona = _load_persona_for_agent(agent_id)
-
-            # Build the opinion query: topic + panel_context + memory + story
-            # context (driver script passes StoryKernel JSON via panel_context).
-            user_parts = [f"# Round-table topic\n{topic}"]
-            if panel_context:
-                user_parts.append(
-                    f"\n# Prior panel discussion (chain)\n{panel_context}"
-                )
-            if memory_context:
-                user_parts.append(f"\n# {memory_context}")
-            user_parts.append(
-                "\n# Your task\nContribute your expert slice on this topic. "
-                "Be concrete and actionable; cite specific moments from "
-                "the topic or panel discussion. Limit to ~200 words."
-            )
-            user_prompt = "\n".join(user_parts)
-
-            # CRITICAL (MEMORY.md feedback-glm-5-2-only.md): explicit
-            # provider="glm" — never rely on the auto-chain (which could
-            # pick OpenRouter and violate the user's GLM-only policy).
-            response = call_llm(
-                task="round_table_opinion",
-                provider="glm",
-                messages=[
-                    {"role": "system", "content": persona},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7,
-                max_tokens=2048,
-            )
-            # WR-02: defensive content extraction — same pattern as
-            # ``agent.memory_arbitration._extract_content`` + driver's
-            # synthesis pass. If the LLM returns a malformed shape (None
-            # response, empty choices, missing message), return a structured
-            # JSON error rather than propagating AttributeError up through
-            # the asyncio task (which would crash the MCP server / daemon).
-            try:
-                opinion_text = str(response.choices[0].message.content)
-            except (AttributeError, IndexError, TypeError) as exc:
-                logger.warning(
-                    "get_agent_opinion: malformed LLM response for %s: %s",
-                    agent_id,
-                    exc,
-                )
+            if not state_path.exists():
+                # Phase 67 OBSRV-02
+                cap.status = "round_not_found"
                 return json.dumps(
                     {
-                        "error": "llm_malformed_response",
-                        "agent_id": agent_id,
-                        "detail": str(exc),
+                        "error": "round_not_found",
+                        "status": 404,
+                        "round_id": round_id,
                     },
                     indent=2,
                 )
 
-            # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
-            turn = {
-                "turnIndex": len(state.get("turns", [])) + 1,
-                "panelistId": agent_id,
-                "opinion": opinion_text,
-                "citedMemoryIds": cited_memory_ids,
-                "submittedAt": _state_now_iso(),
-            }
-
             try:
-                append_turn(state_path, turn)
+                state = read_and_recover_state(state_path)
+            except FileNotFoundError:
+                # Phase 67 OBSRV-02
+                cap.status = "round_not_found"
+                return json.dumps(
+                    {
+                        "error": "round_not_found",
+                        "status": 404,
+                        "round_id": round_id,
+                    },
+                    indent=2,
+                )
             except Exception as exc:
                 logger.warning(
-                    "get_agent_opinion: append_turn failed for %s: %s",
+                    "get_agent_opinion: state read failed for %s: %s",
                     round_id,
                     exc,
                 )
+                # Phase 67 OBSRV-02
+                cap.status = "state_read_failed"
                 return json.dumps(
-                    {"error": "append_turn_failed", "detail": str(exc)},
+                    {"error": "state_read_failed", "detail": str(exc)},
                     indent=2,
                 )
 
-            return json.dumps(
-                {
-                    "round_id": round_id,
-                    "agent_id": agent_id,
+            if state.get("status") != "open":
+                # Phase 67 OBSRV-02
+                cap.status = "round_not_open"
+                return json.dumps(
+                    {
+                        "error": "round_not_open",
+                        "status": 409,
+                        "round_id": round_id,
+                        "current_status": state.get("status"),
+                    },
+                    indent=2,
+                )
+
+            # Phase 53: real GLM dispatch + scoped memory retrieval.
+            #
+            # Nested try/finally: the OUTER finally releases the per-roundId
+            # lock (T-52-15 DoS mitigation preserved verbatim from Phase 52).
+            # The INNER finally clears ``_scoped_agent_id`` so the ContextVar
+            # does not leak into the next panelist's turn (RESEARCH Pitfall 5).
+            set_scoped_agent_id(agent_id)
+            try:
+                # memory_retrieve_scoped honors the ContextVar we just set; it
+                # falls back to the explicit agent_id if the ContextVar is unset
+                # (defensive — never blocks the round on missing scope).
+                try:
+                    mem_result = await memory_retrieve_scoped(
+                        query=topic, agent_id=agent_id, top_k=5,
+                    )
+                except Exception as exc:  # noqa: BLE001 — memory degrade, never crash
+                    logger.warning(
+                        "get_agent_opinion: memory_retrieve_scoped failed for %s: %s",
+                        agent_id,
+                        exc,
+                    )
+                    mem_result = {"status": "unavailable", "hits": []}
+
+                memory_context = _format_memory_context(mem_result.get("hits", []))
+                cited_memory_ids = _extract_cited_memory_ids(mem_result.get("hits", []))
+
+                persona = _load_persona_for_agent(agent_id)
+
+                # Build the opinion query: topic + panel_context + memory + story
+                # context (driver script passes StoryKernel JSON via panel_context).
+                user_parts = [f"# Round-table topic\n{topic}"]
+                if panel_context:
+                    user_parts.append(
+                        f"\n# Prior panel discussion (chain)\n{panel_context}"
+                    )
+                if memory_context:
+                    user_parts.append(f"\n# {memory_context}")
+                user_parts.append(
+                    "\n# Your task\nContribute your expert slice on this topic. "
+                    "Be concrete and actionable; cite specific moments from "
+                    "the topic or panel discussion. Limit to ~200 words."
+                )
+                user_prompt = "\n".join(user_parts)
+
+                # CRITICAL (MEMORY.md feedback-glm-5-2-only.md): explicit
+                # provider="glm" — never rely on the auto-chain (which could
+                # pick OpenRouter and violate the user's GLM-only policy).
+                response = call_llm(
+                    task="round_table_opinion",
+                    provider="glm",
+                    messages=[
+                        {"role": "system", "content": persona},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.7,
+                    max_tokens=2048,
+                )
+                # WR-02: defensive content extraction — same pattern as
+                # ``agent.memory_arbitration._extract_content`` + driver's
+                # synthesis pass. If the LLM returns a malformed shape (None
+                # response, empty choices, missing message), return a structured
+                # JSON error rather than propagating AttributeError up through
+                # the asyncio task (which would crash the MCP server / daemon).
+                try:
+                    opinion_text = str(response.choices[0].message.content)
+                except (AttributeError, IndexError, TypeError) as exc:
+                    logger.warning(
+                        "get_agent_opinion: malformed LLM response for %s: %s",
+                        agent_id,
+                        exc,
+                    )
+                    # Phase 67 OBSRV-02
+                    cap.status = "llm_malformed_response"
+                    return json.dumps(
+                        {
+                            "error": "llm_malformed_response",
+                            "agent_id": agent_id,
+                            "detail": str(exc),
+                        },
+                        indent=2,
+                    )
+
+                # Build the Turn dict per round-table-state-schema.yaml $defs.Turn.
+                turn = {
+                    "turnIndex": len(state.get("turns", [])) + 1,
+                    "panelistId": agent_id,
                     "opinion": opinion_text,
-                    "cited_memory_ids": cited_memory_ids,
-                    "status": "ok",
-                },
-                indent=2,
-            )
+                    "citedMemoryIds": cited_memory_ids,
+                    "submittedAt": _state_now_iso(),
+                }
+
+                try:
+                    append_turn(state_path, turn)
+                except Exception as exc:
+                    logger.warning(
+                        "get_agent_opinion: append_turn failed for %s: %s",
+                        round_id,
+                        exc,
+                    )
+                    # Phase 67 OBSRV-02
+                    cap.status = "append_turn_failed"
+                    return json.dumps(
+                        {"error": "append_turn_failed", "detail": str(exc)},
+                        indent=2,
+                    )
+
+                # Phase 67 OBSRV-02: happy path -- read token cost
+                # IMMEDIATELY after call_llm (RESEARCH Pitfall 3 -- the
+                # global _LAST_CALL_USAGE dict is shared mutable; reading
+                # it before any further await prevents race with a
+                # concurrent coroutine overwriting the value).
+                from agent.auxiliary_client import get_last_call_usage
+                cap.token_cost = int(get_last_call_usage().get("total_tokens", 0))
+                cap.status = "ok"
+                return json.dumps(
+                    {
+                        "round_id": round_id,
+                        "agent_id": agent_id,
+                        "opinion": opinion_text,
+                        "cited_memory_ids": cited_memory_ids,
+                        "status": "ok",
+                    },
+                    indent=2,
+                )
+            finally:
+                # RESEARCH Pitfall 5 mitigation: clear the ContextVar on EVERY
+                # exit path (happy, error, asyncio.CancelledError). Without this,
+                # the scope leaks into the next panelist's turn and memory calls
+                # hit the wrong namespace.
+                set_scoped_agent_id(None)
         finally:
-            # RESEARCH Pitfall 5 mitigation: clear the ContextVar on EVERY
-            # exit path (happy, error, asyncio.CancelledError). Without this,
-            # the scope leaks into the next panelist's turn and memory calls
-            # hit the wrong namespace.
-            set_scoped_agent_id(None)
-    finally:
-        # T-52-15 (DoS): lock MUST be released on every path — happy,
-        # error, AND asyncio.CancelledError. Without finally, an
-        # exception in read_and_recover_state or append_turn would
-        # permanently block that roundId.
-        await release_round_lock(round_id)
+            # T-52-15 (DoS): lock MUST be released on every path — happy,
+            # error, AND asyncio.CancelledError. Without finally, an
+            # exception in read_and_recover_state or append_turn would
+            # permanently block that roundId.
+            await release_round_lock(round_id)
 
 
 async def submit_round_table_result(
@@ -959,6 +1001,8 @@ async def submit_round_table_result(
         validate_project_slug,
         validate_round_id,
     )
+    # Phase 67 OBSRV-02: lazy import (RESEARCH Pitfall 6).
+    from agent.observability.round_table_metrics import _submit_capture
 
     # CR-01 fix: validate BOTH inputs before they touch the filesystem.
     slug_err = validate_project_slug(project_slug)
@@ -993,32 +1037,55 @@ async def submit_round_table_result(
             indent=2,
         )
 
-    try:
-        result = _submit(
-            state_path,
-            conclusion=conclusion,
-            cited_memories=cited_memories or [],
-            closed_by=closed_by,
+    # Phase 67 OBSRV-02: wrap the _submit call so every exit path records
+    # a metric entry. Early returns above (validation failures) are NOT
+    # instrumented because no round-table state mutation occurred -- they
+    # are caller-error paths, not round-table-execution metrics.
+    with _submit_capture(round_id) as cap:
+        try:
+            result = _submit(
+                state_path,
+                conclusion=conclusion,
+                cited_memories=cited_memories or [],
+                closed_by=closed_by,
+            )
+        except Exception as exc:
+            logger.warning(
+                "submit_round_table_result: submit failed for %s: %s",
+                round_id,
+                exc,
+            )
+            # Phase 67 OBSRV-02
+            cap.status = "submit_exception"
+            return json.dumps(
+                {"error": "submit_failed", "detail": str(exc)},
+                indent=2,
+            )
+
+        if "error" in result:
+            # _submit returns a dict-with-error on 409 round_not_open.
+            # Phase 67 OBSRV-02: classify the error for the metric entry.
+            cap.status = (
+                "conflict_409" if result.get("error") == "round_not_open"
+                else "submit_error"
+            )
+            return json.dumps(result, indent=2)
+
+        # Phase 67 OBSRV-02: happy path -- populate the round-level totals
+        # from the result dict. The state module sets tokensConsumed +
+        # costUsdEstimate + turns + events unconditionally on the
+        # completed transition (verified at round_table_state.py:597-601).
+        cap.token_cost = int(result.get("tokensConsumed", 0))
+        cap.cost_usd = float(result.get("costUsdEstimate", 0.0))
+        cap.turn_count = len(result.get("turns", []))
+        cap.early_stop_triggered = any(
+            e.get("type") == "budget_exceeded" for e in result.get("events", [])
         )
-    except Exception as exc:
-        logger.warning(
-            "submit_round_table_result: submit failed for %s: %s",
-            round_id,
-            exc,
-        )
+        cap.status = "completed"
         return json.dumps(
-            {"error": "submit_failed", "detail": str(exc)},
+            {"roundId": round_id, "status": "completed"},
             indent=2,
         )
-
-    if "error" in result:
-        # _submit returns a dict-with-error on 409 round_not_open
-        return json.dumps(result, indent=2)
-
-    return json.dumps(
-        {"roundId": round_id, "status": "completed"},
-        indent=2,
-    )
 
 
 # -- memory_retrieve_scoped / memory_submit_record ----------------------
