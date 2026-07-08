@@ -574,3 +574,58 @@ class TestMissingExpertAlarm:
         assert warnings == ["hook_retention", "screenplay"], (
             f"expected ['hook_retention', 'screenplay'] (sorted), got: {warnings!r}"
         )
+
+    def test_alarm_re_emitted_on_cache_hit(self, caplog: pytest.LogCaptureFixture):
+        """WR-06 / CR-01 regression: alarm MUST emit logger.warning on EVERY
+        call, not just the first (cache-miss) one.
+
+        All other TestMissingExpertAlarm tests use force_reload=True, which
+        forces the cache-miss path. This test exercises the cache-hit path
+        (call once with force_reload=True, then again WITHOUT force_reload)
+        and asserts the logger.warning alarm fires on BOTH calls.
+
+        Without the CR-01 fix (_emit_missing_expert_warnings invoked on
+        cache-hit path), the second call would silently return the
+        structured warnings list without writing to agent.log — defeating
+        log-based alerting for any consumer that polls the loader more
+        than once per process (Phase 67 OBSRV-01 collector, MCP
+        agents_list, dashboard health endpoints).
+        """
+        _reset_registry_cache()
+        _stage_required_experts(exclude={"screenplay"})
+
+        from agent.registry_loader import load_agent_registry_with_warnings
+
+        # First call (cache miss) — should emit warning.
+        with caplog.at_level(logging.WARNING, logger="agent.registry_loader"):
+            load_agent_registry_with_warnings(force_reload=True)
+        first_call_warnings = sum(
+            1 for r in caplog.records
+            if "screenplay" in r.getMessage()
+            and "missing" in r.getMessage().lower()
+        )
+        assert first_call_warnings >= 1, (
+            f"first call (cache miss) should emit warning; got "
+            f"{first_call_warnings} records"
+        )
+
+        # Second call (cache hit, no force_reload) — MUST also emit warning.
+        # This is the CR-01 regression: previously the cache-hit path
+        # returned the structured warnings list silently.
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="agent.registry_loader"):
+            _entries2, warnings2 = load_agent_registry_with_warnings()
+        second_call_warnings = sum(
+            1 for r in caplog.records
+            if "screenplay" in r.getMessage()
+            and "missing" in r.getMessage().lower()
+        )
+
+        assert "screenplay" in warnings2, (
+            f"cache-hit path must still return warnings list; got {warnings2!r}"
+        )
+        assert second_call_warnings >= 1, (
+            f"cache-hit path must re-emit logger.warning (CR-01 regression); "
+            f"got {second_call_warnings} records (first call had "
+            f"{first_call_warnings})"
+        )
