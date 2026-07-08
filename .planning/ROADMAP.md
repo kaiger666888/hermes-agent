@@ -211,8 +211,8 @@ Plans:
 
 **Wave 1** (parallel — independent collectors + instrumentation, no file overlap)
 
-- [ ] 67-02-PLAN.md — OBSRV-02 round table metrics collector + `mcp_serve.get_agent_opinion` + `submit_round_table_result` instrumentation + unit tests
-- [ ] 67-03-PLAN.md — OBSRV-03 memory backend metrics collector + `_BackendAdapter.search` / `.add` + `append_conflict_record` instrumentation + unit tests
+- [x] 67-02-PLAN.md — OBSRV-02 round table metrics collector + `mcp_serve.get_agent_opinion` + `submit_round_table_result` instrumentation + unit tests
+- [x] 67-03-PLAN.md — OBSRV-03 memory backend metrics collector + `_BackendAdapter.search` / `.add` + `append_conflict_record` instrumentation + unit tests
 
 **Wave 2** (blocked on Waves 0+1 — endpoint consumes all 3 collectors)
 
@@ -263,7 +263,7 @@ Phases 62 → 63 (sequential, code-work); 65 → 66 (sequential, code-work); 67 
 | 64. LIVE-EVAL-EXEC | 0/TBD | Not started | - |
 | 65. CURATOR-LIVE-GUARDS | 3/3 | Complete    | 2026-07-08 |
 | 66. CURATOR-LIVE-TICK | 0/TBD | Not started | - |
-| 67. OBSERVABILITY-BACKEND | 1/4 | In Progress|  |
+| 67. OBSERVABILITY-BACKEND | 3/4 | In Progress|  |
 | 68. OBSERVABILITY-PRESENTATION | 0/TBD | Not started | - |
 | 69. VALIDATE | 0/TBD | Not started | - |
 
