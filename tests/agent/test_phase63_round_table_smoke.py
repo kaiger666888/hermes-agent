@@ -115,11 +115,18 @@ def _seed_visual_executor_yamls(tmp_path) -> None:
         from agent import registry_loader
 
         registry_loader._REGISTRY_CACHE = None
-    except Exception:
+    except Exception as exc:
         # registry_loader may not be importable in some environments;
         # the smoke still works because get_agent_opinion reads the
         # persona directly from the YAML via _load_persona_for_agent.
-        pass
+        # WR-03 fix (review): bind the exception and emit a debug log so
+        # a future refactor that renames _REGISTRY_CACHE surfaces clearly
+        # instead of silently proceeding with a stale cache.
+        import logging as _logging
+
+        _logging.getLogger(__name__).debug(
+            "registry_loader cache reset skipped: %s", exc
+        )
 
 
 def _mock_call_llm(monkeypatch) -> None:
