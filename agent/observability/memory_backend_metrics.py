@@ -406,17 +406,17 @@ def _reset_for_test() -> None:
     Mirrors the Wave 0 pattern (``_reset_registry_cache`` in
     ``agent/registry_loader.py``).
 
-    Implementation note: we clear the underlying deque in place
-    (``_BUFFER._buf.clear()``) rather than rebinding the module global
-    ``_BUFFER``. Rebinding would break callers that imported the
-    reference via ``from agent.observability.memory_backend_metrics
-    import _BUFFER`` -- their reference would still point at the old
-    deque. In-place clear preserves the singleton identity.
+    Phase 67 WR-05 fix: switched from reaching into the private
+    ``_BUFFER._buf`` attribute to calling the public
+    ``MetricsBuffer.clear()`` method (added in Wave 0 for this purpose).
+    In-place clear preserves the singleton identity (no rebind of the
+    module global), and the public API avoids coupling test helpers to
+    MetricsBuffer internals. Consistent with
+    ``round_table_metrics._reset_for_test``.
     """
     global _CONFLICT_COUNT
-    # deque.clear() preserves maxlen. Access the private _buf attr --
-    # this is test-only so reaching into MetricsBuffer internals is
-    # acceptable (Wave 0 MetricsBuffer has no public clear()).
-    _BUFFER._buf.clear()
+    # MetricsBuffer.clear() preserves maxlen, acquires the internal
+    # lock, and uses deque.clear() under the hood.
+    _BUFFER.clear()
     with _CONFLICT_LOCK:
         _CONFLICT_COUNT = 0

@@ -147,13 +147,17 @@ def _reset_for_test() -> None:
     ``test_round_table_metrics.py`` calls this before each test so prior
     appends cannot leak into later assertions. NOT for production use --
     production callers should never reset the buffer.
+
+    Phase 67 WR-05 fix: switched from rebinding the module global
+    (``_BUFFER = MetricsBuffer(...)``) to in-place ``_BUFFER.clear()``.
+    The rebind pattern silently broke any caller that imported the
+    reference via ``from ... import _BUFFER`` — their reference would
+    still point at the old deque while tests reset the new one. The
+    in-place clear preserves the singleton identity and uses the public
+    ``MetricsBuffer.clear()`` API rather than reaching into ``_buf``.
+    Consistent with ``memory_backend_metrics._reset_for_test``.
     """
-    # Snapshot returns a copy; we replace the underlying deque by constructing
-    # a fresh MetricsBuffer. The old buffer is garbage-collected. This is the
-    # cleanest reset path because deque.clear() would require reaching into
-    # the private _buf attribute.
-    global _BUFFER
-    _BUFFER = MetricsBuffer[RoundTableMetricEntry](maxlen=100)
+    _BUFFER.clear()
 
 
 # ---------------------------------------------------------------------------

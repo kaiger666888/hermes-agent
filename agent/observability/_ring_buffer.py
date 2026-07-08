@@ -104,6 +104,20 @@ class MetricsBuffer(Generic[T]):
             # if another thread appends mid-iteration (RESEARCH Pitfall 2).
             return list(self._buf)
 
+    def clear(self) -> None:
+        """Empty the buffer in place. Thread-safe. Preserves ``maxlen``.
+
+        Phase 67 WR-05 fix: public clear path so test-reset helpers
+        (``_reset_for_test``) can reset the buffer without (a) rebinding
+        the module global (which silently breaks any
+        ``from ... import _BUFFER`` caller's reference) or (b) reaching
+        into the private ``_buf`` attribute. Both collectors
+        (``round_table_metrics``, ``memory_backend_metrics``) now call
+        ``_BUFFER.clear()`` instead of either hazard.
+        """
+        with self._lock:
+            self._buf.clear()
+
     def __len__(self) -> int:
         """Current entry count. Bounded by ``maxlen``."""
         with self._lock:
