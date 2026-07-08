@@ -454,9 +454,26 @@ class _BackendAdapter:
                 cap.mark_failure(exc)
                 return []
             if not isinstance(parsed, dict):
+                # Phase 67 OBSRV-03 (WR-01 fix): malformed response (not a
+                # dict) is an observable failure -- record it so the
+                # error_rate metric reflects the silent degradation. The
+                # try/except-branch mark_failure only covers exceptions; the
+                # error-shaped-but-no-exception paths need an explicit
+                # mark_failure to avoid being counted as success=True.
+                cap.mark_failure(
+                    RuntimeError(f"mem0_malformed_response: {type(parsed).__name__}")
+                )
                 return []
             items = parsed.get("results", [])
             if not isinstance(items, list):
+                # Phase 67 OBSRV-03 (WR-01 fix): same rationale as above --
+                # results key missing or wrong type is a backend contract
+                # violation, count it as a failure for error_rate accuracy.
+                cap.mark_failure(
+                    RuntimeError(
+                        f"mem0_malformed_results: type={type(items).__name__}"
+                    )
+                )
                 return []
             out: list[Dict[str, Any]] = []
             for it in items:
@@ -509,7 +526,14 @@ class _BackendAdapter:
                 else:
                     parsed = raw
                 if isinstance(parsed, dict) and parsed.get("error"):
-                    logger.warning("mem0 backend add returned error: %s", parsed.get("error"))
+                    err_msg = str(parsed.get("error"))
+                    logger.warning("mem0 backend add returned error: %s", err_msg)
+                    # Phase 67 OBSRV-03 (WR-01 fix): signal failure to the
+                    # metrics ctx mgr. Without this, the ctx mgr's __exit__
+                    # sees a normal return and records success=True, silently
+                    # inflating the operator-visible error_rate denominator.
+                    # Mirror the except-branch mark_failure contract.
+                    cap.mark_failure(RuntimeError(f"mem0_error_response: {err_msg}"))
                     return None
             except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
                 logger.warning("mem0 backend add failed: %s", exc)
