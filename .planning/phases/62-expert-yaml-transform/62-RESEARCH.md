@@ -603,22 +603,25 @@ lineage:
 
 **If this table is empty:** N/A — 5 assumptions documented above, all LOW/MEDIUM risk with clear mitigations.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `refs` field be populated with actual ref paths or stay `[]`?**
    - What we know: All 9 shipped YAMLs have `refs: []`. Refs are surfaced in persona text by name. Schema allows array of strings.
    - What's unclear: Is this a deliberate v11.0 design choice (refs in persona suffice) or an oversight?
    - Recommendation: Follow shipped convention (`refs: []`). If Phase 63 round table needs path-based ref retrieval, operator can backfill. Low risk.
+   - RESOLVED: Follow shipped convention (`refs: []`) — confirmed across all 12 transform_notes drafts in plans 02/03.
 
 2. **Should creative_source's `topic_curator` reference be filtered or kept?**
    - What we know: topic_curator skill does NOT exist in kais-hermes-skills repo. [VERIFIED: ls → not found]
    - What's unclear: Is topic_curator a planned future skill that related_agents should pre-reference?
    - Recommendation: Filter it out (dangling edge in collaboration DAG is worse than missing a future peer). Document in transform_notes.
+   - RESOLVED: Filter topic_curator (Plan 02 Task 2 acceptance criterion enforces grep returns 0).
 
 3. **Transform timestamp precision — date only or ISO datetime?**
    - What we know: Schema `transform_date` has `format: date` (ISO date, no time). SC#3 says "transform_timestamp".
    - What's unclear: Does SC#3 require sub-day precision for audit?
    - Recommendation: Use ISO date in `transform_date` field (schema-compliant). Optionally add ISO datetime in `transform_notes` free-text for audit precision.
+   - RESOLVED: ISO date in `transform_date` + ISO datetime in `transform_notes` free-text (Plan 02/03 transform_notes cite "2026-07-08T00:00:00Z").
 
 ## Environment Availability
 
