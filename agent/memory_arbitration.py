@@ -372,6 +372,14 @@ def append_conflict_record(
     defense lives at the call site (Phase 52 ``validate_project_slug``
     + ``validate_round_id`` reject ``..`` / ``/`` — see threat T-53-08).
     """
+    # Phase 67 OBSRV-03: count every observed conflict before the JSONL
+    # write so even a failed write still counts as a conflict observed.
+    # Lazy import per RESEARCH Pitfall 6 (avoid circular import between
+    # agent.memory_arbitration and agent.observability).
+    from agent.observability.memory_backend_metrics import record_conflict
+
+    record_conflict()  # Phase 67 OBSRV-03
+
     path = Path(conflicts_jsonl_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"

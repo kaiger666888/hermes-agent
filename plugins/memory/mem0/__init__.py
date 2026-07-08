@@ -428,34 +428,49 @@ class _BackendAdapter:
         layered defense (``agent.memory_arbitration.memory_retrieve_scoped``
         filter at line 439-443) can verify scope.
         """
-        try:
-            provider = Mem0MemoryProvider()
-            provider.initialize(session_id="benchmark")
-            if agent_id:
-                provider._agent_id = agent_id
-            raw = provider.handle_tool_call(
-                "mem0_search",
-                {"query": query, "top_k": top_k, "rerank": False},
-            )
-            parsed = json.loads(raw) if isinstance(raw, str) else raw
-        except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
-            logger.warning("mem0 backend search failed: %s", exc)
-            return []
-        if not isinstance(parsed, dict):
-            return []
-        items = parsed.get("results", [])
-        if not isinstance(items, list):
-            return []
-        out: list[Dict[str, Any]] = []
-        for it in items:
-            if not isinstance(it, dict):
-                continue
-            out.append({
-                "memory": it.get("memory", ""),
-                "score": float(it.get("score", 0.0) or 0.0),
-                "agent_id": agent_id,
-            })
-        return out
+        # Phase 67 OBSRV-03: wrap the entire op in the metrics context manager.
+        # Lazy import per RESEARCH Pitfall 6 (avoid any circular-import risk
+        # between plugins.memory and agent.observability).
+        from agent.observability.memory_backend_metrics import _memory_op_capture
+
+        with _memory_op_capture("search") as cap:  # Phase 67 OBSRV-03
+            try:
+                provider = Mem0MemoryProvider()
+                provider.initialize(session_id="benchmark")
+                if agent_id:
+                    provider._agent_id = agent_id
+                raw = provider.handle_tool_call(
+                    "mem0_search",
+                    {"query": query, "top_k": top_k, "rerank": False},
+                )
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
+                logger.warning("mem0 backend search failed: %s", exc)
+                # Signal failure to the metrics ctx mgr. The adapter's
+                # try/except swallows the exception (per its "never raise"
+                # contract), so the ctx mgr's __exit__ would otherwise see
+                # normal exit and record success=True. mark_failure() tells
+                # it to record success=False with this error_type instead.
+                cap.mark_failure(exc)
+                return []
+            if not isinstance(parsed, dict):
+                return []
+            items = parsed.get("results", [])
+            if not isinstance(items, list):
+                return []
+            out: list[Dict[str, Any]] = []
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                out.append({
+                    "memory": it.get("memory", ""),
+                    "score": float(it.get("score", 0.0) or 0.0),
+                    "agent_id": agent_id,
+                })
+            # Record the hit count on the capture state before normal exit.
+            # The context manager will build the entry with success=True.
+            cap.hit_count = len(out)
+            return out
 
     def add(
         self,
@@ -472,28 +487,38 @@ class _BackendAdapter:
         caller-side tracking. On any exception returns ``None`` and logs
         warning — never raises.
         """
-        try:
-            provider = Mem0MemoryProvider()
-            provider.initialize(session_id="benchmark")
-            if agent_id:
-                provider._agent_id = agent_id
-            raw = provider.handle_tool_call(
-                "mem0_conclude",
-                {"conclusion": content},
-            )
-            # Validate the response parsed cleanly; we do not require an id
-            # in the response, but we want to confirm it wasn't an error.
-            if isinstance(raw, str):
-                parsed = json.loads(raw)
-            else:
-                parsed = raw
-            if isinstance(parsed, dict) and parsed.get("error"):
-                logger.warning("mem0 backend add returned error: %s", parsed.get("error"))
+        # Phase 67 OBSRV-03: wrap the entire op in the metrics context manager.
+        # Lazy import per RESEARCH Pitfall 6.
+        from agent.observability.memory_backend_metrics import _memory_op_capture
+
+        with _memory_op_capture("add") as cap:  # Phase 67 OBSRV-03
+            # add has no "hits" -- cap.hit_count stays at its default 0.
+            try:
+                provider = Mem0MemoryProvider()
+                provider.initialize(session_id="benchmark")
+                if agent_id:
+                    provider._agent_id = agent_id
+                raw = provider.handle_tool_call(
+                    "mem0_conclude",
+                    {"conclusion": content},
+                )
+                # Validate the response parsed cleanly; we do not require an id
+                # in the response, but we want to confirm it wasn't an error.
+                if isinstance(raw, str):
+                    parsed = json.loads(raw)
+                else:
+                    parsed = raw
+                if isinstance(parsed, dict) and parsed.get("error"):
+                    logger.warning("mem0 backend add returned error: %s", parsed.get("error"))
+                    return None
+            except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
+                logger.warning("mem0 backend add failed: %s", exc)
+                # Signal failure to the metrics ctx mgr (see search() for
+                # rationale -- the adapter swallows the exception, so the
+                # ctx mgr needs an explicit mark_failure to record it).
+                cap.mark_failure(exc)
                 return None
-        except Exception as exc:  # noqa: BLE001 — adapter contract: never raise
-            logger.warning("mem0 backend add failed: %s", exc)
-            return None
-        return f"mem0-{int(time.time() * 1000)}"
+            return f"mem0-{int(time.time() * 1000)}"
 
 
 #: Module-level singleton consumed by ``agent.memory_arbitration._get_mem0_backend``.

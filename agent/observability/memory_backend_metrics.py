@@ -278,16 +278,38 @@ class _CaptureState:
     ``cap.hit_count = len(out)`` for search). On normal exit, the
     context manager reads ``hit_count`` to build the metric entry.
 
+    For the failure case where the caller's own ``try/except`` catches
+    the exception (so it never propagates through ``__exit__`` -- this
+    is the mem0 adapter's "never raise" pattern), the caller MUST call
+    :meth:`mark_failure` inside its except branch so the metrics entry
+    is correctly recorded as ``success=False``.
+
     Using a small class rather than ``types.SimpleNamespace`` so the
     type is explicit and the attribute is documented.
     """
 
-    __slots__ = ("hit_count",)
+    __slots__ = ("hit_count", "_error_type")
 
     def __init__(self) -> None:
         # Default hit_count is 0. ``add`` never overrides this; ``search``
         # sets it to ``len(out)`` just before normal exit.
         self.hit_count = 0
+        # Caller-signalled failure (set via mark_failure). When non-None,
+        # the ctx manager records success=False with this error_type,
+        # regardless of whether an exception propagated.
+        self._error_type: str | None = None
+
+    def mark_failure(self, exc: BaseException) -> None:
+        """Signal that the op failed, even though the caller's outer
+        try/except swallowed the exception.
+
+        Used by the mem0 adapter's ``except Exception as exc: return []``
+        branch -- the adapter catches the exception (preserving its
+        "never raise" contract) but wants the metrics entry to still
+        record the failure. Without this call, the ctx manager would
+        see normal exit and record ``success=True`` (bug).
+        """
+        self._error_type = type(exc).__name__
 
 
 @contextmanager
@@ -295,26 +317,43 @@ def _memory_op_capture(op_type: str) -> Iterator[_CaptureState]:
     """Context manager wrapping one memory-backend op (search or add).
 
     Records the op's latency, success/failure, and (for search)
-    hit count into the metrics buffer. On exception, the entry is
-    recorded with ``success=False`` + ``error_type`` set to the
-    exception class name, and the exception is RE-RAISED so the
-    outer try/except in ``_BackendAdapter.search/add`` still catches
-    it (preserving the adapter's "never raise" contract -- threat
-    T-67-03-adapter).
+    hit count into the metrics buffer.
 
-    Usage::
+    Failure detection -- two complementary paths:
+
+    1. **Exception propagation** (preferred for non-adapter callers):
+       If an exception propagates through the ``with`` block, the
+       ctx manager catches it, records ``success=False`` +
+       ``error_type=type(exc).__name__``, and re-raises so outer
+       handlers still apply.
+    2. **Caller-signalled failure** (required for the mem0 adapter,
+       which swallows exceptions to preserve its "never raise"
+       contract): the caller calls ``cap.mark_failure(exc)`` inside
+       its own ``except`` branch. The ctx manager checks
+       ``state._error_type`` on normal exit and records the entry
+       as failed.
+
+    Threat T-67-03-adapter mitigation: path 2 is the load-bearing one
+    for the adapter. Without it, the metric would record every adapter
+    failure as a success (because the adapter's outer try/except
+    swallows the exception before it reaches ``__exit__``).
+
+    Usage (adapter pattern)::
 
         with _memory_op_capture("search") as cap:
-            out = backend._raw_search(...)
+            try:
+                out = backend._raw_search(...)
+            except Exception as exc:
+                cap.mark_failure(exc)  # signal failure
+                return []
             cap.hit_count = len(out)
-        # entry recorded with success=True, hit_count=len(out)
+            return out
 
     Args:
         op_type: ``"search"`` or ``"add"``.
 
     Yields:
-        A :class:`_CaptureState` instance. Set ``cap.hit_count`` before
-        normal exit (search only; add leaves it at 0).
+        A :class:`_CaptureState` instance.
     """
     started_at_iso = _now_iso_utc()
     t0 = time.perf_counter()
@@ -325,6 +364,7 @@ def _memory_op_capture(op_type: str) -> Iterator[_CaptureState]:
     try:
         yield state
     except BaseException as exc:
+        # Path 1: exception propagated through the with block.
         # BaseException so we also capture KeyboardInterrupt /
         # SystemExit -- they're rare in production but the metric
         # should still record the failure. The exception is re-raised
@@ -333,6 +373,12 @@ def _memory_op_capture(op_type: str) -> Iterator[_CaptureState]:
         error_type = type(exc).__name__
         raise
     finally:
+        # Path 2: caller signalled failure via cap.mark_failure(exc).
+        # This runs on normal exit too -- check the caller-signalled
+        # error_type and override success/error_type if set.
+        if state._error_type is not None:
+            success = False
+            error_type = state._error_type
         duration_ms = (time.perf_counter() - t0) * 1000.0
         entry = MemoryOpMetricEntry(
             op_type=op_type,
@@ -359,15 +405,18 @@ def _reset_for_test() -> None:
 
     Mirrors the Wave 0 pattern (``_reset_registry_cache`` in
     ``agent/registry_loader.py``).
+
+    Implementation note: we clear the underlying deque in place
+    (``_BUFFER._buf.clear()``) rather than rebinding the module global
+    ``_BUFFER``. Rebinding would break callers that imported the
+    reference via ``from agent.observability.memory_backend_metrics
+    import _BUFFER`` -- their reference would still point at the old
+    deque. In-place clear preserves the singleton identity.
     """
     global _CONFLICT_COUNT
-    # Clear the buffer by appending to a fresh deque. MetricsBuffer has
-    # no public ``clear()`` -- we replace the singleton instead.
-    # NOTE: must reassign the module-level name, not mutate, because
-    # MetricsBuffer's internal deque is not exposed for clearing.
-    # Use a sentinel: append N placeholders to evict? No -- that would
-    # leave N stale entries. Instead, rebind the module global.
-    global _BUFFER
-    _BUFFER = MetricsBuffer(maxlen=100)
+    # deque.clear() preserves maxlen. Access the private _buf attr --
+    # this is test-only so reaching into MetricsBuffer internals is
+    # acceptable (Wave 0 MetricsBuffer has no public clear()).
+    _BUFFER._buf.clear()
     with _CONFLICT_LOCK:
         _CONFLICT_COUNT = 0
