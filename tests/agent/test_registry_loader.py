@@ -43,7 +43,14 @@ from hermes_constants import get_hermes_home
 # READ-ONLY access — canary copies from here into the redirected _agents_dir().
 # Pitfall #2 mitigation: this constant is a SOURCE only; all writes go through
 # _agents_dir() (which honors the redirected HERMES_HOME via get_hermes_home()).
-_REAL_AGENTS_DIR = Path("/home/kai/.hermes/agents")
+# WR-01 fix (review): compute dynamically via Path.home() instead of
+# hardcoding '/home/kai/...'. conftest.py's _hermetic_environment redirects
+# HERMES_HOME but NOT HOME (conftest.py:347-353), so Path.home() still
+# resolves to the real user's home. The _stage_required_experts helper
+# already uses pytest.skip (not pytest.fail) when a source YAML is missing,
+# so on machines without Phase 62's 21 YAMLs the canary tests degrade to
+# SKIPPED rather than HARD-FAILING.
+_REAL_AGENTS_DIR = Path.home() / ".hermes" / "agents"
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "agents"
 VALID_FIXTURE = FIXTURES_DIR / "test-coordinator.agent.yaml"

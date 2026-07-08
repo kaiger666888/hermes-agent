@@ -41,14 +41,17 @@ import pytest
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-# Real YAMLs staged READ-ONLY from the live ~/.hermes/agents/ tree. This
-# absolute path is the only place we tolerate a literal — it is NOT
-# the home-directory concatenation pattern (which conftest warns
-# against) and NOT
-# ``get_hermes_home()`` (which the autouse _hermetic_environment fixture
-# has already redirected to tmp_path). Source-only; all writes go to the
-# redirected HERMES_HOME via _seed_visual_executor_yamls().
-REAL_AGENTS_DIR = Path("/home/kai/.hermes/agents")
+# Real YAMLs staged READ-ONLY from the live ~/.hermes/agents/ tree.
+# WR-01 fix (review): compute dynamically via Path.home() instead of
+# hardcoding '/home/kai/...'. conftest.py's _hermetic_environment fixture
+# redirects HERMES_HOME but NOT HOME (see conftest.py:347-353), so
+# Path.home() still resolves to the real user's home — '/home/kai' on
+# Kai's machine, '/home/runner' in CI, etc. Combined with the
+# pytest.skip (not pytest.fail) fallback in _seed_visual_executor_yamls,
+# tests degrade gracefully to SKIPPED on machines without Phase 62's
+# 21 shipped YAMLs, instead of HARD-FAILING.
+# Naming (IN-04): leading underscore — module-private per CLAUDE.md.
+_REAL_AGENTS_DIR = Path.home() / ".hermes" / "agents"
 
 # The smoke target project slug. Passed as project_id to open_round_table
 # AND as project_slug to get_agent_opinion — they MUST match because
@@ -100,11 +103,21 @@ def _seed_visual_executor_yamls(tmp_path) -> None:
     agents_dir.mkdir(parents=True, exist_ok=True)
 
     for agent_id in PANELIST_AGENT_IDS:
-        src = REAL_AGENTS_DIR / f"{agent_id}.agent.yaml"
+        src = _REAL_AGENTS_DIR / f"{agent_id}.agent.yaml"
         if not src.exists():
-            pytest.fail(
+            # WR-01 fix (review): SKIP not FAIL. The Phase 62 deliverable
+            # (21 YAMLs at ~/.hermes/agents/) is only present on Kai's
+            # machine. On any other developer machine, CI runner, or
+            # Docker container, _REAL_AGENTS_DIR points to a path that
+            # doesn't have these YAMLs. Hard-failing breaks hermetic-test
+            # invariant (conftest.py:8-12) and breaks CI. Skip lets the
+            # test degrade gracefully — the operator sees "skipped:
+            # required fixture YAML missing" and knows Phase 62 isn't
+            # installed locally.
+            pytest.skip(
                 f"Required fixture YAML missing: {src}. Phase 62 deliverable "
-                f"not installed in real ~/.hermes/agents/."
+                f"(21 agent YAMLs) not installed in real ~/.hermes/agents/. "
+                f"Install Phase 62 deliverables or run on Kai's machine."
             )
         shutil.copyfile(src, agents_dir / f"{agent_id}.agent.yaml")
 
