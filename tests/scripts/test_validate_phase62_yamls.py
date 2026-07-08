@@ -79,7 +79,7 @@ memory_scope: per_agent
 lineage:
   derived_from_skill_id: {name}
   derived_from_repo: kais-hermes-skills
-  transform_date: 2026-07-08
+  transform_date: "2026-07-08"
   transform_notes: test fixture
   skill_sha256: {sha}
 """
@@ -204,7 +204,7 @@ def test_validate_one_missing_required_field_returns_fail_message(agents_dir):
         lineage:
           derived_from_skill_id: missingreq
           derived_from_repo: kais-hermes-skills
-          transform_date: 2026-07-08
+          transform_date: "2026-07-08"
           skill_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     """)
     (agents_dir / "missingreq.agent.yaml").write_text(body, encoding="utf-8")
