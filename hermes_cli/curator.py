@@ -336,11 +336,19 @@ def _cmd_evolve(args) -> int:
     # happened and cannot be rolled back from here (Phase 66 runbook
     # covers manual rollback).
     try:
-        from agent.curator_audit import append_audit
+        from agent.curator_audit import append_audit, AuditChainError
         # Build mutation_summary from the result dict — auto_transitions
-        # is the deterministic stale/archive/reactivate count. Wrap in
-        # try/except KeyError for forward-compat (RESEARCH: mutation_summary
-        # is free-form so Phase 66 can evolve keys without audit-module edit).
+        # is the deterministic stale/archive/reactivate count.
+        # WR-05 (Phase 65 review): the inner ``except`` below catches
+        # (AttributeError, TypeError) — NOT KeyError despite the legacy
+        # comment that previously claimed otherwise. ``dict.get(...)`` cannot
+        # raise KeyError; the realistic crash mode is ``result`` being a
+        # non-dict value (e.g. a future run_curator_review regression
+        # returning a string), which surfaces as AttributeError on ``.get``.
+        # The ``or {}`` coalescing already handles ``result=None``. Defense
+        # kept so a malformed result shape is surfaced as a WARNING (rather
+        # than silently writing ``mutation_summary={}`` which would hide an
+        # upstream defect in the audit trail).
         try:
             auto = result.get("auto_transitions", {}) or {}
             mutation_summary = {
@@ -351,12 +359,13 @@ def _cmd_evolve(args) -> int:
             }
         except (AttributeError, TypeError) as exc:
             logger.warning(
-                "mutation_summary extraction failed: %s", exc,
+                "mutation_summary extraction failed (result shape "
+                "unexpected — investigate run_curator_review return): %s",
+                exc,
             )
             mutation_summary = {}
 
-        from datetime import datetime as _dt
-        ts = _dt.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         append_audit(
             action="auto_apply",
             patch_id=f"live-tick-{ts}",
@@ -367,9 +376,20 @@ def _cmd_evolve(args) -> int:
             caught_count=caught,
             mutation_summary=mutation_summary,
         )
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, AuditChainError, ImportError) as exc:
+        # CR-02 (Phase 65 review): AuditChainError is raised when the audit
+        #   log tail is corrupt (truncated final line, interrupted flush) —
+        #   issubclass(AuditChainError, OSError|ValueError) is False, so it
+        #   MUST be listed explicitly to preserve the "best-effort" guarantee.
+        #   Without this, a corrupted tail would crash the CLI AFTER live
+        #   memory writes already succeeded — the exact inversion of the
+        #   documented safety property (see agent/curator_audit.py:79).
+        # WR-02 (Phase 65 review): ImportError added for symmetry with the
+        #   _resolve_skill_from_patch lazy-import defense at line 675 — a
+        #   partially-broken wheel install or circular-import regression
+        #   should not crash the post-tick path either.
         # OSError = disk full / IO error; ValueError = schema validation.
-        # Both are operator-investigable; the tick already succeeded.
+        # All four are operator-investigable; the tick already succeeded.
         logger.warning(
             "post-tick audit append failed (tick succeeded): %s", exc,
         )
