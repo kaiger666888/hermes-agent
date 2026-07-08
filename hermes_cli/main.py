@@ -11083,7 +11083,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "config", "cron", "curator", "dashboard", "debug", "doctor",
         "dump", "fallback", "gateway", "hooks", "import", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate",
-        "model", "pairing", "plugins", "portal", "postinstall", "profile", "proxy",
+        "model", "orchestrator", "pairing", "plugins", "portal", "postinstall", "profile", "proxy",
         "prompt-size",
         "send", "sessions", "setup",
         "skills", "slack", "status", "tools", "uninstall", "update",
@@ -11974,6 +11974,26 @@ def main():
         _register_curator_cli(curator_parser)
     except Exception as _exc:
         logging.getLogger(__name__).debug("curator CLI wiring failed: %s", _exc)
+
+    # =========================================================================
+    # orchestrator command — operator observability (Phase 68 OBSRV-04)
+    # =========================================================================
+    orchestrator_parser = subparsers.add_parser(
+        "orchestrator",
+        help="Operator observability (orchestrator status)",
+        description=(
+            "Operator visibility into the v10.0 orchestrator: agent "
+            "registry health, round-table latency/token cost, and "
+            "memory backend status. All metrics come from Phase 67 "
+            "collectors (agent.observability)."
+        ),
+    )
+    try:
+        from hermes_cli.orchestrator import register_cli as _register_orchestrator_cli
+
+        _register_orchestrator_cli(orchestrator_parser)
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("orchestrator CLI wiring failed: %s", _exc)
 
     # =========================================================================
     # feedback command — multi-source feedback ingestion subcommands
