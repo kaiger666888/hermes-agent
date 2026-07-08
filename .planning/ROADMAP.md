@@ -82,7 +82,7 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
 - [ ] **Phase 64: LIVE-EVAL-EXEC** - 3 deferred operator smoke tests + live-eval-report.md(v14 decision feed)
 - [x] **Phase 65: CURATOR-LIVE-GUARDS** ✓ 2026-07-08 - `--live` opt-in flag + bias canary pre-check (4/5 catch) + audit tick_mode extension
 - [ ] **Phase 66: CURATOR-LIVE-TICK** - 1st live tick end-to-end + operator runbook + safety policy
-- [ ] **Phase 67: OBSERVABILITY-BACKEND** - 3 metrics collectors(agent registry / round table / mem0 backend)
+- [x] **Phase 67: OBSERVABILITY-BACKEND** ✓ 2026-07-08 - 3 metrics collectors (agent registry / round table / memory backend) + FastAPI /orchestrator/agents/status endpoint
 - [ ] **Phase 68: OBSERVABILITY-PRESENTATION** - CLI `hermes orchestrator status` + dashboard web view
 - [ ] **Phase 69: VALIDATE** - v13.0 milestone audit + close-out report(strictly LAST)
 
