@@ -77,7 +77,7 @@ v12.0 (Production Hardening) shipped 2026-07-08 — fixed 4 hardening gaps expos
 
 ## Phases
 
-- [ ] **Phase 62: EXPERT-YAML-TRANSFORM** - 12 expert agent YAML 全量 transform(15/15 active coverage)
+- [x] **Phase 62: EXPERT-YAML-TRANSFORM** ✓ 2026-07-08 - 12 expert agent YAML 全量 transform(15/15 active coverage · 21/21 schema PASS · human UAT deferred)
 - [ ] **Phase 63: EXPERT-REGISTRY-INTEGRATION** - 21-agent registry load + visual_executor round table smoke
 - [ ] **Phase 64: LIVE-EVAL-EXEC** - 3 deferred operator smoke tests + live-eval-report.md(v14 decision feed)
 - [ ] **Phase 65: CURATOR-LIVE-GUARDS** - `--live` opt-in flag + pre-tick bias canary + post-tick audit log
