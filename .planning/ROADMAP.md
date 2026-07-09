@@ -17,7 +17,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 - [x] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline (completed 2026-07-09)
 - [x] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default) (completed 2026-07-09)
 - [x] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination (completed 2026-07-09)
-- [ ] **Phase 73: IMG** — dreamina cli production-grade orchestration
+- [x] **Phase 73: IMG** — dreamina cli production-grade orchestration (completed 2026-07-09)
 - [ ] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design
 - [ ] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 6 affected agents
 - [ ] **Phase 76: VALIDATE** — META-RULE audit + operator-action handoffs + milestone audit
@@ -96,7 +96,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 Plans:
 - [x] 73-01-PLAN.md — IMG Foundation (dreamina_manager orchestrator + vision_verify GLM-4.6V gate + dreamina_stats MetricsBuffer + 10 unit tests) — SHIPPED 2026-07-09
 - [x] 73-02-PLAN.md — IMG Integration (RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI registration + _VISION_VERIFY_INSTRUCTION XCUT-02 injection + SKILL.md patches) — SHIPPED 2026-07-09
-- [ ] 73-03-PLAN.md — IMG Validation (e2e integration tests + XCUT-02 goal-content test + 73-smoke.sh 15 assertions)
+- [x] 73-03-PLAN.md — IMG Validation (e2e integration tests + XCUT-02 goal-content test + 73-smoke.sh 15 assertions) — SHIPPED 2026-07-09
 
 ### Phase 74: TRANSITION
 **Goal**: Users can author structured transition designs as first-class pipeline assets, with creative intent (cinematographer Step 9) cleanly separated from post-production execution (editor Step 13), and with per-transition engine routing evaluated across Wan2.2 FLF2V / Hailuo / Vidu / ffmpeg / LTX-2.3 FLF (evaluated, not assumed incapable).
@@ -151,7 +151,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 3/3 | Complete    | 2026-07-09 |
-| 73. IMG | 2/3 | In progress (Plans 01+02 shipped) | 2026-07-09 |
+| 73. IMG | 3/3 | COMPLETE (all 3 plans shipped) | 2026-07-09 |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
 | 76. VALIDATE | 0/TBD | Not started | - |
@@ -176,4 +176,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 73 Plan 02 SHIPPED (IMG Integration: RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI + _VISION_VERIFY_INSTRUCTION XCUT-02 + SKILL.md patches). 11/12 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (2/3, in progress). Phase 73 Plan 03 (validation) next. Phase 74 (TRANSITION) after 73. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 73 Plan 03 SHIPPED + Phase 73 (IMG) COMPLETE (e2e integration tests + XCUT-02 goal-content test + 73-smoke.sh 15 assertions). 12/12 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (3/3, COMPLETE). 4/7 phases done. Phase 74 (TRANSITION) next — most invasive phase. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
