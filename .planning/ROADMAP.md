@@ -14,7 +14,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 - Integer phases (70-76): Planned v14.0 milestone work
 - Decimal phases (e.g., 71.1): Urgent insertions (marked with INSERTED) — none anticipated for v14.0
 
-- [ ] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline
+- [x] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline (completed 2026-07-09)
 - [ ] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default)
 - [ ] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination
 - [ ] **Phase 73: IMG** — dreamina cli production-grade orchestration
@@ -37,7 +37,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Plans**:
 - [x] 70-01-PLAN.md — Lineage Impact Inventory (6 SKILL.md + 3 agent.yaml + cross-repo pins)
 - [x] 70-02-PLAN.md — Curator freeze (config.yaml) + STATE.md v14.0.freeze block
-- [ ] 70-03-PLAN.md — Phase 76 VALIDATE-CHECKLIST + smoke.sh runner
+- [x] 70-03-PLAN.md — Phase 76 VALIDATE-CHECKLIST + smoke.sh runner
 
 **Plans**: 3 plans
 
@@ -133,7 +133,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 70. FOUNDATION-AUDIT | 2/3 | In Progress|  |
+| 70. FOUNDATION-AUDIT | 3/3 | Complete   | 2026-07-09 |
 | 71. FORM | 0/TBD | Not started | - |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |
