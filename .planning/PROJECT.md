@@ -84,6 +84,8 @@ v14.0 milestone started 2026-07-09. v13.0 SHIPPED + closed 2026-07-08 (tag `v13.
 **v14.0 跨 repo:** hermes-agent/.planning/ + kais-hermes-skills/。
 **v14.0 阶段编号:** Phase 70+ (continuing from v13.0 Phase 69)。
 
+**Phase 70 FOUNDATION-AUDIT COMPLETE (2026-07-09):** Lineage baseline inventory captured (6 SKILL.md + 3 agent.yaml + cross-repo pins), curator frozen for v14.0 (`config.yaml curator.enabled: false`, code-enforced at `hermes_cli/curator.py:270-272`), Phase 76 VALIDATE-CHECKLIST drafted. Curator `--live` blocked; freeze released by Phase 75. Pre-existing drift in `cinematographer` + `audio_pipeline` captured as MISMATCH (Phase 75 closes). Next: Phase 71 (FORM — 横竖双 default)。
+
 ## Previous Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval ✅ SHIPPED 2026-07-08
 
 **Stats:** 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff) · Tag `v13.0` · Audit `tech_debt`
@@ -595,4 +597,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-09 — v14.0 milestone started (kais-movie-pipeline 形态/音频/图像/转场 4 项升级). v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`). v14.0 跨 repo 模式: hermes-agent/.planning/ + kais-hermes-skills/。Phase 70+ 继续 v13.0 Phase 69 之后编号。Next: define v14.0 REQUIREMENTS.md → spawn gsd-roadmapper。*
+*Last updated: 2026-07-09 — Phase 70 FOUNDATION-AUDIT complete (lineage baseline + curator freeze + Phase 76 VALIDATE-CHECKLIST). v14.0 milestone started 2026-07-09 (kais-movie-pipeline 形态/音频/图像/转场 4 项升级). v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`). v14.0 跨 repo 模式: hermes-agent/.planning/ + kais-hermes-skills/。Phase 70+ 继续 v13.0 Phase 69 之后编号。Next: Phase 71 (FORM)。*
