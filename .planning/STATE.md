@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
-status: ready_to_plan
-last_updated: 2026-07-09T17:09:34.856Z
-last_activity: 2026-07-10 -- Phase 75 LINEAGE-BUMP complete (15 agent.yaml regenerated + curator freeze released)
+status: executing
+last_updated: "2026-07-09T17:19:26.500Z"
+last_activity: 2026-07-09 -- Phase 76 execution started
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 16
+  total_plans: 17
   completed_plans: 16
   percent: 86
-stopped_at: Phase 75 complete (1/1) — ready to discuss Phase 76
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -29,10 +28,10 @@ stopped_at: Phase 75 complete (1/1) — ready to discuss Phase 76
 
 ## Current Position
 
-Phase: 76
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-09
+Phase: 76 (validate) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 76
+Last activity: 2026-07-09 -- Phase 76 execution started
 
 ### Progress
 
@@ -250,6 +249,21 @@ Plus 3 cross-cutting phases: Phase 70 (FOUNDATION-AUDIT lineage baseline) + Phas
 5. (Optional) Backup `~/.hermes/config.yaml.pre-v14.0-freeze.bak` retained for audit
 
 **Threat model T-70-01 (HIGH, Tampering) mitigation:** Operator running `hermes curator evolve --live --skip-canary` during v14.0 window is blocked at `hermes_cli/curator.py:270-272` BEFORE the `--live` flag is even read (line 274). Residual: `--skip-canary` is audit-logged at `hermes_cli/curator.py:344-349` (`canary_pass=None`); Phase 76 VALIDATE checks the audit log for any live-tick during v14.0.
+
+### v14.0 Cross-Repo Pins (FINAL)
+
+Captured 2026-07-10 by Phase 76 Plan 01 Task 2. Satisfies ROADMAP SC#2 (cross-repo commit pin assertion) + D-03. Both final pins are verified descendants of P70 baselines via `git merge-base --is-ancestor` (exit 0 = descendant).
+
+| Repo | Role | Full SHA (40 char) | Short | Ancestry |
+|------|------|---------------------|-------|----------|
+| hermes-agent | P70 baseline | `8f70fcf7f0604db21158f86f8495f3d9ce3c9ab1` | `8f70fcf7` | (baseline) |
+| hermes-agent | v14.0 final | `4e7c58cc9cac3c4925770beaf5a9433369094a24` | `4e7c58cc9` | descendant of `8f70fcf7` (exit 0) |
+| kais-hermes-skills | P70 baseline | `d9620369e48eec51c31ee72ac8827c288eaccf71` | `d9620369` | (baseline) |
+| kais-hermes-skills | v14.0 final | `ba58c2548ab82f0cd9acd7cc7af14402137f8520` | `ba58c254` | descendant of `d9620369` (exit 0) |
+
+**Assertion date:** 2026-07-10 (re-run at Task 2 execution time, not cached from planning).
+**Coverage:** 17 SKILL.md commits in kais-hermes-skills layered on P70 baseline; hermes-agent `.planning/` commits layered on P70 baseline; zero force-push rewrites detected.
+**Evidence:** `.planning/phases/76-validate/76-ANCESTRY-ASSERT.md` (full 4-pin table + assertion commands + exit codes).
 
 ### Pending Todos
 
