@@ -114,7 +114,7 @@ Plans:
 
 Plans:
 - [x] 74-01-PLAN.md — TRANSITION Foundation (transition_schema.py TRANS-01/02 + asset_bus slot + canvas_sync TRANS-03 + 12 tests) — SHIPPED 2026-07-09
-- [ ] 74-02-PLAN.md — SKILL.md Ownership + Routing Refs + XCUT-02 Injection (TRANS-04/05/06 + _INSTRUCTION constants + e-konte Layer 5)
+- [x] 74-02-PLAN.md — SKILL.md Ownership + Routing Refs + XCUT-02 Injection (TRANS-04/05/06 + _INSTRUCTION constants + e-konte Layer 5) — SHIPPED 2026-07-09
 - [ ] 74-03-PLAN.md — LTX-FLF Validation + Smoke (TRANS-07 template + XCUT-02 goal-content test + 74-smoke.sh)
 
 ### Phase 75: LINEAGE-BUMP
@@ -157,7 +157,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 3/3 | Complete    | 2026-07-09 |
 | 73. IMG | 3/3 | Complete    | 2026-07-09 |
-| 74. TRANSITION | 1/3 | IN PROGRESS (Plan 01 shipped) | TRANS-01/02/03 foundation complete |
+| 74. TRANSITION | 2/3 | IN PROGRESS (Plans 01+02 shipped) | TRANS-01/02/03/04/05/06 + XCUT-02 injection complete; TRANS-07 validation + smoke remaining |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
 | 76. VALIDATE | 0/TBD | Not started | - |
 
@@ -181,4 +181,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 74 Plan 01 SHIPPED (TRANSITION Foundation). 3 commits in kais-hermes-skills (df78a6f transition_schema.py + 7 tests + 2e446be 3-system registration + d079103 D-06 comment). 12 TRANS tests green. TRANS-01 (12-enum + 6-enum Pydantic Literal) + TRANS-02 (backward-compat reader) + TRANS-03 (3-system asset registration) complete. 13/15 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (3/3, COMPLETE) + Phase 74 (1/3, IN PROGRESS). 4/7 phases done. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/ (HEAD now d079103).*
+*Last updated: 2026-07-09 — Phase 74 Plan 02 SHIPPED (SKILL.md Ownership + Routing Refs + XCUT-02 Injection). 3 commits in kais-hermes-skills (eec0b72 TRANS-04 SKILL.md ownership split + 11e165e TRANS-05/06 transition-design + routing refs + 7d113da XCUT-02 _INJECTION p09+p13+e-konte). 22 tests green (8 p09 unit + 12 transition_schema + 2 syntax checks). TRANS-04 (field-level ownership — FOUND-08 preserved) + TRANS-05 (12-type taxonomy) + TRANS-06 (declarative routing — INFRA-04 compliant) + XCUT-02 (_TRANSITION_DESIGN_INSTRUCTION + _EDITOR_TRANSITION_EXECUTION_INSTRUCTION) complete. 14/15 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (3/3, COMPLETE) + Phase 74 (2/3, IN PROGRESS). 4/7 phases done. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/ (HEAD now 7d113da).*
