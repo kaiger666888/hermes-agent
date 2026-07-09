@@ -44,7 +44,7 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 - [x] **TRANS-04**: Field-level ownership split is documented in BOTH `cinematographer/SKILL.md` (Step 9 owns creative intent: `transition_method` / `visual_hook` / `camera_continuity`) AND `editor/SKILL.md` (Step 13 owns post-production execution: `cut_duration_frames` / `dissolve_curve` / `match_cut_alignment_point`); updated in the SAME phase (FOUND-08 preservation — NO new `transition_designer` expert)
 - [x] **TRANS-05**: User can read `references/transition-design.md` for the 12-type transition taxonomy mapped to execution paths (generation-time / post-production / hybrid) with concrete examples
 - [x] **TRANS-06**: Per-transition engine routing rule is documented in `references/transition-engine-routing.md`: Wan2.2 14B FLF2V for local match-cut via shared object / Hailuo 02 i2v Pro + Vidu keyframe-to-video for cloud Chinese-content backups (opt-in via operator API key) / ffmpeg xfade for dissolve/wipe/fade/J-cut/L-cut fallback / **LTX-2.3 FLF path evaluated per-transition (NOT assumed incapable — per SUMMARY reconciled conflict #1)**
-- [ ] **TRANS-07**: LTX-2.3 FLF + ICLoRA combined workflow is validated on 1-2 reference shots (research-scope only — NOT pipeline-integrated); validation report documents whether combined workflow is production-ready or deferred to v15+
+- [x] **TRANS-07**: LTX-2.3 FLF + ICLoRA combined workflow is validated on 1-2 reference shots (research-scope only — NOT pipeline-integrated); validation report documents whether combined workflow is production-ready or deferred to v15+
 
 ### Cross-cutting — 强制基础设施(milestone coherence 必需)
 
@@ -137,7 +137,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 | TRANS-04 | Phase 74 (TRANSITION) | Satisfied (Plan 74-02 — SKILL.md ownership split + p13_execution) |
 | TRANS-05 | Phase 74 (TRANSITION) | Satisfied (Plan 74-02 — transition-design.md 12-type taxonomy) |
 | TRANS-06 | Phase 74 (TRANSITION) | Satisfied (Plan 74-02 — transition-engine-routing.md declarative table) |
-| TRANS-07 | Phase 74 (TRANSITION) | Pending |
+| TRANS-07 | Phase 74 (TRANSITION) | Complete |
 | XCUT-03 | Phase 75 (LINEAGE-BUMP) | Pending |
 | XCUT-02 | Phase 76 (VALIDATE) | Pending |
 | XCUT-04 | Phase 76 (VALIDATE) | Pending |

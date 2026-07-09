@@ -157,7 +157,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 3/3 | Complete    | 2026-07-09 |
 | 73. IMG | 3/3 | Complete    | 2026-07-09 |
-| 74. TRANSITION | 2/3 | IN PROGRESS (Plans 01+02 shipped) | TRANS-01/02/03/04/05/06 + XCUT-02 injection complete; TRANS-07 validation + smoke remaining |
+| 74. TRANSITION | 3/3 | Complete    | 2026-07-09 |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
 | 76. VALIDATE | 0/TBD | Not started | - |
 
