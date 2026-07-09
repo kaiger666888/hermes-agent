@@ -154,6 +154,13 @@ Carry-forward (NOT new blockers):
 
 **FINAL ACTION of v14.0 milestone:** `git tag -a v14.0 -m "v14.0: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)"`. Verified via `git tag | grep v14.0` → `v14.0`. Annotated tag (immutable release marker per T-76-06 threat mitigation). NOT pushed to remote — that is operator decision (gsd-autonomous complete-milestone lifecycle step handles push + ROADMAP/REQUIREMENTS archive).
 
+## Self-Check: PASSED
+
+All 6 files exist. All 4 commits (4e7c58cc9, b792b06d3, 12a337db7, 1c46f9cd8) exist in git log.
+Tag v14.0 exists in tag list. Script is executable. STATE.md has status=milestone_complete +
+v14.0 Cross-Repo Pins (FINAL) block. ROADMAP.md has 76-01 SHIPPED. Milestone audit doc has 9
+sections + verdict tech_debt.
+
 ---
 
 *Authored: 2026-07-10 — Phase 76 Plan 01 (VALIDATE) complete. v14.0 milestone closed.*
