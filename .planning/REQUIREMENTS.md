@@ -120,10 +120,10 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 | FORM-03 | Phase 71 (FORM) | Complete (Plan 71-01) |
 | FORM-04 | Phase 71 (FORM) | Complete (Plan 71-03) |
 | FORM-05 | Phase 71 (FORM) | Complete (Plan 71-01) |
-| DUB-01 | Phase 72 (DUB) | Pending |
-| DUB-02 | Phase 72 (DUB) | Pending |
-| DUB-03 | Phase 72 (DUB) | Pending |
-| DUB-04 | Phase 72 (DUB) | Pending |
+| DUB-01 | Phase 72 (DUB) | In Progress (Plan 72-01: validator enables routing; Plan 72-02 wires workflow JSON + healthcheck) |
+| DUB-02 | Phase 72 (DUB) | In Progress (Plan 72-01: validate_tts_engine_division shipped; Plan 72-02 wires p10_voice pre-flight) |
+| DUB-03 | Phase 72 (DUB) | In Progress (Plan 72-01: validate_voice_clone_ref + schema field + fail-fast shipped; Plan 72-02 wires workflow submission) |
+| DUB-04 | Phase 72 (DUB) | In Progress (Plan 72-01: DEPRECATED warning + progress metadata shipped; Plan 72-02 wires healthcheck-based auto-fallback) |
 | DUB-05 | Phase 72 (DUB) | Pending |
 | IMG-01 | Phase 73 (IMG) | Pending |
 | IMG-02 | Phase 73 (IMG) | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T11:00:01.324Z"
-last_activity: 2026-07-09 -- Phase 72 planning complete
+last_updated: "2026-07-09T11:07:15.000Z"
+last_activity: 2026-07-09 -- Phase 72 Plan 01 SHIPPED (DUB foundation: division rule + voice clone schema + routing)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
-  percent: 29
+  completed_plans: 7
+  percent: 33
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 72
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-09 -- Phase 72 planning complete
+Phase: 72 (dub) — EXECUTING
+Plan: 2 of 3 (Plan 01 SHIPPED)
+Status: Phase 72 Plan 01 complete — DUB foundation delivered
+Last activity: 2026-07-09 -- Phase 72 Plan 01 SHIPPED (division rule + voice clone schema + routing)
 
 ### Progress
 
@@ -59,7 +59,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 |-------|------|--------|-------|
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
 | 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
-| 72 | DUB | Not started | CosyVoice + LTX 2.3 native audio (DUB-01..05). Parallel with Phase 73. Needs plan-phase research (CosyVoice variant A/B). |
+| 72 | DUB | **Plan 01 SHIPPED 2026-07-09** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. Plan 02 (workflow JSON + healthcheck) + Plan 03 (docs + VERSION.json) next. |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
 | 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |
@@ -111,6 +111,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 71 | P01 | ~10min | 3 | 10 (store.py + SKILL.md + p09 + p11_video_render + ltx template + 3 refs + test_form_factor.py + horizontal-screen-framing.md) |
 | 71 | P02 | ~12min | 3 | 16 (15 movie-expert SKILL.md + 71-check-form-sections.sh) |
 | 71 | P03 | ~7min | 3 | 11 (platform-master-slicing.md + test_step14_reframe_matrix.py + _step14_reframe_math.py + 8 PNGs + README) |
+| 72 | P01 | ~6min | 3 | 7 (store.py + dub_validators.py + p04_character_design.py + tts_batch.py + test_dub_division.py + conftest.py + test_voice_clone_ref.py) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -144,6 +145,10 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 71-03]** ffmpeg cropdetect chosen as Cell D saliency-scan zero-dep default | RESEARCH Open Question #2 resolution: ffmpeg cropdetect (brightness edge scan) is zero-dep — already in stack, deterministic, no API call. GLM-4.6V semantic scan is enhancement if operator reports cropdetect misses semantic subjects (e.g., dark scenes with bright backgrounds). MEMORY.md glm-5.2-only constraint NOT violated (vision tool call, not model switch). | Applied 2026-07-09 (commits 46728da + 5f120ab) |
 | **[Phase 71-03]** Sample-frame fixtures use ffmpeg testsrc2 synthetic pattern | Plan Task 3 CONTEXT.md Claude's Discretion: "Placeholder PNGs acceptable initially". Generated real PNGs (not placeholders) via ffmpeg testsrc2 + per-cell filter chain — no copyrighted content, regenerable from real master.mp4 via README-documented commands. Better than placeholder because the fixtures actually demonstrate the reframe math (Cell A+B byte-identical; Cell C visible pillarbox bars; Cell D center-crop). | Applied 2026-07-09 (commit 3c97902) |
 | **[Phase 71-03]** 43 pre-existing test failures logged as deferred (out-of-scope) | Full pipeline suite has 43 failures in test_canvas_v4.py / test_runner_full_dag.py / test_skill_discovery.py / test_v50_regression.py. Root cause: tests resolve paths assuming cwd is the skill directory, not kais-hermes-skills root. Per deviation SCOPE BOUNDARY rule, pre-existing failures in unrelated files are NOT auto-fixed mid-task. Logged to SUMMARY deferred-items; Phase 76 VALIDATE may sweep if relevant. | Applied 2026-07-09 |
+| **[Phase 72-01]** Standalone function validate_tts_engine_division (NOT @model_validator) | Shot is a plain dict per RESEARCH Critical Correction #3, not a Pydantic BaseModel. @model_validator would not work. Standalone function mirrors validate_form_factor_invariant (store.py:111-140) precedent. | Applied 2026-07-09 (commit bc2f041) |
+| **[Phase 72-01]** voice_clone_reference_wav as sibling to 4d_anchor.voice (additive, no schema bump) | character_bible V3 envelope extended additively; consumers use .get("voice_clone_reference_wav") returning None for pre-v14.0 bibles. No schema_version bump needed (additive fields default via .get()). | Applied 2026-07-09 (commit 2c31d0d) |
+| **[Phase 72-01]** Fail-fast ValueError on missing voice_clone_ref + NO silent fallback | CosyVoice clone mode requires operator-sourced reference audio. Silent fallback to generic voice defeats cloning purpose (CONTEXT.md D-02 mitigation #2). | Applied 2026-07-09 (commit f4d4f51) |
+| **[Phase 72-01]** DUB-04 workflow submission stub deferred to Plan 72-02 | Plan 72-01 delivers the fail-fast gate (voice_clone_ref validation); the ComfyUI AIIA_CosyVoice_TTS workflow JSON submission + healthcheck-based fallback IS Plan 72-02 Task 1+2. Advisory warning accepted + documented in SUMMARY. | Applied 2026-07-09 |
 
 ### Decisions carried forward (still relevant)
 
