@@ -950,21 +950,26 @@ def check_brightness(path: str) -> dict:
 | A4 | GLM-4.6V supports multi-image messages (batched vision-verify) | Pattern 2: Vision-Verify Gate | If wrong (single-image only), batching benefit is lost but serial calls still work. PITFALL I-1 mitigation is degraded, not broken. MEDIUM risk. |
 | A5 | tenacity AsyncRetrying works with subprocess.TimeoutExpired retry | Pattern 1: Orchestrator | If wrong (tenacity doesn't recognize subprocess exception), custom retry wrapper needed. LOW risk — tenacity `retry_if_exception_type` accepts any exception class. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All 3 open questions are **RESOLVED** by PATTERNS.md corrections + Plan 73-01 execution-time scaffolding. Markers below formalize the resolution for Dimension 11 compliance.
 
 1. **Does `async_call_llm(prefer_vision=True)` route to GLM-4.6V specifically?**
    - What we know: `vision_tools.py` uses `async_call_llm` with the auxiliary vision router. The router reads `auxiliary.vision.model` from `cli-config.yaml`.
    - What's unclear: whether the current config has `glm-4.6v` set as the vision model, or a different model.
    - Recommendation: Plan A executor verifies `cli-config.yaml auxiliary.vision.model` at execution time. If not `glm-4.6v`, document the actual model + flag for operator to update config if needed.
+   - **RESOLVED (SUPERSEDED):** PATTERNS.md CRITICAL CORRECTION — `prefer_vision` parameter does NOT exist on `async_call_llm` (verified at `auxiliary_client.py:6006-6030`). The correct routing parameter is `task="vision"`. Plan 73-01 T2 enforces this via acceptance criterion `grep -c "prefer_vision" returns 0`. The `cli-config.yaml auxiliary.vision.model` config verification is deferred to operator pre-flight (not a plan blocker).
 
 2. **Does GLM-4.6V accept `file://` local paths or require base64?**
    - What we know: `vision_tools.py` downloads remote URLs to temp files, then base64-encodes for the API call. This suggests base64 is the safe path.
    - Recommendation: Plan A's `vision_verify.py` base64-encodes local images (matching `vision_tools.py` pattern) rather than relying on `file://` support. Safer default.
+   - **RESOLVED: Base64-encode local images** per PATTERNS.md Open Question #2 resolution. Plan 73-01 T2 action explicitly base64-encodes via `vision_tools.py:289-312` pattern.
 
 3. **What is the exact `submit_id` → `list_task` → `query_result` UUID resolution flow?**
    - What we know: `text2image --poll=0` returns 8-char prefix. `query_result` requires FULL UUID. `list_task` returns full UUIDs.
    - What's unclear: whether there's a direct way to get the full UUID from the initial submit response (without `list_task` round-trip).
    - Recommendation: Plan A's `dreamina_manager._dreamina_submit()` parses the initial response for full UUID; if only prefix available, calls `list_task` to resolve. Document the flow in the module docstring.
+   - **RESOLVED: list_task UUID resolution scaffold** per Plan 73-01 T1 action — `dreamina_manager._dreamina_submit()` implements the prefix → list_task → full UUID fallback. Documented in module docstring at execution time.
 
 ## Environment Availability
 
