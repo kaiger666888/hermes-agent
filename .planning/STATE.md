@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T11:17:00.000Z"
-last_activity: 2026-07-09 -- Phase 72 Plan 02 SHIPPED (DUB routing + DEPRECATED + XCUT-02 injection)
+last_updated: "2026-07-09T11:28:59Z"
+last_activity: 2026-07-09 -- Phase 72 Plan 03 SHIPPED (docs + VERSION.json + benchmark template + migration + smoke runner)
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 44
+  completed_plans: 9
+  percent: 56
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 72 (dub) — EXECUTING
-Plan: 2 of 3 (Plan 02 SHIPPED)
-Status: Phase 72 Plan 02 complete — DUB routing + DEPRECATED + XCUT-02 injection delivered
-Last activity: 2026-07-09 -- Phase 72 Plan 02 SHIPPED (workflow JSON + healthcheck + SKILL.md demotion + p10 _INSTRUCTION)
+Phase: 72 (dub) — COMPLETE (3/3 plans shipped)
+Plan: 3 of 3 (Plan 03 SHIPPED)
+Status: Phase 72 complete — all DUB deliverables shipped (contract + routing + docs + smoke)
+Last activity: 2026-07-09 -- Phase 72 Plan 03 SHIPPED (cosyvoice-deployment.md + VERSION.json + cosyvoice-benchmark.md + migration map + 72-smoke.sh)
 
 ### Progress
 
@@ -48,7 +48,7 @@ v10.0 编排架构设计(设计型):         [██████████] 10
 v11.0 Expert Agents PoC:           [██████████] 100% (Phases 52-56, shipped 2026-07-07, tag v11.0)
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
-v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases 70-76, started 2026-07-09, IN PROGRESS)
+v14.0 4-Track Upgrade:             [████░░░░░░]  40% (Phases 70-76, 3/7 phases complete, Phase 72 DUB SHIPPED)
 ```
 
 **v14.0 milestone status:** IN PROGRESS — roadmap created 2026-07-09. 7 phases (70-76), 26/26 reqs mapped. Phase 70 (FOUNDATION-AUDIT) ready to plan.
@@ -59,7 +59,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 |-------|------|--------|-------|
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
 | 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
-| 72 | DUB | **Plan 02 SHIPPED 2026-07-09** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. Plan 03 (docs + VERSION.json) next. |
+| 72 | DUB | **COMPLETE (3/3 plans shipped 2026-07-09)** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. **Plan 03 SHIPPED:** cosyvoice-deployment.md (286-line twin, dual-path DUB-01) + VERSION.json (top-level, tts.cosyvoice_default_variant null DUB-05 lock) + cosyvoice-benchmark.md (120-line template, DUB-05 operator-action handoff) + indextts2-to-cosyvoice-migration.md (DUB-03 mapping) + 72-smoke.sh (11 assertions ALL PASS). 4 commits kais-hermes-skills (1320728→df71fde) + 1 commit hermes-agent (3a8949bf0). Phase 72 COMPLETE — ready for Phase 73 (IMG) parallel track or Phase 74 (TRANSITION). |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
 | 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |

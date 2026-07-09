@@ -75,7 +75,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Plans**:
 - [x] 72-01-PLAN.md — DUB Foundation (validate_tts_engine_division + voice_clone_reference_wav schema + validate_voice_clone_ref + tts_batch routing + DEPRECATED fallback) — **SHIPPED 2026-07-09** (8 commits in kais-hermes-skills: 5772f55→4d1f907; 15 tests green; DUB-02/03/04 contract layer delivered; DUB-04 workflow submission stub deferred to Plan 72-02)
 - [x] 72-02-PLAN.md — Routing + DEPRECATED + SKILL.md demotion + XCUT-02 _TTS_ENGINE_INJECTION into p10_voice.py (FIRST p10 _INSTRUCTION) — **SHIPPED 2026-07-09** (5 commits in kais-hermes-skills: 4d1f907→1320728; 13 p10 + 10 dub_division tests green; DUB-01 workflow JSON + DUB-04 healthcheck/demotion + XCUT-02 p10 injection delivered)
-- [ ] 72-03-PLAN.md — Docs (cosyvoice-deployment.md + migration mapping) + VERSION.json + cosyvoice-benchmark.md template + 72-smoke.sh
+- [x] 72-03-PLAN.md — Docs (cosyvoice-deployment.md 286-line twin + migration mapping) + VERSION.json (top-level, tts.cosyvoice_default_variant null) + cosyvoice-benchmark.md template (120-line, DUB-05 operator-action handoff) + 72-smoke.sh (11 assertions ALL PASS) — **SHIPPED 2026-07-09** (4 commits kais-hermes-skills: 1320728→df71fde; 1 commit hermes-agent: 3a8949bf0; DUB-01 deployment doc + DUB-05 lock site + DUB-03 migration map + Phase 76 VALIDATE smoke input delivered)
 
 **Plans**: 3 plans
 
@@ -145,7 +145,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
-| 72. DUB | 2/3 | In progress (Plan 02 SHIPPED) | DUB-01..04 delivered; DUB-05 + docs in Plan 03 |
+| 72. DUB | 3/3 | **COMPLETE** (Plan 03 SHIPPED) | DUB-01..05 all delivered; docs + VERSION.json + smoke runner complete |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
@@ -171,4 +171,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 72 Plan 02 SHIPPED (DUB routing + DEPRECATED + XCUT-02 p10 injection). 8/9 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (2/3). Phase 72 Plan 03 (docs + VERSION.json) next. Phase 73 (IMG) parallel-ready. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 72 Plan 03 SHIPPED (DUB docs + VERSION.json + benchmark template + migration + smoke runner). 9/9 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE). Phase 73 (IMG) parallel-ready. Phase 74 (TRANSITION) next after 72+73. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*

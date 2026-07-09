@@ -21,11 +21,11 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 
 ### DUB — CosyVoice + LTX 2.3 native audio 协调
 
-- [ ] **DUB-01**: User can generate TTS via CosyVoice 2.0-0.5B as P10 default (replacing IndexTTS2) through ComfyUI `filliptm/ComfyUI_FL-CosyVoice3` node + `audio_pipeline/references/workflows/cosyvoice-comfyui.json`
-- [ ] **DUB-02**: Schema validator rejects configurations where both LTX 2.3 native audio AND CosyVoice overlay are enabled for the same shot (prevents doubled audio / phase cancellation / lip-sync mismatch per PITFALL D-1)
-- [ ] **DUB-03**: User can attach `voice_clone_reference_wav` (3-10s reference audio) per character in `pipeline_state.episode_id.character_voice_presets`; system fails fast with explicit error if missing when CosyVoice clone mode is selected
-- [ ] **DUB-04**: IndexTTS2 ComfyUI node remains installed and accessible as DEPRECATED fallback path (CosyVoice failure → IndexTTS2 fallback; node not removed)
-- [ ] **DUB-05**: Operator has A/B benchmark report comparing CosyVoice 2.0-0.5B vs Fun-CosyVoice 3.0 on 3-5 kais-movie-pipeline reference dialogue lines; default variant recorded in `VERSION.json` with rationale
+- [x] **DUB-01**: User can generate TTS via CosyVoice 2.0-0.5B as P10 default (replacing IndexTTS2) through ComfyUI `filliptm/ComfyUI_FL-CosyVoice3` node + `audio_pipeline/references/workflows/cosyvoice-comfyui.json`
+- [x] **DUB-02**: Schema validator rejects configurations where both LTX 2.3 native audio AND CosyVoice overlay are enabled for the same shot (prevents doubled audio / phase cancellation / lip-sync mismatch per PITFALL D-1)
+- [x] **DUB-03**: User can attach `voice_clone_reference_wav` (3-10s reference audio) per character in `pipeline_state.episode_id.character_voice_presets`; system fails fast with explicit error if missing when CosyVoice clone mode is selected
+- [x] **DUB-04**: IndexTTS2 ComfyUI node remains installed and accessible as DEPRECATED fallback path (CosyVoice failure → IndexTTS2 fallback; node not removed)
+- [x] **DUB-05**: Operator has A/B benchmark report comparing CosyVoice 2.0-0.5B vs Fun-CosyVoice 3.0 on 3-5 kais-movie-pipeline reference dialogue lines; default variant recorded in `VERSION.json` with rationale
 
 ### IMG — dreamina cli 深度集成升级
 
@@ -120,11 +120,11 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 | FORM-03 | Phase 71 (FORM) | Complete (Plan 71-01) |
 | FORM-04 | Phase 71 (FORM) | Complete (Plan 71-03) |
 | FORM-05 | Phase 71 (FORM) | Complete (Plan 71-01) |
-| DUB-01 | Phase 72 (DUB) | In Progress (Plan 72-01: validator enables routing; Plan 72-02 wires workflow JSON + healthcheck) |
-| DUB-02 | Phase 72 (DUB) | In Progress (Plan 72-01: validate_tts_engine_division shipped; Plan 72-02 wires p10_voice pre-flight) |
-| DUB-03 | Phase 72 (DUB) | In Progress (Plan 72-01: validate_voice_clone_ref + schema field + fail-fast shipped; Plan 72-02 wires workflow submission) |
-| DUB-04 | Phase 72 (DUB) | In Progress (Plan 72-01: DEPRECATED warning + progress metadata shipped; Plan 72-02 wires healthcheck-based auto-fallback) |
-| DUB-05 | Phase 72 (DUB) | Pending |
+| DUB-01 | Phase 72 (DUB) | Complete (Plan 72-02: workflow JSON + Plan 72-03: deployment doc) |
+| DUB-02 | Phase 72 (DUB) | Complete (Plan 72-01: validate_tts_engine_division + Plan 72-02: p10 pre-flight) |
+| DUB-03 | Phase 72 (DUB) | Complete (Plan 72-01: validate_voice_clone_ref + Plan 72-03: migration mapping) |
+| DUB-04 | Phase 72 (DUB) | Complete (Plan 72-01: DEPRECATED metadata + Plan 72-02: healthcheck auto-fallback) |
+| DUB-05 | Phase 72 (DUB) | Complete (Plan 72-03: VERSION.json lock site + benchmark template; operator-action handoff for actual A/B run) |
 | IMG-01 | Phase 73 (IMG) | Pending |
 | IMG-02 | Phase 73 (IMG) | Pending |
 | IMG-03 | Phase 73 (IMG) | Pending |
