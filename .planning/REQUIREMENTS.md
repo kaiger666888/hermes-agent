@@ -14,9 +14,9 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 ### FORM — 横竖并行双 default 参数化
 
 - [x] **FORM-01**: User can specify project-level `form_factor` (`landscape_16_9` / `portrait_9:16`) via `PipelineState.form_factor` field, defaulting to `portrait` for backwards-compat with existing projects
-- [ ] **FORM-02**: Each of 15 active movie-expert skills has a `## Form Factor Adaptation` section with dual-branch (landscape/portrait) creative rules, replacing hardcoded `9:16` assumptions
+- [x] **FORM-02**: Each of 15 active movie-expert skills has a `## Form Factor Adaptation` section with dual-branch (landscape/portrait) creative rules, replacing hardcoded `9:16` assumptions
 - [x] **FORM-03**: User can read `references/horizontal-screen-framing.md` for landscape creative rules (power points / headroom / subtitle safe area / shot scale distribution / eye-trace region), mirroring existing `vertical-screen-framing.md`
-- [ ] **FORM-04**: Step 14 platform-master-slicing handles 4-cell reframe matrix (`master_form_factor × target_platform_form_factor`: 16:9→9:16 / 9:16→16:9 / 16:9→16:9 / 9:16→9:16) without quality degradation
+- [x] **FORM-04**: Step 14 platform-master-slicing handles 4-cell reframe matrix (`master_form_factor × target_platform_form_factor`: 16:9→9:16 / 9:16→16:9 / 16:9→16:9 / 9:16→9:16) without quality degradation
 - [x] **FORM-05**: `kais-movie-pipeline/SKILL.md` line 446 stale `MSR_FC=17` corrected to canonical `MSR_FC=41` per 2026-07-01 A/B test (incidental tech-debt fix, not a standalone feature)
 
 ### DUB — CosyVoice + LTX 2.3 native audio 协调
@@ -116,9 +116,9 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 |-------------|-------|--------|
 | XCUT-01 | Phase 70 (FOUNDATION-AUDIT) | Complete (all 6 sub-rows a-f shipped: a/b/c via Plan 01 inventory, d/e via Plan 02 freeze, f via Plan 03 checklist). Phase 70 ready for verification. |
 | FORM-01 | Phase 71 (FORM) | Complete (Plan 71-01) |
-| FORM-02 | Phase 71 (FORM) | In progress (orchestrator dispatch in Plan 71-01; 15-expert sections in Plan 71-02) |
+| FORM-02 | Phase 71 (FORM) | Complete (Plan 71-02) |
 | FORM-03 | Phase 71 (FORM) | Complete (Plan 71-01) |
-| FORM-04 | Phase 71 (FORM) | Pending (Plan 71-03) |
+| FORM-04 | Phase 71 (FORM) | Complete (Plan 71-03) |
 | FORM-05 | Phase 71 (FORM) | Complete (Plan 71-01) |
 | DUB-01 | Phase 72 (DUB) | Pending |
 | DUB-02 | Phase 72 (DUB) | Pending |
@@ -160,4 +160,4 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 
 *Requirements defined: 2026-07-09*
 *Source: 用户 4-feature request + `.planning/research/v14-4track-upgrade/SUMMARY.md` (HIGH confidence)*
-*Last updated: 2026-07-09 — traceability filled by roadmapper (26/26 reqs mapped, 100% coverage, zero orphans)*
+*Last updated: 2026-07-09 — Phase 71 (FORM) COMPLETE: all 5 FORM reqs satisfied (FORM-01 Plan 71-01, FORM-02 Plan 71-02, FORM-03 Plan 71-01, FORM-04 Plan 71-03, FORM-05 Plan 71-01). Phase 70 (1 req) + Phase 71 (5 reqs) = 6/26 v14.0 reqs satisfied. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next.*

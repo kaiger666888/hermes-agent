@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T09:25:00.000Z"
-last_activity: 2026-07-09 -- Phase 71 Plan 02 (15 SKILL.md Form Factor Adaptation) shipped
+last_updated: "2026-07-09T09:40:00.000Z"
+last_activity: 2026-07-09 -- Phase 71 Plan 03 (Step 14 4-cell reframe matrix) shipped; Phase 71 COMPLETE
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 24
+  completed_plans: 6
+  percent: 28
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 71 (form) — EXECUTING
-Plan: 3 of 3 (Plans 01 + 02 shipped 2026-07-09)
-Status: Executing Phase 71 — Plan 02 complete, Plan 03 next (Step 14 4-cell reframe matrix)
-Last activity: 2026-07-09 -- Phase 71 Plan 02 (15 SKILL.md ## Form Factor Adaptation sections tiered Tier 1/2/3) shipped
+Phase: 71 (form) — COMPLETE (all 3 plans shipped 2026-07-09)
+Plan: 3 of 3 (Plans 01 + 02 + 03 shipped 2026-07-09)
+Status: Phase 71 complete; Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next
+Last activity: 2026-07-09 -- Phase 71 Plan 03 (Step 14 4-cell reframe matrix + tests + 8 sample-frame fixtures) shipped
 
 ### Progress
 
@@ -58,7 +58,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
-| 71 | FORM | Plans 01 + 02 shipped (2/3 plans) | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED 2026-07-09:** PipelineState.form_factor field (Literal["landscape","portrait"], default "portrait") + validate_form_factor_invariant + horizontal-screen-framing.md (226 lines, 5-section mirror of vertical twin) + MSR_FC=17→41 sweep (5 doc + 1 code location) + --form-factor argparse helper + _FORM_FACTOR_INSTRUCTION injection into p09 goal (XCUT-02). 6 commits in kais-hermes-skills (d962036→fea9999). 5/5 form_factor tests green. **Plan 02 SHIPPED 2026-07-09:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 section tiered by form-criticality (Tier 1: cinematographer + visual_executor + editor + character_designer substantive dual-branch ≥15 lines; Tier 2: continuity_auditor + hook_retention + screenplay + prompt_injector + compliance_gate short dual-branch ~8 lines; Tier 3: style_genome + script_auditor + creative_source + colorist + theory_critic + audio_pipeline verbatim form-agnostic stub). Cinematographer Step 3 dispatches on form_factor loading vertical vs horizontal ref. 3 atomic per-tier commits in kais-hermes-skills (fea9999→cdf71dd) + 1 smoke script commit in hermes-agent (cf8ca0ea5). 71-check-form-sections.sh exits 0 asserting 15/15. Plan 03 (Step 14 4-cell reframe matrix + tests + sample-frame fixtures) next. |
+| 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
 | 72 | DUB | Not started | CosyVoice + LTX 2.3 native audio (DUB-01..05). Parallel with Phase 73. Needs plan-phase research (CosyVoice variant A/B). |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
@@ -110,6 +110,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 70 | P03 | 5min | 2 | 2 (70-VALIDATE-CHECKLIST.md + 70-smoke.sh) |
 | 71 | P01 | ~10min | 3 | 10 (store.py + SKILL.md + p09 + p11_video_render + ltx template + 3 refs + test_form_factor.py + horizontal-screen-framing.md) |
 | 71 | P02 | ~12min | 3 | 16 (15 movie-expert SKILL.md + 71-check-form-sections.sh) |
+| 71 | P03 | ~7min | 3 | 11 (platform-master-slicing.md + test_step14_reframe_matrix.py + _step14_reframe_math.py + 8 PNGs + README) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -139,6 +140,10 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 71-02]** Tier classification followed RESEARCH 4/5/6 NOT CONTEXT 5/7/3 | CONTEXT.md decisions listed deprecated stubs (drawer / scene_builder / storyboard_designer) in Tier 1/2 — these are 654-byte redirect stubs (status: merged_into), patching them is wasted work per RESEARCH §Pitfall 3. RESEARCH §15-Expert Tier Classification correction is AUTHORITATIVE per plan-checker. Patched 4 Tier 1 (cinematographer + visual_executor + editor + character_designer) + 5 Tier 2 (continuity_auditor + hook_retention + screenplay + prompt_injector + compliance_gate) + 6 Tier 3 (style_genome + script_auditor + creative_source + colorist + theory_critic + audio_pipeline) = 15 canonical active DAG experts. | Applied 2026-07-09 (commits f99f112 + 6a0b644 + cdf71dd) |
 | **[Phase 71-02]** prompt_injector lands at Tier 2 not Tier 1 | RESEARCH Open Question #1 resolved by reading prompt_injector/SKILL.md in full: token VOCABULARY is form-neutral (shared across forms — "vertical tilt up" / "horizontal pan right" exist in one vocabulary), only SELECTION differs. Selection is inherited from upstream cinematographer's form_factor-branched camera_move intent. No dreamina CLI aspect-ratio flag divergence found (--aspect accepts both 9:16 and 16:9). Tier 2 stub suffices. | Applied 2026-07-09 (commit 6a0b644) |
 | **[Phase 71-02]** Pre-existing visual_executor render-verification edits included in Tier 1 commit | Working tree carried pre-existing operator-validated edits (idempotency check-before-render + Tier 4 INSERT shots + frame budget long-shot example + template loading guidance + ebur128 BGM multi-level diagnostic — validated formc-test-01 2026-07-09) interleaved with my Form Factor append. Staging surgically was brittle; reverting would destroy operator-validated work (forbidden). Included entire file in Tier 1 commit with explicit documentation in commit body. | Applied 2026-07-09 (commit f99f112) |
+| **[Phase 71-03]** Reframe math lives in tests/_step14_reframe_math.py (test-internal), NOT production phase modules | Plan Task 2 action step 2.4 explicitly authorized "put the math in a test helper" over touching production phase modules. The production reframe logic lives in the markdown spec (platform-master-slicing.md §4-Cell Reframe Matrix); the test helper mirrors that spec as importable pure functions for deterministic unit test assertions. Avoids perturbing production code for a docs-truth contract. | Applied 2026-07-09 (commit 5f120ab) |
+| **[Phase 71-03]** ffmpeg cropdetect chosen as Cell D saliency-scan zero-dep default | RESEARCH Open Question #2 resolution: ffmpeg cropdetect (brightness edge scan) is zero-dep — already in stack, deterministic, no API call. GLM-4.6V semantic scan is enhancement if operator reports cropdetect misses semantic subjects (e.g., dark scenes with bright backgrounds). MEMORY.md glm-5.2-only constraint NOT violated (vision tool call, not model switch). | Applied 2026-07-09 (commits 46728da + 5f120ab) |
+| **[Phase 71-03]** Sample-frame fixtures use ffmpeg testsrc2 synthetic pattern | Plan Task 3 CONTEXT.md Claude's Discretion: "Placeholder PNGs acceptable initially". Generated real PNGs (not placeholders) via ffmpeg testsrc2 + per-cell filter chain — no copyrighted content, regenerable from real master.mp4 via README-documented commands. Better than placeholder because the fixtures actually demonstrate the reframe math (Cell A+B byte-identical; Cell C visible pillarbox bars; Cell D center-crop). | Applied 2026-07-09 (commit 3c97902) |
+| **[Phase 71-03]** 43 pre-existing test failures logged as deferred (out-of-scope) | Full pipeline suite has 43 failures in test_canvas_v4.py / test_runner_full_dag.py / test_skill_discovery.py / test_v50_regression.py. Root cause: tests resolve paths assuming cwd is the skill directory, not kais-hermes-skills root. Per deviation SCOPE BOUNDARY rule, pre-existing failures in unrelated files are NOT auto-fixed mid-task. Logged to SUMMARY deferred-items; Phase 76 VALIDATE may sweep if relevant. | Applied 2026-07-09 |
 
 ### Decisions carried forward (still relevant)
 
@@ -251,4 +256,4 @@ Items acknowledged and carried forward (NOT in v14.0 scope):
 
 ---
 
-*Last updated: 2026-07-09 — v14.0 Phase 71 Plan 02 SHIPPED (15 SKILL.md Form Factor Adaptation sections). 4 commits across 2 repos: 3 atomic per-tier commits in kais-hermes-skills (fea9999→f99f112 Tier 1: cinematographer + visual_executor + editor + character_designer substantive dual-branch ≥15 lines + cinematographer Step 3 form_factor dispatch → 6a0b644 Tier 2: continuity_auditor + hook_retention + screenplay + prompt_injector + compliance_gate short dual-branch ~8 lines [RESEARCH Open Q #1 resolved: prompt_injector Tier 2 suffices — token VOCABULARY form-neutral, only SELECTION differs, inherited from cinematographer] → cdf71dd Tier 3: style_genome + script_auditor + creative_source + colorist + theory_critic + audio_pipeline verbatim form-agnostic stub per CONTEXT.md locked decision) + 1 smoke script commit cf8ca0ea5 in hermes-agent (71-check-form-sections.sh enumerating 15 canonical active experts, exits 0). 15/15 experts verified have ## Form Factor Adaptation section. Tier classification followed RESEARCH §15-Expert Tier Classification (4/5/6 split) NOT CONTEXT.md initial (5/7/3) — RESEARCH corrected deprecated stub inclusion per PITFALL 3. All 15 SKILL.md frontmatter byte-identical (FOUND-08 freeze preserved). Cinematographer Step 3 dispatch is the single load-bearing integration point for Plan 71-01's horizontal-screen-framing.md ref. Plan 03 (Step 14 4-cell reframe matrix + tests + sample-frame fixtures) next. Phase 72 ∥ Phase 73 parallel after Phase 71. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. P70 baseline pin preserved as commit parent.*
+*Last updated: 2026-07-09 — v14.0 Phase 71 Plan 03 SHIPPED (Step 14 4-cell reframe matrix). 3 commits in kais-hermes-skills (cdf71dd→46728da feat: platform-master-slicing.md 4-Cell Reframe Matrix H2 with 4-row table + Cell D mandatory saliency-scan contract (ffmpeg cropdetect zero-dep default per RESEARCH OQ#2; GLM-4.6V semantic scan enhancement) + ffmpeg CLI examples per cell + T-71-08 mitigation → 5f120ab test: 4 unit tests one-per-cell in test_step14_reframe_matrix.py (Cell A+B passthrough identity; Cell C pillarbox math content_width=608 pad=656 each side; Cell D center-crop crop_x=656 crop_width=608 full-height preserved + saliency_scan_required=True contract assertion) + _step14_reframe_math.py pure-function helper mirroring markdown spec → 3c97902 feat: 8 sample-frame fixtures under _eval/form_factor_step14/ generated via ffmpeg testsrc2 + README with operator UAT instructions). All 4 VALIDATION 71-03-01..04 criteria pass: 9 cell-name mentions (≥4); 4/4 unit tests green; 8 PNG fixtures; existing Step 14 behavior preserved as Cell A regression coverage. Phase 71 (FORM) COMPLETE — all 5 requirements FORM-01..05 satisfied. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. P70 baseline pin preserved as commit parent.*

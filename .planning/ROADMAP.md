@@ -15,7 +15,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 - Decimal phases (e.g., 71.1): Urgent insertions (marked with INSERTED) — none anticipated for v14.0
 
 - [x] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline (completed 2026-07-09)
-- [ ] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default)
+- [x] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default) (completed 2026-07-09)
 - [ ] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination
 - [ ] **Phase 73: IMG** — dreamina cli production-grade orchestration
 - [ ] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design
@@ -56,7 +56,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Plans**:
 - [x] 71-01-PLAN.md — FORM Foundation (PipelineState.form_factor schema + horizontal-screen-framing.md ref + MSR_FC=17→41 sweep + LTX template helper + XCUT-02 _FORM_FACTOR_INJECTION injection) — **SHIPPED 2026-07-09** (6 commits in kais-hermes-skills: d962036→fea9999; 5/5 tests green)
 - [x] 71-02-PLAN.md — 15 SKILL.md Form Factor Adaptation patches tiered by form-criticality (Tier 1 substantive dual-branch / Tier 2 short dual-branch / Tier 3 form-agnostic stub) — **SHIPPED 2026-07-09** (3 atomic per-tier commits in kais-hermes-skills: f99f112 Tier 1 / 6a0b644 Tier 2 / cdf71dd Tier 3 + 1 smoke script commit cf8ca0ea5 in hermes-agent; 71-check-form-sections.sh exits 0 with 15/15 experts passing)
-- [ ] 71-03-PLAN.md — Step 14 4-cell reframe matrix (portrait/landscape × portrait/landscape) + 4 unit tests + 8 sample-frame fixtures
+- [x] 71-03-PLAN.md — Step 14 4-cell reframe matrix (portrait/landscape × portrait/landscape) + 4 unit tests + 8 sample-frame fixtures — **SHIPPED 2026-07-09** (3 commits in kais-hermes-skills: 46728da feat ref + 5f120ab test unit tests + 3c97902 feat fixtures; 4/4 tests green; 8 PNGs under _eval/form_factor_step14/)
 
 **Plans**: 3 plans
 
@@ -139,7 +139,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
-| 71. FORM | 2/3 | Plans 01 + 02 shipped | 71-01-SUMMARY.md (FORM-01, FORM-03, FORM-05, FORM-02 partial, XCUT-02 — 6 commits) + 71-02-SUMMARY.md (FORM-02 — 4 commits across 2 repos) |
+| 71. FORM | 3/3 ✅ | **COMPLETE (all 3 plans shipped 2026-07-09)** | 71-01-SUMMARY.md (FORM-01, FORM-03, FORM-05, FORM-02 partial, XCUT-02 — 6 commits) + 71-02-SUMMARY.md (FORM-02 — 4 commits across 2 repos) + 71-03-SUMMARY.md (FORM-04 — 3 commits kais-hermes-skills: ref + tests + fixtures) |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
@@ -166,4 +166,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 71 Plan 02 SHIPPED (15 SKILL.md Form Factor Adaptation sections tiered by form-criticality). 5/6 plans shipped across Phase 70 (3/3) + Phase 71 (2/3). Phase 72 ∥ Phase 73 parallel after Phase 71. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 71 Plan 03 SHIPPED (Step 14 4-cell reframe matrix + tests + 8 sample-frame fixtures). 6/6 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE). All 5 FORM requirements (FORM-01..05) satisfied. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
