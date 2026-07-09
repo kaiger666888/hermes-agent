@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
-status: milestone_complete
-last_updated: "2026-07-10T00:00:00.000Z"
-last_activity: 2026-07-10 -- Phase 76 VALIDATE complete (v14.0 milestone closed, tag v14.0 placed)
+status: Awaiting next milestone
+last_updated: "2026-07-09T17:35:26.774Z"
+last_activity: 2026-07-09 — Milestone v14.0 completed and archived
 progress:
   total_phases: 7
   completed_phases: 7
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** v14.0 milestone COMPLETE — tag v14.0 placed 2026-07-10
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 76 (validate) — COMPLETE (v14.0 milestone closed)
-Plan: 1 of 1 (shipped)
-Status: Milestone complete
-Last activity: 2026-07-10 -- Phase 76 VALIDATE complete (v14.0 milestone closed, tag v14.0 placed)
+Phase: Milestone v14.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-09 — Milestone v14.0 completed and archived
 
 ### Progress
 
@@ -309,3 +309,7 @@ Items acknowledged and carried forward (NOT in v14.0 scope):
 ---
 
 *Last updated: 2026-07-09 — v14.0 Phase 74 TRANSITION COMPLETE (Plan 03 shipped: LTX-FLF validation template + XCUT-02 goal-content test + 74-smoke.sh 17 assertions). Plan 74-03: 2 commits in kais-hermes-skills (0182ba8 docs: TRANS-07 LTX-FLF+ICLoRA validation report template + 3f79695 test: XCUT-02 p09 goal-content assertion) + 1 commit hermes-agent (29b4194f0 feat: bash smoke runner executing 17 XCUT-01 assertions). 359 tests green (2 new transition_unit + 1 VALIDATION 74-03-02 + 356 full-suite excluding pre-existing failure). 74-smoke.sh exits 0 with 17/17 TRANS-01..07 + XCUT-02 assertions PASSED. All 7 TRANS requirements satisfied + FOUND-08 preserved + INFRA-04 compliant + MAX_CONSTRAINTS=7 consolidated. Operator-action handoffs: TRANS-07 LTX-FLF validation shots + XCUT-04b Hailuo/Vidu API keys. Phase 74 ready for Phase 75 (LINEAGE-BUMP). Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/ (HEAD now 3f79695).*
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
