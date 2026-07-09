@@ -50,7 +50,7 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 
 - [x] **XCUT-01**: Phase 0 Lineage Impact Assessment enumerates every SKILL.md to be touched with current `source_sha` BEFORE any edits land; curator `--live` mode is frozen for milestone duration (per PITFALL X-1, X-4)
 - [ ] **XCUT-02**: Every MUST/MUST NOT added to SKILL.md is also encoded as a `_INSTRUCTION` constant in the relevant phase module's `goal` f-string with a test asserting the keyword appears in `captured["goal"]` (META-RULE X-2 prevention — "文档有规则,代码没执行"silently failure 防护)
-- [ ] **XCUT-03**: Phase 5 Lineage Bump re-runs v13.0 P62 transform flow on 6 affected agents (`cinematographer / editor / audio_pipeline / drawer / kais-movie-pipeline / kais-jimeng-cli`); CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passes for all 6
+- [x] **XCUT-03**: Phase 75 Lineage Bump re-runs v13.0 P62 transform flow on 15 active movie-expert agents (Track A 9 EXPERTS_9 via `transform_skill_to_agent.py` + Track B 6 v13.0 P62 via manual lineage-field YAML edit); CI assertion `agent.yaml.lineage.skill_sha256 == sha256(SKILL.md)` passes for all 15 (75-lineage-assert.sh 15/15 PASSED). 2 skill-only (kais-movie-pipeline + kais-jimeng-cli) + drawer DEPRECATED documented in bump report. SHIPPED 2026-07-10.
 - [ ] **XCUT-04**: Operator-action handoffs are documented in milestone audit: (a) CosyVoice `voice_clone_reference_wav` per character (3-10s samples); (b) Hailuo/Vidu API keys (opt-in for cloud transition engines); (c) vision-verify API cost budget (GLM-4.6V batch calls at production scale)
 
 ---
@@ -138,7 +138,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 | TRANS-05 | Phase 74 (TRANSITION) | Satisfied (Plan 74-02 — transition-design.md 12-type taxonomy) |
 | TRANS-06 | Phase 74 (TRANSITION) | Satisfied (Plan 74-02 — transition-engine-routing.md declarative table) |
 | TRANS-07 | Phase 74 (TRANSITION) | Complete |
-| XCUT-03 | Phase 75 (LINEAGE-BUMP) | Pending |
+| XCUT-03 | Phase 75 (LINEAGE-BUMP) | **Complete** (15/15 agent.yaml regenerated, 75-lineage-assert.sh exits 0, 2026-07-10) |
 | XCUT-02 | Phase 76 (VALIDATE) | Pending |
 | XCUT-04 | Phase 76 (VALIDATE) | Pending |
 

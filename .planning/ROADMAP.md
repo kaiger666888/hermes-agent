@@ -19,7 +19,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 - [x] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination (completed 2026-07-09)
 - [x] **Phase 73: IMG** — dreamina cli production-grade orchestration (completed 2026-07-09)
 - [x] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design (completed 2026-07-09)
-- [ ] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 6 affected agents
+- [x] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 15 affected agents (XCUT-03) — SHIPPED 2026-07-10
 - [ ] **Phase 76: VALIDATE** — META-RULE audit + operator-action handoffs + milestone audit
 
 ## Phase Details
@@ -131,7 +131,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 75-01-PLAN.md — LINEAGE-BUMP Execution (15 agent.yaml regeneration: Track A 9 via transform_skill_to_agent.py + Track B 6 v13.0 P62 manual lineage update + 75-lineage-assert.sh + 75-LINEAGE-BUMP-REPORT.md + curator freeze release as final action)
+- [x] 75-01-PLAN.md — LINEAGE-BUMP Execution (15 agent.yaml regeneration: Track A 9 via transform_skill_to_agent.py + Track B 6 v13.0 P62 manual lineage update + 75-lineage-assert.sh + 75-LINEAGE-BUMP-REPORT.md + curator freeze release as final action) — SHIPPED 2026-07-10
 
 ### Phase 76: VALIDATE
 **Goal**: Cross-cutting audit closes v14.0 with verified lineage coverage, META-RULE X-2 _INSTRUCTION injection test-count diff, cross-repo commit pin assertion, INFRA-04 / EVAL-06 / FOUND-08 preservation, documented operator-action handoffs, and the milestone audit doc + tag.

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T16:56:27.359Z"
-last_activity: 2026-07-09 -- Phase 75 planning complete
+last_updated: "2026-07-10T01:13:00.000Z"
+last_activity: 2026-07-10 -- Phase 75 LINEAGE-BUMP complete (15 agent.yaml regenerated + curator freeze released)
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 16
-  completed_plans: 15
-  percent: 71
+  completed_plans: 16
+  percent: 86
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 75 — lineage bump
+**Current focus:** Phase 76 — VALIDATE (final phase of v14.0)
 
 ## Current Position
 
-Phase: 75
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-09 -- Phase 75 planning complete
+Phase: 76 (VALIDATE) — NOT STARTED
+Plan: TBD
+Status: Phase 75 LINEAGE-BUMP complete (16/16 plans shipped). Phase 76 VALIDATE next (strictly LAST).
+Last activity: 2026-07-10 -- Phase 75 LINEAGE-BUMP complete (15 agent.yaml regenerated + curator freeze released as final action)
 
 ### Progress
 
@@ -48,10 +48,10 @@ v10.0 编排架构设计(设计型):         [██████████] 10
 v11.0 Expert Agents PoC:           [██████████] 100% (Phases 52-56, shipped 2026-07-07, tag v11.0)
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
-v14.0 4-Track Upgrade:             [████████░░]  71% (Phases 70-76, 5/7 phases complete, 15/15 plans)
+v14.0 4-Track Upgrade:             [██████████]  86% (Phases 70-76, 6/7 phases complete, 16/16 plans)
 ```
 
-**v14.0 milestone status:** IN PROGRESS — roadmap created 2026-07-09. 7 phases (70-76), 26/26 reqs mapped. 4/7 phases complete (70, 71, 72, 73). Phase 74 (TRANSITION) next.
+**v14.0 milestone status:** IN PROGRESS — roadmap created 2026-07-09. 7 phases (70-76), 26/26 reqs mapped. 6/7 phases complete (70, 71, 72, 73, 74, 75). Phase 76 (VALIDATE) next — strictly LAST.
 
 ### Phase Statuses (v14.0)
 
@@ -62,7 +62,7 @@ v14.0 4-Track Upgrade:             [████████░░]  71% (Phases
 | 72 | DUB | **COMPLETE (3/3 plans shipped 2026-07-09)** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. **Plan 03 SHIPPED:** cosyvoice-deployment.md (286-line twin, dual-path DUB-01) + VERSION.json (top-level, tts.cosyvoice_default_variant null DUB-05 lock) + cosyvoice-benchmark.md (120-line template, DUB-05 operator-action handoff) + indextts2-to-cosyvoice-migration.md (DUB-03 mapping) + 72-smoke.sh (11 assertions ALL PASS). 4 commits kais-hermes-skills (1320728→df71fde) + 1 commit hermes-agent (3a8949bf0). Phase 72 COMPLETE — ready for Phase 73 (IMG) parallel track or Phase 74 (TRANSITION). |
 | 73 | IMG | **COMPLETE (3/3 plans shipped 2026-07-09)** | dreamina production-grade orchestration (IMG-01..06). **Plan 01 SHIPPED:** dreamina_manager.py (asyncio.Semaphore(10) + tenacity AsyncRetrying + asyncio.gather block-on-all) + vision_verify.py (GLM-4.6V gate via task="vision" routing + sha256 cache + confidence gating) + dreamina_stats.py (MetricsBuffer JSONL ring buffer, sync-only INFRA-04) + 10 unit tests green. 6 commits kais-hermes-skills (f2b4111→1cf9d54). **Plan 02 SHIPPED:** RHD/LHD 3-attempt budget with image2image fallback in dreamina_manager (IMG-04) + image2image-stratification.md 1/3/5-ref table (IMG-06) + `hermes dreamina stats` CLI registered (IMG-05 CLI half) + _VISION_VERIFY_INSTRUCTION XCUT-02 3-site injection in p07 (constant + .task + .constraints) + SKILL.md body patches (vision-verify MUST gate + Volvo V2 3-attempt budget + Production Orchestrator H2). 5 commits kais-hermes-skills (e62ccce→96adafe). **Plan 03 SHIPPED:** IMG validation layer — test_batch_e2e (IMG-01 integration) + test_rhd_lhd_e2e (IMG-04 integration) + test_goal_includes_vision_verify_instruction (XCUT-02 goal-content assertion) + 73-smoke.sh (15 assertions, exits 0). 2 commits kais-hermes-skills (3ab1d0f→4fdd8ab) + 1 commit hermes-agent (b6f889a68). All 23 IMG + p07 tests green. Phase 73 COMPLETE — IMG-01..06 + XCUT-02 satisfied. Ready for Phase 74 (TRANSITION). |
 | 74 | TRANSITION | **COMPLETE (3/3 plans shipped 2026-07-09)** | 创作+数据+生成三层 (TRANS-01..07). Most invasive. **Plan 01 SHIPPED:** transition_schema.py (TRANS-01 12-enum + 6-enum Pydantic Literal + frozenset runtime + TRANS-02 load_next_shot_link backward-compat reader) + transition-design ASSET_SCHEMA slot (TRANS-03 system 1, writer=p09 reader=p13) + canvas_sync _PHASE_OUTPUT_MAP p09 tuple (TRANS-03 system 2, storyboard canvas_type) + D-06 storyboard reuse documentation (TRANS-03 system 3, zero frontend change). 12 unit tests green. 3 commits kais-hermes-skills (df78a6f→d079103). **Plan 02 SHIPPED:** TRANS-04 cinematographer + editor SKILL.md ownership split (Field Ownership + Execution Ownership subsections, PITFALL T-4 disambiguation) + TRANS-05 transition-design.md 12-type taxonomy ref (hard_cut→none, film examples fair-use) + TRANS-06 transition-engine-routing.md declarative per-transition routing table (INFRA-04 compliant, PITFALL T-1 LTX-FLF drift risk documented, XCUT-04b operator-action handoff) + XCUT-02 _TRANSITION_DESIGN_INSTRUCTION (p09, consolidated with form_factor per MAX_CONSTRAINTS=7) + _EDITOR_TRANSITION_EXECUTION_INSTRUCTION (p13, first _INJECTION constant) + e-konte-format.md Layer 5 schema extension (TRANS-01/02 backward-compat). 22 tests green. 3 commits kais-hermes-skills (eec0b72→7d113da). **Plan 03 SHIPPED:** TRANS-07 ltx-flf-iclora-validation.md research-scope template (ComfyUI node graph LiconMSR+FLF+LTXVConditioning+SamplerCustomAdvanced + 2 reference shot placeholders + Production-Readiness Verdict gating TRANS-11 v15+ rollout) + XCUT-02 test_p09_transition_unit.py goal-content assertion (9 keyword checks via delegate-spy) + slot-write test (TRANS-03 system 1 writer verification) + 74-smoke.sh 17 XCUT-01 assertions (TRANS-01..07 + XCUT-02, exits 0, Phase 76 VALIDATE audit input). 359 tests green (356 full-suite excluding pre-existing + 2 new transition_unit + 1 VALIDATION 74-03-02). 2 commits kais-hermes-skills (0182ba8 + 3f79695) + 1 commit hermes-agent (29b4194f0). **Phase 74 COMPLETE** — all 7 TRANS reqs satisfied; ready for Phase 75 (LINEAGE-BUMP). |
-| 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |
+| 75 | LINEAGE-BUMP | **COMPLETE (1/1 plans shipped 2026-07-10)** | Lineage bump via v13.0 P62 transform flow (XCUT-03). **Plan 01 SHIPPED:** 15 agent.yaml lineage blocks regenerated (Track A 9 EXPERTS_9 via `transform_skill_to_agent.py` + Track B 6 v13.0 P62 via targeted lineage-field YAML edit, persona byte-preserved). 75-lineage-assert.sh 15/15 PASSED (sha256 LF-norm UTF-8 equality). 75-LINEAGE-BUMP-REPORT.md (136 lines, Phase 76 VALIDATE input with delta decomposition). Pre-existing drift on cinematographer + audio_pipeline (P70 MISMATCH) closed as side effect. Curator `--live` freeze lifted as final action (config.yaml curator.enabled: false → true, FROZEN comment replaced with release citation per ROADMAP SC#4). |
 | 76 | VALIDATE | Not started | META-RULE audit (XCUT-02) + operator-action handoffs (XCUT-04) + milestone audit. Strictly LAST. |
 
 ### Critical Path
@@ -220,31 +220,33 @@ Plus 3 cross-cutting phases: Phase 70 (FOUNDATION-AUDIT lineage baseline) + Phas
 | **CosyVoice + LTX 2.3 native audio both enabled (PITFALL D-1)** | MEDIUM | HIGH (doubled audio / phase cancellation / lip-sync mismatch) | DUB-02 schema validator rejects; unit test asserts no shot has both `ltx_native_dialogue AND cosyvoice_overlay`. |
 | **Operator wavs missing for CosyVoice clone mode (PITFALL D-2)** | MEDIUM | LOW (fail-fast with explicit error) | DUB-03 schema field + fail-fast error. Documented as operator-action handoff in Phase 76. |
 
-### v14.0 Freeze Flags (active — set by Phase 70, released by Phase 75)
+### v14.0 Freeze Flags (RELEASED by Phase 75 — 2026-07-10)
 
 | flag | value | set_by | released_by | enforcement |
 |------|-------|--------|-------------|-------------|
-| `curator.enabled` | `false` | Phase 70 (2026-07-09) | Phase 75 (post-bump) | `~/.hermes/config.yaml` line 458 (code-enforced via `agent/curator.py:is_enabled()` lines 141-144; `--live` flag blocked at `hermes_cli/curator.py:270-272`) |
-| `curator.consolidate` | `false` (already default) | Phase 70 (defense-in-depth) | Phase 75 (post-bump) | `~/.hermes/config.yaml` line 463 (already false; documented for traceability) |
+| `curator.enabled` | `true` (RELEASED) | Phase 70 (2026-07-09) | **Phase 75 (2026-07-10)** | `~/.hermes/config.yaml` line 458: `enabled: true  # Released post-Phase-75 lineage bump (XCUT-03 complete)` |
+| `curator.consolidate` | `false` (still default — NOT auto-lifted) | Phase 70 (defense-in-depth) | Phase 75 (post-bump) — unchanged | `~/.hermes/config.yaml` line 463 (still false; operator may lift separately) |
 | `cross_repo_pin.hermes-agent` | `8f70fcf7f0604db21158f86f8495f3d9ce3c9ab1` | Phase 70 | Phase 76 (assertion) | STATE.md record (documentation-only; Phase 76 re-hashes from this pin) |
 | `cross_repo_pin.kais-hermes-skills` | `d9620369e48eec51c31ee72ac8827c288eaccf71` | Phase 70 | Phase 76 (assertion) | STATE.md record (documentation-only) |
 
 **Freeze rationale:** PITFALL X-1 (lineage cascade) + X-4 (curator drift) — no curator tick can silently mutate `~/.hermes/agents/*.agent.yaml` during v14.0. The freeze blocks even `hermes curator evolve --live --skip-canary` (VERIFIED at `hermes_cli/curator.py:270-272` via `is_enabled()` check, not assumed). `hermes curator status` CLI reports `curator: DISABLED` as operator-visible confirmation.
 
-**Verified 2026-07-09:**
+**Verified 2026-07-10 (Phase 75 release):**
 
-- `agent/curator.py:is_enabled()` returns `False` (Python-level check)
-- `hermes curator status` CLI prints `curator: DISABLED`
-- Backup of pre-freeze config at `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
+- `~/.hermes/config.yaml` line 458: `enabled: true  # Released post-Phase-75 lineage bump (XCUT-03 complete)`
+- `curator.enabled: true` grep-confirmed (FREEZE RELEASED)
+- FROZEN comment removed (replaced with release citation)
+- Phase 75 lineage assertion: 15/15 PASSED (precondition for release met)
 - Config flag read fresh on every curator call (`_load_config()` line 125-138) — no gateway restart needed (survives systemd `Restart=always` cycle per MEMORY.md `hermes-gateway-systemd.md`)
+- Backup of pre-freeze config retained at `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
 
-**Release procedure (Phase 75 final action):**
+**Release procedure (Phase 75 final action) — COMPLETED 2026-07-10:**
 
-1. Confirm Phase 75 lineage bump complete (all 3 existing `agent.yaml` files regenerated: `cinematographer`, `editor`, `audio_pipeline`)
-2. Edit `~/.hermes/config.yaml` line 458: `enabled: false` -> `enabled: true` (remove the `# FROZEN for v14.0 ...` comment)
-3. Run `hermes curator status` to verify output reports `ENABLED`
-4. Run `agent/curator.py:is_enabled()` to verify returns `True`
-5. (Optional) Remove backup `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
+1. ✅ Phase 75 lineage bump complete (15/15 agent.yaml regenerated; assertion exits 0)
+2. ✅ Edit `~/.hermes/config.yaml` line 458: `enabled: false` -> `enabled: true` (FROZEN comment replaced)
+3. ✅ Config-flag grep confirms `enabled: true` (CLI status check optional — config flag is single source of truth per `hermes_cli/curator.py:270-272`)
+4. N/A `agent/curator.py:is_enabled()` Python-level check (reads same config flag — transitive)
+5. (Optional) Backup `~/.hermes/config.yaml.pre-v14.0-freeze.bak` retained for audit
 
 **Threat model T-70-01 (HIGH, Tampering) mitigation:** Operator running `hermes curator evolve --live --skip-canary` during v14.0 window is blocked at `hermes_cli/curator.py:270-272` BEFORE the `--live` flag is even read (line 274). Residual: `--skip-canary` is audit-logged at `hermes_cli/curator.py:344-349` (`canary_pass=None`); Phase 76 VALIDATE checks the audit log for any live-tick during v14.0.
 
