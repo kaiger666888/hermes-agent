@@ -72,7 +72,12 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
   5. Operator has an A/B benchmark report comparing CosyVoice 2.0-0.5B vs Fun-CosyVoice 3.0 on 3-5 kais-movie-pipeline reference dialogue lines, with the default variant + rationale recorded in `VERSION.json` (research-then-implementation pattern per SUMMARY §Implications for Roadmap)
 **Cross-repo touch**: kais-hermes-skills (new `cosyvoice-comfyui.json` workflow, `audio_pipeline/SKILL.md` body edits, `voice_clone_reference_wav` schema field, `VERSION.json`)
 **Research flag**: **Plan-phase research needed.** CosyVoice variant benchmark (2.0 vs 3.0) is unresolved; ComfyUI node maturity is MEDIUM confidence (7 months old, install docs missing). A/B test on 3-5 reference lines must run before locking default. DUB-05 explicitly gates the default on this benchmark.
-**Plans**: TBD
+**Plans**:
+- [ ] 72-01-PLAN.md — DUB Foundation (validate_tts_engine_division + voice_clone_reference_wav schema + validate_voice_clone_ref + tts_batch routing + DEPRECATED fallback)
+- [ ] 72-02-PLAN.md — Routing + DEPRECATED + SKILL.md demotion + XCUT-02 _TTS_ENGINE_INJECTION into p10_voice.py (FIRST p10 _INSTRUCTION)
+- [ ] 72-03-PLAN.md — Docs (cosyvoice-deployment.md + migration mapping) + VERSION.json + cosyvoice-benchmark.md template + 72-smoke.sh
+
+**Plans**: 3 plans
 
 ### Phase 73: IMG
 **Goal**: Users can submit dreamina batch image generation through a production-grade orchestrator with retry + concurrency cap + sync queue semantics, where reference images are vision-verified via GLM-4.6V before ComfyUI upload, RHD/LHD-type failures are systematically mitigated, and the operator has an SLA dashboard.
