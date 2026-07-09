@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T12:33:41.724Z"
-last_activity: 2026-07-09 -- Phase 73 planning complete
+last_updated: "2026-07-09T14:18:57.000Z"
+last_activity: 2026-07-09 -- Phase 73 Plan 01 IMG Foundation shipped
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 12
-  completed_plans: 9
-  percent: 43
+  completed_plans: 10
+  percent: 48
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 73
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-09 -- Phase 73 planning complete
+Phase: 73 (img) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 73 (Plan 01 shipped)
+Last activity: 2026-07-09 -- Phase 73 Plan 01 IMG Foundation shipped
 
 ### Progress
 
@@ -48,7 +48,7 @@ v10.0 编排架构设计(设计型):         [██████████] 10
 v11.0 Expert Agents PoC:           [██████████] 100% (Phases 52-56, shipped 2026-07-07, tag v11.0)
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
-v14.0 4-Track Upgrade:             [████░░░░░░]  40% (Phases 70-76, 3/7 phases complete, Phase 72 DUB SHIPPED)
+v14.0 4-Track Upgrade:             [█████░░░░░]  48% (Phases 70-76, 3/7 phases complete + Phase 73 Plan 01, 10/12 plans)
 ```
 
 **v14.0 milestone status:** IN PROGRESS — roadmap created 2026-07-09. 7 phases (70-76), 26/26 reqs mapped. Phase 70 (FOUNDATION-AUDIT) ready to plan.
@@ -60,7 +60,7 @@ v14.0 4-Track Upgrade:             [████░░░░░░]  40% (Phases
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
 | 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
 | 72 | DUB | **COMPLETE (3/3 plans shipped 2026-07-09)** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. **Plan 03 SHIPPED:** cosyvoice-deployment.md (286-line twin, dual-path DUB-01) + VERSION.json (top-level, tts.cosyvoice_default_variant null DUB-05 lock) + cosyvoice-benchmark.md (120-line template, DUB-05 operator-action handoff) + indextts2-to-cosyvoice-migration.md (DUB-03 mapping) + 72-smoke.sh (11 assertions ALL PASS). 4 commits kais-hermes-skills (1320728→df71fde) + 1 commit hermes-agent (3a8949bf0). Phase 72 COMPLETE — ready for Phase 73 (IMG) parallel track or Phase 74 (TRANSITION). |
-| 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
+| 73 | IMG | **In progress (1/3 plans shipped 2026-07-09)** | dreamina production-grade orchestration (IMG-01..06). **Plan 01 SHIPPED:** dreamina_manager.py (asyncio.Semaphore(10) + tenacity AsyncRetrying + asyncio.gather block-on-all) + vision_verify.py (GLM-4.6V gate via task="vision" routing + sha256 cache + confidence gating) + dreamina_stats.py (MetricsBuffer JSONL ring buffer, sync-only INFRA-04) + 10 unit tests green. 6 commits kais-hermes-skills (f2b4111→1cf9d54). CRITICAL CORRECTION enforced: task="vision" NOT boolean flag. IMG-01/02/03/05 foundation complete. |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
 | 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |
 | 76 | VALIDATE | Not started | META-RULE audit (XCUT-02) + operator-action handoffs (XCUT-04) + milestone audit. Strictly LAST. |
@@ -113,6 +113,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 71 | P03 | ~7min | 3 | 11 (platform-master-slicing.md + test_step14_reframe_matrix.py + _step14_reframe_math.py + 8 PNGs + README) |
 | 72 | P01 | ~6min | 3 | 7 (store.py + dub_validators.py + p04_character_design.py + tts_batch.py + test_dub_division.py + conftest.py + test_voice_clone_ref.py) |
 | 72 | P02 | ~6min | 4 | 5 (cosyvoice-comfyui.json + probe-tts-routing.sh + SKILL.md + p10_voice.py + test_p10_unit.py) |
+| 73 | P01 | ~14min | 3 | 6 (dreamina_manager.py + vision_verify.py + dreamina_stats.py + 3 test files) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -154,6 +155,9 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 72-02]** probe-tts-routing.sh advisory gate (NOT hard fail) | CONTEXT D-04 locked decision: auto-fallback to indextts2_fallback with DEPRECATED warning, NOT hard fail. curl -m 5 + \|\| true on all failure paths so connection-refused doesn't abort the probe. | Applied 2026-07-09 (commit 163a5ed) |
 | **[Phase 72-02]** _TTS_ENGINE_INSTRUCTION is FIRST p10 _INJECTION (XCUT-02) | p10_voice.py previously had NO _INSTRUCTION constants. Plan 72-02 establishes the XCUT-02 META-RULE X-2 pattern for P10 (3-site injection: constant + .task + .constraints + test). Pre-flight validate_tts_engine_division() wired via lazy import. | Applied 2026-07-09 (commit 1320728) |
 | **[Phase 72-02]** SKILL.md edit body-only (frontmatter byte-identical) | FOUND-08 freeze preserved: YAML frontmatter (name/description/tags/related_skills/expert_id/metrics) untouched. Only TTS section at lines 456-462 rewritten. Phase 75 LINEAGE-BUMP will regenerate source_sha. | Applied 2026-07-09 (commit 5123669) |
+| **[Phase 73-01]** task="vision" routing (NOT boolean flag) per PATTERNS.md CRITICAL CORRECTION | RESEARCH.md Pattern 2 + GLM-4.6V API Integration both named a boolean routing parameter that DOES NOT EXIST in async_call_llm signature (verified auxiliary_client.py:6006-6030). The correct routing mechanism is task="vision". Plan enforces via acceptance criterion: grep count for the forbidden flag name == 0. | Applied 2026-07-09 (commit 30e8b8a) |
+| **[Phase 73-01]** Test mocks at async boundary (_dreamina_submit/_dreamina_poll/_download), NOT subprocess.run | Mocking subprocess.run tracked concurrency at thread-pool level, not asyncio.Semaphore level. Semaphore acquires BEFORE subprocess call, so tests needed to track at the async boundary with asyncio.sleep to let concurrency build up. | Applied 2026-07-09 (commit cef06e7) |
+| **[Phase 73-01]** vision_verify.py stub created in Task 1 for dreamina_manager test pass | dreamina_manager lazy-imports verify_image_content; the module must exist for the import to succeed. Created minimal stub (always-pass), Task 2 replaced with full GLM-4.6V integration. | Applied 2026-07-09 (commit cef06e7) |
 
 ### Decisions carried forward (still relevant)
 
