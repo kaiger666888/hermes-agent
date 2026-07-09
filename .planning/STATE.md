@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T06:39:35.872Z"
+last_updated: "2026-07-09T06:48:34.808Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ progress:
 ## Current Position
 
 Phase: 70 (FOUNDATION-AUDIT) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-09
 
@@ -172,12 +172,14 @@ Plus 3 cross-cutting phases: Phase 70 (FOUNDATION-AUDIT lineage baseline) + Phas
 **Freeze rationale:** PITFALL X-1 (lineage cascade) + X-4 (curator drift) — no curator tick can silently mutate `~/.hermes/agents/*.agent.yaml` during v14.0. The freeze blocks even `hermes curator evolve --live --skip-canary` (VERIFIED at `hermes_cli/curator.py:270-272` via `is_enabled()` check, not assumed). `hermes curator status` CLI reports `curator: DISABLED` as operator-visible confirmation.
 
 **Verified 2026-07-09:**
+
 - `agent/curator.py:is_enabled()` returns `False` (Python-level check)
 - `hermes curator status` CLI prints `curator: DISABLED`
 - Backup of pre-freeze config at `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
 - Config flag read fresh on every curator call (`_load_config()` line 125-138) — no gateway restart needed (survives systemd `Restart=always` cycle per MEMORY.md `hermes-gateway-systemd.md`)
 
 **Release procedure (Phase 75 final action):**
+
 1. Confirm Phase 75 lineage bump complete (all 3 existing `agent.yaml` files regenerated: `cinematographer`, `editor`, `audio_pipeline`)
 2. Edit `~/.hermes/config.yaml` line 458: `enabled: false` -> `enabled: true` (remove the `# FROZEN for v14.0 ...` comment)
 3. Run `hermes curator status` to verify output reports `ENABLED`

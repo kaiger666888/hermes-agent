@@ -36,7 +36,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Cross-repo touch**: hermes-agent (.planning/) + kais-hermes-skills (read-only enumeration, no edits) + `~/.hermes/agents/` (read-only enumeration)
 **Plans**:
 - [x] 70-01-PLAN.md — Lineage Impact Inventory (6 SKILL.md + 3 agent.yaml + cross-repo pins)
-- [ ] 70-02-PLAN.md — Curator freeze (config.yaml) + STATE.md v14.0.freeze block
+- [x] 70-02-PLAN.md — Curator freeze (config.yaml) + STATE.md v14.0.freeze block
 - [ ] 70-03-PLAN.md — Phase 76 VALIDATE-CHECKLIST + smoke.sh runner
 
 **Plans**: 3 plans
@@ -133,7 +133,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 70. FOUNDATION-AUDIT | 1/3 | In Progress|  |
+| 70. FOUNDATION-AUDIT | 2/3 | In Progress|  |
 | 71. FORM | 0/TBD | Not started | - |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |

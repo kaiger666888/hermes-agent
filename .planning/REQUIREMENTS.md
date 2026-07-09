@@ -48,7 +48,7 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 
 ### Cross-cutting — 强制基础设施(milestone coherence 必需)
 
-- [ ] **XCUT-01**: Phase 0 Lineage Impact Assessment enumerates every SKILL.md to be touched with current `source_sha` BEFORE any edits land; curator `--live` mode is frozen for milestone duration (per PITFALL X-1, X-4)
+- [x] **XCUT-01**: Phase 0 Lineage Impact Assessment enumerates every SKILL.md to be touched with current `source_sha` BEFORE any edits land; curator `--live` mode is frozen for milestone duration (per PITFALL X-1, X-4)
 - [ ] **XCUT-02**: Every MUST/MUST NOT added to SKILL.md is also encoded as a `_INSTRUCTION` constant in the relevant phase module's `goal` f-string with a test asserting the keyword appears in `captured["goal"]` (META-RULE X-2 prevention — "文档有规则,代码没执行"silently failure 防护)
 - [ ] **XCUT-03**: Phase 5 Lineage Bump re-runs v13.0 P62 transform flow on 6 affected agents (`cinematographer / editor / audio_pipeline / drawer / kais-movie-pipeline / kais-jimeng-cli`); CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passes for all 6
 - [ ] **XCUT-04**: Operator-action handoffs are documented in milestone audit: (a) CosyVoice `voice_clone_reference_wav` per character (3-10s samples); (b) Hailuo/Vidu API keys (opt-in for cloud transition engines); (c) vision-verify API cost budget (GLM-4.6V batch calls at production scale)
