@@ -74,7 +74,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Research flag**: **Plan-phase research needed.** CosyVoice variant benchmark (2.0 vs 3.0) is unresolved; ComfyUI node maturity is MEDIUM confidence (7 months old, install docs missing). A/B test on 3-5 reference lines must run before locking default. DUB-05 explicitly gates the default on this benchmark.
 **Plans**:
 - [x] 72-01-PLAN.md — DUB Foundation (validate_tts_engine_division + voice_clone_reference_wav schema + validate_voice_clone_ref + tts_batch routing + DEPRECATED fallback) — **SHIPPED 2026-07-09** (8 commits in kais-hermes-skills: 5772f55→4d1f907; 15 tests green; DUB-02/03/04 contract layer delivered; DUB-04 workflow submission stub deferred to Plan 72-02)
-- [ ] 72-02-PLAN.md — Routing + DEPRECATED + SKILL.md demotion + XCUT-02 _TTS_ENGINE_INJECTION into p10_voice.py (FIRST p10 _INSTRUCTION)
+- [x] 72-02-PLAN.md — Routing + DEPRECATED + SKILL.md demotion + XCUT-02 _TTS_ENGINE_INJECTION into p10_voice.py (FIRST p10 _INSTRUCTION) — **SHIPPED 2026-07-09** (5 commits in kais-hermes-skills: 4d1f907→1320728; 13 p10 + 10 dub_division tests green; DUB-01 workflow JSON + DUB-04 healthcheck/demotion + XCUT-02 p10 injection delivered)
 - [ ] 72-03-PLAN.md — Docs (cosyvoice-deployment.md + migration mapping) + VERSION.json + cosyvoice-benchmark.md template + 72-smoke.sh
 
 **Plans**: 3 plans
@@ -145,7 +145,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
-| 72. DUB | 0/TBD | Not started | - |
+| 72. DUB | 2/3 | In progress (Plan 02 SHIPPED) | DUB-01..04 delivered; DUB-05 + docs in Plan 03 |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
@@ -171,4 +171,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 71 Plan 03 SHIPPED (Step 14 4-cell reframe matrix + tests + 8 sample-frame fixtures). 6/6 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE). All 5 FORM requirements (FORM-01..05) satisfied. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 72 Plan 02 SHIPPED (DUB routing + DEPRECATED + XCUT-02 p10 injection). 8/9 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (2/3). Phase 72 Plan 03 (docs + VERSION.json) next. Phase 73 (IMG) parallel-ready. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*

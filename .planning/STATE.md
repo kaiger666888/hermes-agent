@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T11:07:15.000Z"
-last_activity: 2026-07-09 -- Phase 72 Plan 01 SHIPPED (DUB foundation: division rule + voice clone schema + routing)
+last_updated: "2026-07-09T11:17:00.000Z"
+last_activity: 2026-07-09 -- Phase 72 Plan 02 SHIPPED (DUB routing + DEPRECATED + XCUT-02 injection)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 33
+  completed_plans: 8
+  percent: 44
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -29,9 +29,9 @@ progress:
 ## Current Position
 
 Phase: 72 (dub) — EXECUTING
-Plan: 2 of 3 (Plan 01 SHIPPED)
-Status: Phase 72 Plan 01 complete — DUB foundation delivered
-Last activity: 2026-07-09 -- Phase 72 Plan 01 SHIPPED (division rule + voice clone schema + routing)
+Plan: 2 of 3 (Plan 02 SHIPPED)
+Status: Phase 72 Plan 02 complete — DUB routing + DEPRECATED + XCUT-02 injection delivered
+Last activity: 2026-07-09 -- Phase 72 Plan 02 SHIPPED (workflow JSON + healthcheck + SKILL.md demotion + p10 _INSTRUCTION)
 
 ### Progress
 
@@ -59,7 +59,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 |-------|------|--------|-------|
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
 | 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
-| 72 | DUB | **Plan 01 SHIPPED 2026-07-09** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. Plan 02 (workflow JSON + healthcheck) + Plan 03 (docs + VERSION.json) next. |
+| 72 | DUB | **Plan 02 SHIPPED 2026-07-09** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. Plan 03 (docs + VERSION.json) next. |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
 | 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |
@@ -112,6 +112,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 71 | P02 | ~12min | 3 | 16 (15 movie-expert SKILL.md + 71-check-form-sections.sh) |
 | 71 | P03 | ~7min | 3 | 11 (platform-master-slicing.md + test_step14_reframe_matrix.py + _step14_reframe_math.py + 8 PNGs + README) |
 | 72 | P01 | ~6min | 3 | 7 (store.py + dub_validators.py + p04_character_design.py + tts_batch.py + test_dub_division.py + conftest.py + test_voice_clone_ref.py) |
+| 72 | P02 | ~6min | 4 | 5 (cosyvoice-comfyui.json + probe-tts-routing.sh + SKILL.md + p10_voice.py + test_p10_unit.py) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -149,6 +150,10 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 72-01]** voice_clone_reference_wav as sibling to 4d_anchor.voice (additive, no schema bump) | character_bible V3 envelope extended additively; consumers use .get("voice_clone_reference_wav") returning None for pre-v14.0 bibles. No schema_version bump needed (additive fields default via .get()). | Applied 2026-07-09 (commit 2c31d0d) |
 | **[Phase 72-01]** Fail-fast ValueError on missing voice_clone_ref + NO silent fallback | CosyVoice clone mode requires operator-sourced reference audio. Silent fallback to generic voice defeats cloning purpose (CONTEXT.md D-02 mitigation #2). | Applied 2026-07-09 (commit f4d4f51) |
 | **[Phase 72-01]** DUB-04 workflow submission stub deferred to Plan 72-02 | Plan 72-01 delivers the fail-fast gate (voice_clone_ref validation); the ComfyUI AIIA_CosyVoice_TTS workflow JSON submission + healthcheck-based fallback IS Plan 72-02 Task 1+2. Advisory warning accepted + documented in SUMMARY. | Applied 2026-07-09 |
+| **[Phase 72-02]** AIIA nodes (NOT filliptm) for ComfyUI CosyVoice workflow | RESEARCH Critical Correction #1: filliptm/ComfyUI_FL-CosyVoice3 is NOT installed in production; AIIA_CosyVoice_TTS + AIIA_CosyVoice_ModelLoader already operational with Fun-CosyVoice3-0.5B-2512 model. Migration to filliptm would be scope expansion. | Applied 2026-07-09 (commit b961c30) |
+| **[Phase 72-02]** probe-tts-routing.sh advisory gate (NOT hard fail) | CONTEXT D-04 locked decision: auto-fallback to indextts2_fallback with DEPRECATED warning, NOT hard fail. curl -m 5 + \|\| true on all failure paths so connection-refused doesn't abort the probe. | Applied 2026-07-09 (commit 163a5ed) |
+| **[Phase 72-02]** _TTS_ENGINE_INSTRUCTION is FIRST p10 _INJECTION (XCUT-02) | p10_voice.py previously had NO _INSTRUCTION constants. Plan 72-02 establishes the XCUT-02 META-RULE X-2 pattern for P10 (3-site injection: constant + .task + .constraints + test). Pre-flight validate_tts_engine_division() wired via lazy import. | Applied 2026-07-09 (commit 1320728) |
+| **[Phase 72-02]** SKILL.md edit body-only (frontmatter byte-identical) | FOUND-08 freeze preserved: YAML frontmatter (name/description/tags/related_skills/expert_id/metrics) untouched. Only TTS section at lines 456-462 rewritten. Phase 75 LINEAGE-BUMP will regenerate source_sha. | Applied 2026-07-09 (commit 5123669) |
 
 ### Decisions carried forward (still relevant)
 
