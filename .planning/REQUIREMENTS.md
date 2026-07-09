@@ -29,12 +29,12 @@ Requirements for v14.0 milestone. Each maps to roadmap phases (Phase 70+, contin
 
 ### IMG — dreamina cli 深度集成升级
 
-- [ ] **IMG-01**: User can submit dreamina batch image generation via `dreamina_manager.py` orchestrator with `asyncio.Semaphore(10)` + `tenacity` retry + sync queue model (block on poll-all-before-deadline)
-- [ ] **IMG-02**: `dreamina_manager.py` blocks `pipeline_state` write until ALL retries resolve (fixes SKILL.md line 619 pitfall — no missing reference images in P11 video render)
-- [ ] **IMG-03**: Reference images are vision-verified via GLM-4.6V (content match + directional match e.g. LHD/RHD) before ComfyUI upload; vision-verify is a mandatory gate, not optional (fixes line 561 pitfall)
-- [ ] **IMG-04**: RHD/LHD-type prompt failures are systematically mitigated via 3-attempt budget (prompt-engineering + verify-retry + image2image fallback) with documented expected success rate (fixes line 570 pitfall)
-- [ ] **IMG-05**: User can run `hermes dreamina stats` CLI to see per-task latency / success rate / cost dashboard (SLA tracking via local MetricsBuffer)
-- [ ] **IMG-06**: image2image workflow is standardized across the pipeline (reference image count + strength parameter + retry budget per ref-count stratum: 1-ref / 3-ref / 5-ref)
+- [x] **IMG-01**: User can submit dreamina batch image generation via `dreamina_manager.py` orchestrator with `asyncio.Semaphore(10)` + `tenacity` retry + sync queue model (block on poll-all-before-deadline)
+- [x] **IMG-02**: `dreamina_manager.py` blocks `pipeline_state` write until ALL retries resolve (fixes SKILL.md line 619 pitfall — no missing reference images in P11 video render)
+- [x] **IMG-03**: Reference images are vision-verified via GLM-4.6V (content match + directional match e.g. LHD/RHD) before ComfyUI upload; vision-verify is a mandatory gate, not optional (fixes line 561 pitfall)
+- [x] **IMG-04**: RHD/LHD-type prompt failures are systematically mitigated via 3-attempt budget (prompt-engineering + verify-retry + image2image fallback) with documented expected success rate (fixes line 570 pitfall)
+- [x] **IMG-05**: User can run `hermes dreamina stats` CLI to see per-task latency / success rate / cost dashboard (SLA tracking via local MetricsBuffer)
+- [x] **IMG-06**: image2image workflow is standardized across the pipeline (reference image count + strength parameter + retry budget per ref-count stratum: 1-ref / 3-ref / 5-ref)
 
 ### TRANSITION — 创作+数据+生成三层协作
 
@@ -125,12 +125,12 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 | DUB-03 | Phase 72 (DUB) | Complete (Plan 72-01: validate_voice_clone_ref + Plan 72-03: migration mapping) |
 | DUB-04 | Phase 72 (DUB) | Complete (Plan 72-01: DEPRECATED metadata + Plan 72-02: healthcheck auto-fallback) |
 | DUB-05 | Phase 72 (DUB) | Complete (Plan 72-03: VERSION.json lock site + benchmark template; operator-action handoff for actual A/B run) |
-| IMG-01 | Phase 73 (IMG) | Pending |
-| IMG-02 | Phase 73 (IMG) | Pending |
-| IMG-03 | Phase 73 (IMG) | Pending |
-| IMG-04 | Phase 73 (IMG) | Pending |
-| IMG-05 | Phase 73 (IMG) | Pending |
-| IMG-06 | Phase 73 (IMG) | Pending |
+| IMG-01 | Phase 73 (IMG) | Complete (Plan 73-01: dreamina_manager.py asyncio.Semaphore(10) + tenacity + sync queue) |
+| IMG-02 | Phase 73 (IMG) | Complete (Plan 73-01: asyncio.gather block-on-all in batch_submit) |
+| IMG-03 | Phase 73 (IMG) | Complete (Plan 73-01: vision_verify.py GLM-4.6V gate + Plan 73-02: SKILL.md MUST gate + p07 _VISION_VERIFY_INSTRUCTION) |
+| IMG-04 | Phase 73 (IMG) | Complete (Plan 73-02: _escalate_prompt 3-attempt budget + _dreamina_image2image fallback) |
+| IMG-05 | Phase 73 (IMG) | Complete (Plan 73-01: dreamina_stats.py MetricsBuffer + Plan 73-02: hermes dreamina stats CLI registration) |
+| IMG-06 | Phase 73 (IMG) | Complete (Plan 73-02: image2image-stratification.md 1/3/5-ref table) |
 | TRANS-01 | Phase 74 (TRANSITION) | Pending |
 | TRANS-02 | Phase 74 (TRANSITION) | Pending |
 | TRANS-03 | Phase 74 (TRANSITION) | Pending |

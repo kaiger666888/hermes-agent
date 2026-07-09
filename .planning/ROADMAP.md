@@ -95,7 +95,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 
 Plans:
 - [x] 73-01-PLAN.md — IMG Foundation (dreamina_manager orchestrator + vision_verify GLM-4.6V gate + dreamina_stats MetricsBuffer + 10 unit tests) — SHIPPED 2026-07-09
-- [ ] 73-02-PLAN.md — IMG Integration (RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI registration + _VISION_VERIFY_INSTRUCTION XCUT-02 injection + SKILL.md patches)
+- [x] 73-02-PLAN.md — IMG Integration (RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI registration + _VISION_VERIFY_INSTRUCTION XCUT-02 injection + SKILL.md patches) — SHIPPED 2026-07-09
 - [ ] 73-03-PLAN.md — IMG Validation (e2e integration tests + XCUT-02 goal-content test + 73-smoke.sh 15 assertions)
 
 ### Phase 74: TRANSITION
@@ -151,7 +151,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 3/3 | Complete    | 2026-07-09 |
-| 73. IMG | 1/3 | In progress (Plan 01 shipped) | 2026-07-09 |
+| 73. IMG | 2/3 | In progress (Plans 01+02 shipped) | 2026-07-09 |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
 | 76. VALIDATE | 0/TBD | Not started | - |
@@ -176,4 +176,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — Phase 73 Plan 01 SHIPPED (IMG Foundation: dreamina_manager + vision_verify + dreamina_stats + 10 unit tests). 10/12 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (1/3, in progress). Phase 73 Plans 02+03 next. Phase 74 (TRANSITION) after 72+73. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 73 Plan 02 SHIPPED (IMG Integration: RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI + _VISION_VERIFY_INSTRUCTION XCUT-02 + SKILL.md patches). 11/12 plans shipped across Phase 70 (3/3) + Phase 71 (3/3, COMPLETE) + Phase 72 (3/3, COMPLETE) + Phase 73 (2/3, in progress). Phase 73 Plan 03 (validation) next. Phase 74 (TRANSITION) after 73. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
