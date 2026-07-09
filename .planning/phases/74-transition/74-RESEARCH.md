@@ -566,17 +566,19 @@ NOT the default for identity-critical transitions.
 | A4 | Hailuo 02 + Vidu API pricing ($0.056/sec) is current | Standard Stack; transition-engine-routing.md | LOW — pricing is operator concern (opt-in); even if stale, routing rule still works. Operator-action handoff per XCUT-04b. |
 | A5 | Editor SKILL.md "Step 13" in TRANS-04 CONTEXT refers to pipeline phase p13_delivery, not editor Workflow Step 13 | Pitfall 4 | LOW — verified via p13_delivery.py:89 ("editor performs final-cut + render"). Both interpretations point to the same code path. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should transition-design.md live under cinematographer/references/ or kais-movie-pipeline/references/?**
    - What we know: CONTEXT.md `canonical_refs` lists `cinematographer/references/e-konte-format.md` as the Layer 5 extension insertion point. transition-design.md is the taxonomy companion to e-konte-format.md.
    - What's unclear: whether the 12-type taxonomy is cinematographer-specific (creative intent) or pipeline-wide (consumed by editor + visual_executor).
    - Recommendation: Place under `cinematographer/references/` — the taxonomy is creative-intent-primary (editor consumes via transition_design.json asset, not by reading the ref directly). transition-engine-routing.md goes under `kais-movie-pipeline/references/` (pipeline-wide routing consumed by P11/P12).
+   - **RESOLVED: cinematographer/references/transition-design.md + kais-movie-pipeline/references/transition-engine-routing.md** per Plan 74-02 Task 2 (both files created at these paths).
 
 2. **Should TRANS-07 validation report be authored as a template (operator runs shots) or with placeholder content (researcher fills in setup + operator adds results)?**
    - What we know: CONTEXT.md says "Operator runs the actual validation shots; this phase produces the report TEMPLATE + setup instructions."
    - What's unclear: depth of the template — bare skeleton vs detailed setup with placeholders.
    - Recommendation: Detailed setup (ComfyUI node graph + LiconMSR + LTXVConditioning + SamplerCustomAdvanced per community reports) with explicit "operator fills in results" placeholders. This maximizes operator value while staying within research-scope.
+   - **RESOLVED: Detailed setup template with placeholders** per Plan 74-03 Task 1 (`<operator fills>` markers + ComfyUI node graph).
 
 ## Environment Availability
 
