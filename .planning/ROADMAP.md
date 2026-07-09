@@ -151,7 +151,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 3/3 | Complete    | 2026-07-09 |
-| 73. IMG | 3/3 | COMPLETE (all 3 plans shipped) | 2026-07-09 |
+| 73. IMG | 3/3 | Complete    | 2026-07-09 |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
 | 76. VALIDATE | 0/TBD | Not started | - |
