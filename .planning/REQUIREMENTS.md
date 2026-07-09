@@ -110,19 +110,54 @@ Explicitly excluded from v14.0. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation (next step).
+Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmapper) | — | Pending |
+| XCUT-01 | Phase 70 (FOUNDATION-AUDIT) | Pending |
+| FORM-01 | Phase 71 (FORM) | Pending |
+| FORM-02 | Phase 71 (FORM) | Pending |
+| FORM-03 | Phase 71 (FORM) | Pending |
+| FORM-04 | Phase 71 (FORM) | Pending |
+| FORM-05 | Phase 71 (FORM) | Pending |
+| DUB-01 | Phase 72 (DUB) | Pending |
+| DUB-02 | Phase 72 (DUB) | Pending |
+| DUB-03 | Phase 72 (DUB) | Pending |
+| DUB-04 | Phase 72 (DUB) | Pending |
+| DUB-05 | Phase 72 (DUB) | Pending |
+| IMG-01 | Phase 73 (IMG) | Pending |
+| IMG-02 | Phase 73 (IMG) | Pending |
+| IMG-03 | Phase 73 (IMG) | Pending |
+| IMG-04 | Phase 73 (IMG) | Pending |
+| IMG-05 | Phase 73 (IMG) | Pending |
+| IMG-06 | Phase 73 (IMG) | Pending |
+| TRANS-01 | Phase 74 (TRANSITION) | Pending |
+| TRANS-02 | Phase 74 (TRANSITION) | Pending |
+| TRANS-03 | Phase 74 (TRANSITION) | Pending |
+| TRANS-04 | Phase 74 (TRANSITION) | Pending |
+| TRANS-05 | Phase 74 (TRANSITION) | Pending |
+| TRANS-06 | Phase 74 (TRANSITION) | Pending |
+| TRANS-07 | Phase 74 (TRANSITION) | Pending |
+| XCUT-03 | Phase 75 (LINEAGE-BUMP) | Pending |
+| XCUT-02 | Phase 76 (VALIDATE) | Pending |
+| XCUT-04 | Phase 76 (VALIDATE) | Pending |
 
 **Coverage:**
 - v14.0 requirements: 26 total (FORM-01..05 + DUB-01..05 + IMG-01..06 + TRANS-01..07 + XCUT-01..04)
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️ (will be filled by roadmapper)
+- Mapped to phases: 26/26 ✓
+- Unmapped: 0
+
+**Phase distribution:**
+- Phase 70 (FOUNDATION-AUDIT): 1 req (XCUT-01)
+- Phase 71 (FORM): 5 reqs (FORM-01..05)
+- Phase 72 (DUB): 5 reqs (DUB-01..05)
+- Phase 73 (IMG): 6 reqs (IMG-01..06)
+- Phase 74 (TRANSITION): 7 reqs (TRANS-01..07)
+- Phase 75 (LINEAGE-BUMP): 1 req (XCUT-03)
+- Phase 76 (VALIDATE): 2 reqs (XCUT-02, XCUT-04)
 
 ---
 
 *Requirements defined: 2026-07-09*
 *Source: 用户 4-feature request + `.planning/research/v14-4track-upgrade/SUMMARY.md` (HIGH confidence)*
-*Last updated: 2026-07-09 — initial v14.0 definition after parallel research synthesis*
+*Last updated: 2026-07-09 — traceability filled by roadmapper (26/26 reqs mapped, 100% coverage, zero orphans)*

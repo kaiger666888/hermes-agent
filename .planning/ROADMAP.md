@@ -2,9 +2,141 @@
 
 ## Overview
 
-v13.0 (v10.0 Design Suite Full Rollout & Live Eval) shipped 2026-07-08 — closed the v10.0-v13.0 four-milestone architecture arc: 12 expert agent YAML transform (15/15 active coverage) + curator live-tick safety guards + observability dashboard (3 collectors + CLI + web panel). **8/8 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff); audit verdict `tech_debt`; 6 operator-action handoffs deferred per VALIDATE-01 spec.**
+v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏短剧专用」升级为「横竖双 default 的通用短片创作管线」,同步升级配音 (CosyVoice)、图像 (dreamina cli 深度集成)、转场(创作+数据+生成三层)三个核心生成环节。**v14.0 是 v9.0 后首个 kais-movie-pipeline-focused milestone,重启跨 repo 工作流** (plan → hermes-agent/.planning/;code → kais-hermes-skills/)。Phase 编号继续 v13.0 Phase 69 → **Phase 70 起**。本次例外破例 kais-hermes-skills SKILL.md read-only invariant L1-L6 (PROJECT.md authorized);lineage 字段 (source_sha + transform_rule_id + transform_timestamp) 需在 Phase 75 重新生成并 propagate 到 `~/.hermes/agents/*.agent.yaml`。
 
-**Awaiting next milestone.** v14+ decisions (物理分区 / 异步并发 / 15-expert production tuning) wait on v13 Phase 64 live-eval data (operator secrets needed).
+**v14.0 范围:** 4 tracks × 26 requirements (FORM-01..05 + DUB-01..05 + IMG-01..06 + TRANS-01..07 + XCUT-01..04)。
+**Research source:** `.planning/research/v14-4track-upgrade/SUMMARY.md` (HIGH confidence, 4 parallel researcher + synthesizer, 6 reconciled conflicts)。
+**Hard constraints preserved:** INFRA-04 serial constraint NOT lifted (MEMORY.md `feedback-glm-overload-reduce-concurrency.md`);EVAL-06 dry-run-first NOT changed (curator `--live` frozen per XCUT-01);FOUND-08 15-expert set frozen (TRANS-04 field-level ownership split, no new expert);SKILL.md L1-L6 read-only invariant 例外破例(lineage regeneration mandatory per XCUT-03)。
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (70-76): Planned v14.0 milestone work
+- Decimal phases (e.g., 71.1): Urgent insertions (marked with INSERTED) — none anticipated for v14.0
+
+- [ ] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline
+- [ ] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default)
+- [ ] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination
+- [ ] **Phase 73: IMG** — dreamina cli production-grade orchestration
+- [ ] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design
+- [ ] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 6 affected agents
+- [ ] **Phase 76: VALIDATE** — META-RULE audit + operator-action handoffs + milestone audit
+
+## Phase Details
+
+### Phase 70: FOUNDATION-AUDIT
+**Goal**: Before any SKILL.md edits land, enumerate every file to be touched with its current lineage baseline so the post-edit lineage bump (Phase 75) is fully deterministic and curator cannot silently drift agent YAMLs mid-milestone.
+**Depends on**: Nothing (first v14.0 phase; v13.0 closed 2026-07-08)
+**Requirements**: XCUT-01
+**Success Criteria** (what must be TRUE):
+  1. Operator can read a Lineage Impact Inventory listing every kais-hermes-skills SKILL.md (target: 6 — cinematographer, editor, audio_pipeline, drawer, kais-movie-pipeline, kais-jimeng-cli) plus their current `source_sha` + `transform_rule_id` + `transform_timestamp` values, captured BEFORE any v14.0 edit
+  2. Curator `--live` flag cannot mutate agent YAMLs for the duration of v14.0 (frozen via in-flight registry / explicit guard), with the freeze recorded in STATE.md so any future session restores the constraint
+  3. Cross-repo baseline commit pin is captured for both repos (hermes-agent + kais-hermes-skills) so Phase 76 VALIDATE can assert `agent.yaml.source_sha == sha256(SKILL.md)` post-bump against this baseline
+  4. Audit checklist for Phase 76 VALIDATE is drafted (lineage coverage rows, META-RULE X-2 test-count diff, cross-repo commit pin assertion, INFRA-04 preservation, EVAL-06 dry-run state, FOUND-08 field-ownership)
+**Cross-repo touch**: hermes-agent (.planning/) + kais-hermes-skills (read-only enumeration, no edits) + `~/.hermes/agents/` (read-only enumeration)
+**Plans**: TBD
+
+### Phase 71: FORM
+**Goal**: Users can author a kais-movie-pipeline project in either landscape 16:9 or portrait 9:16 form factor, with the pipeline reading `form_factor` as a first-class project meta and each expert emitting form-aware creative rules instead of hardcoded `9:16` assumptions.
+**Depends on**: Phase 70 (lineage impact inventory must be the authoritative edit-list before any SKILL.md touch)
+**Requirements**: FORM-01, FORM-02, FORM-03, FORM-04, FORM-05
+**Success Criteria** (what must be TRUE):
+  1. User can set `form_factor` (`landscape_16_9` / `portrait_9:16`) at the project level via `PipelineState.form_factor`, with default `portrait` preserving existing-project backward-compat
+  2. Each of the 15 active movie-expert SKILL.md files has a `## Form Factor Adaptation` section with dual-branch (landscape / portrait) creative rules, replacing any hardcoded `9:16`-only framing references
+  3. User can read `references/horizontal-screen-framing.md` as the landscape companion to existing `vertical-screen-framing.md` (power points / headroom / subtitle safe area / shot scale distribution / eye-trace region), so landscape creative rules are no longer inferred by analogy from vertical
+  4. Step 14 platform-master-slicing correctly resolves the 4-cell reframe matrix (`master_form_factor × target_platform_form_factor`) without quality degradation, verified by matrix coverage in the Step 14 plan (16:9→9:16 / 9:16→16:9 / 16:9→16:9 / 9:16→9:16)
+  5. `kais-movie-pipeline/SKILL.md` line 446 stale `MSR_FC=17` is corrected to canonical `MSR_FC=41` per the 2026-07-01 A/B test (incidental tech-debt fix)
+**Cross-repo touch**: kais-hermes-skills (`PipelineState` dataclass in `plugins/pipeline_state/store.py`, 15 SKILL.md body edits, new `references/horizontal-screen-framing.md`, kais-movie-pipeline Step 14 body)
+**Research flag**: Standard pattern (dataclass migration + SKILL.md conditional branches; landscape eval variants are a light spike, no deep research)
+**Plans**: TBD
+
+### Phase 72: DUB
+**Goal**: Users can generate TTS via CosyVoice 2.0-0.5B as the P10 default (replacing IndexTTS2), with a strict schema-enforced division rule preventing CosyVoice overlay and LTX 2.3 native audio from both firing on the same shot, and with a benchmark-locked default variant recorded in `VERSION.json`.
+**Depends on**: Phase 70 (lineage impact inventory) + Phase 71 (FORM — voice presets may vary by form_factor for spatial placement); **parallel with Phase 73** (DUB and IMG are independent surfaces)
+**Requirements**: DUB-01, DUB-02, DUB-03, DUB-04, DUB-05
+**Success Criteria** (what must be TRUE):
+  1. User can generate TTS via CosyVoice 2.0-0.5B through the ComfyUI `filliptm/ComfyUI_FL-CosyVoice3` node using the `audio_pipeline/references/workflows/cosyvoice-comfyui.json` workflow, replacing IndexTTS2 as the P10 default
+  2. Schema validator rejects any configuration where both LTX 2.3 native audio AND CosyVoice overlay are enabled for the same shot (prevents doubled audio / phase cancellation / lip-sync mismatch per PITFALL D-1), with a unit test asserting no shot has both `ltx_native_dialogue AND cosyvoice_overlay`
+  3. User can attach a `voice_clone_reference_wav` (3-10s reference audio) per character in `pipeline_state.episode_id.character_voice_presets`; if CosyVoice clone mode is selected and the reference is missing, the system fails fast with an explicit operator-actionable error
+  4. IndexTTS2 ComfyUI node remains installed and accessible as a DEPRECATED fallback path (CosyVoice failure → IndexTTS2 fallback; node is not removed, only demoted)
+  5. Operator has an A/B benchmark report comparing CosyVoice 2.0-0.5B vs Fun-CosyVoice 3.0 on 3-5 kais-movie-pipeline reference dialogue lines, with the default variant + rationale recorded in `VERSION.json` (research-then-implementation pattern per SUMMARY §Implications for Roadmap)
+**Cross-repo touch**: kais-hermes-skills (new `cosyvoice-comfyui.json` workflow, `audio_pipeline/SKILL.md` body edits, `voice_clone_reference_wav` schema field, `VERSION.json`)
+**Research flag**: **Plan-phase research needed.** CosyVoice variant benchmark (2.0 vs 3.0) is unresolved; ComfyUI node maturity is MEDIUM confidence (7 months old, install docs missing). A/B test on 3-5 reference lines must run before locking default. DUB-05 explicitly gates the default on this benchmark.
+**Plans**: TBD
+
+### Phase 73: IMG
+**Goal**: Users can submit dreamina batch image generation through a production-grade orchestrator with retry + concurrency cap + sync queue semantics, where reference images are vision-verified via GLM-4.6V before ComfyUI upload, RHD/LHD-type failures are systematically mitigated, and the operator has an SLA dashboard.
+**Depends on**: Phase 70 (lineage impact inventory) + Phase 71 (FORM — image2image reference counts may vary by form_factor for shot scale); **parallel with Phase 72** (IMG is independent of DUB)
+**Requirements**: IMG-01, IMG-02, IMG-03, IMG-04, IMG-05, IMG-06
+**Success Criteria** (what must be TRUE):
+  1. User can submit dreamina batch image generation via `dreamina_manager.py` orchestrator with `asyncio.Semaphore(10)` concurrency cap + `tenacity` retry + sync queue model (block on poll-all-before-deadline); validated 10-parallel = 100% sweet spot preserved
+  2. `dreamina_manager.py` blocks `pipeline_state` write until ALL retries resolve, so P11 video render never sees missing reference images (fixes SKILL.md line 619 pitfall — async write order bug)
+  3. Reference images are vision-verified via GLM-4.6V (content match + directional match e.g. LHD/RHD) before ComfyUI upload; vision-verify is a mandatory gate (not optional), with an integration test that fails the pipeline if an unverifiable image reaches ComfyUI
+  4. RHD/LHD-type prompt failures are systematically mitigated via a 3-attempt budget (prompt-engineering + verify-retry + image2image fallback) with documented expected success rate, fixing the line 570 pitfall
+  5. User can run `hermes dreamina stats` CLI to see per-task latency / success rate / cost dashboard (SLA tracking via local MetricsBuffer, no GLM calls per metric)
+**Cross-repo touch**: kais-hermes-skills (new `dreamina_manager.py` in `skills/kais-jimeng-cli/scripts/` or `plugins/kais_aigc/`, GLM-4.6V vision tool integration, `kais-jimeng-cli/SKILL.md` + `kais-movie-pipeline/SKILL.md` body edits)
+**Research flag**: **Plan-phase research needed.** GLM-4.6V LHD/RHD detection accuracy on dreamina-generated interior shots is unverified (research gap from SUMMARY §Gaps); dreamina N-ref tolerance for image2image is WATCH-level (no public data on 4-5 ref degradation). IMG-06 standardization should stratify retry budget by ref-count stratum (1-ref / 3-ref / 5-ref) per research recommendation.
+**Plans**: TBD
+
+### Phase 74: TRANSITION
+**Goal**: Users can author structured transition designs as first-class pipeline assets, with creative intent (cinematographer Step 9) cleanly separated from post-production execution (editor Step 13), and with per-transition engine routing evaluated across Wan2.2 FLF2V / Hailuo / Vidu / ffmpeg / LTX-2.3 FLF (evaluated, not assumed incapable).
+**Depends on**: Phase 70 (lineage impact inventory) + Phase 71 (FORM — transitions are form-factor-sensitive: composition match for 16:9 vs 9:16) + Phase 73 (IMG — FLF2V match-cut reuses IMG's vision-verify precedent to confirm first/last frame content)
+**Requirements**: TRANS-01, TRANS-02, TRANS-03, TRANS-04, TRANS-05, TRANS-06, TRANS-07
+**Success Criteria** (what must be TRUE):
+  1. Cinematographer E-Konte Layer 5 schema is extended with `transition_method` (12-value enum: `hard_cut / dissolve / wipe / fade / match_cut_shared_object / match_cut_shared_landscape / motion_vector_match / color_match / j_cut / l_cut / whip_pan / none`) + `visual_hook` + `camera_continuity` fields
+  2. `next_shot_link` is refactored from string id to structured object `{shot_id, transition_method, visual_hook, camera_continuity, generation_path}`, with a backward-compat reader that coerces old string form to default `{transition_method: "hard_cut", ...}` for existing projects (no breaking change)
+  3. User can write `transition_design.json` as a first-class asset registered in 3 systems: asset-bus Phase 36 slot + canvas sync `_PHASE_OUTPUT_MAP` + zod enum (canvas-renderability per PITFALL T-4 — missing any of the 3 silently fails canvas)
+  4. Field-level ownership split is documented in BOTH `cinematographer/SKILL.md` (Step 9 owns creative intent: `transition_method` / `visual_hook` / `camera_continuity`) AND `editor/SKILL.md` (Step 13 owns post-production execution: `cut_duration_frames` / `dissolve_curve` / `match_cut_alignment_point`) in the SAME phase (FOUND-08 preservation — NO new `transition_designer` expert)
+  5. Per-transition engine routing rule is documented in `references/transition-engine-routing.md`: Wan2.2 14B FLF2V for local match-cut via shared object / Hailuo 02 i2v Pro + Vidu keyframe-to-video for cloud Chinese-content backups (opt-in via operator API key) / ffmpeg xfade for dissolve/wipe/fade/J-cut/L-cut fallback / **LTX-2.3 FLF path evaluated per-transition (NOT assumed incapable per SUMMARY reconciled conflict #1)**; LTX-2.3 FLF + ICLoRA combined workflow is validated on 1-2 reference shots (research-scope per TRANS-07, NOT pipeline-integrated)
+**Cross-repo touch**: kais-hermes-skills (cinematographer SKILL.md + e-konte-format.md, editor SKILL.md, 2 new refs `transition-design.md` + `transition-engine-routing.md`, `transition_design.json` schema, asset-bus-schema.md, canvas sync registration, optional Wan FLF2V template + Hailuo/Vidu REST clients)
+**Research flag**: **Plan-phase research needed.** LTX FLF+ICLoRA combined workflow has no public turnkey option (community-verified, custom node graph needed: LiconMSR + LTXVConditioning + SamplerCustomAdvanced); Wan2.2 FLF2V prompt-following in Chinese complex-action descriptions is unvalidated; Hailuo/Vidu production batch cost has only single-source data ($0.056/sec list price). TRANS-07 is explicitly research-scope — validation report determines whether combined workflow is production-ready or deferred to v15+.
+**Plans**: TBD
+
+### Phase 75: LINEAGE-BUMP
+**Goal**: After all v14.0 SKILL.md edits are final, the 6 affected agent YAMLs at `~/.hermes/agents/` have their lineage fields regenerated (source_sha + transform_rule_id + transform_timestamp) by re-running the v13.0 P62 transform flow, with CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passing for all 6.
+**Depends on**: Phase 74 (TRANSITION final — must be the last SKILL.md-touching phase; all 6 agents' SKILL.md sources must be in their final state before bumping)
+**Requirements**: XCUT-03
+**Success Criteria** (what must be TRUE):
+  1. All 6 affected agent YAMLs (cinematographer, editor, audio_pipeline, drawer, kais-movie-pipeline, kais-jimeng-cli) are regenerated via the v13.0 P62 transform flow with refreshed `source_sha` matching `sha256(SKILL.md)` of the final v14.0 SKILL.md source
+  2. CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passes for all 6 affected agents (lineage-coverage row in Phase 76 audit); the 9 untouched experts (screenplay, scene_builder, performer, continuity, colorist, composer, foley, spatial_audio, mixer, style_genome) get NO bump
+  3. `transform_rule_id` + `transform_timestamp` fields on the 6 affected YAMLs reflect v14.0 transform context (not stale v13.0 values); advisory drift mid-milestone was acceptable per v10.0 design, but is closed out here
+  4. Curator `--live` freeze (imposed in Phase 70) is lifted only AFTER lineage bump completes, so no mid-bump curator tick can race the regeneration (the freeze release is the final action of this phase)
+**Cross-repo touch**: hermes-agent (`~/.hermes/agents/*.agent.yaml` regeneration, CI assertion); kais-hermes-skills (SKILL.md sources are read-only at this point — bump consumes final state)
+**Research flag**: Standard pattern (mechanical transform + audit; documented 5-step procedure from v10.0 `04-MIGRATION-PATH.md`)
+**Plans**: TBD
+
+### Phase 76: VALIDATE
+**Goal**: Cross-cutting audit closes v14.0 with verified lineage coverage, META-RULE X-2 _INSTRUCTION injection test-count diff, cross-repo commit pin assertion, INFRA-04 / EVAL-06 / FOUND-08 preservation, documented operator-action handoffs, and the milestone audit doc + tag.
+**Depends on**: Phase 75 (lineage bump must complete so `source_sha` assertions can run against final state) — **strictly LAST** (mirror v10.0 P51 / v11.0 P56 / v12.0 P61 / v13.0 P69 pattern)
+**Requirements**: XCUT-02, XCUT-04
+**Success Criteria** (what must be TRUE):
+  1. META-RULE X-2 audit passes: for every MUST/MUST NOT added to SKILL.md across Phases 71-74, a corresponding `_INSTRUCTION` constant exists in the relevant phase module's `goal` f-string with a test asserting the keyword appears in `captured["goal"]` (CI gate `grep MUST SKILL.md | wc -l == count_constraints(goal)` per the audit checklist from Phase 70)
+  2. Cross-repo commit pin assertion passes: hermes-agent `.planning/` and kais-hermes-skills SKILL.md + refs + code both have a v14.0-anchored commit, recorded in STATE.md (asserts cross-repo coordination was preserved)
+  3. Operator-action handoffs are documented in the milestone audit: (a) CosyVoice `voice_clone_reference_wav` per character (3-10s samples, DUB-03); (b) Hailuo/Vidu API keys (opt-in for cloud transition engines, TRANS-06); (c) vision-verify API cost budget (GLM-4.6V batch calls at production scale, IMG-03); (d) TRANS-07 LTX FLF+ICLoRA validation report disposition (production-ready → v15 rollout, or deferred)
+  4. Hard-constraint preservation verified: INFRA-04 serial constraint NOT lifted (no `asyncio.gather` in v14.0 code paths, all routing under `MAX_CONCURRENT_GL=1`); EVAL-06 dry-run-first NOT changed (curator `--live` frozen during v14.0, released only post-bump in Phase 75); FOUND-08 15-expert set frozen (TRANS-04 field-level split, zero new expert_id); SKILL.md L1-L6 read-only invariant exception破例 documented + lineage regeneration mandatory per XCUT-03
+  5. Milestone audit doc `.planning/milestones/v14.0-MILESTONE-AUDIT.md` is authored and tag `v14.0` is placed (verdict recorded; coverage 26/26 reqs reconciled — satisfied / audit / operator-handoff buckets)
+**Cross-repo touch**: hermes-agent (`.planning/milestones/v14.0-MILESTONE-AUDIT.md`, tag placement); kais-hermes-skills (read-only commit pin verification)
+**Research flag**: Standard pattern (mechanical audit, mirrors v9.0 P43 / v11.0 P56 / v12.0 P61 / v13.0 P69)
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 70 → 71 → (72 ∥ 73) → 74 → 75 → 76
+
+Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independent surfaces both depending only on Phase 71 (FORM). All other phases are strictly sequential. Phase 76 (VALIDATE) is strictly LAST.
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 70. FOUNDATION-AUDIT | 0/TBD | Not started | - |
+| 71. FORM | 0/TBD | Not started | - |
+| 72. DUB | 0/TBD | Not started | - |
+| 73. IMG | 0/TBD | Not started | - |
+| 74. TRANSITION | 0/TBD | Not started | - |
+| 75. LINEAGE-BUMP | 0/TBD | Not started | - |
+| 76. VALIDATE | 0/TBD | Not started | - |
+
+---
 
 ## Milestones
 
@@ -20,98 +152,8 @@ v13.0 (v10.0 Design Suite Full Rollout & Live Eval) shipped 2026-07-08 — close
 - ✅ **v11.0 Hermes-Native Expert Agents PoC Implementation** - Phases 52-56 (shipped 2026-07-07, tag `v11.0`)
 - ✅ **v12.0 Production Hardening** - Phases 57-61 (shipped 2026-07-08, tag `v12.0`)
 - ✅ **v13.0 v10.0 Design Suite Full Rollout & Live Eval** - Phases 62-69 (shipped 2026-07-08, tag `v13.0`)
+- 🔄 **v14.0 kais-movie-pipeline 4-Track Upgrade** - Phases 70-76 (started 2026-07-09, in progress)
 
 ---
 
-## v13.0: v10.0 Design Suite Full Rollout & Live Eval ✅ SHIPPED 2026-07-08
-
-**Stats:** 8 phases (62-69) · 20/20 reqs (13 satisfied + 1 audit + 6 operator-handoff) · 17 plans in shipped phases · Tag `v13.0` · Audit `tech_debt`
-
-**One sentence:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(15/15 active coverage)+ curator live-tick 安全护栏 + 3 维 observability surface(agent registry + round table + memory backend)。
-
-See `.planning/milestones/v13.0-ROADMAP.md` for full archive + `.planning/milestones/v13.0-MILESTONE-AUDIT.md` for audit.
-
----
-
-## Shipped Milestone Details
-
-<details>
-<summary>✅ v13.0 v10.0 Design Suite Full Rollout & Live Eval (Phases 62-69) - SHIPPED 2026-07-08</summary>
-
-**Stats:** 8 phases · 17 plans in shipped phases · 247 files · 34,341 insertions / 9,972 deletions · 20/20 reqs ✓ · Tag `v13.0` · Audit `tech_debt`
-
-**One sentence:** 把 v11.0 设计套件 + v12.0 hardening 留下的 4 项 scope deferrals 全部落地 —— 12 expert agent YAML 全量 transform(15/15 active coverage)+ curator live-tick 安全护栏 + 3 维 observability surface(agent registry + round table + memory backend)。
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 62 | EXPERT-YAML-TRANSFORM — 12 expert agent YAML 全量 transform | SHIPPED (4 plans, 2026-07-08) |
-| 63 | EXPERT-REGISTRY-INTEGRATION — 21-agent registry + missing-expert alarm + visual_executor smoke | SHIPPED (4 plans, 2026-07-08) |
-| 64 | LIVE-EVAL-EXEC — 3 deferred operator smoke tests + report | DEFERRED (operator-handoff, needs GLM/mem0 secrets) |
-| 65 | CURATOR-LIVE-GUARDS — `--live` opt-in flag + bias canary + audit log | SHIPPED (3 plans, 2026-07-08) |
-| 66 | CURATOR-LIVE-TICK — 1st live tick + runbook | DEFERRED (operator-handoff, live memory mutation risk) |
-| 67 | OBSERVABILITY-BACKEND — 3 metrics collectors + FastAPI endpoint | SHIPPED (4 plans, 2026-07-08) |
-| 68 | OBSERVABILITY-PRESENTATION — CLI + dashboard panel | SHIPPED (2 plans, 2026-07-08) |
-| 69 | VALIDATE — milestone audit + close-out | SHIPPED (audit doc, 2026-07-08) |
-
-See `.planning/milestones/v13.0-ROADMAP.md` for full archive + `.planning/milestones/v13.0-MILESTONE-AUDIT.md` for audit (verdict: tech_debt, 13/20 satisfied + 1 audit + 6 operator-handoff).
-
-</details>
-
-<details>
-<summary>✅ v12.0 Production Hardening (Phases 57-61) - SHIPPED 2026-07-08</summary>
-
-**Stats:** 5 phases · 9 plans · 53 commits on v12.0-dev · 8/8 reqs ✓ · Tag `v12.0` · Audit `passed`
-
-**One sentence:** Fixed 4 hardening gaps exposed by v11.0 real-GLM smoke tests — endpoint routing (long prompts → anthropic-compat), RPM throttling (token bucket + per-round-table TPM budget), auxiliary credential pool isolation (separate keys from main agent + per-key TPM tracking), live-eval infrastructure (mem0 backend adapter + fitness battery real-mode baseline).
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 57 | ENDPOINT-ROUTING — long-prompt endpoint routing (z.ai/anthropic-compat split) | SHIPPED (1 plan, 2026-07-08) |
-| 58 | RPM-THROTTLING — per-task RPM token bucket + per-round-table TPM budget | SHIPPED (2 plans, 2026-07-08) |
-| 59 | AUX-POOL-ISOLATION — separate auxiliary credential pool + per-key TPM tracking | SHIPPED (2 plans, 2026-07-08) |
-| 60 | LIVE-EVAL — mem0 backend adapter + fitness battery real-mode infra | SHIPPED (2 plans, 2026-07-08) |
-| 61 | VALIDATE — milestone audit + production smoke report | SHIPPED (1 plan, 2026-07-08) |
-
-See `.planning/milestones/v12.0-ROADMAP.md` for full archive + `.planning/milestones/v12.0-MILESTONE-AUDIT.md` for audit (status: passed, 8/8 reqs, 3 operator-action handoffs deferred).
-
-</details>
-
-<details>
-<summary>✅ v11.0 Hermes-Native Expert Agents PoC Implementation (Phases 52-56) - SHIPPED 2026-07-07</summary>
-
-**Stats:** 5 phases · 12 plans · 128 commits · 149 files · 39,256 insertions · 15/15 reqs ✓ · Tag `v11.0` · Audit `passed`
-
-**One sentence:** Implemented the v10.0 design suite as runtime code — agent registry + 7 MCP tools + round table state machine + serial executor + 9 sample agent YAMLs + screenplay Step 3 driver + memory conflict arbitration + 7 acceptance criteria (fitness battery, latency SLO, bias canary, compaction, threshold tuning, dry-run-first, schema migration dry-run).
-
-See `.planning/milestones/v11.0-ROADMAP.md` for full archive + `.planning/milestones/v11.0-MILESTONE-AUDIT.md` for audit.
-
-</details>
-
-<details>
-<summary>✅ v10.0 Hermes-Agent 编排架构第一性原理推导 (Phases 44-51) - SHIPPED 2026-07-07</summary>
-
-**Stats:** 8 phases · 8 plans · 9/9 reqs ✓ · Tag `v10.0` · Design-only (zero code changes)
-
-**One sentence:** 从第一性原理推导 Hermes 三层编排架构(总调度器 + native expert agents + CC 执行场),产 7 design docs + 3 schemas + 1 lint script,作为 v11.0 PoC 实施蓝本。
-
-See `.planning/milestones/v10.0-ROADMAP.md` for full archive.
-
-</details>
-
-<details>
-<summary>✅ v9.0 kais-movie-pipeline 闭环深化 (Phases 38-43) - SHIPPED 2026-06-27</summary>
-
-**Stats:** 6 phases · 13 plans · 22/22 reqs ✓ · Tag `v9.0` (anchored at `599ef61a8`)
-
-See `.planning/milestones/v9.0-MILESTONE-AUDIT.md` for full audit.
-
-</details>
-
-<details>
-<summary>✅ v7.0 openclaw → hermes Migration (Phases 34-37) - SHIPPED 2026-06-25</summary>
-
-</details>
-
----
-
-*Last updated: 2026-07-08 — v13.0 milestone archived + tag `v13.0` placed. v10.0-v13.0 四 milestone 架构弧线收官。Next: operator review of 6 handoffs → `/gsd:new-milestone` for v14.0.*
+*Last updated: 2026-07-09 — v14.0 roadmap created. 7 phases (70-76), 26/26 reqs mapped (FORM-01..05 + DUB-01..05 + IMG-01..06 + TRANS-01..07 + XCUT-01..04). Phase 72 ∥ Phase 73 parallel; Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
