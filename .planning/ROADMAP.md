@@ -53,7 +53,12 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
   5. `kais-movie-pipeline/SKILL.md` line 446 stale `MSR_FC=17` is corrected to canonical `MSR_FC=41` per the 2026-07-01 A/B test (incidental tech-debt fix)
 **Cross-repo touch**: kais-hermes-skills (`PipelineState` dataclass in `plugins/pipeline_state/store.py`, 15 SKILL.md body edits, new `references/horizontal-screen-framing.md`, kais-movie-pipeline Step 14 body)
 **Research flag**: Standard pattern (dataclass migration + SKILL.md conditional branches; landscape eval variants are a light spike, no deep research)
-**Plans**: TBD
+**Plans**:
+- [ ] 71-01-PLAN.md — FORM Foundation (PipelineState.form_factor schema + horizontal-screen-framing.md ref + MSR_FC=17→41 sweep + LTX template helper + XCUT-02 _FORM_FACTOR_INSTRUCTION injection)
+- [ ] 71-02-PLAN.md — 15 SKILL.md Form Factor Adaptation patches tiered by form-criticality (Tier 1 substantive dual-branch / Tier 2 short dual-branch / Tier 3 form-agnostic stub)
+- [ ] 71-03-PLAN.md — Step 14 4-cell reframe matrix (portrait/landscape × portrait/landscape) + 4 unit tests + 8 sample-frame fixtures
+
+**Plans**: 3 plans
 
 ### Phase 72: DUB
 **Goal**: Users can generate TTS via CosyVoice 2.0-0.5B as the P10 default (replacing IndexTTS2), with a strict schema-enforced division rule preventing CosyVoice overlay and LTX 2.3 native audio from both firing on the same shot, and with a benchmark-locked default variant recorded in `VERSION.json`.
