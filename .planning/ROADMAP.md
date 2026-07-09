@@ -54,7 +54,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 **Cross-repo touch**: kais-hermes-skills (`PipelineState` dataclass in `plugins/pipeline_state/store.py`, 15 SKILL.md body edits, new `references/horizontal-screen-framing.md`, kais-movie-pipeline Step 14 body)
 **Research flag**: Standard pattern (dataclass migration + SKILL.md conditional branches; landscape eval variants are a light spike, no deep research)
 **Plans**:
-- [ ] 71-01-PLAN.md — FORM Foundation (PipelineState.form_factor schema + horizontal-screen-framing.md ref + MSR_FC=17→41 sweep + LTX template helper + XCUT-02 _FORM_FACTOR_INSTRUCTION injection)
+- [x] 71-01-PLAN.md — FORM Foundation (PipelineState.form_factor schema + horizontal-screen-framing.md ref + MSR_FC=17→41 sweep + LTX template helper + XCUT-02 _FORM_FACTOR_INJECTION injection) — **SHIPPED 2026-07-09** (6 commits in kais-hermes-skills: d962036→fea9999; 5/5 tests green)
 - [ ] 71-02-PLAN.md — 15 SKILL.md Form Factor Adaptation patches tiered by form-criticality (Tier 1 substantive dual-branch / Tier 2 short dual-branch / Tier 3 form-agnostic stub)
 - [ ] 71-03-PLAN.md — Step 14 4-cell reframe matrix (portrait/landscape × portrait/landscape) + 4 unit tests + 8 sample-frame fixtures
 
@@ -139,7 +139,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
-| 71. FORM | 0/TBD | Not started | - |
+| 71. FORM | 1/3 | Plan 01 shipped | 71-01-SUMMARY.md (FORM-01, FORM-03, FORM-05, FORM-02 partial, XCUT-02 — 6 commits) |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
@@ -166,4 +166,4 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 ---
 
-*Last updated: 2026-07-09 — v14.0 roadmap created. 7 phases (70-76), 26/26 reqs mapped (FORM-01..05 + DUB-01..05 + IMG-01..06 + TRANS-01..07 + XCUT-01..04). Phase 72 ∥ Phase 73 parallel; Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — Phase 71 Plan 01 SHIPPED (FORM foundation: PipelineState.form_factor + horizontal-screen-framing.md + MSR_FC sweep + XCUT-02). 4/6 plans shipped across Phase 70 (3/3) + Phase 71 (1/3). Phase 72 ∥ Phase 73 parallel after Phase 71. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*

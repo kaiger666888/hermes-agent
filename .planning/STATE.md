@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T08:56:09.845Z"
-last_activity: 2026-07-09 -- Phase 71 planning complete
+last_updated: "2026-07-09T09:10:00.000Z"
+last_activity: 2026-07-09 -- Phase 71 Plan 01 (FORM foundation) shipped
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
-  percent: 14
+  completed_plans: 4
+  percent: 19
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 71
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-09 -- Phase 71 planning complete
+Phase: 71 (form) — EXECUTING
+Plan: 2 of 3 (Plan 01 shipped 2026-07-09)
+Status: Executing Phase 71 — Plan 01 complete, Plan 02 next
+Last activity: 2026-07-09 -- Phase 71 Plan 01 (FORM foundation: form_factor field + horizontal ref + MSR_FC sweep + XCUT-02) shipped
 
 ### Progress
 
@@ -58,7 +58,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 70 | FOUNDATION-AUDIT | Complete (3/3 plans shipped, ready for verification) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. **All 3 plans shipped 2026-07-09:** Plan 01 = 70-LINEAGE-INVENTORY.md (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); Plan 02 = curator.enabled:false freeze + STATE.md v14.0 Freeze Flags block; Plan 03 = 70-VALIDATE-CHECKLIST.md (Phase 76 audit input, 34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). |
-| 71 | FORM | Not started | form_factor parameterization (FORM-01..05). Foundational — every other track consumes `form_factor`. |
+| 71 | FORM | Plan 01 shipped (1/3 plans) | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED 2026-07-09:** PipelineState.form_factor field (Literal["landscape","portrait"], default "portrait") + validate_form_factor_invariant + horizontal-screen-framing.md (226 lines, 5-section mirror of vertical twin) + MSR_FC=17→41 sweep (5 doc + 1 code location) + --form-factor argparse helper + _FORM_FACTOR_INSTRUCTION injection into p09 goal (XCUT-02). 6 commits in kais-hermes-skills (d962036→fea9999). 5/5 form_factor tests green. Plan 02 (15 SKILL.md ## Form Factor Adaptation sections) next. |
 | 72 | DUB | Not started | CosyVoice + LTX 2.3 native audio (DUB-01..05). Parallel with Phase 73. Needs plan-phase research (CosyVoice variant A/B). |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
 | 74 | TRANSITION | Not started | 创作+数据+生成三层 (TRANS-01..07). Most invasive. Needs plan-phase research (LTX FLF+ICLoRA combined workflow). |
@@ -108,6 +108,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 70 | P01 | ~15min | 1 | 1 (70-LINEAGE-INVENTORY.md) |
 | 70 | P02 | ~8min | 1 | 3 (STATE.md + 2 operator-owned) |
 | 70 | P03 | 5min | 2 | 2 (70-VALIDATE-CHECKLIST.md + 70-smoke.sh) |
+| 71 | P01 | ~10min | 3 | 10 (store.py + SKILL.md + p09 + p11_video_render + ltx template + 3 refs + test_form_factor.py + horizontal-screen-framing.md) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -130,6 +131,10 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 70-03]** VALIDATE-CHECKLIST authored hand-rolled (no prior template in repo) | PATTERNS.md No Analog Found section confirms no `.planning/**/CHECKLIST*.md` exists. Hand-rolled from RESEARCH.md Validation Architecture spec. 34 table rows covering 6 XCUT-01 sub-claims + INFRA-04/EVAL-06/FOUND-08/L1-L6 hard-constraint preservation + cross-repo pin re-hash procedure + META-RULE X-2 audit rows. | Applied 2026-07-09 (commit 6e4cba4e4) |
 | **[Phase 70-03]** smoke.sh XCUT-01d uses config.yaml grep (not `hermes curator status` CLI) | Config flag is the canonical freeze mechanism per RESEARCH Pattern 2; works without hermes CLI in execution environment; CLI depends on prompt_toolkit which may not be in scope for Phase 76 CI runner. | Applied 2026-07-09 (commit f665e98df) |
 | **[Phase 70-03]** Canonical field-name discipline encoded in checklist callout | `lineage.skill_sha256` (NOT `source_sha`) — Phase 76 grep for `source_sha` silently passes on empty set (false-green). Checklist prevents the exact bug Phase 76 exists to catch. Mapping documented in both 70-LINEAGE-INVENTORY.md + 70-VALIDATE-CHECKLIST.md. | Applied 2026-07-09 (commit 6e4cba4e4) |
+| **[Phase 71-01]** form_factor default "portrait" (not "landscape") | All existing 短剧 projects are 9:16; defaulting to "landscape" would silently flip form on every existing episode. CONTEXT.md D-01 locked this. | Applied 2026-07-09 (commit 5e47245) |
+| **[Phase 71-01]** __post_init__ validator enforces Literal enum at runtime | stdlib `Literal` is a type-checker hint only, NOT enforced at runtime by default. __post_init__ catches typos and tampering in episode JSON (T-71-01 threat mitigation). | Applied 2026-07-09 (commit 5e47245) |
+| **[Phase 71-01]** p11_video_render.py MSR_FC=17→41 fixed as Rule 1 bug | RESEARCH audit table (lines 506-522) missed this file — listed only the template script (ltx_msr_batch_render.py:67 already correct). Phase module p11_video_render.py:74 had stale MSR_FC=17 at runtime, contradicting the A/B test canonical value. Fixed together with the doc sweep in one commit. | Applied 2026-07-09 (commit 777e31a) |
+| **[Phase 71-01]** Consolidated form_factor constraint with cross-cutting constraint | GoalBuilder enforces MAX_CONSTRAINTS=7; initial separate-constraint approach raised ValueError. form_factor IS a cross-cutting parameter so consolidation is semantically correct. | Applied 2026-07-09 (commit fea9999) |
 
 ### Decisions carried forward (still relevant)
 
@@ -242,4 +247,4 @@ Items acknowledged and carried forward (NOT in v14.0 scope):
 
 ---
 
-*Last updated: 2026-07-09 — v14.0 Phase 70 COMPLETE (3/3 plans shipped, ready for verification). Plan 01 (commit a0a15e2ce): lineage baseline (6 SKILL.md hashes + 3 agent.yaml lineage.skill_sha256 + cross-repo pins hermes-agent=8f70fcf7 / kais-hermes-skills=d9620369). Plan 02 (commit ebcf22fbf): curator freeze (config.yaml curator.enabled:false + STATE.md v14.0 Freeze Flags block). Plan 03 (commits 6e4cba4e4 + f665e98df): Phase 76 VALIDATE-CHECKLIST.md (34 rows) + 70-smoke.sh (6 XCUT-01 assertions, exits 0). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). 7 phases (70-76), 26/26 reqs mapped. Phase 72 ∥ Phase 73 parallel. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — v14.0 Phase 71 Plan 01 SHIPPED (FORM foundation). 6 commits in kais-hermes-skills (d962036→fea9999): PipelineState.form_factor Literal["landscape","portrait"] field + __post_init__ strict enum validator + validate_form_factor_invariant() (FORM-01); horizontal-screen-framing.md 226-line landscape ref mirroring vertical twin 5-section structure (FORM-03); MSR_FC=17→41 sweep across 4 doc locations + 1 code location p11_video_render.py:74 [Rule 1 bug — RESEARCH audit missed it] (FORM-05); SKILL.md:40 form_factor dispatch replacing "All 15 movie-experts assume" hardcoded vertical assumption (FORM-02 partial); --form-factor argparse helper + _FORM_FACTOR_RESOLUTION map in ltx_msr_batch_render.py (FORM-01 render); _FORM_FACTOR_INSTRUCTION injected into p09 goal f-string .task(steps=) + consolidated into .constraints() [Rule 3 — MAX_CONSTRAINTS=7 budget] (XCUT-02 / META-RULE X-2). 5/5 test_form_factor.py tests green. Plan 02 (15 SKILL.md ## Form Factor Adaptation sections, tiered by form-criticality) next. Phase 72 ∥ Phase 73 parallel after Phase 71. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. P70 baseline pin preserved as commit parent.*
