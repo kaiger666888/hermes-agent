@@ -160,6 +160,32 @@ Plus 3 cross-cutting phases: Phase 70 (FOUNDATION-AUDIT lineage baseline) + Phas
 | **CosyVoice + LTX 2.3 native audio both enabled (PITFALL D-1)** | MEDIUM | HIGH (doubled audio / phase cancellation / lip-sync mismatch) | DUB-02 schema validator rejects; unit test asserts no shot has both `ltx_native_dialogue AND cosyvoice_overlay`. |
 | **Operator wavs missing for CosyVoice clone mode (PITFALL D-2)** | MEDIUM | LOW (fail-fast with explicit error) | DUB-03 schema field + fail-fast error. Documented as operator-action handoff in Phase 76. |
 
+### v14.0 Freeze Flags (active — set by Phase 70, released by Phase 75)
+
+| flag | value | set_by | released_by | enforcement |
+|------|-------|--------|-------------|-------------|
+| `curator.enabled` | `false` | Phase 70 (2026-07-09) | Phase 75 (post-bump) | `~/.hermes/config.yaml` line 458 (code-enforced via `agent/curator.py:is_enabled()` lines 141-144; `--live` flag blocked at `hermes_cli/curator.py:270-272`) |
+| `curator.consolidate` | `false` (already default) | Phase 70 (defense-in-depth) | Phase 75 (post-bump) | `~/.hermes/config.yaml` line 463 (already false; documented for traceability) |
+| `cross_repo_pin.hermes-agent` | `8f70fcf7f0604db21158f86f8495f3d9ce3c9ab1` | Phase 70 | Phase 76 (assertion) | STATE.md record (documentation-only; Phase 76 re-hashes from this pin) |
+| `cross_repo_pin.kais-hermes-skills` | `d9620369e48eec51c31ee72ac8827c288eaccf71` | Phase 70 | Phase 76 (assertion) | STATE.md record (documentation-only) |
+
+**Freeze rationale:** PITFALL X-1 (lineage cascade) + X-4 (curator drift) — no curator tick can silently mutate `~/.hermes/agents/*.agent.yaml` during v14.0. The freeze blocks even `hermes curator evolve --live --skip-canary` (VERIFIED at `hermes_cli/curator.py:270-272` via `is_enabled()` check, not assumed). `hermes curator status` CLI reports `curator: DISABLED` as operator-visible confirmation.
+
+**Verified 2026-07-09:**
+- `agent/curator.py:is_enabled()` returns `False` (Python-level check)
+- `hermes curator status` CLI prints `curator: DISABLED`
+- Backup of pre-freeze config at `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
+- Config flag read fresh on every curator call (`_load_config()` line 125-138) — no gateway restart needed (survives systemd `Restart=always` cycle per MEMORY.md `hermes-gateway-systemd.md`)
+
+**Release procedure (Phase 75 final action):**
+1. Confirm Phase 75 lineage bump complete (all 3 existing `agent.yaml` files regenerated: `cinematographer`, `editor`, `audio_pipeline`)
+2. Edit `~/.hermes/config.yaml` line 458: `enabled: false` -> `enabled: true` (remove the `# FROZEN for v14.0 ...` comment)
+3. Run `hermes curator status` to verify output reports `ENABLED`
+4. Run `agent/curator.py:is_enabled()` to verify returns `True`
+5. (Optional) Remove backup `~/.hermes/config.yaml.pre-v14.0-freeze.bak`
+
+**Threat model T-70-01 (HIGH, Tampering) mitigation:** Operator running `hermes curator evolve --live --skip-canary` during v14.0 window is blocked at `hermes_cli/curator.py:270-272` BEFORE the `--live` flag is even read (line 274). Residual: `--skip-canary` is audit-logged at `hermes_cli/curator.py:344-349` (`canary_pass=None`); Phase 76 VALIDATE checks the audit log for any live-tick during v14.0.
+
 ### Pending Todos
 
 None yet (milestone just started).
