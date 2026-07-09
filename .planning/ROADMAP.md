@@ -35,7 +35,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
   4. Audit checklist for Phase 76 VALIDATE is drafted (lineage coverage rows, META-RULE X-2 test-count diff, cross-repo commit pin assertion, INFRA-04 preservation, EVAL-06 dry-run state, FOUND-08 field-ownership)
 **Cross-repo touch**: hermes-agent (.planning/) + kais-hermes-skills (read-only enumeration, no edits) + `~/.hermes/agents/` (read-only enumeration)
 **Plans**:
-- [ ] 70-01-PLAN.md — Lineage Impact Inventory (6 SKILL.md + 3 agent.yaml + cross-repo pins)
+- [x] 70-01-PLAN.md — Lineage Impact Inventory (6 SKILL.md + 3 agent.yaml + cross-repo pins)
 - [ ] 70-02-PLAN.md — Curator freeze (config.yaml) + STATE.md v14.0.freeze block
 - [ ] 70-03-PLAN.md — Phase 76 VALIDATE-CHECKLIST + smoke.sh runner
 
@@ -133,7 +133,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 70. FOUNDATION-AUDIT | 0/3 | Planned (Wave 1, 3 parallel plans) | - |
+| 70. FOUNDATION-AUDIT | 1/3 | In Progress|  |
 | 71. FORM | 0/TBD | Not started | - |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |

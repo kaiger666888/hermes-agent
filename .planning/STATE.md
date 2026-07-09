@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T05:58:12.702Z"
-last_activity: 2026-07-09 -- Phase 70 planning complete
+last_updated: "2026-07-09T06:39:35.872Z"
+last_activity: 2026-07-09
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 70 ready to plan — FOUNDATION-AUDIT (Lineage Impact Assessment + curator freeze + cross-repo baseline)
+**Current focus:** Phase 70 — FOUNDATION-AUDIT
 
 ## Current Position
 
-Phase: 70 of 76 (FOUNDATION-AUDIT)
-Plan: — (not yet planned)
+Phase: 70 (FOUNDATION-AUDIT) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-09 -- Phase 70 planning complete
+Last activity: 2026-07-09
 
 ### Progress
 
@@ -57,7 +57,7 @@ v14.0 4-Track Upgrade:             [░░░░░░░░░░]   0% (Phases
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 70 | FOUNDATION-AUDIT | Not started | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. |
+| 70 | FOUNDATION-AUDIT | In Progress (Plan 1/3 complete) | Lineage Impact Assessment (XCUT-01). Curator `--live` freeze. Cross-repo baseline commit pin. Plan 01 shipped 2026-07-09 — 70-LINEAGE-INVENTORY.md captures pre-v14.0 baseline (6 SKILL.md hashes + 3 agent.yaml lineage + cross-repo pins); pre-existing drift flagged for cinematographer + audio_pipeline. |
 | 71 | FORM | Not started | form_factor parameterization (FORM-01..05). Foundational — every other track consumes `form_factor`. |
 | 72 | DUB | Not started | CosyVoice + LTX 2.3 native audio (DUB-01..05). Parallel with Phase 73. Needs plan-phase research (CosyVoice variant A/B). |
 | 73 | IMG | Not started | dreamina production-grade orchestration (IMG-01..06). Parallel with Phase 72. Needs plan-phase research (GLM-4.6V LHD/RHD accuracy). |
@@ -116,6 +116,9 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | MSR_FC canonical = 41 (not 17) | SUMMARY reconciled conflict #5: SKILL.md line 446 is STALE (pre-2026-07-01 A/B test). FORM-05 incidental tech-debt fix. | Applied 2026-07-09 |
 | CosyVoice default variant gated on A/B benchmark | SUMMARY reconciled conflict #3: CosyVoice 2.0-0.5B default via `filliptm/ComfyUI_FL-CosyVoice3` (same node path supports v3 fallback). DUB-05 A/B test on 3-5 reference lines before locking default in `VERSION.json`. | Applied 2026-07-09 |
 | Field-level ownership split (TRANS-04), NOT new expert | SUMMARY reconciled conflict #4: creative intent → cinematographer Step 9; post-production execution → editor Step 13. `transition_design.json` emitted by cinematographer, additively annotated by editor. FOUND-08 preserved. | Applied 2026-07-09 |
+| **[Phase 70-01]** Lineage inventory uses canonical field names `lineage.skill_sha256` / `lineage.transform_date` / `lineage.transform_notes`, NOT roadmap shorthand `source_sha` / `transform_rule_id` / `transform_timestamp` | Roadmap shorthand was authored from research SUMMARY; actual agent YAML schema (verified against 5 live `~/.hermes/agents/*.agent.yaml` files + `scripts/transform_skill_to_agent.py:191-197`) uses canonical names. Phase 75/76 grep for `source_sha` would silently pass on empty set. Mapping documented explicitly in 70-LINEAGE-INVENTORY.md. | Applied 2026-07-09 (commit a0a15e2ce) |
+| **[Phase 70-01]** Pre-existing drift captured as MISMATCH, NOT fixed mid-Phase-70 | `cinematographer` + `audio_pipeline` agent.yaml `lineage.skill_sha256` mismatch their current SKILL.md hashes (drift introduced between v13.0 P62 transform 2026-07-07 and 2026-07-09). Phase 75 closes it as side-effect of re-transform; fixing mid-Phase-70 would violate read-only enumeration scope. | Applied 2026-07-09 (commit a0a15e2ce) |
+| **[Phase 70-01]** Lineage bump scope = 3 existing agent.yaml files (NOT 6) | Only `cinematographer` / `editor` / `audio_pipeline` have agent YAMLs today. `drawer` merged into `visual_executor` (Phase 14 DEPRECATED stub); `kais-movie-pipeline` + `kais-jimeng-cli` are skill-only orchestration/tool skills (not native expert agents per FOUND-08 frozen 15-expert set). Phase 75 bumps 3 only. | Applied 2026-07-09 (commit a0a15e2ce) |
 
 ### Decisions carried forward (still relevant)
 
@@ -196,8 +199,8 @@ Items acknowledged and carried forward (NOT in v14.0 scope):
 8. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v14.0)
 9. `~/.hermes/agents/` — 21 agent YAMLs (6 to be bumped in Phase 75: cinematographer, editor, audio_pipeline, drawer, kais-movie-pipeline, kais-jimeng-cli)
 
-**Next action:** `/gsd:plan-phase 70` to plan FOUNDATION-AUDIT.
+**Next action:** `/gsd:plan-phase 70` to plan Plans 02 (curator freeze + STATE.md freeze block) and 03 (smoke.sh + VALIDATE-CHECKLIST). Plan 01 (70-LINEAGE-INVENTORY.md) shipped 2026-07-09 — pre-v14.0 lineage baseline captured.
 
 ---
 
-*Last updated: 2026-07-09 — v14.0 roadmap created. 7 phases (70-76), 26/26 reqs mapped. Phase 70 ready to plan. Phase 72 ∥ Phase 73 parallel. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*
+*Last updated: 2026-07-09 — v14.0 Phase 70 Plan 01 shipped (commit a0a15e2ce). Pre-v14.0 lineage baseline captured: 6 SKILL.md working-tree hashes + 3 agent.yaml lineage.skill_sha256 + cross-repo pins (hermes-agent=8f70fcf7 / kais-hermes-skills=d9620369). Pre-existing drift flagged for cinematographer + audio_pipeline (Phase 75 closes). 7 phases (70-76), 26/26 reqs mapped. Phase 72 ∥ Phase 73 parallel. Phase 76 strictly LAST. Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/. SKILL.md L1-L6 read-only exception破例 authorized per PROJECT.md; lineage regeneration mandatory per XCUT-03 in Phase 75.*

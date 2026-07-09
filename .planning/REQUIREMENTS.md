@@ -114,7 +114,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-09.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| XCUT-01 | Phase 70 (FOUNDATION-AUDIT) | Pending |
+| XCUT-01 | Phase 70 (FOUNDATION-AUDIT) | In Progress (sub-rows a/b/c done in Plan 01; d/e/f pending Plans 02+03) |
 | FORM-01 | Phase 71 (FORM) | Pending |
 | FORM-02 | Phase 71 (FORM) | Pending |
 | FORM-03 | Phase 71 (FORM) | Pending |
