@@ -139,7 +139,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
-| 71. FORM | 3/3 ✅ | **COMPLETE (all 3 plans shipped 2026-07-09)** | 71-01-SUMMARY.md (FORM-01, FORM-03, FORM-05, FORM-02 partial, XCUT-02 — 6 commits) + 71-02-SUMMARY.md (FORM-02 — 4 commits across 2 repos) + 71-03-SUMMARY.md (FORM-04 — 3 commits kais-hermes-skills: ref + tests + fixtures) |
+| 71. FORM | 3/3 | Complete    | 2026-07-09 |
 | 72. DUB | 0/TBD | Not started | - |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
