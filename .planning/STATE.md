@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v13.0
-milestone_name: v10.0 Design Suite Full Rollout & Live Eval
-status: milestone_archived
-last_updated: 2026-07-08T07:02:40Z
-last_activity: 2026-07-08 -- v13.0 milestone archived + tag v13.0 placed
+milestone: v14.0
+milestone_name: kais-movie-pipeline 形态/音频/图像/转场 4 项升级
+status: planning
+last_updated: "2026-07-09T04:03:28.574Z"
+last_activity: 2026-07-09
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
-stopped_at: Milestone archived (tag v13.0); awaiting next milestone via /gsd:new-milestone
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -29,10 +28,10 @@ stopped_at: Milestone archived (tag v13.0); awaiting next milestone via /gsd:new
 
 ## Current Position
 
-Phase: 69 (final v13.0 phase, COMPLETE)
-Plan: Not started (milestone closed)
-Status: Milestone archived
-Last activity: 2026-07-08
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-09 — Milestone v14.0 started
 
 ### Progress
 

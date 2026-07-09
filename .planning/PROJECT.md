@@ -8,83 +8,81 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current Milestone: Awaiting next milestone (v13.0 SHIPPED 2026-07-08)
+## Current Milestone: v14.0 — kais-movie-pipeline 形态/音频/图像/转场 4 项升级
 
-v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`, phases archived to `.planning/milestones/v13.0-ROADMAP.md` + `.planning/milestones/v13.0-REQUIREMENTS.md`). v13.0 是 **v10.0 Design Suite Full Rollout & Live Eval** milestone —— 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff per VALIDATE-01 spec) · audit verdict `tech_debt` · 6 operator-action handoffs deferred.
-
-**v13.0 shipped (4 tracks):**
-- **EXPERT-COMPLETION** (P62 + P63): 12 expert agent YAMLs transform (15/15 active coverage via 21 total agents) + 21-agent registry load + missing-expert alarm + visual_executor round table smoke (mock-mode authoritative)
-- **CURATOR-LIVE-GUARDS** (P65): `hermes curator evolve --live` opt-in flag (default dry-run preserved) + bias canary pre-check (4/5 catch rate) + audit `tick_mode` extension
-- **OBSERVABILITY** (P67 + P68): 3 metrics collectors (agent registry + round table + memory backend) + FastAPI `/orchestrator/agents/status` endpoint (auth-gated) + `agent/observability/` package (MetricsBuffer + 3 collector modules) + CLI `hermes orchestrator status` (rich tables + `--json` flag) + dashboard `/orchestrator` panel (client-side fetch + 30s auto-refresh)
-
-**Operator-action handoffs (6, deferred per VALIDATE-01 spec):**
-- Phase 64 LIVE-EVAL-EXEC (4 reqs EVAL-01..04): 3 EVAL smokes (GLM/mem0 keys needed) + report aggregation
-- Phase 66 CURATOR-LIVE-TICK (2 reqs CURATE-04/05): 1st actual live tick + runbook
-- 3 manual UAT deferrals from Phases 62/63/67 (non-blocking, mock/TestClient authoritative)
-
-**Next:** Operator review of handoffs → `/gsd:new-milestone` for v14.0 (物理分区 decision? INFRA-04 async lift? 15-expert production tuning? — driven by Phase 64 live-eval data)
+**Goal:** 把 kais-movie-pipeline 从「竖屏短剧专用」升级为「横竖双 default 的通用短片创作管线」，同步升级配音 (CosyVoice)、图像 (dreamina cli 深度集成)、转场(创作+数据+生成三层)三个核心生成环节。**v14.0 是 v9.0 后首个 kais-movie-pipeline-focused milestone，重启跨 repo 工作流**（plan → hermes-agent/.planning/，code → kais-hermes-skills/）。
 
 **Target features (4 tracks):**
 
-1. **EXPERT-COMPLETION** — 12 active expert agent YAML 全量 transform
-   - 待转(12): `animation_studio / colorist / compliance_gate / creative_source / documentary_maker / performer / production / prompt_injector / scene_builder / script_auditor / storyboard_designer / visual_executor`
-   - Source: `kais-hermes-skills/skills/movie-experts/{name}/SKILL.md`(只读,lineage 不动)
-   - Target: `~/.hermes/agents/{name}.agent.yaml`
-   - Transform rules: v10.0 `.planning/research/v10-orchestrator-design/04-MIGRATION-PATH.md` §2 75-cell table
-   - 完成后 agent registry 共 21 agents(9 已 ship + 12 新增,达成 v10.0 design 假设的 15 active DAG + redirect stubs 覆盖)
+1. **FORM — 横竖并行双 default 参数化**
+   - Pipeline form_factor 从硬编码 `vertical 9:16` (SKILL.md line 40) → 参数化；landscape 16:9 与 portrait 9:16 都是一等公民
+   - 15 个 movie-expert skills 的 form-level 假设全部审计 + 兼容化（`9:16 power points` / `headroom` / `subtitle safe area` 这类硬编码引用要替换为 form_factor 条件分支）
+   - LTX-MSR render params 支持双向（line 446 已是 16:9 default，但要可切 9:16；MSR_FC=41 等不变）
+   - Step 14 平台母版切片保留 7 平台 variants 输出（竖屏 variants 依赖 portrait form_factor 数据）
+   - **数据资产:** `pipeline_state.form_factor` + per-shot `aspect_ratio` field
 
-2. **LIVE-EVAL-EXEC** — 跑 v12.0 deferred 的 3 个 operator smoke tests
-   - Phase 57 SC#2: live GLM synthesis endpoint latency smoke(ENDPOINT-01 真实链路,需 GLM API key)
-   - Phase 60 EVAL-01: live mem0 p95 benchmark(`MEM0_API_KEY`,触发 v14 物理分区决策条件)
-   - Phase 60 EVAL-02: real-mode fitness battery(`GLM_AUX_API_KEY_1..4`,capture production-grade accuracy/latency numbers)
-   - Output: `.planning/research/v13-live-eval/live-eval-report.md` + decision feed for v14(v14 是否做物理分区、是否解 INFRA-04 串行约束)
+2. **DUB — CosyVoice default + LTX 2.3 native audio 协调**
+   - P10 TTS default 从 ComfyUI IndexTTS2 (`AIIA_IndexTTS2_TTS` node) → CosyVoice
+   - 集成路径 (ComfyUI CosyVoice node vs CosyVoice CLI) 由 research 决定
+   - CosyVoice ↔ LTX 2.3 native audio (line 566+) 分工规则:
+     - **LTX native:** 同步对白 + 唇形同步（已有路径，保持）
+     - **CosyVoice:** 后期 TTS overlay（旁白 / voiceover / emotion prosody 重场景）
+   - IndexTTS2 处置（保留 fallback vs 退役）由 research 决定
+   - Voice preset 库迁移：IndexTTS2 emotion sliders (sad/calm/happy/melancholic) → CosyVoice 等效 preset
+   - **数据资产:** `pipeline_state.episode_id.voice_preset` per-character + `tts_engine` field（`cosyvoice` / `ltx_native` / `indextts2_fallback`）
 
-3. **CURATOR-LIVE** — curator self-evolution 从 dry-run → live tick
-   - Currently: `dry_run: true` default per v11.0 EVAL-06 invariant
-   - Target: `dry_run: false` live mode + 安全护栏(bias canary pre-check + rollback on anomaly)
-   - 前置依赖: v12.0 EVAL-03 bias canary 必须先在 live mode 验证 ≥ 4/5 catch rate(否则保留 dry-run)
-   - Output: live tick runbook + safety policy + 1st live run report
+3. **IMG — dreamina cli 集成深度升级**（已是 default，工作在深度不在 default 切换）
+   - **Parallel orchestration:** auto-retry + queue management + failure backoff（line 621-622 已 validated 10-parallel = 100% / 12-parallel = 100% / 20-parallel = 95%，要包成 production-grade manager）
+   - **image2image workflow 标准化:** reference image → output 全链路（含 prompt 模板 + reference 数量 + strength 参数）
+   - **Reference image vision-verify 强制化:** line 561 pitfall（dreamina 生成内容可能完全错误）升级为 mandatory gate，未 verify 不允许 upload 到 ComfyUI
+   - **RHD/LHD bug 系统性缓解:** line 570 mitigation 升级为 prompt 模板 + verify-retry 循环
+   - **Production-grade SLA tracking:** latency / success rate / cost / quota per task
+   - **数据资产:** dreamina 任务 metadata 全部进 `pipeline_state`（修 line 619 pitfall —— manual 生成的 visual assets 必须 backfill 进 result.outputs）
 
-4. **OBSERVABILITY** — operator dashboard(新能力,非 v10.0 设计直接覆盖,从 v12.0 audit §7 gap 衍生)
-   - Round table metrics: latency p50/p95 · token cost · state transitions · serial-lock wait time · early-stop trigger rate
-   - Agent registry health: 21 agents loaded · schema validation status · missing-expert告警 · lineage integrity
-   - Memory backend status: mem0 p95 read/write · conflict arbitration rate · compaction trigger rate · error rate
-   - Output: CLI command(`hermes orchestrator status`)+ 可选 web dashboard(基于现有 `hermes dashboard`)
+4. **TRANSITION — 创作+数据+生成三层协作**
+   - **现状发现:** 转场设计**不是缺失**，是分散 + 薄 + 缺生成层 routing
+     - cinematographer E-Konte Layer 5 schema (line 125) 已有 `cut_transition_type: hard_cut/dissolve/wipe/fade` + `next_shot_link` 字段，但**很薄**，没有 visual_hook / camera_continuity / transition_method
+     - editor workflow step 7 已有 "Transition Design"，但定位是**后期** cutting decision
+     - LTX-MSR ICLoRA conditioning（41 帧）是 **identity preservation**，**不是** first/last frame transition conditioning
+     - `references/video-engine-comparison.md`（2026-07-01 snapshot）只对比了 LTX-MSR / FramePack / Wan2.1/2.2 / HunyuanVideo，**没有评估任何首尾帧 transition-capable 引擎**
+   - **创作层** (cinematographer 主导): E-Konte Layer 5 schema 扩展
+     - `transition_method`: montage cut / match-cut via shared object / match-cut via shared landscape / motion-vector match / color match / none
+     - `visual_hook`: 具体连接元素（哪个物体 / 哪片景观 / 哪种色彩 / 哪个 motion vector）
+     - `camera_continuity`: pan-to / zoom-to / dolly-through / whip-pan / match-cut-on-motion / none
+   - **数据层** (新 first-class asset): `transition_design.json` per-shot transition design + cross-shot chain；扩展 `next_shot_link` 为结构化对象（不是 string id）
+   - **生成层 research** (扩大 scope，不默认 fallback 到后期):
+     - **Step A — Verify LTX-MSR first/last frame capability**（预期 NO，ICLoRA 是 identity conditioning）
+     - **Step B — Survey 其他 generation workflows 的 first/last frame 支持**：候选包括 Kling / Runway Gen-3 / Pika / Hailuo / Vidu / Wan2.2 variants / Hunyuan variants / 本地 ComfyUI first-last-frame I2V nodes / Dreamina/Jimeng video（已在 SKILL.md 但 disabled）
+     - **Step C — 定义 transition engine selection rule**：类比 `references/video-engine-comparison.md §Selection Rules` 现有的 P11 shot routing 模式；新增"per-transition routing"维度
+     - **Step D — Fallback path**：只在所有 generation 选项不合适时才退到 editor 后期（ffmpeg dissolve/wipe/fade / match-cut via manual cut）
+   - **新 ref:**
+     - `references/transition-design.md` (creative taxonomy + data schema + execution paths)
+     - **更新** `references/video-engine-comparison.md`（新增 transition-capable engine 矩阵 + per-transition routing rules）
 
 **Key context:**
 
-- **范式沿用:** Hermes 是 agent 容器 + per-agent memory + 自进化;CC 仅是场地 + 协调员 + 结构化助手(v10.0 锁定,v11.0 实施,v12.0 hardening,v13.0 收官)
-- **范围严格收口:** 仅落地已 deferred 的 4 项 scope + 新加 OBSERVABILITY;**不**做物理分区、**不**解串行约束(均 v14+,取决于 v13 live data)
-- **Operator-action 与 code-work 并行:** LIVE-EVAL-EXEC 需要 operator secrets(GLM/mem0 keys),其它 3 tracks 是纯 code-work;两条线可以并行推进
-- **物理位置:** agent YAML 写 `~/.hermes/agents/`;orchestrator/metrics code 写 hermes-agent repo(`agent/` + `tools/`);live-eval report 写 `.planning/research/v13-live-eval/`
-- **阶段编号:** 继续从 v12.0 Phase 61 之后 → Phase 62 起
-- **Hard constraints(沿用 + 新增):**
-  - INFRA-04 串行约束不变(v13.0不解,MEMORY.md `feedback-glm-overload-reduce-concurrency.md`)
-  - EVAL-06 dry-run-first 不变(v13.0 curator 切 live 是 opt-in `--live` flag,默认仍 dry-run)
-  - Operator secrets 由 operator 提供,LIVE-EVAL-EXEC 不 block 其它 tracks
+- **跨 repo 模式（沿用 v9.0）:** Plan artifacts → hermes-agent/.planning/；SKILL.md + refs + Python + ComfyUI workflow → kais-hermes-skills/
+- **阶段编号:** 继续从 v13.0 phase 69 之后 → phase 70 起
+- **SKILL.md read-only invariant 例外破例:** v10.0 设计的 lineage invariants L1-L6（Phase 48-49）要求 kais-hermes-skills SKILL.md read-only；v14.0 本身就是要改 SKILL.md，**这次例外破例**。Lineage 字段（source_sha + transform_rule_id + transform_timestamp）需重新生成并 propagate 到 `~/.hermes/agents/*.agent.yaml`（重跑 v13.0 P62 的 transform 流程）。连锁影响评估在 v14.0 Phase 0 或首个 SKILL.md-touching phase 进行。
+- **Hard constraints(沿用):**
+  - INFRA-04 串行约束不变（v14.0 不解，MEMORY.md `feedback-glm-overload-reduce-concurrency.md`）
+  - EVAL-06 dry-run-first 不变（v14.0 不动 curator live mode）
+  - v13.0 operator-action handoffs（6 项）不在 v14.0 scope（继续 deferred）
 
 **Constraints(沿用 + 新增):**
 
-- **Tech stack:** 沿用 v11.0/v12.0(Python 3.11+ + PyYAML + mem0 + asyncio.Lock + FastAPI dashboard);OBSERVABILITY 复用 `hermes dashboard` FastAPI server
-- **Compatibility:** 12 新 agent YAML 必须 byte-pass v10.0 `agents-schema.yaml` lint;`related_skills` + `lineage` 字段必须 populated
-- **SKILL.md read-only:** kais-hermes-skills repo 的 SKILL.md 不动(per Phase 48-49 lineage invariants L1-L6)
-- **Single repo 收敛:** 全部在 hermes-agent repo + `~/.hermes/`,不创建新 repo
+- **Tech stack:** 沿用 v9.0 跨 repo 模式（hermes-agent = GSD planning + kais-hermes-skills = code）；新增 CosyVoice 集成（路径 TBD）+ 可能新增 transition-capable engine API client
+- **Compatibility:** v14.0 改的 SKILL.md 必须 byte-pass v10.0 `agents-schema.yaml` lint（如有 agent YAML 需要重生）；refs 文件保持中文为主 + 关键术语英文
+- **SKILL.md lineage:** 修改的 SKILL.md 必须更新 lineage 字段；`~/.hermes/agents/*.agent.yaml` 同步重生
+- **Single repo 收敛 per repo:** hermes-agent repo 仅放 GSD `.planning/` 工件；kais-hermes-skills repo 放 SKILL.md + refs + code
 
-## Current State (v13.0 SHIPPED 2026-07-08, awaiting next milestone)
+## Current State (v14.0 STARTED 2026-07-09)
 
-v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`, phases archived to `.planning/milestones/v13.0-ROADMAP.md` + `.planning/milestones/v13.0-REQUIREMENTS.md`). v13.0 是 **v10.0 Design Suite Full Rollout & Live Eval** milestone —— 8 phases (62-69) · 17 plans in shipped phases · 20/20 reqs mapped (13 satisfied + 1 audit + 6 operator-handoff per VALIDATE-01 spec) · audit verdict `tech_debt` · 6 operator-action handoffs deferred.
+v14.0 milestone started 2026-07-09. v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`, phases archived to `.planning/milestones/v13.0-ROADMAP.md` + `.planning/milestones/v13.0-REQUIREMENTS.md`).
 
-**v13.0 shipped (4 tracks):**
-- EXPERT-COMPLETION (P62 + P63): 12 expert agent YAMLs transform + 21-agent registry + missing-expert alarm + visual_executor round table smoke
-- CURATOR-LIVE-GUARDS (P65): `hermes curator evolve --live` opt-in flag + bias canary pre-check + audit tick_mode extension
-- OBSERVABILITY (P67 + P68): 3 metrics collectors + FastAPI `/orchestrator/agents/status` endpoint + CLI `hermes orchestrator status` + dashboard `/orchestrator` panel
-
-**Operator-action handoffs (6, deferred per VALIDATE-01):**
-- Phase 64 LIVE-EVAL-EXEC: 3 EVAL smokes (GLM/mem0 keys needed)
-- Phase 66 CURATOR-LIVE-TICK: 1st actual live tick
-- Manual UAT deferrals from Phases 62/63/67
-
-**Next:** Operator review of handoffs → `/gsd:new-milestone` for v14.0 (physical partition decision? INFRA-04 async lift? 15-expert production tuning? — driven by Phase 64 live-eval data)
+**v14.0 范围:** kais-movie-pipeline 4 项升级 (FORM 横竖双 default / DUB CosyVoice / IMG dreamina 深度集成 / TRANSITION 三层协作)。
+**v14.0 跨 repo:** hermes-agent/.planning/ + kais-hermes-skills/。
+**v14.0 阶段编号:** Phase 70+ (continuing from v13.0 Phase 69)。
 
 ## Previous Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval ✅ SHIPPED 2026-07-08
 
@@ -267,9 +265,15 @@ v9.0 shipped 后,候选方向:
 
 ### Active
 
-<!-- v13.0 SHIPPED + archived 2026-07-08. Next milestone TBD via /gsd:new-milestone. -->
+<!-- v14.0 STARTED 2026-07-09 — kais-movie-pipeline 形态/音频/图像/转场 4 项升级。 -->
 
-v13.0 SHIPPED 2026-07-08. Awaiting next milestone via `/gsd:new-milestone`. v14+ scope candidates: physical partition decision (driven by Phase 64 EVAL-02 mem0 p95 data) / INFRA-04 async concurrency lift (driven by Phase 64 EVAL-03 fitness battery) / 15-expert production tuning.
+v14.0 STARTED 2026-07-09. 4 tracks:
+- **FORM** — Pipeline form_factor 参数化（横竖并行双 default）
+- **DUB** — CosyVoice default + LTX 2.3 native audio 协调
+- **IMG** — dreamina cli 集成深度升级（parallel / image2image / vision-verify / RHD-LHD / SLA tracking）
+- **TRANSITION** — 创作+数据+生成三层协作（含 LTX-MSR first/last frame 验证 + 其他 engine survey）
+
+详见 `## Current Milestone: v14.0` 章节。
 
 ### Deferred to operator (acknowledged at v1 close)
 
@@ -591,4 +595,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — v13.0 milestone SHIPPED + closed (tag `v13.0`). v10.0-v13.0 四 milestone 架构弧线收官。Phases 62/63/65/67/68 ✓ shipped; Phases 64/66 deferred (operator-handoff per VALIDATE-01 spec). Next: operator review of 6 handoffs → `/gsd:new-milestone` for v14.0.*
+*Last updated: 2026-07-09 — v14.0 milestone started (kais-movie-pipeline 形态/音频/图像/转场 4 项升级). v13.0 SHIPPED + closed 2026-07-08 (tag `v13.0`). v14.0 跨 repo 模式: hermes-agent/.planning/ + kais-hermes-skills/。Phase 70+ 继续 v13.0 Phase 69 之后编号。Next: define v14.0 REQUIREMENTS.md → spawn gsd-roadmapper。*
