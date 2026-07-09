@@ -16,7 +16,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 
 - [x] **Phase 70: FOUNDATION-AUDIT** — Lineage Impact Assessment + curator freeze + cross-repo baseline (completed 2026-07-09)
 - [x] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default) (completed 2026-07-09)
-- [ ] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination
+- [x] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination (completed 2026-07-09)
 - [ ] **Phase 73: IMG** — dreamina cli production-grade orchestration
 - [ ] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design
 - [ ] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 6 affected agents
@@ -145,7 +145,7 @@ Phase 72 (DUB) and Phase 73 (IMG) can execute in parallel — they are independe
 |-------|----------------|--------|-----------|
 | 70. FOUNDATION-AUDIT | 3/3 | Complete    | 2026-07-09 |
 | 71. FORM | 3/3 | Complete    | 2026-07-09 |
-| 72. DUB | 3/3 | **COMPLETE** (Plan 03 SHIPPED) | DUB-01..05 all delivered; docs + VERSION.json + smoke runner complete |
+| 72. DUB | 3/3 | Complete    | 2026-07-09 |
 | 73. IMG | 0/TBD | Not started | - |
 | 74. TRANSITION | 0/TBD | Not started | - |
 | 75. LINEAGE-BUMP | 0/TBD | Not started | - |
