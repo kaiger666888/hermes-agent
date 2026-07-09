@@ -91,7 +91,12 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
   5. User can run `hermes dreamina stats` CLI to see per-task latency / success rate / cost dashboard (SLA tracking via local MetricsBuffer, no GLM calls per metric)
 **Cross-repo touch**: kais-hermes-skills (new `dreamina_manager.py` in `skills/kais-jimeng-cli/scripts/` or `plugins/kais_aigc/`, GLM-4.6V vision tool integration, `kais-jimeng-cli/SKILL.md` + `kais-movie-pipeline/SKILL.md` body edits)
 **Research flag**: **Plan-phase research needed.** GLM-4.6V LHD/RHD detection accuracy on dreamina-generated interior shots is unverified (research gap from SUMMARY §Gaps); dreamina N-ref tolerance for image2image is WATCH-level (no public data on 4-5 ref degradation). IMG-06 standardization should stratify retry budget by ref-count stratum (1-ref / 3-ref / 5-ref) per research recommendation.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 73-01-PLAN.md — IMG Foundation (dreamina_manager orchestrator + vision_verify GLM-4.6V gate + dreamina_stats MetricsBuffer + 8 unit tests)
+- [ ] 73-02-PLAN.md — IMG Integration (RHD/LHD 3-attempt budget + image2image-stratification.md + hermes dreamina stats CLI registration + _VISION_VERIFY_INSTRUCTION XCUT-02 injection + SKILL.md patches)
+- [ ] 73-03-PLAN.md — IMG Validation (e2e integration tests + XCUT-02 goal-content test + 73-smoke.sh 15 assertions)
 
 ### Phase 74: TRANSITION
 **Goal**: Users can author structured transition designs as first-class pipeline assets, with creative intent (cinematographer Step 9) cleanly separated from post-production execution (editor Step 13), and with per-transition engine routing evaluated across Wan2.2 FLF2V / Hailuo / Vidu / ffmpeg / LTX-2.3 FLF (evaluated, not assumed incapable).
