@@ -145,7 +145,10 @@ Plans:
   5. Milestone audit doc `.planning/milestones/v14.0-MILESTONE-AUDIT.md` is authored and tag `v14.0` is placed (verdict recorded; coverage 26/26 reqs reconciled — satisfied / audit / operator-handoff buckets)
 **Cross-repo touch**: hermes-agent (`.planning/milestones/v14.0-MILESTONE-AUDIT.md`, tag placement); kais-hermes-skills (read-only commit pin verification)
 **Research flag**: Standard pattern (mechanical audit, mirrors v9.0 P43 / v11.0 P56 / v12.0 P61 / v13.0 P69)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 76-01-PLAN.md — VALIDATE Execution (76-meta-rule-x2-audit.sh XCUT-02 + ancestry assertion SC#2 + v14.0-MILESTONE-AUDIT.md + tag v14.0)
 
 ## Progress
 
