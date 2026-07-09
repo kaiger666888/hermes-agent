@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
 status: executing
-last_updated: "2026-07-09T16:08:52Z"
-last_activity: 2026-07-09 -- Phase 74 Plan 02 SHIPPED (SKILL.md Ownership + Routing Refs + XCUT-02 Injection)
+last_updated: "2026-07-09T16:17:59Z"
+last_activity: 2026-07-09 -- Phase 74 TRANSITION COMPLETE (Plan 03 shipped: LTX-FLF validation template + XCUT-02 goal-content test + 74-smoke.sh 17 assertions)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
-  percent: 67
+  completed_plans: 15
+  percent: 71
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: 74 (transition) — EXECUTING
+Phase: 74 (transition) — COMPLETE
 Plan: 3 of 3
-Status: Phase 74 Plan 02 SHIPPED (SKILL.md Ownership + Routing Refs + XCUT-02 Injection)
-Last activity: 2026-07-09 -- Phase 74 Plan 02 SHIPPED
+Status: Phase 74 TRANSITION COMPLETE (all 7 TRANS requirements satisfied; 15/15 plans in v14.0 shipped)
+Last activity: 2026-07-09 -- Phase 74 Plan 03 SHIPPED + phase close-out
 
 ### Progress
 
@@ -48,7 +48,7 @@ v10.0 编排架构设计(设计型):         [██████████] 10
 v11.0 Expert Agents PoC:           [██████████] 100% (Phases 52-56, shipped 2026-07-07, tag v11.0)
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
-v14.0 4-Track Upgrade:             [███████░░░]  67% (Phases 70-76, 4/7 phases complete + Phase 74 Plans 01+02, 14/15 plans)
+v14.0 4-Track Upgrade:             [████████░░]  71% (Phases 70-76, 5/7 phases complete, 15/15 plans)
 ```
 
 **v14.0 milestone status:** IN PROGRESS — roadmap created 2026-07-09. 7 phases (70-76), 26/26 reqs mapped. 4/7 phases complete (70, 71, 72, 73). Phase 74 (TRANSITION) next.
@@ -61,7 +61,7 @@ v14.0 4-Track Upgrade:             [███████░░░]  67% (Phases
 | 71 | FORM | **COMPLETE (3/3 plans shipped 2026-07-09)** | form_factor parameterization (FORM-01..05). **Plan 01 SHIPPED:** PipelineState.form_factor field + validate_form_factor_invariant + horizontal-screen-framing.md + MSR_FC=17→41 sweep + --form-factor argparse + _FORM_FACTOR_INSTRUCTION injection (6 commits kais-hermes-skills d962036→fea9999). **Plan 02 SHIPPED:** 15 canonical active movie-expert SKILL.md each have ## Form Factor Adaptation H2 tiered Tier 1/2/3 (3 commits kais-hermes-skills fea9999→cdf71dd + 1 smoke cf8ca0ea5). **Plan 03 SHIPPED:** Step 14 4-cell reframe matrix in platform-master-slicing.md (portrait→portrait pass-through / landscape→landscape pass-through / portrait→landscape letterbox / landscape→portrait center-crop + mandatory saliency scan). 4/4 reframe-math unit tests green. 8 sample-frame fixtures under _eval/form_factor_step14/ + README. 3 commits in kais-hermes-skills (cdf71dd→3c97902). FORM-04 contract complete; PITFALL F-2 (reframe-math inversion when master is landscape) mitigated at contract layer. Phase 72 (DUB) ∥ Phase 73 (IMG) parallel next. |
 | 72 | DUB | **COMPLETE (3/3 plans shipped 2026-07-09)** | CosyVoice + LTX 2.3 native audio (DUB-01..05). **Plan 01 SHIPPED:** validate_tts_engine_division (DUB-02) + validate_voice_clone_ref (DUB-03) + tts_batch routing + DEPRECATED fallback (DUB-04). 8 commits kais-hermes-skills (5772f55→4d1f907). 15 tests green. **Plan 02 SHIPPED:** ComfyUI AIIA CosyVoice workflow JSON (DUB-01) + probe-tts-routing.sh healthcheck + auto-fallback (DUB-04) + SKILL.md IndexTTS2 DEPRECATED demotion + _TTS_ENGINE_INSTRUCTION injection into p10_voice.py (XCUT-02 FIRST p10 _INSTRUCTION). 5 commits kais-hermes-skills (4d1f907→1320728). 13 p10 + 10 dub_division tests green. **Plan 03 SHIPPED:** cosyvoice-deployment.md (286-line twin, dual-path DUB-01) + VERSION.json (top-level, tts.cosyvoice_default_variant null DUB-05 lock) + cosyvoice-benchmark.md (120-line template, DUB-05 operator-action handoff) + indextts2-to-cosyvoice-migration.md (DUB-03 mapping) + 72-smoke.sh (11 assertions ALL PASS). 4 commits kais-hermes-skills (1320728→df71fde) + 1 commit hermes-agent (3a8949bf0). Phase 72 COMPLETE — ready for Phase 73 (IMG) parallel track or Phase 74 (TRANSITION). |
 | 73 | IMG | **COMPLETE (3/3 plans shipped 2026-07-09)** | dreamina production-grade orchestration (IMG-01..06). **Plan 01 SHIPPED:** dreamina_manager.py (asyncio.Semaphore(10) + tenacity AsyncRetrying + asyncio.gather block-on-all) + vision_verify.py (GLM-4.6V gate via task="vision" routing + sha256 cache + confidence gating) + dreamina_stats.py (MetricsBuffer JSONL ring buffer, sync-only INFRA-04) + 10 unit tests green. 6 commits kais-hermes-skills (f2b4111→1cf9d54). **Plan 02 SHIPPED:** RHD/LHD 3-attempt budget with image2image fallback in dreamina_manager (IMG-04) + image2image-stratification.md 1/3/5-ref table (IMG-06) + `hermes dreamina stats` CLI registered (IMG-05 CLI half) + _VISION_VERIFY_INSTRUCTION XCUT-02 3-site injection in p07 (constant + .task + .constraints) + SKILL.md body patches (vision-verify MUST gate + Volvo V2 3-attempt budget + Production Orchestrator H2). 5 commits kais-hermes-skills (e62ccce→96adafe). **Plan 03 SHIPPED:** IMG validation layer — test_batch_e2e (IMG-01 integration) + test_rhd_lhd_e2e (IMG-04 integration) + test_goal_includes_vision_verify_instruction (XCUT-02 goal-content assertion) + 73-smoke.sh (15 assertions, exits 0). 2 commits kais-hermes-skills (3ab1d0f→4fdd8ab) + 1 commit hermes-agent (b6f889a68). All 23 IMG + p07 tests green. Phase 73 COMPLETE — IMG-01..06 + XCUT-02 satisfied. Ready for Phase 74 (TRANSITION). |
-| 74 | TRANSITION | **IN PROGRESS (2/3 plans shipped 2026-07-09)** | 创作+数据+生成三层 (TRANS-01..07). Most invasive. **Plan 01 SHIPPED:** transition_schema.py (TRANS-01 12-enum + 6-enum Pydantic Literal + frozenset runtime + TRANS-02 load_next_shot_link backward-compat reader) + transition-design ASSET_SCHEMA slot (TRANS-03 system 1, writer=p09 reader=p13) + canvas_sync _PHASE_OUTPUT_MAP p09 tuple (TRANS-03 system 2, storyboard canvas_type) + D-06 storyboard reuse documentation (TRANS-03 system 3, zero frontend change). 12 unit tests green. 3 commits kais-hermes-skills (df78a6f→d079103). **Plan 02 SHIPPED:** TRANS-04 cinematographer + editor SKILL.md ownership split (Field Ownership + Execution Ownership subsections, PITFALL T-4 disambiguation) + TRANS-05 transition-design.md 12-type taxonomy ref (hard_cut→none, film examples fair-use) + TRANS-06 transition-engine-routing.md declarative per-transition routing table (INFRA-04 compliant, PITFALL T-1 LTX-FLF drift risk documented, XCUT-04b operator-action handoff) + XCUT-02 _TRANSITION_DESIGN_INSTRUCTION (p09, consolidated with form_factor per MAX_CONSTRAINTS=7) + _EDITOR_TRANSITION_EXECUTION_INSTRUCTION (p13, first _INJECTION constant) + e-konte-format.md Layer 5 schema extension (TRANS-01/02 backward-compat). 22 tests green. 3 commits kais-hermes-skills (eec0b72→7d113da). Next: Plan 74-03 (LTX-FLF validation + smoke runner). |
+| 74 | TRANSITION | **COMPLETE (3/3 plans shipped 2026-07-09)** | 创作+数据+生成三层 (TRANS-01..07). Most invasive. **Plan 01 SHIPPED:** transition_schema.py (TRANS-01 12-enum + 6-enum Pydantic Literal + frozenset runtime + TRANS-02 load_next_shot_link backward-compat reader) + transition-design ASSET_SCHEMA slot (TRANS-03 system 1, writer=p09 reader=p13) + canvas_sync _PHASE_OUTPUT_MAP p09 tuple (TRANS-03 system 2, storyboard canvas_type) + D-06 storyboard reuse documentation (TRANS-03 system 3, zero frontend change). 12 unit tests green. 3 commits kais-hermes-skills (df78a6f→d079103). **Plan 02 SHIPPED:** TRANS-04 cinematographer + editor SKILL.md ownership split (Field Ownership + Execution Ownership subsections, PITFALL T-4 disambiguation) + TRANS-05 transition-design.md 12-type taxonomy ref (hard_cut→none, film examples fair-use) + TRANS-06 transition-engine-routing.md declarative per-transition routing table (INFRA-04 compliant, PITFALL T-1 LTX-FLF drift risk documented, XCUT-04b operator-action handoff) + XCUT-02 _TRANSITION_DESIGN_INSTRUCTION (p09, consolidated with form_factor per MAX_CONSTRAINTS=7) + _EDITOR_TRANSITION_EXECUTION_INSTRUCTION (p13, first _INJECTION constant) + e-konte-format.md Layer 5 schema extension (TRANS-01/02 backward-compat). 22 tests green. 3 commits kais-hermes-skills (eec0b72→7d113da). **Plan 03 SHIPPED:** TRANS-07 ltx-flf-iclora-validation.md research-scope template (ComfyUI node graph LiconMSR+FLF+LTXVConditioning+SamplerCustomAdvanced + 2 reference shot placeholders + Production-Readiness Verdict gating TRANS-11 v15+ rollout) + XCUT-02 test_p09_transition_unit.py goal-content assertion (9 keyword checks via delegate-spy) + slot-write test (TRANS-03 system 1 writer verification) + 74-smoke.sh 17 XCUT-01 assertions (TRANS-01..07 + XCUT-02, exits 0, Phase 76 VALIDATE audit input). 359 tests green (356 full-suite excluding pre-existing + 2 new transition_unit + 1 VALIDATION 74-03-02). 2 commits kais-hermes-skills (0182ba8 + 3f79695) + 1 commit hermes-agent (29b4194f0). **Phase 74 COMPLETE** — all 7 TRANS reqs satisfied; ready for Phase 75 (LINEAGE-BUMP). |
 | 75 | LINEAGE-BUMP | Not started | Re-run v13.0 P62 transform on 6 agents (XCUT-03). After all SKILL.md edits final. |
 | 76 | VALIDATE | Not started | META-RULE audit (XCUT-02) + operator-action handoffs (XCUT-04) + milestone audit. Strictly LAST. |
 
@@ -118,6 +118,7 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | 73 | P03 | ~12min | 3 | 3 (test_integration.py + test_p07_unit.py + 73-smoke.sh) |
 | 74 | P01 | ~5min | 3 | 4 (transition_schema.py + test_transition_schema.py + asset_bus.py + canvas_sync.py) |
 | 74 | P02 | ~7min | 3 | 7 (cinematographer SKILL.md + editor SKILL.md + transition-design.md + transition-engine-routing.md + p09_shot_breakdown.py + p13_delivery.py + e-konte-format.md) |
+| 74 | P03 | ~5min | 3 | 3 (ltx-flf-iclora-validation.md + test_p09_transition_unit.py + 74-smoke.sh) |
 
 ## Decisions (v14.0 — in progress)
 
@@ -174,6 +175,10 @@ Phase 72 (DUB) and Phase 73 (IMG) execute in parallel. Phase 76 (VALIDATE) is st
 | **[Phase 74-02]** Routing rules declarative only (INFRA-04 / PITFALL X-5) | All routing is markdown table in transition-engine-routing.md, NO runtime LLM decisions (TRANS-10 deferred). All calls under existing glm_concurrent semaphore; NO separate transition semaphore. Prevents serial-constraint violation (N routing LLM calls × GLM latency). | Applied 2026-07-09 (commit 11e165e) |
 | **[Phase 74-02]** LTX-2.3 FLF evaluated per-transition (NOT assumed incapable per SUMMARY conflict #1) | Routing table states drift risk explicitly per row; PITFALL T-1 section documents ICLoRA (identity) + FLF (frame-interp) orthogonality. Per-transition trade-off: identity-critical → Wan2.2 or MSR + post-production match-cut; landscape-only → LTX-2.3 FLF viable with drift caveat. | Applied 2026-07-09 (commit 11e165e) |
 | **[Phase 74-02]** p13 first _INSTRUCTION constant (Phase 74 establishes XCUT-02 pattern in p13) | p13_delivery.py previously had NO _INSTRUCTION constants. Phase 74 adds _EDITOR_TRANSITION_EXECUTION_INSTRUCTION as the first — establishes the 3-site injection pattern (constant + .task + .constraints) for future v15+ p13 _INSTRUCTION additions. | Applied 2026-07-09 (commit 7d113da) |
+| **[Phase 74-03]** TRANS-07 research-scope template only (operator runs shots, phase produces template) | CONTEXT.md TRANS-07 lock: detailed ComfyUI node graph setup (LiconMSR + FLF Loader + LTXVConditioning + SamplerCustomAdvanced per community reports) + <operator fills> placeholders for actual validation results. Phase produces REPORT TEMPLATE + setup instructions; operator runs 1-2 reference shots. Verdict (ready / deferred) gates TRANS-11 v15+ production rollout. | Applied 2026-07-09 (commit 0182ba8) |
+| **[Phase 74-03]** Goal-content test uses separate file test_p09_transition_unit.py (NOT extending test_p09_unit.py) | CONTEXT.md Claude's Discretion explicitly permits both approaches. Separate file = cleaner per-requirement test isolation (TRANSITION vs CROSS-CUTTING vs FORM_FACTOR). 9 keyword assertions in one test function covers TRANS-01/02/04/06 injection. | Applied 2026-07-09 (commit 3f79695) |
+| **[Phase 74-03]** TDD RED phase pre-satisfied by Plan 74-02 (cross-plan intra-wave dependency) | Plan 74-03 Task 2 has tdd="true" but the implementation (_TRANSITION_DESIGN_INJECTION in p09) was already shipped by Plan 74-02 Task 3 (commit 7d113da) in wave 2 parallel. Test correctly passes GREEN on first run; RED was pre-satisfied. Cross-plan dependency resolved per critical_context. | Applied 2026-07-09 (commit 3f79695) |
+| **[Phase 74-03]** Smoke script 17 assertions (>= 16 per plan) with file-existence-FIRST pattern | T-74-07 threat mitigation: each assertion uses file-existence check FIRST (if [ ! -f ] then FAIL), then grep-count with explicit -lt N threshold (NOT bare == 0 gate). set -euo pipefail. Does NOT invoke live Docker/ComfyUI/cloud APIs (operator-action handoff per XCUT-04b). TRANS-07a adds wc -l >= 80 line-count check as defense-in-depth. | Applied 2026-07-09 (commit 29b4194f0) |
 
 ### Decisions carried forward (still relevant)
 
@@ -282,8 +287,8 @@ Items acknowledged and carried forward (NOT in v14.0 scope):
 8. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v14.0)
 9. `~/.hermes/agents/` — 21 agent YAMLs (6 to be bumped in Phase 75: cinematographer, editor, audio_pipeline, drawer, kais-movie-pipeline, kais-jimeng-cli)
 
-**Next action:** `/gsd:execute-phase 74` to continue with Plan 74-03 (LTX-FLF validation report template + TRANS-02 backward-compat smoke test + XCUT-02 goal-content test for p09 + 74-smoke.sh). Plan 74-02 (SKILL.md ownership + routing refs + XCUT-02 injection) shipped; Plan 03 remains.
+**Next action:** `/gsd:execute-phase 75` to start Phase 75 (LINEAGE-BUMP — re-run v13.0 P62 transform on 3 affected agent YAMLs: cinematographer, editor, audio_pipeline). Phase 74 (TRANSITION) COMPLETE — all 7 TRANS requirements satisfied, 15/15 v14.0 plans shipped.
 
 ---
 
-*Last updated: 2026-07-09 — v14.0 Phase 74 Plan 02 SHIPPED (SKILL.md Ownership + Routing Refs + XCUT-02 Injection). 3 commits in kais-hermes-skills (eec0b72 docs: TRANS-04 cinematographer + editor SKILL.md ownership split + 11e165e docs: TRANS-05/06 transition-design + routing refs + 7d113da feat: XCUT-02 _INJECTION p09 + p13 + e-konte Layer 5 extension). 22 tests green (8 p09 unit + 12 transition_schema + 2 syntax checks). All 9 plan-level verification commands pass. TRANS-04 (field-level ownership split — FOUND-08 preserved) + TRANS-05 (12-type taxonomy) + TRANS-06 (declarative per-transition routing — INFRA-04 compliant) + XCUT-02 (_TRANSITION_DESIGN_INSTRUCTION p09 + _EDITOR_TRANSITION_EXECUTION_INSTRUCTION p13) satisfied. Next: Phase 74 Plan 03 (LTX-FLF validation + smoke runner). Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/ (HEAD now 7d113da).*
+*Last updated: 2026-07-09 — v14.0 Phase 74 TRANSITION COMPLETE (Plan 03 shipped: LTX-FLF validation template + XCUT-02 goal-content test + 74-smoke.sh 17 assertions). Plan 74-03: 2 commits in kais-hermes-skills (0182ba8 docs: TRANS-07 LTX-FLF+ICLoRA validation report template + 3f79695 test: XCUT-02 p09 goal-content assertion) + 1 commit hermes-agent (29b4194f0 feat: bash smoke runner executing 17 XCUT-01 assertions). 359 tests green (2 new transition_unit + 1 VALIDATION 74-03-02 + 356 full-suite excluding pre-existing failure). 74-smoke.sh exits 0 with 17/17 TRANS-01..07 + XCUT-02 assertions PASSED. All 7 TRANS requirements satisfied + FOUND-08 preserved + INFRA-04 compliant + MAX_CONSTRAINTS=7 consolidated. Operator-action handoffs: TRANS-07 LTX-FLF validation shots + XCUT-04b Hailuo/Vidu API keys. Phase 74 ready for Phase 75 (LINEAGE-BUMP). Cross-repo: hermes-agent/.planning/ + kais-hermes-skills/ (HEAD now 3f79695).*

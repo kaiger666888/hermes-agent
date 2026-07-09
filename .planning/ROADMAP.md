@@ -18,7 +18,7 @@ v14.0 (kais-movie-pipeline 4-Track Upgrade) 把 kais-movie-pipeline 从「竖屏
 - [x] **Phase 71: FORM** — form_factor parameterization (横竖并行双 default) (completed 2026-07-09)
 - [x] **Phase 72: DUB** — CosyVoice + LTX 2.3 native audio coordination (completed 2026-07-09)
 - [x] **Phase 73: IMG** — dreamina cli production-grade orchestration (completed 2026-07-09)
-- [ ] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design
+- [x] **Phase 74: TRANSITION** — 创作+数据+生成三层协作 transition design (completed 2026-07-09)
 - [ ] **Phase 75: LINEAGE-BUMP** — re-run v13.0 P62 transform on 6 affected agents
 - [ ] **Phase 76: VALIDATE** — META-RULE audit + operator-action handoffs + milestone audit
 
@@ -115,7 +115,7 @@ Plans:
 Plans:
 - [x] 74-01-PLAN.md — TRANSITION Foundation (transition_schema.py TRANS-01/02 + asset_bus slot + canvas_sync TRANS-03 + 12 tests) — SHIPPED 2026-07-09
 - [x] 74-02-PLAN.md — SKILL.md Ownership + Routing Refs + XCUT-02 Injection (TRANS-04/05/06 + _INSTRUCTION constants + e-konte Layer 5) — SHIPPED 2026-07-09
-- [ ] 74-03-PLAN.md — LTX-FLF Validation + Smoke (TRANS-07 template + XCUT-02 goal-content test + 74-smoke.sh)
+- [x] 74-03-PLAN.md — LTX-FLF Validation + Smoke (TRANS-07 research-scope template + XCUT-02 goal-content test + 74-smoke.sh 17 assertions) — SHIPPED 2026-07-09
 
 ### Phase 75: LINEAGE-BUMP
 **Goal**: After all v14.0 SKILL.md edits are final, the 6 affected agent YAMLs at `~/.hermes/agents/` have their lineage fields regenerated (source_sha + transform_rule_id + transform_timestamp) by re-running the v13.0 P62 transform flow, with CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passing for all 6.
