@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
-status: executing
-last_updated: "2026-07-10T01:13:00.000Z"
+status: ready_to_plan
+last_updated: 2026-07-09T17:09:34.856Z
 last_activity: 2026-07-10 -- Phase 75 LINEAGE-BUMP complete (15 agent.yaml regenerated + curator freeze released)
 progress:
   total_phases: 7
@@ -11,6 +11,7 @@ progress:
   total_plans: 16
   completed_plans: 16
   percent: 86
+stopped_at: Phase 75 complete (1/1) — ready to discuss Phase 76
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +25,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 76 — VALIDATE (final phase of v14.0)
+**Current focus:** Phase 76 — validate
 
 ## Current Position
 
-Phase: 76 (VALIDATE) — NOT STARTED
-Plan: TBD
-Status: Phase 75 LINEAGE-BUMP complete (16/16 plans shipped). Phase 76 VALIDATE next (strictly LAST).
-Last activity: 2026-07-10 -- Phase 75 LINEAGE-BUMP complete (15 agent.yaml regenerated + curator freeze released as final action)
+Phase: 76
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-09
 
 ### Progress
 
