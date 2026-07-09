@@ -605,24 +605,30 @@ fi
 | A6 | `Fun-CosyVoice3-0.5B-2512` is the correct model for CosyVoice 3.0 (December 2025 release) | Standard Stack | Verified from `/root/ComfyUI/models/cosyvoice/Fun-CosyVoice3-0.5B-2512/` directory + cosyvoice3.yaml present. HIGH confidence. |
 | A7 | `validate_voice_clone_ref()` belongs in a new `dub_validators.py` module (not store.py) | Code Examples | If store.py is the conventional home for validators, plan adjusts. Researcher recommends separate module to keep store.py focused on state I/O. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All 4 open questions below are **RESOLVED** in `72-CONTEXT.md <decisions>` (RESEARCH-corrected). Markers below formalize the resolution for Dimension 11 compliance.
 
 1. **Should Plan A use AIIA nodes (already installed) or install filliptm (CONTEXT.md pick)?**
    - What we know: AIIA is working + same vendor as IndexTTS2; filliptm is NOT installed + last GitHub commit ~Jan 2025.
    - What's unclear: whether operator has explicit preference for filliptm's `Instruct2` / multi-speaker `Dialog` nodes.
    - Recommendation: **Use AIIA** (default). Flag as deviation from CONTEXT.md for plan-checker / discuss-phase reconciliation. If operator mandates filliptm, escalate as scope-expansion.
+   - **RESOLVED: Use AIIA** per CONTEXT.md decision "ComfyUI node: AIIA_CosyVoice_TTS + AIIA_CosyVoice_ModelLoader (CORRECTED from original filliptm/ComfyUI_FL-CosyVoice3 per RESEARCH live verification)".
 
 2. **Should `tts_engine` field live on Shot dict or on PipelineState?**
    - What we know: CONTEXT.md implies per-shot ("for the same shot"). PipelineState is episode-level.
    - Recommendation: per-Shot (inside `shot-list` slot). Confirmed by division rule semantics (DUB-02 is per-shot).
+   - **RESOLVED: Per-Shot fields** per CONTEXT.md decision "Shot dict gets 2 new fields (NOT PipelineState): tts_engine + ltx_native_dialogue — both via .get(key, default) for backward compat".
 
 3. **Should VERSION.json be top-level or skills-scoped?**
    - What we know: No existing VERSION.json anywhere in repo.
    - Recommendation: top-level `kais-hermes-skills/VERSION.json` (matches conventional placement for project meta).
+   - **RESOLVED: Top-level `kais-hermes-skills/VERSION.json`** per CONTEXT.md decision "VERSION.json is NEW at top-level kais-hermes-skills/VERSION.json — no existing VERSION.json".
 
 4. **Is gold-team CosyVoice-300M an acceptable fallback for ComfyUI when GPU contention?**
    - What we know: CosyVoice-300M is the auto-route for `tts_zh`. Quality difference vs Fun-CosyVoice3-0.5B is documented in STACK.md (test-zh SS 1.7% vs 1.21%).
    - Recommendation: Yes for draft/placeholder; No for production final voice. Documented in Plan A deployment doc + DUB-05 benchmark report.
+   - **RESOLVED: Yes for fallback** per CONTEXT.md decision "gold-team CosyVoice-300M (already operational at :8002) — Phase 72 PROMOTES existing path to P10 default + adds ComfyUI AIIA path as alternative; NOT a greenfield integration".
 
 ## Environment Availability
 
