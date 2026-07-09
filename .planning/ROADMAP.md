@@ -128,7 +128,10 @@ Plans:
   4. Curator `--live` freeze (imposed in Phase 70) is lifted only AFTER lineage bump completes, so no mid-bump curator tick can race the regeneration (the freeze release is the final action of this phase)
 **Cross-repo touch**: hermes-agent (`~/.hermes/agents/*.agent.yaml` regeneration, CI assertion); kais-hermes-skills (SKILL.md sources are read-only at this point — bump consumes final state)
 **Research flag**: Standard pattern (mechanical transform + audit; documented 5-step procedure from v10.0 `04-MIGRATION-PATH.md`)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 75-01-PLAN.md — LINEAGE-BUMP Execution (15 agent.yaml regeneration: Track A 9 via transform_skill_to_agent.py + Track B 6 v13.0 P62 manual lineage update + 75-lineage-assert.sh + 75-LINEAGE-BUMP-REPORT.md + curator freeze release as final action)
 
 ### Phase 76: VALIDATE
 **Goal**: Cross-cutting audit closes v14.0 with verified lineage coverage, META-RULE X-2 _INSTRUCTION injection test-count diff, cross-repo commit pin assertion, INFRA-04 / EVAL-06 / FOUND-08 preservation, documented operator-action handoffs, and the milestone audit doc + tag.
