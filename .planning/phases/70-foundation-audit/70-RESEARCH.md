@@ -373,19 +373,21 @@ hermes curator status
 
 **Note:** A2 was downgraded from ASSUMED to VERIFIED during research (confirmed via code read of `hermes_cli/curator.py:271`). Kept in table for traceability.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should v14.0 create agent YAMLs for kais-movie-pipeline and kais-jimeng-cli?**
+> All 3 questions below were resolved during research. Inline `— RESOLVED:` markers capture the disposition. Substantive decisions are encoded in plan truths/task actions; the Assumptions Log (A1/A3) and the VERIFIED A2 entry carry the audit trail.
+
+1. **Should v14.0 create agent YAMLs for kais-movie-pipeline and kais-jimeng-cli?** — RESOLVED: bump 3 existing only (`cinematographer`, `editor`, `audio_pipeline`); other 3 remain skill-only. Preserves FOUND-08.
    - What we know: Both are skills-only today (no `~/.hermes/agents/*.agent.yaml`). They are orchestration/tool skills, not movie-expert agents. The v10.0-v13.0 arc created agent YAMLs only for the 15 movie-experts (FOUND-08 frozen set).
    - What's unclear: Does the XCUT-03 "lineage bump on 6 affected agents" requirement imply creating new agent YAMLs, or only bumping the 3 existing ones?
    - Recommendation: **Ask operator in discuss-phase or default to "bump 3 existing only"** (safer, preserves FOUND-08). The roadmap's "6 agents" is best interpreted as "6 SKILL.md files" not "6 agent.yaml bumps". TRANS-04 explicitly forbids new expert_id per FOUND-08, which supports this interpretation.
 
-2. **Is the pre-existing lineage drift (cinematographer, audio_pipeline) intentional or a bug to fix?**
+2. **Is the pre-existing lineage drift (cinematographer, audio_pipeline) intentional or a bug to fix?** — RESOLVED: capture as MISMATCH in inventory; Phase 75 closes it. Do NOT fix in Phase 70 (would violate read-only scope).
    - What we know: Both agent.yaml `skill_sha256` values mismatch the current SKILL.md hash. The drift was introduced between 2026-07-07 (P62 transform) and 2026-07-09 (today). kais-hermes-skills has 7 modified files in working tree.
    - What's unclear: Were the SKILL.md edits intentional post-v13.0 improvements that someone forgot to re-bump, or accidental?
    - Recommendation: **Capture in inventory as "pre-existing drift" and let Phase 75 close it.** Do NOT fix mid-Phase-70 (that would be a SKILL.md edit, violating the read-only enumeration scope). Flag in the inventory's drift column so the operator can decide.
 
-3. **Does the gateway need a restart after setting `curator.enabled: false`?**
+3. **Does the gateway need a restart after setting `curator.enabled: false`?** — RESOLVED: no restart needed. `_load_config()` is called inside `is_enabled()` on every curator invocation (verified at `agent/curator.py:125-144`).
    - What we know: `agent/curator.py:_load_config()` reads config fresh on every call. But MEMORY.md `feedback-venv-repair-restart-gateway.md` warns that gateway processes cache lazy globals.
    - What's unclear: Whether the gateway's in-memory curator state includes a cached `enabled` flag.
    - Recommendation: **No restart needed** — `_load_config()` is called inside `is_enabled()`, `get_consolidate()`, etc. on every invocation (verified line 125-144). The gateway reads config at curator-call-time, not boot-time. But document this in the freeze task so the operator can verify via `hermes curator status`.
