@@ -110,7 +110,12 @@ Plans:
   5. Per-transition engine routing rule is documented in `references/transition-engine-routing.md`: Wan2.2 14B FLF2V for local match-cut via shared object / Hailuo 02 i2v Pro + Vidu keyframe-to-video for cloud Chinese-content backups (opt-in via operator API key) / ffmpeg xfade for dissolve/wipe/fade/J-cut/L-cut fallback / **LTX-2.3 FLF path evaluated per-transition (NOT assumed incapable per SUMMARY reconciled conflict #1)**; LTX-2.3 FLF + ICLoRA combined workflow is validated on 1-2 reference shots (research-scope per TRANS-07, NOT pipeline-integrated)
 **Cross-repo touch**: kais-hermes-skills (cinematographer SKILL.md + e-konte-format.md, editor SKILL.md, 2 new refs `transition-design.md` + `transition-engine-routing.md`, `transition_design.json` schema, asset-bus-schema.md, canvas sync registration, optional Wan FLF2V template + Hailuo/Vidu REST clients)
 **Research flag**: **Plan-phase research needed.** LTX FLF+ICLoRA combined workflow has no public turnkey option (community-verified, custom node graph needed: LiconMSR + LTXVConditioning + SamplerCustomAdvanced); Wan2.2 FLF2V prompt-following in Chinese complex-action descriptions is unvalidated; Hailuo/Vidu production batch cost has only single-source data ($0.056/sec list price). TRANS-07 is explicitly research-scope — validation report determines whether combined workflow is production-ready or deferred to v15+.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 74-01-PLAN.md — TRANSITION Foundation (transition_schema.py TRANS-01/02 + asset_bus slot + canvas_sync TRANS-03 + 12 tests)
+- [ ] 74-02-PLAN.md — SKILL.md Ownership + Routing Refs + XCUT-02 Injection (TRANS-04/05/06 + _INSTRUCTION constants + e-konte Layer 5)
+- [ ] 74-03-PLAN.md — LTX-FLF Validation + Smoke (TRANS-07 template + XCUT-02 goal-content test + 74-smoke.sh)
 
 ### Phase 75: LINEAGE-BUMP
 **Goal**: After all v14.0 SKILL.md edits are final, the 6 affected agent YAMLs at `~/.hermes/agents/` have their lineage fields regenerated (source_sha + transform_rule_id + transform_timestamp) by re-running the v13.0 P62 transform flow, with CI assertion `agent.yaml.source_sha == sha256(SKILL.md)` passing for all 6.
