@@ -78,7 +78,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 79 | 2/2 | Complete    | 2026-07-10 |
 | 80 | 1/1 | Complete    | 2026-07-10 |
 | 81 | XCUT-04b Cloud Engine Bootstrap | 2/2 | Complete    | 2026-07-10 |
-| 82 | 2/3 | In Progress|  |
+| 82 | 3/3 | Complete    | 2026-07-10 |
 | 83 | VALIDATE | Not started | - |
 
 **Critical path:** 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
