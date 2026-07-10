@@ -35,7 +35,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 ### XCUT-04b — Cloud Engine Bootstrap
 
 - [x] **XCUT-04b-DOCS**: User can read `references/cloud-engine-bootstrap.md` for Hailuo 02 i2v Pro + Vidu keyframe-to-video API key acquisition steps + ComfyUI Wan2.2 FLF2V custom node install procedure + cost-estimation worksheet (per-shot + monthly projections)
-- [ ] **XCUT-04b-OPTIN**: User can opt in per cloud engine via `~/.hermes/config.yaml` cloud_engines block (hailuo_api_key + vidu_api_key + wan22_comfyui_node_enabled); transition-engine-routing.md rules consume opt-in state at runtime
+- [x] **XCUT-04b-OPTIN**: User can opt in per cloud engine via `~/.hermes/config.yaml` cloud_engines block (hailuo_api_key + vidu_api_key + wan22_comfyui_node_enabled); transition-engine-routing.md rules consume opt-in state at runtime
 
 ### XCUT-04c — GLM-4.6V Cost Tracking
 
@@ -113,7 +113,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | DUB-03-PROTOCOL | Phase 80 | Satisfied |
 | DUB-03-BATCH-VALIDATE | Phase 80 | Satisfied |
 | XCUT-04b-DOCS | Phase 81 | Complete (Plan 01) |
-| XCUT-04b-OPTIN | Phase 81 | Pending |
+| XCUT-04b-OPTIN | Phase 81 | Satisfied |
 | XCUT-04c-INSTRUMENT | Phase 82 | Pending |
 | XCUT-04c-CLI | Phase 82 | Pending |
 | XCUT-05-AUTO | Phase 82 | Pending |
