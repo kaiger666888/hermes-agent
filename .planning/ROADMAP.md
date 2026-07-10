@@ -73,7 +73,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 
 | Phase | Name | Status | Completed |
 |-------|------|--------|-----------|
-| 77 | DUB-05 Benchmark Runner | Not started | - |
+| 77 | 1/2 | In Progress|  |
 | 78 | TRANS-07 LTX-FLF Validation Runner | Not started | - |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | - |
 | 80 | DUB-03 Voice Sample Protocol | Not started | - |
@@ -114,7 +114,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 Plans:
 **Wave 1**
 
-- [ ] 77-01-PLAN.md — Benchmark runner script + unit tests (DUB-05-RUNNER)
+- [x] 77-01-PLAN.md — Benchmark runner script + unit tests (DUB-05-RUNNER)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

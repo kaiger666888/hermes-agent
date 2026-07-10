@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T02:00:44.859Z"
-last_activity: 2026-07-10 -- Phase 77 planning complete
+last_updated: "2026-07-10T02:14:45.864Z"
+last_activity: 2026-07-10
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** v15.0 roadmap created — Phase 77 ready to plan
+**Current focus:** Phase 77 — DUB-05 Benchmark Runner
 
 ## Current Position
 
-Phase: 77 of 83 (DUB-05 Benchmark Runner) — first v15.0 phase
-Plan: — (not yet planned)
+Phase: 77 (DUB-05 Benchmark Runner) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 77 planning complete
+Last activity: 2026-07-10
 
 ### Progress
 
@@ -49,14 +49,14 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [░░░░░░░░░░] 0% (Phases 77-83, roadmap created, 0/7 phases started)
+v15.0 Operator-Action Closure:     [█░░░░░░░░░] 7% (Phases 77-83, Plan 77-01 complete, 1/14 plans done)
 ```
 
 ### Phase Statuses (v15.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 77 | DUB-05 Benchmark Runner | Not started | CosyVoice A/B benchmark script + VERSION.json lock mechanism. DUB-05-RUNNER + DUB-05-LOCK. |
+| 77 | DUB-05 Benchmark Runner | In Progress (1/2 plans) | CosyVoice A/B benchmark script + VERSION.json lock mechanism. DUB-05-RUNNER complete (Plan 77-01), DUB-05-LOCK pending (Plan 77-02). |
 | 78 | TRANS-07 LTX-FLF Validation Runner | Not started | ComfyUI workflow JSON + validation runner + verdict doc. TRANS-07-WORKFLOW/RUNNER/VERDICT. Parallel with Phase 79. |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | False-positive calibration analyzer + per-stratum threshold override. IMG-09-CALIBRATE/APPLY. Parallel with Phase 78. |
 | 80 | DUB-03 Voice Sample Protocol | Not started | Collection protocol ref + batch validator. DUB-03-PROTOCOL/BATCH-VALIDATE. |
@@ -105,7 +105,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
-| (none shipped yet) | | | | |
+| 77 | 01 | 373s | 2 | 2 |
 
 ## Accumulated Context
 
@@ -132,6 +132,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - **[Roadmap]** Phase 78 ∥ Phase 79 parallel execution — TRANS-07 and IMG-09 are independent surfaces; both depend only on Phase 77 (establishes operator-runner pattern). Cuts wall time.
 - **[Roadmap]** Phase 82 combines XCUT-04c (2 reqs) + XCUT-05-AUTO (1 req) — both are cost/tooling closures on dreamina_stats/transform infrastructure; natural grouping.
 - **[Roadmap]** Phase 83 strictly LAST — mirrors v14.0 P76 / v13.0 P69 / v10.0 P51 pattern; must run after all code-bearing phases.
+- [Phase ?]: test
+- [Phase ?]: DUB-05 runner CLI variant IDs use underscores (cosyvoice_2_0_0_5b) for shell-safety, mapped to VERSION.json dotted IDs (cosyvoice_2.0_0.5B) via _VARIANT_TO_VERSION_JSON dict
+- [Phase ?]: DUB-05 runner uses sync-only execution (INFRA-04 compliant) with per-cell error handling — partial results preserved on single-variant failure
 
 ### Blockers / Risks (v15.0)
 
