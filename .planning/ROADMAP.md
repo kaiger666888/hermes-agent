@@ -42,7 +42,7 @@ See `milestones/v15.0-MILESTONE-AUDIT.md` for the full audit doc (10 sections, v
 | 80 | DUB-03 Voice Sample Protocol | SHIPPED (1 plan) | 2026-07-10 |
 | 81 | XCUT-04b Cloud Engine Bootstrap | SHIPPED (2 plans) | 2026-07-10 |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | SHIPPED (3 plans) | 2026-07-10 |
-| 83 | VALIDATE | SHIPPED (1 plan + audit + tag) | 2026-07-10 |
+| 83 | 1/1 | Complete    | 2026-07-10 |
 
 **Critical path:** 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
 
