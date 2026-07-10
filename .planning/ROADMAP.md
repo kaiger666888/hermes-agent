@@ -173,7 +173,11 @@ Plans:
   2. User can run `python scripts/validate_voice_clone_batch.py --voice-refs-dir <dir>` to batch-validate all voice_clone_reference_wav files against 3-10s duration + wav format + >=16kHz sample rate + mono channel rules
   3. The validator outputs a pass/fail report per character identifying which rule(s) each sample violated (enabling targeted re-recording)
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+**Wave 1**
+
+- [ ] 80-01-PLAN.md — Collection protocol doc + batch validator script + unit tests (DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE)
 
 ### Phase 81: XCUT-04b Cloud Engine Bootstrap
 
