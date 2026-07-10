@@ -73,7 +73,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 
 | Phase | Name | Status | Completed |
 |-------|------|--------|-----------|
-| 77 | 2/2 | Complete   | 2026-07-10 |
+| 77 | 2/2 | Complete    | 2026-07-10 |
 | 78 | TRANS-07 LTX-FLF Validation Runner | Not started | - |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | - |
 | 80 | DUB-03 Voice Sample Protocol | Not started | - |
