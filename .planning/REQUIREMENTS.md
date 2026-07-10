@@ -20,7 +20,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 
 - [x] **TRANS-07-WORKFLOW**: User can read `references/workflows/ltx-flf-iclora-validation.json` ComfyUI workflow (LiconMSR + LTXVConditioning + SamplerCustomAdvanced node graph per community reports) for 1-2 reference shot validation
 - [x] **TRANS-07-RUNNER**: User can run `python scripts/run_ltx_flf_validation.py --reference-shots <dir>` to submit 1-2 reference shots through the validation workflow + capture results (gen_status, latency, identity-continuity assessment via vision_verify) + write verdict to `references/ltx-flf-iclora-validation.md`
-- [ ] **TRANS-07-VERDICT**: User can read production-readiness verdict (ready / deferred-to-v16+) in `ltx-flf-iclora-validation.md` after operator runs validation; gates TRANS-11 v16+ production rollout
+- [x] **TRANS-07-VERDICT**: User can read production-readiness verdict (ready / deferred-to-v16+) in `ltx-flf-iclora-validation.md` after operator runs validation; gates TRANS-11 v16+ production rollout
 
 ### IMG-09 — Vision-Verify False-Positive Calibration
 
@@ -107,7 +107,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | DUB-05-LOCK | Phase 77 | Complete |
 | TRANS-07-WORKFLOW | Phase 78 | Complete (Plan 01) |
 | TRANS-07-RUNNER | Phase 78 | Complete (Plan 01) |
-| TRANS-07-VERDICT | Phase 78 | Pending (Plan 02) |
+| TRANS-07-VERDICT | Phase 78 | Complete (Plan 02) |
 | IMG-09-CALIBRATE | Phase 79 | Pending |
 | IMG-09-APPLY | Phase 79 | Pending |
 | DUB-03-PROTOCOL | Phase 80 | Pending |

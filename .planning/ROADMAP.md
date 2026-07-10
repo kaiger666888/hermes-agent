@@ -74,7 +74,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | Phase | Name | Status | Completed |
 |-------|------|--------|-----------|
 | 77 | 2/2 | Complete    | 2026-07-10 |
-| 78 | TRANS-07 LTX-FLF Validation Runner | 1/2 complete | - |
+| 78 | 2/2 | Complete    | 2026-07-10 |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | - |
 | 80 | DUB-03 Voice Sample Protocol | Not started | - |
 | 81 | XCUT-04b Cloud Engine Bootstrap | Not started | - |
@@ -88,7 +88,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 ## Phases
 
 - [x] **Phase 77: DUB-05 Benchmark Runner** - CosyVoice A/B benchmark script + VERSION.json lock mechanism (completed 2026-07-10)
-- [ ] **Phase 78: TRANS-07 LTX-FLF Validation Runner** - ComfyUI workflow JSON + validation runner + verdict doc (parallel with Phase 79)
+- [x] **Phase 78: TRANS-07 LTX-FLF Validation Runner** - ComfyUI workflow JSON + validation runner + verdict doc (completed 2026-07-10, parallel with Phase 79)
 - [ ] **Phase 79: IMG-09 Vision-Verify Calibration** - False-positive calibration analyzer + per-stratum threshold override (parallel with Phase 78)
 - [ ] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script
 - [ ] **Phase 81: XCUT-04b Cloud Engine Bootstrap** - Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config mechanism
@@ -135,11 +135,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 78-01-PLAN.md — ComfyUI workflow JSON template + async validation runner script + unit tests (TRANS-07-WORKFLOW + TRANS-07-RUNNER)
+- [x] 78-01-PLAN.md — ComfyUI workflow JSON template + async validation runner script + unit tests (TRANS-07-WORKFLOW + TRANS-07-RUNNER)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 78-02-PLAN.md — Verdict update script + tests + ltx-flf-iclora-validation.md Runner Usage section (TRANS-07-VERDICT)
+- [x] 78-02-PLAN.md — Verdict update script + tests + ltx-flf-iclora-validation.md Runner Usage section (TRANS-07-VERDICT)
 
 ### Phase 79: IMG-09 Vision-Verify Calibration
 
