@@ -213,7 +213,17 @@ Plans:
   2. User can run `hermes glm stats` CLI subcommand to see monthly GLM-4.6V aggregate spend (token count + estimated USD cost) + per-stratum breakdown, reusing Rich table formatting from `hermes dreamina stats`
   3. User can run `python scripts/bump_all_agent_lineage.py` to automate the full 15-agent lineage bump (wraps `transform_skill_to_agent.py` for all 15 active experts + handles Track B 6 v13.0 P62 manual cases)
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 82-01-PLAN.md — XCUT-04c MetricsBuffer instrumentation + vision_verify usage + dreamina_manager capture (XCUT-04c-INSTRUMENT)
+
+- [ ] 82-03-PLAN.md — XCUT-05-AUTO bump_all_agent_lineage.py 15-agent lineage bump script (XCUT-05-AUTO)
+
+**Wave 2** *(blocked on Wave 1 Plan 82-01 completion)*
+
+- [ ] 82-02-PLAN.md — XCUT-04c-CLI register_glm_cli + monthly/per-stratum aggregation + Rich tables (XCUT-04c-CLI)
 **UI hint**: yes
 
 ### Phase 83: VALIDATE
