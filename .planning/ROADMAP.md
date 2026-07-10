@@ -77,7 +77,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 78 | 2/2 | Complete    | 2026-07-10 |
 | 79 | 2/2 | Complete    | 2026-07-10 |
 | 80 | 1/1 | Complete    | 2026-07-10 |
-| 81 | XCUT-04b Cloud Engine Bootstrap | Not started | - |
+| 81 | XCUT-04b Cloud Engine Bootstrap | 1/2 (Plan 01 done) | 2026-07-10 |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | - |
 | 83 | VALIDATE | Not started | - |
 
@@ -195,7 +195,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 81-01-PLAN.md — Cloud engine bootstrap doc + routing update + cli-config + kais-jimeng-cli SKILL.md touch (XCUT-04b-DOCS)
+- [x] 81-01-PLAN.md — Cloud engine bootstrap doc + routing update + cli-config + kais-jimeng-cli SKILL.md touch (XCUT-04b-DOCS)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

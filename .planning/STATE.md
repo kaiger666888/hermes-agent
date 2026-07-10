@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T07:17:05.804Z"
-last_activity: 2026-07-10 -- Phase 81 planning complete
+last_updated: "2026-07-10T07:22:32Z"
+last_activity: 2026-07-10 -- Phase 81 Plan 01 complete (XCUT-04b-DOCS)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 9
-  completed_plans: 7
-  percent: 57
+  completed_plans: 8
+  percent: 64
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 81 — xcut 04b cloud engine bootstrap
+**Current focus:** Phase 81 — XCUT-04b Cloud Engine Bootstrap
 
 ## Current Position
 
-Phase: 81
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 81 planning complete
+Phase: 81 (XCUT-04b Cloud Engine Bootstrap) — EXECUTING
+Plan: 1 of 2 complete (Plan 02 pending)
+Status: Executing Phase 81 — Plan 01 done
+Last activity: 2026-07-10 -- Phase 81 Plan 01 complete (XCUT-04b-DOCS)
 
 ### Progress
 
@@ -49,7 +49,7 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [█████░░░░░] 50% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2 + Phase 80 complete 1/1, 7/14 plans done)
+v15.0 Operator-Action Closure:     [██████░░░░] 57% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2 + Phase 80 complete 1/1 + Phase 81 Plan 01 complete 1/2, 8/14 plans done)
 ```
 
 ### Phase Statuses (v15.0)
@@ -60,7 +60,7 @@ v15.0 Operator-Action Closure:     [█████░░░░░] 50% (Phases 
 | 78 | TRANS-07 LTX-FLF Validation Runner | COMPLETE (2/2 plans) | Verdict update script + 18 tests + Runner Usage docs shipped. Phase 78 fully complete. Ready for verification. |
 | 79 | IMG-09 Vision-Verify Calibration | COMPLETE (2/2 plans) | Calibration script + 14 tests shipped (Plan 01). Apply script + vision_verify.py get_threshold + dreamina_manager stratum wiring + 30 tests shipped (Plan 02). IMG-09-CALIBRATE + IMG-09-APPLY both complete. Ready for verification. |
 | 80 | DUB-03 Voice Sample Protocol | COMPLETE (1/1 plans) | Voice sample collection protocol doc + batch validator script + 17 tests. DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE complete. Ready for verification. |
-| 81 | XCUT-04b Cloud Engine Bootstrap | Not started | Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config. XCUT-04b-DOCS/OPTIN. |
+| 81 | XCUT-04b Cloud Engine Bootstrap | Plan 01 complete (1/2) | XCUT-04b-DOCS complete: cloud-engine-bootstrap.md (320 lines) + transition-engine-routing.md Cloud Engine Opt-in State section + cli-config.yaml.example cloud_engines block + kais-jimeng-cli SKILL.md touch. Plan 02 (XCUT-04b-OPTIN check script) pending. |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | GLM-4.6V cost instrumentation + CLI + auto lineage bump. XCUT-04c-INSTRUMENT/CLI + XCUT-05-AUTO. |
 | 83 | VALIDATE | Not started | Milestone audit + meta-rule audit extension + tag v15.0. VALIDATE-V15. Strictly LAST. |
 
@@ -112,6 +112,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 | 79 | 01 | 245s | 2 | 2 |
 | 79 | 02 | 332s | 4 | 6 |
 | 80 | 01 | 358s | 2 | 3 |
+| 81 | 01 | 230s | 2 | 4 |
 
 ## Accumulated Context
 
@@ -153,6 +154,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 79]: IMG-09-APPLY: dreamina_manager passes stratum=_infer_stratum(item) to verify_image_content — per-stratum thresholds in config.yaml are actually USED at runtime (closes Success Criterion #2 loop)
 - [Phase 80]: DUB-03-BATCH-VALIDATE: single-script design (no operator_decision) — validation is pass/fail, not an operator decision; 4 hard rules hardcoded (duration 3-10s + WAV + >=16kHz + mono); stdlib wave module only (no pydub/librosa/numpy); best-effort episode/character extraction (path-agnostic); exit code 1 on any failure (CI-friendly)
 - [Phase 80]: DUB-03-BATCH-VALIDATE: format failure skips other 3 rules (can't check duration/rate/channels without reading WAV header); conftest tmp_wav_factory produces incorrect stereo WAV (half-length data) — test uses local _write_wav helper with proper interleaved multi-channel frames
+- [Phase 81]: XCUT-04b-DOCS: config-primary-env-var-fallback pattern — cloud_engines config block is canonical opt-in; HAILUO_API_KEY/VIDU_API_KEY env vars are fallback for CI/containers
+- [Phase 81]: XCUT-04b-DOCS: Hailuo = MiniMax rebrand — both HAILUO_API_KEY and MINIMAX_API_KEY env vars accepted (same key); config key uses hailuo_api_key (consumer brand)
+- [Phase 81]: XCUT-04b-DOCS: Wan2.2 uses boolean config (wan22_comfyui_node_enabled), not API key — honesty-based self-declaration, no automated verification (v16+ scope)
+- [Phase 81]: XCUT-04b-DOCS: kais-jimeng-cli SKILL.md is the SINGLE authorized SKILL.md touch per v15.0 hard constraints; touch is minimal (4 lines appended at end, lines 1-483 unchanged)
 
 ### Blockers / Risks (v15.0)
 
@@ -196,7 +201,7 @@ Items acknowledged and carried forward (NOT in v15.0 scope):
 5. `.planning/milestones/v14.0-MILESTONE-AUDIT.md` §5 — 6 operator-action handoffs (v15.0 source)
 6. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v15.0)
 
-**Next action:** Phase 80 complete (voice sample collection protocol doc + batch validator script + 17 tests). Next: Phase 81 (XCUT-04b Cloud Engine Bootstrap). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
+**Next action:** Phase 81 Plan 01 complete (cloud-engine-bootstrap.md + routing update + cli-config + kais-jimeng-cli SKILL.md touch). Next: Phase 81 Plan 02 (check_cloud_engine_optin.py script + unit tests). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
 
 ---
 
@@ -254,4 +259,4 @@ Per XCUT-04 spec, these are NOT gaps — v14.0 delivered the framework, operator
 
 ---
 
-*Last updated: 2026-07-10 — v15.0 Phase 80 complete (DUB-03 Voice Sample Protocol; 1/1 plan, 17 tests). Phases 77+78+79+80 all complete (7/14 plans done, 50%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: `/gsd:plan-phase 81`.*
+*Last updated: 2026-07-10 — v15.0 Phase 81 Plan 01 complete (XCUT-04b-DOCS: cloud-engine-bootstrap.md + routing update + cli-config + kais-jimeng-cli SKILL.md touch; 2 tasks, 4 files, 3 commits across 2 repos). 8/14 plans done (57%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: Phase 81 Plan 02 (check_cloud_engine_optin.py).*
