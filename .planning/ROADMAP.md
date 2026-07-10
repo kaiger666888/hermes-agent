@@ -131,7 +131,15 @@ Plans:
   2. User can run `python scripts/run_ltx_flf_validation.py --reference-shots <dir>` to submit reference shots through the workflow + capture results (gen_status, latency, identity-continuity via vision_verify)
   3. User can read production-readiness verdict (ready / deferred-to-v16+) in `references/ltx-flf-iclora-validation.md` after operator runs validation — this verdict gates TRANS-11 v16+ production rollout
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 78-01-PLAN.md — ComfyUI workflow JSON template + async validation runner script + unit tests (TRANS-07-WORKFLOW + TRANS-07-RUNNER)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 78-02-PLAN.md — Verdict update script + tests + ltx-flf-iclora-validation.md Runner Usage section (TRANS-07-VERDICT)
 
 ### Phase 79: IMG-09 Vision-Verify Calibration
 
