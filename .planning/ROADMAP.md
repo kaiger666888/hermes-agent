@@ -191,7 +191,15 @@ Plans:
   3. The existing `transition-engine-routing.md` declarative routing rules consume the opt-in state at runtime (engines not opted in are skipped during routing evaluation)
   4. The `kais-jimeng-cli` SKILL.md may be touched ONLY for cloud-engine-bootstrap doc cross-references (the single authorized SKILL.md exception per v15.0 hard constraints)
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 81-01-PLAN.md — Cloud engine bootstrap doc + routing update + cli-config + kais-jimeng-cli SKILL.md touch (XCUT-04b-DOCS)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 81-02-PLAN.md — check_cloud_engine_optin.py script + unit tests (XCUT-04b-OPTIN)
 **UI hint**: yes
 
 ### Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto
