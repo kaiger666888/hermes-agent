@@ -8,7 +8,34 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current Milestone: v14.0 ✅ SHIPPED 2026-07-10 — kais-movie-pipeline 形态/音频/图像/转场 4 项升级
+## Current Milestone: v15.0 — Operator-Action Closure Tooling (STARTED 2026-07-10)
+
+**Goal:** Author production-grade tooling + workflows that close v14.0's 6 operator-action handoffs by making them executable; captured data flows back to code (VERSION.json locks, calibration thresholds, validation verdicts).
+
+**Target features (6 tracks mirroring v14.0 operator-action handoffs):**
+
+1. **DUB-05 Benchmark Runner** — `scripts/run_cosyvoice_benchmark.py` takes 3-5 dialogue lines + runs both CosyVoice 2.0-0.5B + Fun-CosyVoice 3.0 + outputs side-by-side comparison report; operator runs once + locks `VERSION.json.tts.cosyvoice_default_variant`.
+2. **TRANS-07 LTX-FLF Validation Runner** — ComfyUI workflow JSON + `scripts/run_ltx_flf_validation.py` submits 1-2 reference shots + captures results + writes production-readiness verdict to `ltx-flf-iclora-validation.md`; gates TRANS-11 v16+ rollout.
+3. **IMG-09 False-Positive Calibration** — `scripts/calibrate_vision_verify.py` analyzes `~/.hermes/metrics/dreamina_stats.jsonl` production data + recommends confidence threshold per stratum (1-ref/3-ref/5-ref); operator reviews + commits calibrated thresholds.
+4. **DUB-03 Voice Sample Collection Protocol** — `references/voice-sample-collection-protocol.md` + `scripts/validate_voice_clone_batch.py` (batch-validates operator-provided wavs against 3-10s + wav + ≥16kHz + mono rules); operator sources wavs per protocol.
+5. **XCUT-04b Cloud Engine Bootstrap** — `references/cloud-engine-bootstrap.md` (Hailuo + Vidu API key acquisition + ComfyUI Wan2.2 FLF2V node install + cost-estimation worksheet); operator opts in per engine.
+6. **XCUT-04c GLM-4.6V Cost Tracking** — Extend `dreamina_stats.py` MetricsBuffer to track per-batch GLM-4.6V token spend + monthly aggregate; `hermes glm stats` CLI subcommand.
+
+**Cross-cutting phases:**
+
+- **VALIDATE** — closes v14.0 tech_debt items in the audit; re-runs `76-meta-rule-x2-audit.sh` + extends to v15.0 `_INSTRUCTION` constants.
+- **LINEAGE-BUMP** (if any SKILL.md touched in v15.0) — regenerate agent.yaml per XCUT-03 pattern.
+
+**Hard constraints preserved (沿用 v14.0):**
+
+- INFRA-04 serial execution NOT lifted
+- EVAL-06 dry-run-first NOT changed (curator `--live` opt-in; v15.0 doesn't unfreeze)
+- FOUND-08 15-expert set frozen
+- SKILL.md L1-L6 read-only invariant **REVERTS** unless v15.0 re-authorizes the破例 (default: only kais-jimeng-cli SKILL.md may be touched for cloud-engine-bootstrap doc references; no Form/DUB/IMG/TRANSITION SKILL.md body changes)
+
+**Cross-repo topology (沿用):** hermes-agent repo = GSD `.planning/` 工件; kais-hermes-skills repo = scripts + refs + Python. Final cross-repo pins recorded at v15.0 close.
+
+## Previous Milestone: v14.0 ✅ SHIPPED 2026-07-10 — kais-movie-pipeline 形态/音频/图像/转场 4 项升级
 
 **Stats:** 7 phases (70-76) · 17 plans · 36 tasks · 26/26 reqs mapped (24 satisfied + 2 operator-handoff) · Tag `v14.0` · Audit `tech_debt`
 

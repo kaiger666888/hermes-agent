@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v14.0
-milestone_name: kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION)
-status: Awaiting next milestone
-last_updated: "2026-07-09T17:35:26.774Z"
-last_activity: 2026-07-09 — Milestone v14.0 completed and archived
+milestone: v15.0
+milestone_name: Operator-Action Closure Tooling
+status: planning
+last_updated: "2026-07-10T00:53:32.597Z"
+last_activity: 2026-07-10
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,10 +28,10 @@ progress:
 
 ## Current Position
 
-Phase: Milestone v14.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-09 — Milestone v14.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-10 — Milestone v15.0 started
 
 ### Progress
 
