@@ -77,7 +77,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 78 | 2/2 | Complete    | 2026-07-10 |
 | 79 | 2/2 | Complete    | 2026-07-10 |
 | 80 | 1/1 | Complete    | 2026-07-10 |
-| 81 | XCUT-04b Cloud Engine Bootstrap | 2/2 | Complete | 2026-07-10 |
+| 81 | XCUT-04b Cloud Engine Bootstrap | 2/2 | Complete    | 2026-07-10 |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | - |
 | 83 | VALIDATE | Not started | - |
 
