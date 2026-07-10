@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T04:00:16.160Z"
-last_activity: 2026-07-10 -- Phase 78 planning complete
+last_updated: "2026-07-10T04:08:00.000Z"
+last_activity: 2026-07-10 -- Phase 78 Plan 01 complete
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
-  percent: 14
+  completed_plans: 3
+  percent: 21
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 78 — trans 07 ltx flf validation runner
+**Current focus:** Phase 78 — TRANS-07 LTX-FLF Validation Runner
 
 ## Current Position
 
-Phase: 78
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 78 planning complete
+Phase: 78 (TRANS-07 LTX-FLF Validation Runner) — EXECUTING
+Plan: 1 of 2 complete (Plan 02 pending: verdict doc update script + Runner Usage docs)
+Status: Phase 78 Plan 01 complete
+Last activity: 2026-07-10 -- Phase 78 Plan 01 (workflow JSON + runner + tests) shipped
 
 ### Progress
 
@@ -49,7 +49,7 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [█░░░░░░░░░] 14% (Phases 77-83, Phase 77 complete 2/2 plans, 2/14 plans done)
+v15.0 Operator-Action Closure:     [██░░░░░░░░] 21% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 Plan 01 complete, 3/14 plans done)
 ```
 
 ### Phase Statuses (v15.0)
@@ -57,7 +57,7 @@ v15.0 Operator-Action Closure:     [█░░░░░░░░░] 14% (Phases 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 77 | DUB-05 Benchmark Runner | COMPLETE (2/2 plans) | CosyVoice A/B benchmark runner script + VERSION.json lock mechanism + cosyvoice-benchmark.md Runner Usage docs. DUB-05-RUNNER + DUB-05-LOCK complete. Ready for verification. |
-| 78 | TRANS-07 LTX-FLF Validation Runner | Not started | ComfyUI workflow JSON + validation runner + verdict doc. TRANS-07-WORKFLOW/RUNNER/VERDICT. Parallel with Phase 79. |
+| 78 | TRANS-07 LTX-FLF Validation Runner | Plan 01 complete (1/2) | ComfyUI workflow JSON + async validation runner + 12 tests shipped. Plan 02 pending: verdict update script + Runner Usage docs. |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | False-positive calibration analyzer + per-stratum threshold override. IMG-09-CALIBRATE/APPLY. Parallel with Phase 78. |
 | 80 | DUB-03 Voice Sample Protocol | Not started | Collection protocol ref + batch validator. DUB-03-PROTOCOL/BATCH-VALIDATE. |
 | 81 | XCUT-04b Cloud Engine Bootstrap | Not started | Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config. XCUT-04b-DOCS/OPTIN. |
@@ -107,6 +107,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 |-------|------|----------|-------|-------|
 | 77 | 01 | 373s | 2 | 2 |
 | 77 | 02 | 195s | 3 | 3 |
+| 78 | 01 | 366s | 2 | 3 |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: DUB-05 runner uses sync-only execution (INFRA-04 compliant) with per-cell error handling — partial results preserved on single-variant failure
 - [Phase 77]: DUB-05-LOCK: lock script reads operator_decision.variant from benchmark report (not --variant flag); 3-check validation + lock_ready guard + overwrite guard; writes only 3 fields to VERSION.json; does NOT auto-pick-lower-WER (DUB-05-AUTO-LOCK deferred)
 - [Phase 77]: DUB-05-LOCK: VARIANT_ID_MAP maps CLI underscore IDs to VERSION.json dotted IDs; rationale guard added as 4th validation check (T-77-09 repudiation mitigation)
+- [Phase 78]: TRANS-07-RUNNER: async runner with serial awaits (httpx.AsyncClient, no concurrent dispatch — INFRA-04); vision_verify_fn injected as parameter for testability; 3-frame identity check (first/middle/last) per shot
+- [Phase 78]: TRANS-07-WORKFLOW: 25-node combined ICLoRA+FLF JSON template based on validated LiconMSR (3/3 success 2026-06-28) + FLF additions (LTXVImgToVideoInplace + LTXVAddGuide); placeholder strings for runner parameterization
 
 ### Blockers / Risks (v15.0)
 
