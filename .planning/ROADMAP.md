@@ -238,7 +238,11 @@ Plans:
   3. `v15.0-MILESTONE-AUDIT.md` authored with verdict + tag `v15.0` placed
   4. Cross-repo final pins recorded (hermes-agent + kais-hermes-skills commit hashes at close)
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+**Wave 1**
+
+- [ ] 83-01-PLAN.md — VALIDATE: META-RULE X-2 audit extension + cross-repo ancestry assertion + v15.0-MILESTONE-AUDIT.md + tag v15.0 (VALIDATE-V15)
 
 ---
 
@@ -255,4 +259,4 @@ Candidate directions for v16+ (not yet committed — pending milestone planning)
 
 ---
 
-*Last updated: 2026-07-10 — v15.0 roadmap created (Operator-Action Closure Tooling; 7 phases 77-83, 15/15 reqs mapped, standard granularity). v14.0 milestone SHIPPED 2026-07-10. Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83.*
+*Last updated: 2026-07-10 — Phase 83 VALIDATE planned (1 plan, 4 tasks: audit script + ancestry assertion + milestone audit doc + tag v15.0). v15.0 milestone 13/13 plans ready for close. Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83.*
