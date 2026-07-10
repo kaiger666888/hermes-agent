@@ -76,7 +76,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 77 | 2/2 | Complete    | 2026-07-10 |
 | 78 | 2/2 | Complete    | 2026-07-10 |
 | 79 | 2/2 | Complete    | 2026-07-10 |
-| 80 | DUB-03 Voice Sample Protocol | Not started | - |
+| 80 | 1/1 | Complete    | 2026-07-10 |
 | 81 | XCUT-04b Cloud Engine Bootstrap | Not started | - |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | - |
 | 83 | VALIDATE | Not started | - |
@@ -90,7 +90,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 - [x] **Phase 77: DUB-05 Benchmark Runner** - CosyVoice A/B benchmark script + VERSION.json lock mechanism (completed 2026-07-10)
 - [x] **Phase 78: TRANS-07 LTX-FLF Validation Runner** - ComfyUI workflow JSON + validation runner + verdict doc (completed 2026-07-10, parallel with Phase 79)
 - [x] **Phase 79: IMG-09 Vision-Verify Calibration** - False-positive calibration analyzer + per-stratum threshold override (parallel with Phase 78, completed 2026-07-10)
-- [ ] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script
+- [x] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script (completed 2026-07-10)
 - [ ] **Phase 81: XCUT-04b Cloud Engine Bootstrap** - Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config mechanism
 - [ ] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script
 - [ ] **Phase 83: VALIDATE** - Milestone audit + meta-rule audit extension + tag v15.0 (strictly LAST)
@@ -177,7 +177,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 80-01-PLAN.md — Collection protocol doc + batch validator script + unit tests (DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE)
+- [x] 80-01-PLAN.md — Collection protocol doc + batch validator script + unit tests (DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE)
 
 ### Phase 81: XCUT-04b Cloud Engine Bootstrap
 

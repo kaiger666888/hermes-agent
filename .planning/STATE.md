@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T06:26:07.924Z"
-last_activity: 2026-07-10 -- Phase 80 planning complete
+last_updated: "2026-07-10T06:33:05Z"
+last_activity: 2026-07-10 -- Phase 80 complete (1/1 plans)
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
-  percent: 43
+  completed_plans: 7
+  percent: 50
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 80 — dub 03 voice sample protocol
+**Current focus:** Phase 81 — XCUT-04b Cloud Engine Bootstrap
 
 ## Current Position
 
-Phase: 80
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 80 planning complete
+Phase: 80 (DUB-03 Voice Sample Protocol) — COMPLETE
+Plan: 1 of 1 (complete)
+Status: Phase 80 complete, ready for Phase 81
+Last activity: 2026-07-10 -- Phase 80 complete (protocol doc + batch validator + 17 tests)
 
 ### Progress
 
@@ -49,7 +49,7 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [████▎░░░░░] 43% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2, 6/14 plans done)
+v15.0 Operator-Action Closure:     [█████░░░░░] 50% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2 + Phase 80 complete 1/1, 7/14 plans done)
 ```
 
 ### Phase Statuses (v15.0)
@@ -59,7 +59,7 @@ v15.0 Operator-Action Closure:     [████▎░░░░░] 43% (Phases 
 | 77 | DUB-05 Benchmark Runner | COMPLETE (2/2 plans) | CosyVoice A/B benchmark runner script + VERSION.json lock mechanism + cosyvoice-benchmark.md Runner Usage docs. DUB-05-RUNNER + DUB-05-LOCK complete. Ready for verification. |
 | 78 | TRANS-07 LTX-FLF Validation Runner | COMPLETE (2/2 plans) | Verdict update script + 18 tests + Runner Usage docs shipped. Phase 78 fully complete. Ready for verification. |
 | 79 | IMG-09 Vision-Verify Calibration | COMPLETE (2/2 plans) | Calibration script + 14 tests shipped (Plan 01). Apply script + vision_verify.py get_threshold + dreamina_manager stratum wiring + 30 tests shipped (Plan 02). IMG-09-CALIBRATE + IMG-09-APPLY both complete. Ready for verification. |
-| 80 | DUB-03 Voice Sample Protocol | Not started | Collection protocol ref + batch validator. DUB-03-PROTOCOL/BATCH-VALIDATE. |
+| 80 | DUB-03 Voice Sample Protocol | COMPLETE (1/1 plans) | Voice sample collection protocol doc + batch validator script + 17 tests. DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE complete. Ready for verification. |
 | 81 | XCUT-04b Cloud Engine Bootstrap | Not started | Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config. XCUT-04b-DOCS/OPTIN. |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | GLM-4.6V cost instrumentation + CLI + auto lineage bump. XCUT-04c-INSTRUMENT/CLI + XCUT-05-AUTO. |
 | 83 | VALIDATE | Not started | Milestone audit + meta-rule audit extension + tag v15.0. VALIDATE-V15. Strictly LAST. |
@@ -111,6 +111,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 | 78 | 02 | 255s | 3 | 3 |
 | 79 | 01 | 245s | 2 | 2 |
 | 79 | 02 | 332s | 4 | 6 |
+| 80 | 01 | 358s | 2 | 3 |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 79]: IMG-09-APPLY: 5-check validation (lock_ready + non-null thresholds + valid strata + valid float range + non-null rationale) + ruamel.yaml round-trip + atomic write + JSONL audit log with 1000-entry ring buffer
 - [Phase 79]: IMG-09-APPLY: get_threshold(stratum) reads config first, falls back to 0.7 on any error (T-79-04); process-lifetime _threshold_cache avoids re-reading config per call
 - [Phase 79]: IMG-09-APPLY: dreamina_manager passes stratum=_infer_stratum(item) to verify_image_content — per-stratum thresholds in config.yaml are actually USED at runtime (closes Success Criterion #2 loop)
+- [Phase 80]: DUB-03-BATCH-VALIDATE: single-script design (no operator_decision) — validation is pass/fail, not an operator decision; 4 hard rules hardcoded (duration 3-10s + WAV + >=16kHz + mono); stdlib wave module only (no pydub/librosa/numpy); best-effort episode/character extraction (path-agnostic); exit code 1 on any failure (CI-friendly)
+- [Phase 80]: DUB-03-BATCH-VALIDATE: format failure skips other 3 rules (can't check duration/rate/channels without reading WAV header); conftest tmp_wav_factory produces incorrect stereo WAV (half-length data) — test uses local _write_wav helper with proper interleaved multi-channel frames
 
 ### Blockers / Risks (v15.0)
 
@@ -193,7 +196,7 @@ Items acknowledged and carried forward (NOT in v15.0 scope):
 5. `.planning/milestones/v14.0-MILESTONE-AUDIT.md` §5 — 6 operator-action handoffs (v15.0 source)
 6. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v15.0)
 
-**Next action:** Phase 79 complete (calibration script + apply script + vision_verify.py get_threshold + dreamina_manager stratum wiring + 55 tests). Next: Phase 80 (DUB-03 Voice Sample Protocol). Phases 78 + 79 both complete — critical path unblocked for Phase 80.
+**Next action:** Phase 80 complete (voice sample collection protocol doc + batch validator script + 17 tests). Next: Phase 81 (XCUT-04b Cloud Engine Bootstrap). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
 
 ---
 
@@ -251,4 +254,4 @@ Per XCUT-04 spec, these are NOT gaps — v14.0 delivered the framework, operator
 
 ---
 
-*Last updated: 2026-07-10 — v15.0 Phase 79 complete (IMG-09 Vision-Verify Calibration; 2/2 plans, 55 tests). Phases 77+78+79 all complete (6/14 plans done, 43%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: `/gsd:plan-phase 80`.*
+*Last updated: 2026-07-10 — v15.0 Phase 80 complete (DUB-03 Voice Sample Protocol; 1/1 plan, 17 tests). Phases 77+78+79+80 all complete (7/14 plans done, 50%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: `/gsd:plan-phase 81`.*

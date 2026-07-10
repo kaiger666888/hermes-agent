@@ -29,8 +29,8 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 
 ### DUB-03 — Voice Sample Collection Protocol
 
-- [ ] **DUB-03-PROTOCOL**: User can read `references/voice-sample-collection-protocol.md` for per-character voice sample collection protocol (3-10s clean recording guidelines, environment requirements, file naming convention `assets/<episode>/voice_refs/<character>.wav`)
-- [ ] **DUB-03-BATCH-VALIDATE**: User can run `python scripts/validate_voice_clone_batch.py --voice-refs-dir <dir>` to batch-validate all voice_clone_reference_wav files in an episode against 3-10s + wav + ≥16kHz + mono rules; outputs pass/fail report per character
+- [x] **DUB-03-PROTOCOL**: User can read `references/voice-sample-collection-protocol.md` for per-character voice sample collection protocol (3-10s clean recording guidelines, environment requirements, file naming convention `assets/<episode>/voice_refs/<character>.wav`)
+- [x] **DUB-03-BATCH-VALIDATE**: User can run `python scripts/validate_voice_clone_batch.py --voice-refs-dir <dir>` to batch-validate all voice_clone_reference_wav files in an episode against 3-10s + wav + ≥16kHz + mono rules; outputs pass/fail report per character
 
 ### XCUT-04b — Cloud Engine Bootstrap
 
@@ -110,8 +110,8 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | TRANS-07-VERDICT | Phase 78 | Complete (Plan 02) |
 | IMG-09-CALIBRATE | Phase 79 | Complete (Plan 01) |
 | IMG-09-APPLY | Phase 79 | Complete (Plan 02) |
-| DUB-03-PROTOCOL | Phase 80 | Pending |
-| DUB-03-BATCH-VALIDATE | Phase 80 | Pending |
+| DUB-03-PROTOCOL | Phase 80 | Satisfied |
+| DUB-03-BATCH-VALIDATE | Phase 80 | Satisfied |
 | XCUT-04b-DOCS | Phase 81 | Pending |
 | XCUT-04b-OPTIN | Phase 81 | Pending |
 | XCUT-04c-INSTRUMENT | Phase 82 | Pending |
