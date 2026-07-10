@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T15:39:36.044Z"
-last_activity: 2026-07-10 -- Phase 83 planning complete
+last_updated: "2026-07-10T15:40:03.164Z"
+last_activity: 2026-07-10 -- Phase 83 execution started
 progress:
   total_phases: 7
   completed_phases: 6
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 83 — validate
+**Current focus:** Phase 83 — VALIDATE
 
 ## Current Position
 
-Phase: 83
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 83 planning complete
+Phase: 83 (VALIDATE) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 83
+Last activity: 2026-07-10 -- Phase 83 execution started
 
 ### Progress
 
@@ -267,6 +267,17 @@ Per XCUT-04 spec, these are NOT gaps — v14.0 delivered the framework, operator
 - EVAL-06 dry-run-first NOT changed (curator `--live` frozen for v14.0 duration, released post-Phase-75)
 - FOUND-08 15-expert set frozen (TRANS-04 field-level ownership split, zero new expert_id)
 - SKILL.md L1-L6 read-only invariant exception破例 authorized for v14.0 only (lineage regeneration mandatory per XCUT-03) — **REVERTS v15+ unless re-authorized**
+
+### v15.0 Cross-Repo Pins (FINAL)
+
+| Repo | Role | Full SHA | Short | Ancestry |
+|------|------|----------|-------|----------|
+| hermes-agent | v14.0 final (baseline) | `4e7c58cc9cac3c4925770beaf5a9433369094a24` | `4e7c58cc` | (baseline) |
+| hermes-agent | v15.0 final | `48cb57d7b6ecc5d171f070d898fb57e7d5c5e70c` | `48cb57d7` | descendant of `4e7c58cc` (exit 0) |
+| kais-hermes-skills | v14.0 final (baseline) | `ba58c2548ab82f0cd9acd7cc7af14402137f8520` | `ba58c254` | (baseline) |
+| kais-hermes-skills | v15.0 final | `009773fcb50041813d436c4c09ac7a52f10cf5a3` | `009773f` | descendant of `ba58c254` (exit 0) |
+
+66 commits in hermes-agent + 140 commits in kais-hermes-skills layered on top of v14.0 pins. Zero force-push rewrites detected.
 
 </details>
 
