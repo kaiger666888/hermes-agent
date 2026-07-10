@@ -103,18 +103,18 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DUB-05-RUNNER | TBD | Pending |
-| DUB-05-LOCK | TBD | Pending |
-| TRANS-07-WORKFLOW | TBD | Pending |
-| TRANS-07-RUNNER | TBD | Pending |
-| TRANS-07-VERDICT | TBD | Pending |
-| IMG-09-CALIBRATE | TBD | Pending |
-| IMG-09-APPLY | TBD | Pending |
-| DUB-03-PROTOCOL | TBD | Pending |
-| DUB-03-BATCH-VALIDATE | TBD | Pending |
-| XCUT-04b-DOCS | TBD | Pending |
-| XCUT-04b-OPTIN | TBD | Pending |
-| XCUT-04c-INSTRUMENT | TBD | Pending |
-| XCUT-04c-CLI | TBD | Pending |
-| XCUT-05-AUTO | TBD | Pending |
-| VALIDATE-V15 | TBD | Pending |
+| DUB-05-RUNNER | Phase 77 | Pending |
+| DUB-05-LOCK | Phase 77 | Pending |
+| TRANS-07-WORKFLOW | Phase 78 | Pending |
+| TRANS-07-RUNNER | Phase 78 | Pending |
+| TRANS-07-VERDICT | Phase 78 | Pending |
+| IMG-09-CALIBRATE | Phase 79 | Pending |
+| IMG-09-APPLY | Phase 79 | Pending |
+| DUB-03-PROTOCOL | Phase 80 | Pending |
+| DUB-03-BATCH-VALIDATE | Phase 80 | Pending |
+| XCUT-04b-DOCS | Phase 81 | Pending |
+| XCUT-04b-OPTIN | Phase 81 | Pending |
+| XCUT-04c-INSTRUMENT | Phase 82 | Pending |
+| XCUT-04c-CLI | Phase 82 | Pending |
+| XCUT-05-AUTO | Phase 82 | Pending |
+| VALIDATE-V15 | Phase 83 | Pending |
