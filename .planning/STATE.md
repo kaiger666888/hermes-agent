@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
 status: executing
-last_updated: "2026-07-10T13:20:00.000Z"
-last_activity: 2026-07-10 -- Phase 82 Plan 01 complete (XCUT-04c-INSTRUMENT)
+last_updated: "2026-07-10T13:12:16.648Z"
+last_activity: 2026-07-10
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 12
-  completed_plans: 10
-  percent: 71
+  completed_plans: 11
+  percent: 92
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -24,14 +24,14 @@ progress:
 **Mode:** yolo (auto-advance, parallelization on)
 **Granularity:** standard
 **Model profile:** quality
-**Current focus:** Phase 82 — XCUT-04c Cost Tracking + XCUT-05 Lineage Auto (Plan 01 complete)
+**Current focus:** Phase 82 — XCUT-04c Cost Tracking + XCUT-05 Lineage Auto (Plan 01 + Plan 03 complete, Plan 02 pending)
 
 ## Current Position
 
 Phase: 82 (XCUT-04c Cost Tracking + XCUT-05 Lineage Auto) — EXECUTING
-Plan: 2 of 3
-Status: Phase 82 Plan 01 complete (XCUT-04c-INSTRUMENT)
-Last activity: 2026-07-10 -- Phase 82 Plan 01 complete (XCUT-04c MetricsBuffer instrumentation)
+Plan: 2 of 3 (next: Plan 02 — XCUT-04c-CLI)
+Status: Plan 03 complete (XCUT-05-AUTO), Plan 02 pending
+Last activity: 2026-07-10
 
 ### Progress
 
@@ -49,7 +49,7 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [███████░░░] 71% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2 + Phase 80 complete 1/1 + Phase 81 complete 2/2 + Phase 82 Plan 01 complete, 10/14 plans done)
+v15.0 Operator-Action Closure:     [█████████░] 92% (Phases 77-83, Phase 77 complete 2/2 + Phase 78 complete 2/2 + Phase 79 complete 2/2 + Phase 80 complete 1/1 + Phase 81 complete 2/2 + Phase 82 Plans 01+03 complete, 11/12 plans done)
 ```
 
 ### Phase Statuses (v15.0)
@@ -61,7 +61,7 @@ v15.0 Operator-Action Closure:     [███████░░░] 71% (Phases 
 | 79 | IMG-09 Vision-Verify Calibration | COMPLETE (2/2 plans) | Calibration script + 14 tests shipped (Plan 01). Apply script + vision_verify.py get_threshold + dreamina_manager stratum wiring + 30 tests shipped (Plan 02). IMG-09-CALIBRATE + IMG-09-APPLY both complete. Ready for verification. |
 | 80 | DUB-03 Voice Sample Protocol | COMPLETE (1/1 plans) | Voice sample collection protocol doc + batch validator script + 17 tests. DUB-03-PROTOCOL + DUB-03-BATCH-VALIDATE complete. Ready for verification. |
 | 81 | XCUT-04b Cloud Engine Bootstrap | COMPLETE (2/2 plans) | XCUT-04b-DOCS complete: cloud-engine-bootstrap.md + routing update + cli-config + kais-jimeng-cli SKILL.md touch. XCUT-04b-OPTIN complete: check_cloud_engine_optin.py (449 lines) + 23 unit tests. Phase 81 fully complete. Ready for verification. |
-| 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | IN PROGRESS (1/3 plans) | XCUT-04c-INSTRUMENT complete: DreaminaTaskMetrics token fields + vision_verify usage extraction + dreamina_manager cost computation + MetricsBuffer capture (16 new tests). XCUT-04c-CLI + XCUT-05-AUTO pending. |
+| 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | IN PROGRESS (2/3 plans) | XCUT-04c-INSTRUMENT complete: DreaminaTaskMetrics token fields + vision_verify usage extraction + dreamina_manager cost computation + MetricsBuffer capture (16 new tests). XCUT-05-AUTO complete: bump_all_agent_lineage.py (15-agent lineage bump automation, Track A wrap + Track B mirror, 46 tests). XCUT-04c-CLI pending (Plan 02). |
 | 83 | VALIDATE | Not started | Milestone audit + meta-rule audit extension + tag v15.0. VALIDATE-V15. Strictly LAST. |
 
 ### Critical Path (v15.0)
@@ -115,6 +115,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 | 81 | 01 | 230s | 2 | 4 |
 | 81 | 02 | 178s | 2 | 2 |
 | 82 | 01 | 1080s | 2 | 6 |
+| 82 | 03 | 365s | 1 | 2 |
 
 ## Accumulated Context
 
@@ -165,6 +166,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 82]: XCUT-04c-INSTRUMENT: token fields default to 0 (backward-compatible with v14.0 entries); pricing in config.yaml glm_46v.pricing block with $3/$8 per 1M token defaults (operator-configurable)
 - [Phase 82]: XCUT-04c-INSTRUMENT: cache hits report usage 0/0 (no new API call consumed); batch-level usage attributed per image (approximate — shared API call)
 - [Phase 82]: XCUT-04c-INSTRUMENT: _extract_usage handles prompt_tokens/input_tokens/dict/None (dual-form pattern from auxiliary_client.py); process-lifetime _pricing_cache mirrors Phase 79 _threshold_cache pattern
+- [Phase 82]: XCUT-05-AUTO: ACTIVE_EXPERTS_15 = Track A (9 EXPERTS_9) + Track B (6 manual cases) hardcoded; bump_track_a wraps transform_one, bump_track_b uses transform_track_b_one mirror
+- [Phase 82]: XCUT-05-AUTO: Track B tools sourced from existing agent.yaml ground truth (plan interfaces block was stale for colorist/storyboard_designer/visual_executor — Rule 1 auto-fix)
+- [Phase 82]: XCUT-05-AUTO: TRACK_B_PANEL preserves non-expert agent peers (compliance_gate, production, prompt_injector, scene_builder) in collaboration graph; transform_track_b_one does NOT apply LEGACY_NAME_MAP canonicalization
 
 ### Blockers / Risks (v15.0)
 
@@ -208,7 +212,7 @@ Items acknowledged and carried forward (NOT in v15.0 scope):
 5. `.planning/milestones/v14.0-MILESTONE-AUDIT.md` §5 — 6 operator-action handoffs (v15.0 source)
 6. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v15.0)
 
-**Next action:** Phase 82 Plan 01 complete (XCUT-04c-INSTRUMENT: DreaminaTaskMetrics token fields + vision_verify usage extraction + dreamina_manager cost computation). Next: Phase 82 Plan 02 (XCUT-04c-CLI: `hermes glm stats` aggregation) or Plan 82-03 (XCUT-05-AUTO: bump_all_agent_lineage.py). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
+**Next action:** Phase 82 Plans 01 + 03 complete (XCUT-04c-INSTRUMENT + XCUT-05-AUTO: 15-agent lineage bump automation shipped). Next: Phase 82 Plan 02 (XCUT-04c-CLI: `hermes glm stats` aggregation). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
 
 ---
 
@@ -266,4 +270,4 @@ Per XCUT-04 spec, these are NOT gaps — v14.0 delivered the framework, operator
 
 ---
 
-*Last updated: 2026-07-10 — v15.0 Phase 82 Plan 01 complete (XCUT-04c-INSTRUMENT: DreaminaTaskMetrics token fields + vision_verify usage extraction + dreamina_manager cost computation + MetricsBuffer capture; 2 tasks TDD, 6 files, 4 commits in kais-hermes-skills). 10/14 plans done (71%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: Phase 82 Plan 02 (XCUT-04c-CLI) or Plan 82-03 (XCUT-05-AUTO).*
+*Last updated: 2026-07-10 — v15.0 Phase 82 Plans 01 + 03 complete (XCUT-04c-INSTRUMENT: token fields + usage extraction + cost computation; XCUT-05-AUTO: bump_all_agent_lineage.py 15-agent lineage bump automation, 46 tests). 11/12 plans done (92%). Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST. Next: Phase 82 Plan 02 (XCUT-04c-CLI).*

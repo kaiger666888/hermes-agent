@@ -44,7 +44,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 
 ### Cross-cutting — v14.0 tech_debt closure + lineage
 
-- [ ] **XCUT-05-AUTO**: User can run `python scripts/bump_all_agent_lineage.py` to automate full 15-agent lineage bump (v14.0 XCUT-05 deferred; the script wraps `transform_skill_to_agent.py` for all 15 active experts + handles Track B 6 v13.0 P62 manual cases)
+- [x] **XCUT-05-AUTO**: User can run `python scripts/bump_all_agent_lineage.py` to automate full 15-agent lineage bump (v14.0 XCUT-05 deferred; the script wraps `transform_skill_to_agent.py` for all 15 active experts + handles Track B 6 v13.0 P62 manual cases)
 - [ ] **VALIDATE-V15**: v15.0 VALIDATE phase re-runs `76-meta-rule-x2-audit.sh` + extends coverage to any new v15.0 `_INSTRUCTION` constants; closes v14.0 tech_debt items where operator-action data has flowed back to code (DUB-05 lock / IMG-09 thresholds applied / TRANS-07 verdict recorded)
 
 ---
@@ -116,5 +116,5 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | XCUT-04b-OPTIN | Phase 81 | Satisfied |
 | XCUT-04c-INSTRUMENT | Phase 82 | Satisfied |
 | XCUT-04c-CLI | Phase 82 | Pending |
-| XCUT-05-AUTO | Phase 82 | Pending |
+| XCUT-05-AUTO | Phase 82 | Complete |
 | VALIDATE-V15 | Phase 83 | Pending |

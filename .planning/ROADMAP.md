@@ -78,7 +78,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 79 | 2/2 | Complete    | 2026-07-10 |
 | 80 | 1/1 | Complete    | 2026-07-10 |
 | 81 | XCUT-04b Cloud Engine Bootstrap | 2/2 | Complete    | 2026-07-10 |
-| 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | 1/3 | In progress    |
+| 82 | 2/3 | In Progress|  |
 | 83 | VALIDATE | Not started | - |
 
 **Critical path:** 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
@@ -92,7 +92,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 - [x] **Phase 79: IMG-09 Vision-Verify Calibration** - False-positive calibration analyzer + per-stratum threshold override (parallel with Phase 78, completed 2026-07-10)
 - [x] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script (completed 2026-07-10)
 - [x] **Phase 81: XCUT-04b Cloud Engine Bootstrap** - Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config mechanism (completed 2026-07-10)
-- [ ] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script (Plan 01 complete)
+- [ ] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script (Plans 01 + 03 complete, Plan 02 pending)
 - [ ] **Phase 83: VALIDATE** - Milestone audit + meta-rule audit extension + tag v15.0 (strictly LAST)
 
 ---
@@ -219,7 +219,7 @@ Plans:
 
 - [x] 82-01-PLAN.md — XCUT-04c MetricsBuffer instrumentation + vision_verify usage + dreamina_manager capture (XCUT-04c-INSTRUMENT)
 
-- [ ] 82-03-PLAN.md — XCUT-05-AUTO bump_all_agent_lineage.py 15-agent lineage bump script (XCUT-05-AUTO)
+- [x] 82-03-PLAN.md — XCUT-05-AUTO bump_all_agent_lineage.py 15-agent lineage bump script (XCUT-05-AUTO)
 
 **Wave 2** *(blocked on Wave 1 Plan 82-01 completion)*
 
