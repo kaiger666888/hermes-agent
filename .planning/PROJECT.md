@@ -8,32 +8,37 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 让 hermes-agent 成为 Kai 的主 agent:既承载 movie-experts 这样的领域专家子系统(v1-v6 已 shipped),也具备通用 agent 必备的代码委派、自动化集成、文档协作、个人身份与记忆能力(v7.0 迁移目标)—— 任何 openclaw 能做的事,hermes-agent 都能做,且做得更好。
 
-## Current Milestone: v15.0 — Operator-Action Closure Tooling (STARTED 2026-07-10)
+## Previous Milestone: v15.0 ✅ SHIPPED 2026-07-10 — Operator-Action Closure Tooling
 
-**Goal:** Author production-grade tooling + workflows that close v14.0's 6 operator-action handoffs by making them executable; captured data flows back to code (VERSION.json locks, calibration thresholds, validation verdicts).
+**Stats:** 7 phases (77-83) · 13 plans · 15/15 reqs structurally satisfied · 6 operator-action handoffs preserved (closure tooling delivered, operator-action pending — v16+ runtime) · Tag `v15.0` · Audit `tech_debt` · Cross-repo final pins: hermes-agent `48cb57d7`, kais-hermes-skills `009773f`.
 
-**Target features (6 tracks mirroring v14.0 operator-action handoffs):**
+**Goal (achieved):** 把 v14.0 留的 6 项 operator-action handoffs 工具化,让每个 handoff 变成 5-minute operator task 而非 research project。每个 handoff 现在有 runner script / validator script / lock script / workflow JSON / opt-in mechanism — operator 跑一遍即可,captured data flows back to code (VERSION.json locks / calibration thresholds / validation verdicts)。
 
-1. **DUB-05 Benchmark Runner** — `scripts/run_cosyvoice_benchmark.py` takes 3-5 dialogue lines + runs both CosyVoice 2.0-0.5B + Fun-CosyVoice 3.0 + outputs side-by-side comparison report; operator runs once + locks `VERSION.json.tts.cosyvoice_default_variant`.
-2. **TRANS-07 LTX-FLF Validation Runner** — ComfyUI workflow JSON + `scripts/run_ltx_flf_validation.py` submits 1-2 reference shots + captures results + writes production-readiness verdict to `ltx-flf-iclora-validation.md`; gates TRANS-11 v16+ rollout.
-3. **IMG-09 False-Positive Calibration** — `scripts/calibrate_vision_verify.py` analyzes `~/.hermes/metrics/dreamina_stats.jsonl` production data + recommends confidence threshold per stratum (1-ref/3-ref/5-ref); operator reviews + commits calibrated thresholds.
-4. **DUB-03 Voice Sample Collection Protocol** — `references/voice-sample-collection-protocol.md` + `scripts/validate_voice_clone_batch.py` (batch-validates operator-provided wavs against 3-10s + wav + ≥16kHz + mono rules); operator sources wavs per protocol.
-5. **XCUT-04b Cloud Engine Bootstrap** — `references/cloud-engine-bootstrap.md` (Hailuo + Vidu API key acquisition + ComfyUI Wan2.2 FLF2V node install + cost-estimation worksheet); operator opts in per engine.
-6. **XCUT-04c GLM-4.6V Cost Tracking** — Extend `dreamina_stats.py` MetricsBuffer to track per-batch GLM-4.6V token spend + monthly aggregate; `hermes glm stats` CLI subcommand.
+**6 tracks shipped:**
 
-**Cross-cutting phases:**
+1. **DUB-05 Benchmark Runner (Phase 77)** — `run_cosyvoice_benchmark.py` + `lock_cosyvoice_default.py` (operator runs A/B benchmark + locks `VERSION.json.tts.cosyvoice_default_variant`).
+2. **TRANS-07 LTX-FLF Validation Runner (Phase 78)** — `references/workflows/ltx-flf-iclora-validation.json` ComfyUI workflow + `run_ltx_flf_validation.py` + verdict update script (gates TRANS-11 v16+ rollout).
+3. **IMG-09 Vision-Verify Calibration (Phase 79)** — `calibrate_vision_verify.py` (analyzes production MetricsBuffer + recommends per-stratum thresholds) + apply script + audit log.
+4. **DUB-03 Voice Sample Protocol (Phase 80)** — `references/voice-sample-collection-protocol.md` + `validate_voice_clone_batch.py` (batch-validates operator-provided wavs against 3-10s + wav + ≥16kHz + mono rules).
+5. **XCUT-04b Cloud Engine Bootstrap (Phase 81)** — `references/cloud-engine-bootstrap.md` (Hailuo + Vidu API key acquisition + ComfyUI Wan2.2 FLF2V node install + cost-estimation worksheet) + `check_cloud_engine_optin.py` opt-in mechanism.
+6. **XCUT-04c Cost Tracking + XCUT-05 Lineage Auto (Phase 82)** — `dreamina_stats.py` MetricsBuffer extends to track GLM-4.6V token spend + `hermes glm stats` CLI subcommand + `bump_all_agent_lineage.py` (full 15-agent lineage bump automated).
 
-- **VALIDATE** — closes v14.0 tech_debt items in the audit; re-runs `76-meta-rule-x2-audit.sh` + extends to v15.0 `_INSTRUCTION` constants.
-- **LINEAGE-BUMP** (if any SKILL.md touched in v15.0) — regenerate agent.yaml per XCUT-03 pattern.
+**Cross-cutting phase shipped:**
+
+- **Phase 83 VALIDATE** — `76-meta-rule-x2-audit.sh` re-run + coverage extended to v15.0 constants + `v15.0-MILESTONE-AUDIT.md` authored (verdict `tech_debt`) + tag `v15.0` placed.
 
 **Hard constraints preserved (沿用 v14.0):**
 
 - INFRA-04 serial execution NOT lifted
 - EVAL-06 dry-run-first NOT changed (curator `--live` opt-in; v15.0 doesn't unfreeze)
 - FOUND-08 15-expert set frozen
-- SKILL.md L1-L6 read-only invariant **REVERTS** unless v15.0 re-authorizes the破例 (default: only kais-jimeng-cli SKILL.md may be touched for cloud-engine-bootstrap doc references; no Form/DUB/IMG/TRANSITION SKILL.md body changes)
+- SKILL.md L1-L6 read-only invariant **REVERTS** post-v14.0 (only kais-jimeng-cli SKILL.md touched per Phase 81 for cloud-engine-bootstrap doc references)
 
-**Cross-repo topology (沿用):** hermes-agent repo = GSD `.planning/` 工件; kais-hermes-skills repo = scripts + refs + Python. Final cross-repo pins recorded at v15.0 close.
+See `.planning/milestones/v15.0-ROADMAP.md` for the full archive + `.planning/milestones/v15.0-REQUIREMENTS.md` for requirement outcomes + `.planning/milestones/v15.0-MILESTONE-AUDIT.md` for the audit report.
+
+---
+
+## Next Milestone: Not yet planned. Run `/gsd:new-milestone` to start.
 
 ## Previous Milestone: v14.0 ✅ SHIPPED 2026-07-10 — kais-movie-pipeline 形态/音频/图像/转场 4 项升级
 
@@ -74,13 +79,13 @@ Kai 的个人 Hermes Agent 平台。v1-v6 聚焦 `skills/movie-experts/` 短剧/
 
 See `.planning/milestones/v14.0-ROADMAP.md` for the full archive + `.planning/milestones/v14.0-REQUIREMENTS.md` for requirement outcomes + `.planning/milestones/v14.0-MILESTONE-AUDIT.md` for the audit report.
 
-## Current State (v14.0 SHIPPED 2026-07-10)
+## Current State (v15.0 SHIPPED 2026-07-10)
 
-v14.0 milestone SHIPPED + closed 2026-07-10 (tag `v14.0` placed, phases archived to `.planning/milestones/v14.0-ROADMAP.md` + `.planning/milestones/v14.0-REQUIREMENTS.md` + `.planning/milestones/v14.0-MILESTONE-AUDIT.md`).
+v15.0 milestone SHIPPED + closed 2026-07-10 (tag `v15.0` placed, phases archived to `.planning/milestones/v15.0-ROADMAP.md` + `.planning/milestones/v15.0-REQUIREMENTS.md` + `.planning/milestones/v15.0-MILESTONE-AUDIT.md`).
 
-**v9.0-v14.0 milestone arc closure:** v9.0 kais-movie-pipeline 闭环深化 (P38-43) → v10.0 orchestrator design (P44-51) → v11.0 PoC (P52-56) → v12.0 hardening (P57-61) → v13.0 full rollout (P62-69) → **v14.0 4-track upgrade** (P70-76). v14.0 returns focus to kais-movie-pipeline with production-grade FORM/DUB/IMG/TRANSITION.
+**v9.0-v15.0 milestone arc closure:** v9.0 kais-movie-pipeline 闭环深化 (P38-43) → v10.0 orchestrator design (P44-51) → v11.0 PoC (P52-56) → v12.0 hardening (P57-61) → v13.0 full rollout (P62-69) → v14.0 4-track upgrade (P70-76) → **v15.0 operator-action closure tooling** (P77-83). v15.0 closed all 6 v14.0 operator-action handoffs with executable tooling — operator runs at v16+ runtime.
 
-**Next milestone:** Not yet planned. v15+ candidate directions wait on (a) DUB-05 A/B benchmark result (CosyVoice variant lock); (b) TRANS-07 LTX-FLF validation report (production rollout gate); (c) v13.0 Phase 64 live-eval data (operator secrets). Run `/gsd:new-milestone` to start.
+**Next milestone:** Not yet planned. v16+ candidate directions wait on (a) operator execution of v15.0 tooling (DUB-05 benchmark + lock / TRANS-07 validation + verdict / IMG-09 calibration + thresholds / DUB-03 voice sourcing / XCUT-04b API keys + ComfyUI node / XCUT-04c production data); (b) TRANS-07 verdict (gates TRANS-11 production rollout); (c) v13.0 Phase 64 live-eval data (operator secrets). Run `/gsd:new-milestone` to start.
 
 ## Previous Milestone: v13.0 — v10.0 Design Suite Full Rollout & Live Eval ✅ SHIPPED 2026-07-08
 
@@ -618,4 +623,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 — v14.0 milestone SHIPPED (kais-movie-pipeline 4-Track Upgrade FORM/DUB/IMG/TRANSITION; 7 phases 70-76, 17 plans, 26/26 reqs mapped, verdict `tech_debt`, tag `v14.0`). v9.0-v14.0 milestone arc closure complete. SKILL.md L1-L6 read-only invariant exception破例 authorized for v14.0 only; reverts read-only v15+ unless re-authorized. Next milestone not yet planned — v15+ candidate directions wait on DUB-05 A/B benchmark + TRANS-07 LTX-FLF validation + v13.0 Phase 64 live-eval data.*
+*Last updated: 2026-07-10 — v15.0 milestone SHIPPED (Operator-Action Closure Tooling; 7 phases 77-83, 13 plans, 15/15 reqs structurally satisfied, verdict `tech_debt`, tag `v15.0`). v9.0-v15.0 milestone arc closure complete. 6 operator-action handoffs have closure tooling delivered (operator runs at v16+ runtime). Next milestone not yet planned — v16+ candidate directions wait on operator execution of v15.0 tooling + TRANS-07 verdict + v13.0 Phase 64 live-eval data. Run `/gsd:new-milestone` to start.*
