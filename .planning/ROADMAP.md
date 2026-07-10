@@ -17,19 +17,50 @@
 | v12.0 | Production Hardening | 57-61 | 2026-07-08 | `v12.0` | passed |
 | v13.0 | v10.0 Design Suite Full Rollout & Live Eval | 62-69 | 2026-07-08 | `v13.0` | tech_debt |
 | v14.0 | kais-movie-pipeline 4-Track Upgrade (FORM / DUB / IMG / TRANSITION) | 70-76 | 2026-07-10 | `v14.0` | tech_debt (24 satisfied + 2 operator-handoff) |
-| **v15.0** | **Operator-Action Closure Tooling** | **77-83** | **In progress** | **TBD** | **TBD** |
+| **v15.0** | **Operator-Action Closure Tooling** | **77-83** | **2026-07-10** | **v15.0** | **tech_debt** |
 
 See [MILESTONES.md](./MILESTONES.md) for full milestone history with key accomplishments per milestone, and `milestones/v{N}.0-ROADMAP.md` for archived phase artifacts.
 
 ---
 
-## Most Recent Shipped Milestone: v14.0 ✅ SHIPPED 2026-07-10
+## Most Recent Shipped Milestone: v15.0 — SHIPPED 2026-07-10
+
+**Stats:** 7 phases (77-83) · 13 plans · 15/15 reqs structurally satisfied · Tag `v15.0` · Audit `tech_debt`
+
+**One sentence:** 把 v14.0 留的 6 项 operator-action handoffs 工具化,让每个 handoff 变成 5-minute operator task 而非 research project (DUB-05 benchmark runner + VERSION.json lock / TRANS-07 LTX-FLF validation runner + verdict update / IMG-09 vision-verify calibration + per-stratum threshold apply / DUB-03 voice sample protocol + batch validator / XCUT-04b cloud engine bootstrap doc + opt-in / XCUT-04c GLM-4.6V cost instrumentation + CLI + XCUT-05 automated lineage bump)。v15.0 delivered closure tooling for all 6 v14.0 handoffs — operator runs at v16+ runtime.
+
+See `milestones/v15.0-MILESTONE-AUDIT.md` for the full audit doc (10 sections, verdict tech_debt).
+
+<details>
+<summary>v15.0 Phase Details (click to expand)</summary>
+
+| Phase | Name | Status | Completed |
+|-------|------|--------|-----------|
+| 77 | DUB-05 Benchmark Runner | SHIPPED (2 plans) | 2026-07-10 |
+| 78 | TRANS-07 LTX-FLF Validation Runner | SHIPPED (2 plans) | 2026-07-10 |
+| 79 | IMG-09 Vision-Verify Calibration | SHIPPED (2 plans) | 2026-07-10 |
+| 80 | DUB-03 Voice Sample Protocol | SHIPPED (1 plan) | 2026-07-10 |
+| 81 | XCUT-04b Cloud Engine Bootstrap | SHIPPED (2 plans) | 2026-07-10 |
+| 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | SHIPPED (3 plans) | 2026-07-10 |
+| 83 | VALIDATE | SHIPPED (1 plan + audit + tag) | 2026-07-10 |
+
+**Critical path:** 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
+
+**Cross-repo topology:** hermes-agent = GSD planning; kais-hermes-skills = scripts + workflows + Python + refs. Final pins: hermes-agent `48cb57d7`, kais-hermes-skills `009773f`.
+
+**Hard constraints preserved:** INFRA-04 serial NOT lifted · EVAL-06 dry-run-first NOT changed · FOUND-08 15-expert set frozen · SKILL.md L1-L6 read-only invariant REVERTED post-v14.0 (only kais-jimeng-cli touched per Phase 81).
+
+</details>
+
+---
+
+## Previous Shipped Milestone: v14.0
 
 **Stats:** 7 phases (70-76) · 17 plans · 36 tasks · 26/26 reqs mapped (24 satisfied + 2 operator-handoff) · Tag `v14.0` · Audit `tech_debt`
 
 **One sentence:** 把 kais-movie-pipeline 从「竖屏短剧专用」升级为「横竖双 default 的通用短片创作管线」,同步升级 4 项核心生成环节到 production-grade (横竖并行双 default 形态参数化 / CosyVoice 2.0-0.5B 配音 + LTX 2.3 native audio 分工 / dreamina cli 深度编排 + GLM-4.6V vision-verify 强制门 / 创作+数据+生成三层转场协作)。v14.0 是 v9.0 后首个 kais-movie-pipeline-focused milestone,重启跨 repo 工作流 (plan → hermes-agent/.planning/,code → kais-hermes-skills/)。
 
-See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 operator-action handoffs documented in `milestones/v14.0-MILESTONE-AUDIT.md §5` — v15.0 closes them.
+See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 operator-action handoffs documented in `milestones/v14.0-MILESTONE-AUDIT.md §5` — v15.0 closed them with tooling.
 
 <details>
 <summary>v14.0 Phase Details (click to expand)</summary>
@@ -54,11 +85,11 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 
 ---
 
-## Current Milestone: v15.0 — Operator-Action Closure Tooling (STARTED 2026-07-10)
+## Current Milestone: v15.0 SHIPPED 2026-07-10 — Ready for v16.0 Planning
 
 **Milestone Goal:** Author production-grade tooling + workflows that close v14.0's 6 operator-action handoffs by making them executable; captured data flows back to code (VERSION.json locks, calibration thresholds, validation verdicts). Each handoff becomes a 5-minute operator task rather than a research project.
 
-**Stats:** 7 phases (77-83) · 15 reqs · Coverage 15/15 ✓
+**Stats:** 7 phases (77-83) · 15/15 reqs structurally satisfied · Tag `v15.0` · Audit `tech_debt`
 
 **Cross-repo topology (沿用 v14.0):** hermes-agent repo = GSD `.planning/` 工件; kais-hermes-skills repo = scripts + workflows + Python + refs. Final cross-repo pins recorded at v15.0 close.
 
@@ -79,7 +110,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 | 80 | 1/1 | Complete    | 2026-07-10 |
 | 81 | XCUT-04b Cloud Engine Bootstrap | 2/2 | Complete    | 2026-07-10 |
 | 82 | 3/3 | Complete    | 2026-07-10 |
-| 83 | VALIDATE | Not started | - |
+| 83 | VALIDATE | 1/1 | Complete | 2026-07-10 |
 
 **Critical path:** 77 → (78 ∥ 79) → 80 → 81 → 82 → 83. Phase 83 strictly LAST.
 
@@ -93,7 +124,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 - [x] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script (completed 2026-07-10)
 - [x] **Phase 81: XCUT-04b Cloud Engine Bootstrap** - Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config mechanism (completed 2026-07-10)
 - [x] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script (all 3 plans complete, completed 2026-07-10)
-- [ ] **Phase 83: VALIDATE** - Milestone audit + meta-rule audit extension + tag v15.0 (strictly LAST)
+- [x] **Phase 83: VALIDATE** - Milestone audit + meta-rule audit extension + tag v15.0 (completed 2026-07-10)
 
 ---
 
@@ -242,7 +273,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 83-01-PLAN.md — VALIDATE: META-RULE X-2 audit extension + cross-repo ancestry assertion + v15.0-MILESTONE-AUDIT.md + tag v15.0 (VALIDATE-V15)
+- [x] 83-01-PLAN.md — VALIDATE: META-RULE X-2 audit extension + ancestry assertion + v15.0-MILESTONE-AUDIT.md + tag v15.0 (VALIDATE-V15)
 
 ---
 
@@ -259,4 +290,4 @@ Candidate directions for v16+ (not yet committed — pending milestone planning)
 
 ---
 
-*Last updated: 2026-07-10 — Phase 83 VALIDATE planned (1 plan, 4 tasks: audit script + ancestry assertion + milestone audit doc + tag v15.0). v15.0 milestone 13/13 plans ready for close. Critical path: 77 → (78 ∥ 79) → 80 → 81 → 82 → 83.*
+*Last updated: 2026-07-10 — **v15.0 SHIPPED** (tag v15.0, verdict tech_debt). Phase 83 VALIDATE complete. 13/13 plans done (100%). All 15 reqs structurally satisfied. 6 operator-action handoffs preserved (tooling delivered, operator-action pending — v16+ runtime). Ready for v16.0 milestone planning.*
