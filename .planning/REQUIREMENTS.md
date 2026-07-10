@@ -1,0 +1,120 @@
+# Requirements: Hermes Agent — v15.0 Operator-Action Closure Tooling
+
+**Defined:** 2026-07-10
+**Core Value:** 让 hermes-agent 成为 Kai 的主 agent:v14.0 已 shipped kais-movie-pipeline 4-track upgrade (FORM/DUB/IMG/TRANSITION);**v15.0 聚焦把 v14.0 留的 6 项 operator-action handoffs 工具化,让每个 handoff 变成 5-minute operator task 而非 research project**。Captured data flows back to code (VERSION.json locks / calibration thresholds / validation verdicts)。
+
+**Source:** v14.0-MILESTONE-AUDIT.md §5 operator-action handoffs (6 items) + Kai 的 "A. Operator-action handoff 闭环" 选择 (2026-07-10)。
+
+---
+
+## v15.0 Requirements
+
+Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, continuing from v14.0 Phase 76)。
+
+### DUB-05 — CosyVoice A/B Benchmark Runner
+
+- [ ] **DUB-05-RUNNER**: User can run `python scripts/run_cosyvoice_benchmark.py --dialogue-lines <file> --variants cosyvoice_2_0_0_5b,fun_cosyvoice_3_0` to execute side-by-side A/B benchmark across CosyVoice 2.0-0.5B + Fun-CosyVoice 3.0 on operator-provided dialogue lines; script outputs structured JSON report + audio files for human review
+- [ ] **DUB-05-LOCK**: User can run `python scripts/lock_cosyvoice_default.py --benchmark-report <path>` to lock the chosen variant in `VERSION.json.tts.cosyvoice_default_variant` with rationale captured from the benchmark report (operator decision; NOT auto-pick-lower-WER)
+
+### TRANS-07 — LTX-FLF+ICLoRA Validation Runner
+
+- [ ] **TRANS-07-WORKFLOW**: User can read `references/workflows/ltx-flf-iclora-validation.json` ComfyUI workflow (LiconMSR + LTXVConditioning + SamplerCustomAdvanced node graph per community reports) for 1-2 reference shot validation
+- [ ] **TRANS-07-RUNNER**: User can run `python scripts/run_ltx_flf_validation.py --reference-shots <dir>` to submit 1-2 reference shots through the validation workflow + capture results (gen_status, latency, identity-continuity assessment via vision_verify) + write verdict to `references/ltx-flf-iclora-validation.md`
+- [ ] **TRANS-07-VERDICT**: User can read production-readiness verdict (ready / deferred-to-v16+) in `ltx-flf-iclora-validation.md` after operator runs validation; gates TRANS-11 v16+ production rollout
+
+### IMG-09 — Vision-Verify False-Positive Calibration
+
+- [ ] **IMG-09-CALIBRATE**: User can run `python scripts/calibrate_vision_verify.py --metrics-buffer <path>` to analyze production MetricsBuffer data + recommend confidence threshold per stratum (1-ref/3-ref/5-ref) using false-positive rate analysis
+- [ ] **IMG-09-APPLY**: User can apply calibrated thresholds via `vision_verify.py` config (per-stratum threshold override) with audit log of when/why thresholds changed
+
+### DUB-03 — Voice Sample Collection Protocol
+
+- [ ] **DUB-03-PROTOCOL**: User can read `references/voice-sample-collection-protocol.md` for per-character voice sample collection protocol (3-10s clean recording guidelines, environment requirements, file naming convention `assets/<episode>/voice_refs/<character>.wav`)
+- [ ] **DUB-03-BATCH-VALIDATE**: User can run `python scripts/validate_voice_clone_batch.py --voice-refs-dir <dir>` to batch-validate all voice_clone_reference_wav files in an episode against 3-10s + wav + ≥16kHz + mono rules; outputs pass/fail report per character
+
+### XCUT-04b — Cloud Engine Bootstrap
+
+- [ ] **XCUT-04b-DOCS**: User can read `references/cloud-engine-bootstrap.md` for Hailuo 02 i2v Pro + Vidu keyframe-to-video API key acquisition steps + ComfyUI Wan2.2 FLF2V custom node install procedure + cost-estimation worksheet (per-shot + monthly projections)
+- [ ] **XCUT-04b-OPTIN**: User can opt in per cloud engine via `~/.hermes/config.yaml` cloud_engines block (hailuo_api_key + vidu_api_key + wan22_comfyui_node_enabled); transition-engine-routing.md rules consume opt-in state at runtime
+
+### XCUT-04c — GLM-4.6V Cost Tracking
+
+- [ ] **XCUT-04c-INSTRUMENT**: `dreamina_stats.py` MetricsBuffer extends to track per-batch GLM-4.6V token spend (input_tokens + output_tokens + estimated_cost_usd) alongside existing per-task latency/success rate
+- [ ] **XCUT-04c-CLI**: User can run `hermes glm stats` CLI subcommand to see monthly GLM-4.6V aggregate spend (token count + estimated USD cost) + per-stratum breakdown; reuses Rich table formatting from `hermes dreamina stats`
+
+### Cross-cutting — v14.0 tech_debt closure + lineage
+
+- [ ] **XCUT-05-AUTO**: User can run `python scripts/bump_all_agent_lineage.py` to automate full 15-agent lineage bump (v14.0 XCUT-05 deferred; the script wraps `transform_skill_to_agent.py` for all 15 active experts + handles Track B 6 v13.0 P62 manual cases)
+- [ ] **VALIDATE-V15**: v15.0 VALIDATE phase re-runs `76-meta-rule-x2-audit.sh` + extends coverage to any new v15.0 `_INSTRUCTION` constants; closes v14.0 tech_debt items where operator-action data has flowed back to code (DUB-05 lock / IMG-09 thresholds applied / TRANS-07 verdict recorded)
+
+---
+
+## Future Requirements (v16+)
+
+Acknowledged but deferred. Tracked for roadmap visibility.
+
+### v14.0 deferred carry-forward (not in v15.0 scope)
+
+- **FORM-06**: per-shot `form_factor` override (anti-pattern — project-level lock only; cross-shot consistency collapse risk)
+- **FORM-07**: auto-`form_factor` inference from screenplay content (unreliable, ~40% wrong per FEATURES research)
+- **DUB-06**: real-time TTS streaming during video generation (race-condition architecture needed; current sync model sufficient)
+- **DUB-07**: CosyVoice 2 `instruct2` fine-grained per-line control (emotion + speed + volume per line)
+- **DUB-08**: cross-shot voice_identity dimension in `continuity_auditor` (5th dimension)
+- **IMG-07**: auto-scaling concurrency (current 10-parallel is validated stable; auto-tune adds complexity without payoff until quota wall hit)
+- **IMG-08**: multi-model routing (dreamina 5.0 vs Seedance 2.0 vs other) — defer until v14.0 dreamina_manager pattern proven
+- **TRANS-08**: AI-generated whip pan transitions (current generation engines unreliable for cross-shot motion-vector continuity)
+- **TRANS-09**: custom transition types beyond 12-value taxonomy (industry-standard taxonomy sufficient; avoid over-engineering)
+- **TRANS-10**: per-transition runtime LLM routing decisions (INFRA-04 serial constraint violation risk; v14.0 uses declarative rules only)
+- **TRANS-11**: LTX-2.3 FLF + ICLoRA combined workflow **production rollout** (gated by TRANS-07 v15.0 validation verdict; v16+ if validation passes)
+
+### v15.0 deferred
+
+- **DUB-05-AUTO-LOCK**: full automation of VERSION.json lock based on benchmark scores (operator-in-loop required for audio quality judgment)
+- **IMG-09-AUTO-TUNE**: closed-loop auto-threshold adjustment based on rolling production data (operator review still required for threshold changes)
+- **v15-LIVE-EVAL**: v13.0 Phase 64 live-eval secrets integration (operator-secret-dependent; not automatable without secrets)
+
+---
+
+## Out of Scope
+
+Explicitly excluded from v15.0. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| New `expert_id` (e.g., transition_designer, voice_cloning_specialist) | FOUND-08 frozen 15-expert set; v14.0/v15.0 preserve |
+| Operator-supplied voice_clone_reference_wav sourcing (actual recordings) | Operator-action; v15.0 delivers collection protocol + batch validator, NOT the recordings themselves |
+| Operator-supplied Hailuo/Vidu API keys | Operator-action; v15.0 delivers bootstrap doc + opt-in mechanism, NOT the keys themselves |
+| Operator-run ComfyUI Wan2.2 node install | Operator-action; v15.0 delivers install procedure doc, NOT the actual install |
+| Production data collection for IMG-09 calibration (operator must run v14.0 IMG stack in production first) | Operator-action; v15.0 delivers analyzer script, NOT the production data |
+| v13.0 Phase 64 live-eval secrets | Operator-secret-dependent; v15.0 delivers opt-in mechanism if secrets available, but secret sourcing is out-of-scope |
+| INFRA-04 serial constraint lift | Out of scope for v15.0; preserved per MEMORY.md `feedback-glm-overload-reduce-concurrency.md` |
+| EVAL-06 dry-run-first change | Out of scope for v15.0; curator `--live` opt-in (default dry-run preserved) |
+| Full agent.yaml persona refresh | v13.0 P62 personas preserved; v15.0 bumps lineage fields only if SKILL.md touched |
+| New SKILL.md body changes (FORM/DUB/IMG/TRANSITION tracks) | L1-L6 read-only invariant REVERTS to v10.0 state post-v14.0; v15.0 only touches kais-jimeng-cli SKILL.md for cloud-engine-bootstrap doc references |
+| Per-shot form_factor mixing | Anti-pattern (cross-shot consistency collapse); project-level lock only |
+| Real-time TTS streaming during video gen | Race-condition architecture; current sync queue model sufficient |
+| Auto-form_factor inference from screenplay | Unreliable (~40% wrong); explicit project meta only |
+
+---
+
+## Traceability
+
+Which phases cover which requirements. Filled by roadmapper 2026-07-10.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DUB-05-RUNNER | TBD | Pending |
+| DUB-05-LOCK | TBD | Pending |
+| TRANS-07-WORKFLOW | TBD | Pending |
+| TRANS-07-RUNNER | TBD | Pending |
+| TRANS-07-VERDICT | TBD | Pending |
+| IMG-09-CALIBRATE | TBD | Pending |
+| IMG-09-APPLY | TBD | Pending |
+| DUB-03-PROTOCOL | TBD | Pending |
+| DUB-03-BATCH-VALIDATE | TBD | Pending |
+| XCUT-04b-DOCS | TBD | Pending |
+| XCUT-04b-OPTIN | TBD | Pending |
+| XCUT-04c-INSTRUMENT | TBD | Pending |
+| XCUT-04c-CLI | TBD | Pending |
+| XCUT-05-AUTO | TBD | Pending |
+| VALIDATE-V15 | TBD | Pending |
