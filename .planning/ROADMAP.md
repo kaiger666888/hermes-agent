@@ -152,7 +152,15 @@ Plans:
   2. User can apply calibrated thresholds via `vision_verify.py` config (per-stratum threshold override) and the change is recorded in an audit log capturing when and why thresholds changed
   3. The calibration script reads from existing `~/.hermes/metrics/dreamina_stats.jsonl` production data (no new data collection needed — operator must have run v14.0 IMG stack in production first)
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 79-01-PLAN.md — Calibration script + unit tests (IMG-09-CALIBRATE)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 79-02-PLAN.md — Apply script + vision_verify.py modification + tests (IMG-09-APPLY)
 
 ### Phase 80: DUB-03 Voice Sample Protocol
 
