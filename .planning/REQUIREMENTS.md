@@ -14,7 +14,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 ### DUB-05 — CosyVoice A/B Benchmark Runner
 
 - [x] **DUB-05-RUNNER**: User can run `python scripts/run_cosyvoice_benchmark.py --dialogue-lines <file> --variants cosyvoice_2_0_0_5b,fun_cosyvoice_3_0` to execute side-by-side A/B benchmark across CosyVoice 2.0-0.5B + Fun-CosyVoice 3.0 on operator-provided dialogue lines; script outputs structured JSON report + audio files for human review
-- [ ] **DUB-05-LOCK**: User can run `python scripts/lock_cosyvoice_default.py --benchmark-report <path>` to lock the chosen variant in `VERSION.json.tts.cosyvoice_default_variant` with rationale captured from the benchmark report (operator decision; NOT auto-pick-lower-WER)
+- [x] **DUB-05-LOCK**: User can run `python scripts/lock_cosyvoice_default.py --benchmark-report <path>` to lock the chosen variant in `VERSION.json.tts.cosyvoice_default_variant` with rationale captured from the benchmark report (operator decision; NOT auto-pick-lower-WER)
 
 ### TRANS-07 — LTX-FLF+ICLoRA Validation Runner
 
@@ -104,7 +104,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DUB-05-RUNNER | Phase 77 | Complete |
-| DUB-05-LOCK | Phase 77 | Pending |
+| DUB-05-LOCK | Phase 77 | Complete |
 | TRANS-07-WORKFLOW | Phase 78 | Pending |
 | TRANS-07-RUNNER | Phase 78 | Pending |
 | TRANS-07-VERDICT | Phase 78 | Pending |

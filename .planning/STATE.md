@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Operator-Action Closure Tooling
-status: executing
-last_updated: "2026-07-10T02:14:45.864Z"
+status: verifying
+last_updated: "2026-07-10T02:21:52.162Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 14
 ---
 
 # State: Hermes Agent — Kai's Personal Agent Platform
@@ -28,9 +28,9 @@ progress:
 
 ## Current Position
 
-Phase: 77 (DUB-05 Benchmark Runner) — EXECUTING
+Phase: 77 (DUB-05 Benchmark Runner) — COMPLETE (2/2 plans)
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase 77 complete — ready for verification. Next: Phase 78 ∥ Phase 79.
 Last activity: 2026-07-10
 
 ### Progress
@@ -49,14 +49,14 @@ v11.0 Expert Agents PoC:           [██████████] 100% (Phases
 v12.0 Production Hardening:        [██████████] 100% (Phases 57-61, shipped 2026-07-08, tag v12.0)
 v13.0 Design Suite Full Rollout:   [██████████] 100% (Phases 62-69, shipped 2026-07-08, tag v13.0, verdict: tech_debt)
 v14.0 4-Track Upgrade:             [██████████] 100% (Phases 70-76, shipped 2026-07-10, tag v14.0, verdict: tech_debt)
-v15.0 Operator-Action Closure:     [█░░░░░░░░░] 7% (Phases 77-83, Plan 77-01 complete, 1/14 plans done)
+v15.0 Operator-Action Closure:     [█░░░░░░░░░] 14% (Phases 77-83, Phase 77 complete 2/2 plans, 2/14 plans done)
 ```
 
 ### Phase Statuses (v15.0)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 77 | DUB-05 Benchmark Runner | In Progress (1/2 plans) | CosyVoice A/B benchmark script + VERSION.json lock mechanism. DUB-05-RUNNER complete (Plan 77-01), DUB-05-LOCK pending (Plan 77-02). |
+| 77 | DUB-05 Benchmark Runner | COMPLETE (2/2 plans) | CosyVoice A/B benchmark runner script + VERSION.json lock mechanism + cosyvoice-benchmark.md Runner Usage docs. DUB-05-RUNNER + DUB-05-LOCK complete. Ready for verification. |
 | 78 | TRANS-07 LTX-FLF Validation Runner | Not started | ComfyUI workflow JSON + validation runner + verdict doc. TRANS-07-WORKFLOW/RUNNER/VERDICT. Parallel with Phase 79. |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | False-positive calibration analyzer + per-stratum threshold override. IMG-09-CALIBRATE/APPLY. Parallel with Phase 78. |
 | 80 | DUB-03 Voice Sample Protocol | Not started | Collection protocol ref + batch validator. DUB-03-PROTOCOL/BATCH-VALIDATE. |
@@ -106,6 +106,7 @@ Phase 78 and Phase 79 execute in parallel (both depend only on Phase 77). Phase 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 77 | 01 | 373s | 2 | 2 |
+| 77 | 02 | 195s | 3 | 3 |
 
 ## Accumulated Context
 
@@ -135,6 +136,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: test
 - [Phase ?]: DUB-05 runner CLI variant IDs use underscores (cosyvoice_2_0_0_5b) for shell-safety, mapped to VERSION.json dotted IDs (cosyvoice_2.0_0.5B) via _VARIANT_TO_VERSION_JSON dict
 - [Phase ?]: DUB-05 runner uses sync-only execution (INFRA-04 compliant) with per-cell error handling — partial results preserved on single-variant failure
+- [Phase 77]: DUB-05-LOCK: lock script reads operator_decision.variant from benchmark report (not --variant flag); 3-check validation + lock_ready guard + overwrite guard; writes only 3 fields to VERSION.json; does NOT auto-pick-lower-WER (DUB-05-AUTO-LOCK deferred)
+- [Phase 77]: DUB-05-LOCK: VARIANT_ID_MAP maps CLI underscore IDs to VERSION.json dotted IDs; rationale guard added as 4th validation check (T-77-09 repudiation mitigation)
 
 ### Blockers / Risks (v15.0)
 
@@ -178,7 +181,7 @@ Items acknowledged and carried forward (NOT in v15.0 scope):
 5. `.planning/milestones/v14.0-MILESTONE-AUDIT.md` §5 — 6 operator-action handoffs (v15.0 source)
 6. MEMORY.md `feedback-glm-overload-reduce-concurrency.md` (INFRA-04 serial constraint — NOT lifted in v15.0)
 
-**Next action:** `/gsd:plan-phase 77` to plan Phase 77 (DUB-05 Benchmark Runner — CosyVoice A/B benchmark script + VERSION.json lock mechanism).
+**Next action:** Phase 77 complete (2/2 plans). Next: `/gsd:plan-phase 78` and `/gsd:plan-phase 79` (parallel — TRANS-07 LTX-FLF Validation Runner + IMG-09 Vision-Verify Calibration).
 
 ---
 

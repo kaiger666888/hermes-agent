@@ -73,7 +73,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 
 | Phase | Name | Status | Completed |
 |-------|------|--------|-----------|
-| 77 | 1/2 | In Progress|  |
+| 77 | 2/2 | Complete   | 2026-07-10 |
 | 78 | TRANS-07 LTX-FLF Validation Runner | Not started | - |
 | 79 | IMG-09 Vision-Verify Calibration | Not started | - |
 | 80 | DUB-03 Voice Sample Protocol | Not started | - |
@@ -87,7 +87,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 
 ## Phases
 
-- [ ] **Phase 77: DUB-05 Benchmark Runner** - CosyVoice A/B benchmark script + VERSION.json lock mechanism
+- [x] **Phase 77: DUB-05 Benchmark Runner** - CosyVoice A/B benchmark script + VERSION.json lock mechanism (completed 2026-07-10)
 - [ ] **Phase 78: TRANS-07 LTX-FLF Validation Runner** - ComfyUI workflow JSON + validation runner + verdict doc (parallel with Phase 79)
 - [ ] **Phase 79: IMG-09 Vision-Verify Calibration** - False-positive calibration analyzer + per-stratum threshold override (parallel with Phase 78)
 - [ ] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script
@@ -118,7 +118,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 77-02-PLAN.md — VERSION.json lock script + tests + cosyvoice-benchmark.md Runner Usage section (DUB-05-LOCK)
+- [x] 77-02-PLAN.md — VERSION.json lock script + tests + cosyvoice-benchmark.md Runner Usage section (DUB-05-LOCK)
 
 ### Phase 78: TRANS-07 LTX-FLF Validation Runner
 
