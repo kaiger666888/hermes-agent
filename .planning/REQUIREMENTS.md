@@ -40,7 +40,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 ### XCUT-04c — GLM-4.6V Cost Tracking
 
 - [x] **XCUT-04c-INSTRUMENT**: `dreamina_stats.py` MetricsBuffer extends to track per-batch GLM-4.6V token spend (input_tokens + output_tokens + estimated_cost_usd) alongside existing per-task latency/success rate
-- [ ] **XCUT-04c-CLI**: User can run `hermes glm stats` CLI subcommand to see monthly GLM-4.6V aggregate spend (token count + estimated USD cost) + per-stratum breakdown; reuses Rich table formatting from `hermes dreamina stats`
+- [x] **XCUT-04c-CLI**: User can run `hermes glm stats` CLI subcommand to see monthly GLM-4.6V aggregate spend (token count + estimated USD cost) + per-stratum breakdown; reuses Rich table formatting from `hermes dreamina stats`
 
 ### Cross-cutting — v14.0 tech_debt closure + lineage
 
@@ -115,6 +115,6 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | XCUT-04b-DOCS | Phase 81 | Complete (Plan 01) |
 | XCUT-04b-OPTIN | Phase 81 | Satisfied |
 | XCUT-04c-INSTRUMENT | Phase 82 | Satisfied |
-| XCUT-04c-CLI | Phase 82 | Pending |
+| XCUT-04c-CLI | Phase 82 | Satisfied |
 | XCUT-05-AUTO | Phase 82 | Complete |
 | VALIDATE-V15 | Phase 83 | Pending |

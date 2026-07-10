@@ -92,7 +92,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 - [x] **Phase 79: IMG-09 Vision-Verify Calibration** - False-positive calibration analyzer + per-stratum threshold override (parallel with Phase 78, completed 2026-07-10)
 - [x] **Phase 80: DUB-03 Voice Sample Protocol** - Collection protocol ref + batch validator script (completed 2026-07-10)
 - [x] **Phase 81: XCUT-04b Cloud Engine Bootstrap** - Hailuo/Vidu/Wan2.2 bootstrap doc + opt-in config mechanism (completed 2026-07-10)
-- [ ] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script (Plans 01 + 03 complete, Plan 02 pending)
+- [x] **Phase 82: XCUT-04c Cost Tracking + XCUT-05 Lineage Auto** - GLM-4.6V cost instrumentation + CLI + automated lineage bump script (all 3 plans complete, completed 2026-07-10)
 - [ ] **Phase 83: VALIDATE** - Milestone audit + meta-rule audit extension + tag v15.0 (strictly LAST)
 
 ---
@@ -223,7 +223,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 Plan 82-01 completion)*
 
-- [ ] 82-02-PLAN.md — XCUT-04c-CLI register_glm_cli + monthly/per-stratum aggregation + Rich tables (XCUT-04c-CLI)
+- [x] 82-02-PLAN.md — XCUT-04c-CLI register_glm_cli + monthly/per-stratum aggregation + Rich tables (XCUT-04c-CLI)
 **UI hint**: yes
 
 ### Phase 83: VALIDATE
