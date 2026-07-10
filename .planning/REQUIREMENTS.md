@@ -25,7 +25,7 @@ Requirements for v15.0 milestone. Each maps to roadmap phases (Phase 77+, contin
 ### IMG-09 — Vision-Verify False-Positive Calibration
 
 - [x] **IMG-09-CALIBRATE**: User can run `python scripts/calibrate_vision_verify.py --metrics-buffer <path>` to analyze production MetricsBuffer data + recommend confidence threshold per stratum (1-ref/3-ref/5-ref) using false-positive rate analysis
-- [ ] **IMG-09-APPLY**: User can apply calibrated thresholds via `vision_verify.py` config (per-stratum threshold override) with audit log of when/why thresholds changed
+- [x] **IMG-09-APPLY**: User can apply calibrated thresholds via `vision_verify.py` config (per-stratum threshold override) with audit log of when/why thresholds changed
 
 ### DUB-03 — Voice Sample Collection Protocol
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Filled by roadmapper 2026-07-10.
 | TRANS-07-RUNNER | Phase 78 | Complete (Plan 01) |
 | TRANS-07-VERDICT | Phase 78 | Complete (Plan 02) |
 | IMG-09-CALIBRATE | Phase 79 | Complete (Plan 01) |
-| IMG-09-APPLY | Phase 79 | Pending |
+| IMG-09-APPLY | Phase 79 | Complete (Plan 02) |
 | DUB-03-PROTOCOL | Phase 80 | Pending |
 | DUB-03-BATCH-VALIDATE | Phase 80 | Pending |
 | XCUT-04b-DOCS | Phase 81 | Pending |
