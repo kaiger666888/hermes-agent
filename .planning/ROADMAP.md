@@ -107,7 +107,10 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
   1. User can run `python scripts/run_cosyvoice_benchmark.py --dialogue-lines <file> --variants cosyvoice_2_0_0_5b,fun_cosyvoice_3_0` and get a structured JSON report + audio files for human review
   2. User can run `python scripts/lock_cosyvoice_default.py --benchmark-report <path>` to lock the chosen variant in `VERSION.json.tts.cosyvoice_default_variant` with rationale field populated from the benchmark report
   3. The lock script does NOT auto-pick-lower-WER — it requires operator decision (audio quality judgment is human-in-loop per DUB-05-AUTO-LOCK deferral)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 77-01-PLAN.md — Benchmark runner script + unit tests (DUB-05-RUNNER)
+- [ ] 77-02-PLAN.md — VERSION.json lock script + tests + cosyvoice-benchmark.md Runner Usage section (DUB-05-LOCK)
 
 ### Phase 78: TRANS-07 LTX-FLF Validation Runner
 **Goal**: Operator can validate the LTX-2.3 FLF + ICLoRA combined workflow against 1-2 reference shots through a ComfyUI workflow JSON + runner script, and read the production-readiness verdict that gates TRANS-11 v16+ rollout.
