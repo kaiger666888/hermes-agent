@@ -1439,3 +1439,25 @@ updates:
 #   # default — works on Fly.io out of the box).
 #   #
 #   #   public_url: "https://example.com/hermes"
+
+# =============================================================================
+# Cloud Engine Bootstrap (Phase 81 — XCUT-04b)
+# =============================================================================
+# Cloud transition engine opt-in configuration. Uncomment and fill in to
+# enable cloud transition engines (Hailuo / Vidu / Wan2.2) for the
+# kais-movie-pipeline transition routing.
+#
+# See skills/kais-movie-pipeline/references/cloud-engine-bootstrap.md (in
+# kais-hermes-skills repo) for API key acquisition steps + ComfyUI node
+# install procedure + cost-estimation worksheet.
+#
+# Config is primary; env vars (HAILUO_API_KEY / VIDU_API_KEY) are fallback
+# for CI/containers where config file isn't practical.
+#
+# cloud_engines:
+#   hailuo_api_key: null        # null = not opted in; paste API key string to opt in
+#   vidu_api_key: null          # null = not opted in; paste API key string to opt in
+#   wan22_comfyui_node_enabled: false  # false = not installed; true = installed + opted in
+#
+# Verification: run `python scripts/check_cloud_engine_optin.py` to see
+# opt-in status per engine + which transition methods are available.
