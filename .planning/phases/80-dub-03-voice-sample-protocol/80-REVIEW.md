@@ -1,233 +1,111 @@
 ---
 phase: 80-dub-03-voice-sample-protocol
-reviewed: 2026-07-10T06:42:01Z
-depth: standard
-files_reviewed: 2
+reviewed: 2026-07-10T07:15:00Z
+depth: quick
+files_reviewed: 3
 files_reviewed_list:
   - /data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py
   - /data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/tests/test_validate_voice_clone_batch.py
+  - /data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/tests/conftest.py
 findings:
-  critical: 1
-  warning: 6
-  info: 4
-  total: 11
-status: issues_found
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
 ---
 
-# Phase 80: Code Review Report
+# Phase 80: Code Review Report (Re-Review, Iteration 2)
 
-**Reviewed:** 2026-07-10T06:42:01Z
-**Depth:** standard
-**Files Reviewed:** 2
-**Status:** issues_found
+**Reviewed:** 2026-07-10T07:15:00Z
+**Depth:** quick
+**Files Reviewed:** 3
+**Status:** clean
 
 ## Summary
 
-Phase 80 (DUB-03 Voice Sample Protocol) implements a sync-only batch validator for voice clone reference WAVs plus a protocol doc + tests. The implementation is generally sound — stdlib `wave` module usage, Pydantic v2 schema with `extra="forbid"`, atomic JSON write via `os.replace`, and a comprehensive test suite. However, one BLOCKER and several robustness defects warrant attention before this ships.
+Re-review after fixes for Phase 80 (DUB-03 Voice Sample Protocol). The original review (iteration 1) found 1 Critical + 6 Warning + 4 Info findings. All 7 Critical+Warning findings have been verified as resolved. No new Critical or Warning issues were introduced by the fixes.
 
-The most significant issue is a **misclassification of permission errors as format violations** (CR-01): the catch-all `except (wave.Error, OSError, Exception)` tuple lumps `PermissionError`, `IsADirectoryError`, and any other `OSError` into the `format` rule, which misleads the operator into re-recording samples when the real fix is a `chmod` or path correction. Several WARNING-tier issues follow: `rglob` silently skips permission-denied directories without surfacing the skip, the `--verbose` flag is declared but never read, the exception tuple lists `Exception` redundantly after the specific types, and a test contains dead code that writes a stray WAV file.
+All 21 tests in `test_validate_voice_clone_batch.py` pass. All 7 tests in `test_voice_clone_ref.py` (which depends on the shared `conftest.py` fixture) pass. The full `audio_pipeline/tests/` suite (52 tests) passes with zero failures — confirming the conftest WR-06 fix is backward-compatible.
 
-The protocol doc is mostly accurate but documents `.WAV` (uppercase) as discoverable on Windows without flagging that Linux (the primary deployment target per CLAUDE.md) silently skips uppercase extensions — this is a documentation gap, not a code bug.
+## Verification of Original Findings
 
-## Critical Issues
+### CR-01: Permission/path errors misclassified as format violations — RESOLVED
 
-### CR-01: Permission/path errors misclassified as format violations
+**File:** `validate_voice_clone_batch.py:274-304`
+**Verification:** The exception handler is now split into two branches:
+- `except wave.Error as exc:` (line 274) — genuine format violations, records `actual="non-WAV or corrupt"`.
+- `except OSError as exc:` (line 285) — I/O errors (PermissionError, IsADirectoryError, FileNotFoundError), records `actual=f"OS error: {type(exc).__name__}"` with a message pointing at filesystem causes.
+- The bare `Exception` has been removed; a comment at lines 300-304 documents the decision to let unexpected errors propagate as exit-2 crashes.
 
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:268`
-**Issue:** The exception handler catches `(wave.Error, OSError, Exception)` and unconditionally records a `format` violation with message `"Not a valid WAV file: {exc}"`. This misclassifies operational errors that have nothing to do with file format:
+Two new tests verify the fix:
+- `test_permission_denied_reports_io_error_not_format` (line 203) — chmod 000 file, asserts `"filesystem error" in message` and `"PermissionError" in actual`.
+- `test_directory_as_wav_reports_io_error_not_format` (line 231) — directory with .wav suffix, asserts `"filesystem error" in message` and `"IsADirectoryError" in actual`.
 
-- `PermissionError` (unreadable file) — operator is told to re-record, but the real fix is `chmod`.
-- `IsADirectoryError` (path is a directory) — operator is told the file is corrupt.
-- `FileNotFoundError` (race: file deleted between `rglob` and `wave.open`) — same misdirection.
+Both tests pass.
 
-Verified by reproducing: `wave.open` on a `chmod 000` WAV raises `PermissionError`, which is an `OSError` subclass, so it lands in this handler and is reported as `rule_id="format"` with `actual="non-WAV or corrupt"`. The operator's next action (per the protocol doc's Troubleshooting section) would be to re-export the file — wasted effort when the actual problem is file permissions.
+### WR-01: rglob silently swallows permission errors — RESOLVED
 
-**Fix:** Split the exception handler into two branches — true format errors (`wave.Error`) vs. I/O errors (`OSError`). Record format violations only for `wave.Error`; for `OSError`, record a separate operational-error outcome (or at minimum, a different `rule_id` / message that points the operator at filesystem causes).
+**File:** `validate_voice_clone_batch.py:335-356`
+**Verification:** `rglob` replaced with `os.walk` that explicitly checks each subdirectory via `os.access(full, os.R_OK | os.X_OK)` (line 351). Unreadable dirs are pruned from `dirs[:]` in-place (standard os.walk convention, line 356) and recorded in `skipped_dirs` list (line 354). A `logger.warning` is emitted for each skipped dir (line 355).
 
+A new `skipped_dirs: list[str]` field was added to `ValidationMetadata` (line 146) with a descriptive docstring. The field defaults to an empty list via `default_factory=list`.
+
+New test `test_permission_denied_dir_recorded_in_skipped_dirs` (line 347) verifies: a locked subdir is not traversed, `total_files` excludes its contents, and `skipped_dirs` contains the locked dir path. Test passes.
+
+### WR-02: --verbose CLI flag declared but never used — RESOLVED
+
+**File:** `validate_voice_clone_batch.py:445-468, 555-557`
+**Verification:** New `emit_verbose_details(report)` function (line 445) prints per-file PASS/FAIL status with violation details (rule_id + message for each violation). It also surfaces skipped directories if any (lines 464-468). Called from `main()` at line 555-557 when `args.verbose` is set.
+
+New test `test_verbose_flag_prints_per_file_details` (line 412) runs the CLI with `--verbose` and asserts the output contains `"Per-file details:"`, `"PASS"`, `"FAIL"`, `"alice"`, `"short"`, `"duration"`, and `"below minimum"`. Test passes.
+
+### WR-03: Exception tuple redundantly lists Exception — RESOLVED
+
+**File:** `validate_voice_clone_batch.py:274-304`
+**Verification:** `Exception` removed from the catch tuple. The handler now catches only `wave.Error` (line 274) and `OSError` (line 285). Comment at lines 300-304 explicitly documents that unexpected errors (TypeError, KeyError, AttributeError) should propagate as exit-2 crashes per the documented exit code semantics. This was resolved as part of the CR-01 fix.
+
+### WR-04: Dead tmp_wav_factory call in test_mixed_batch — RESOLVED
+
+**File:** `test_validate_voice_clone_batch.py:265`
+**Verification:** The dead `tmp_wav_factory(duration_sec=5.0, ...)` call is gone. The test signature is now `def test_mixed_batch_exit_code_and_report(self, tmp_path):` — `tmp_wav_factory` removed from the parameter list. The test body (lines 267-283) uses only `_write_wav` to create the 4 test files. Test passes.
+
+### WR-05: Unused tmp_wav_factory parameters in test methods — RESOLVED
+
+**File:** `test_validate_voice_clone_batch.py`
+**Verification:** `tmp_wav_factory` remains in only 4 test signatures, all of which actually call it:
+- `test_valid_wav_passes_all_rules` (line 104) — calls it at line 106.
+- `test_too_short_fails_duration` (line 118) — calls it at line 120.
+- `test_too_long_fails_duration` (line 131) — calls it at line 133.
+- `test_low_sample_rate_fails_sample_rate` (line 161) — calls it at line 163.
+
+All 9 test methods flagged in the original review (`test_character_extracted_from_filename`, `test_episode_extracted_from_voice_refs_parent`, `test_episode_null_when_no_voice_refs_in_path`, `test_recursive_search_finds_nested_wavs`, `test_report_json_schema`, `test_by_rule_violation_count_aggregation`, `test_mixed_batch_exit_code_and_report`, `test_stereo_fails_channels`, `test_non_wav_fails_format`, `test_corrupt_wav_fails_format`, `test_permission_denied_reports_io_error_not_format`, `test_directory_as_wav_reports_io_error_not_format`, `test_empty_directory_produces_empty_report`, `test_permission_denied_dir_recorded_in_skipped_dirs`, `test_cli_help_exits_zero`, `test_nonexistent_dir_exits_2`, `test_verbose_flag_prints_per_file_details`) no longer have `tmp_wav_factory` in their signatures unless they use it.
+
+### WR-06: conftest tmp_wav_factory produces wrong-duration stereo — RESOLVED
+
+**File:** `conftest.py:45-63`
+**Verification:** The factory now packs interleaved frames for all channels:
 ```python
-    except wave.Error as exc:
-        # Genuine format violation — corrupt RIFF header, non-WAV content, etc.
-        violations.append(Violation(
-            rule_id="format",
-            expected="WAV (RIFF)",
-            actual="non-WAV or corrupt",
-            message=f"Not a valid WAV file: {exc}",
-        ))
-    except OSError as exc:
-        # I/O error — permission denied, file vanished, is a directory, etc.
-        # NOT a format problem. Report as format violation but with a message
-        # that points the operator at filesystem causes, not re-recording.
-        violations.append(Violation(
-            rule_id="format",
-            expected="readable WAV file",
-            actual=f"OS error: {type(exc).__name__}",
-            message=f"Could not read file (filesystem error, not format): {exc}. "
-                    f"Check permissions / path.",
-        ))
+frame_data = struct.pack("<" + "h" * channels, *([sample] * channels))
+wf.writeframes(frame_data)
 ```
+(line 61). This mirrors the `_write_wav` helper pattern in the test file. The filename now includes `_{channels}ch` to prevent mono/stereo collisions (line 47). Comment at lines 54-56 documents the rationale and references Phase 80 WR-06.
 
-(If a distinct `rule_id` like `"io_error"` is preferable, add it to `RULES` and `by_rule_violation_count` — but that is a larger change. The minimal fix above at least gives the operator an accurate message.)
+**Backward compatibility verified:** All 7 tests in `test_voice_clone_ref.py` pass, including `test_voice_clone_ref_rejects_stereo` (line 62) which uses `tmp_wav_factory(duration_sec=5.0, sample_rate_hz=16000, channels=2)` and expects a ValueError matching "mono". The stereo file now has the correct 5.0s duration (previously 2.5s), and the validator correctly rejects it for being stereo. The full `audio_pipeline/tests/` suite (52 tests) passes with zero failures.
 
-## Warnings
+## New Issues Introduced by Fixes
 
-### WR-01: `rglob` silently swallows permission errors — no visibility into skipped files
+None. The fixes are clean, well-commented, and well-tested. No new Critical or Warning issues found.
 
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:308`
-**Issue:** `voice_refs_dir.rglob("*.wav")` silently skips directories it cannot enter (`PermissionError` on the directory itself is swallowed by CPython's `Path.rglob` implementation — it uses `os.scandir` which raises, but `rglob` catches and continues). Verified: with a `chmod 000` subdirectory containing a valid WAV, `rglob` returns only the files in readable directories and emits no warning. The validator then reports `total_files` as the count of files it could see, with no indication that some directories were skipped.
+## Info-Tier Findings (carried forward, not blocking)
 
-This is a silent-failure pattern: an operator runs the validator, sees "all 3 files passed", and assumes their sample set is complete — unaware that 2 more samples existed in a subdirectory the validator couldn't enter.
-
-**Fix:** Either (a) catch `OSError` during `rglob` and log a warning for each skipped directory, or (b) do an explicit recursive walk with `os.walk` and surface permission errors:
-
-```python
-    wav_files: list[Path] = []
-    for root, dirs, files in os.walk(voice_refs_dir):
-        for name in files:
-            if name.lower().endswith(".wav"):
-                wav_files.append(Path(root) / name)
-        # os.walk does not prune on permission errors by default; catch and log
-    # If you want to detect unreadable dirs explicitly:
-    for root, dirs, _ in os.walk(voice_refs_dir):
-        for d in dirs:
-            full = Path(root) / d
-            if not os.access(full, os.R_OK | os.X_OK):
-                logger.warning("Skipping unreadable directory: %s", full)
-    wav_files.sort(key=lambda p: str(p))
-```
-
-### WR-02: `--verbose` CLI flag declared but never used
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:421-425`
-**Issue:** The `--verbose` argument is added to the parser (line 421) and parsed into `args.verbose` (line 427), but `args.verbose` is never referenced anywhere in `main()`. The flag is a no-op — an operator passing `--verbose` gets the same output as without it. The docstring says "Print per-file details (default: summary table only)" but no per-file details are ever printed.
-
-**Fix:** Either implement the verbose behavior (print per-file violation details) or remove the flag to avoid misleading the operator. Minimal implementation:
-
-```python
-    if args.verbose:
-        for char in report.characters:
-            if not char.passed:
-                print(f"\n  {char.character} ({char.path}):")
-                for v in char.violations:
-                    print(f"    [{v.rule_id}] {v.message}")
-```
-
-### WR-03: Exception tuple `(wave.Error, OSError, Exception)` — `Exception` is redundant and overly broad
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:268`
-**Issue:** The `except (wave.Error, OSError, Exception) as exc:` clause lists `Exception` as the third tuple element. Since `Exception` is the base class of both `wave.Error` and `OSError`, listing it makes the first two redundant — and more importantly, it catches *every* exception including `KeyError`, `ValueError`, `AttributeError`, and other programming errors that indicate a bug rather than a bad file. A `TypeError` from a Pydantic schema mismatch, for example, would be silently reported as a "format violation" instead of surfacing as a crash for the developer to fix.
-
-This is related to CR-01 (which addresses the misclassification of `OSError` subclasses). Even after splitting `wave.Error` and `OSError`, the bare `Exception` should be removed — let unexpected exceptions propagate so they surface as exit-code-2 crashes with a traceback, per the documented exit code semantics ("2 = crash").
-
-**Fix:** Remove `Exception` from the tuple. Catch only the specific, expected error types:
-
-```python
-    except wave.Error as exc:
-        # format violation
-        ...
-    except OSError as exc:
-        # I/O error (permission, missing file, etc.)
-        ...
-    # Do NOT catch Exception here — let unexpected errors propagate as exit 2.
-```
-
-### WR-04: Dead `tmp_wav_factory` call in `test_mixed_batch_exit_code_and_report` writes stray file
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/tests/test_validate_voice_clone_batch.py:223`
-**Issue:** Line 223 calls `tmp_wav_factory(duration_sec=5.0, sample_rate_hz=16000, channels=1)` but discards the return value. The factory writes a WAV file to `tmp_path / "ref_5.0s_16000hz.wav"` (in `tmp_path` root, not in `voice_refs_dir`). The test then calls `_write_wav` for all 4 actual test files inside `voice_refs_dir`. The stray file is not counted by `run_validation(voice_refs_dir)` because the validator only scans `voice_refs_dir` — but if a future test variant passes `tmp_path` instead of `voice_refs_dir`, it would pick up the stray file as a 5th character and break the assertion `report.summary.total == 4`.
-
-The `tmp_path` and `tmp_wav_factory` parameters on this test function are both unused except for this dead call — `tmp_wav_factory` can be removed from the signature entirely.
-
-**Fix:** Remove the dead call and the unused fixture parameter:
-
-```python
-    def test_mixed_batch_exit_code_and_report(self, tmp_path):
-        """80-01i: mixed pass/fail batch — full report with all characters."""
-        voice_refs_dir = tmp_path / "voice_refs"
-        voice_refs_dir.mkdir()
-        _write_wav(voice_refs_dir / "alice.wav", 5.0, 16000, 1)
-        _write_wav(voice_refs_dir / "bob.wav", 5.0, 22050, 1)
-        _write_wav(voice_refs_dir / "short.wav", 2.0, 16000, 1)
-        _write_wav(voice_refs_dir / "stereo.wav", 5.0, 16000, 2)
-        ...
-```
-
-### WR-05: Several test functions take `tmp_wav_factory` but don't use it
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/tests/test_validate_voice_clone_batch.py:118,131,161,244,255,268,281,336,381`
-**Issue:** Multiple test methods declare `tmp_wav_factory` as a parameter but never call it — they use `_write_wav` instead (because the conftest factory has a known stereo bug, see WR-06 below, and cannot write to arbitrary paths). Unused fixture parameters are harmless at runtime (pytest will still set them up) but they add noise and mislead readers into thinking the factory is used. Examples: `test_too_short_fails_duration` (line 118), `test_too_long_fails_duration` (line 131), `test_low_sample_rate_fails_sample_rate` (line 161), `test_character_extracted_from_filename` (line 244), `test_episode_extracted_from_voice_refs_parent` (line 255), `test_episode_null_when_no_voice_refs_in_path` (line 268), `test_recursive_search_finds_nested_wavs` (line 281), `test_report_json_schema` (line 336), `test_by_rule_violation_count_aggregation` (line 381).
-
-**Fix:** Remove `tmp_wav_factory` from the parameter lists of all test methods that don't call it. Only `test_valid_wav_passes_all_rules` (line 104) actually uses the factory.
-
-### WR-06: `tmp_wav_factory` conftest fixture produces wrong-duration output for stereo
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/tests/conftest.py:54-58`
-**Issue:** The conftest `tmp_wav_factory` writes one sample per `wf.writeframes(struct.pack("<h", sample))` call, but when `channels=2`, `wave.writeframes` expects interleaved multi-channel frames (i.e., 2 samples per frame for stereo). Writing one sample per call produces a file with half the declared duration: a 5.0s stereo request yields a 2.5s file (verified by reproducing — `wf.getnframes()` returns 40000 instead of 80000 for 5s@16kHz stereo, giving `40000/16000 = 2.5s`). The test file's `_write_wav` helper at line 67-93 correctly packs interleaved samples (`struct.pack("<" + "h" * channels, *([sample] * channels))`), which is why the stereo test uses `_write_wav` instead.
-
-This is a latent bug in the shared fixture — any future test that uses `tmp_wav_factory` with `channels=2` will get a wrong-duration file and likely a confusing assertion failure.
-
-**Fix:** Fix the conftest factory to pack interleaved frames (mirror the `_write_wav` pattern in the test file):
-
-```python
-    def _factory(duration_sec: float = 5.0, sample_rate_hz: int = 16000,
-                 channels: int = 1) -> Path:
-        p = tmp_path / f"ref_{duration_sec}s_{sample_rate_hz}hz_{channels}ch.wav"
-        n_frames = int(duration_sec * sample_rate_hz)
-        with wave.open(str(p), "wb") as wf:
-            wf.setnchannels(channels)
-            wf.setsampwidth(2)
-            wf.setframerate(sample_rate_hz)
-            for i in range(n_frames):
-                sample = int(32767 * 0.3 * math.sin(2 * math.pi * 220 * i / sample_rate_hz))
-                frame_data = struct.pack("<" + "h" * channels, *([sample] * channels))
-                wf.writeframes(frame_data)
-        return p
-```
-
-(Also add `_{channels}ch` to the filename so mono and stereo variants of the same duration/rate don't collide.)
-
-## Info
-
-### IN-01: Protocol doc case-sensitivity note is accurate but understates Linux risk
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/references/voicer/voice-sample-collection-protocol.md:70`
-**Issue:** The doc states: "The validator finds files via `rglob("*.wav")` — case-insensitive on Windows, case-sensitive on Linux." This is technically correct, but the primary deployment target (per CLAUDE.md) is a Linux Docker container. An operator who saves a file as `alice.WAV` (common on macOS, where the default recording app may uppercase the extension) and runs the validator on Linux will see "No .wav files found" — a confusing result. Verified: `rglob("*.wav")` on Linux does not match `bob.WAV` or `carol.Wav`.
-
-**Fix:** Either (a) make the validator case-insensitive by globbing `*.wav` and `*.WAV` (and `.Wav`), or (b) add a stronger warning in the protocol doc: "On Linux (the production deployment target), files with uppercase `.WAV` extensions are silently skipped. Always save with lowercase `.wav`."
-
-### IN-02: Duration boundary semantics not documented in protocol
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/references/voicer/voice-sample-collection-protocol.md:79-83`
-**Issue:** The protocol says "Minimum: 3.0s" and "Maximum: 10.0s" but doesn't clarify whether the boundaries are inclusive or exclusive. The validator uses strict `<` and `>` (lines 235, 242), so exactly 3.0s and exactly 10.0s pass. This is a reasonable choice, but the doc should state it explicitly to avoid operator confusion ("is 3.0s exactly OK?").
-
-**Fix:** Add to the protocol doc: "Boundaries are inclusive: exactly 3.0s and exactly 10.0s pass."
-
-### IN-03: `RULES` constants dict uses `object` value type — loses type safety
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:82`
-**Issue:** `RULES: dict[str, dict[str, object]]` types all values as `object`, which forces `# type: ignore[operator]` on every comparison (lines 235, 242, 251, 260). The dict mixes `float` (`min`/`max` for duration), `int` (`min` for sample_rate, `expected` for channels), and `str` (`expected` for format). A `TypedDict` or per-rule dataclass would give proper type safety and eliminate the `# type: ignore` comments.
-
-**Fix:** (Optional — this is a maintainability improvement, not a bug.) Define each rule as a small dataclass or `TypedDict`:
-
-```python
-from typing import TypedDict
-
-class DurationRule(TypedDict):
-    rule_id: str
-    description: str
-    min: float
-    max: float
-# ... etc, then RULES: dict[str, DurationRule | FormatRule | ...]
-```
-
-### IN-04: `extract_episode` has an undocumented second branch
-
-**File:** `/data/workspace/kais-hermes-skills/skills/movie-experts/audio_pipeline/scripts/validate_voice_clone_batch.py:193-194`
-**Issue:** The second branch (`if path.parent.parent.name == "voice_refs"`) is documented as "handles rglob started from a parent" but this scenario is not covered by any test. All tested paths use the first branch (`voice_refs/alice.wav` -> episode is grandparent). The second branch would fire for a path like `ep-001/voice_refs/subdir/alice.wav` (where `subdir.parent == voice_refs`), returning `episode="subdir"` — which is likely wrong (the episode should be `ep-001`, not `subdir`). This logic appears to be attempting to handle a case that doesn't match the documented convention, and the return value may be incorrect.
-
-**Fix:** Either add a test that exercises the second branch with a clear expected outcome, or remove the branch if it doesn't correspond to a real use case. If the intent is "rglob started from `voice_refs/` itself, so `alice.wav` has `parent = voice_refs` and `parent.parent = voice_refs`'s parent", that's already handled by the first branch — the second branch only fires for deeper nesting that the convention doesn't define.
+The 4 Info findings from the original review (IN-01 through IN-04) are not blocking and were not required to be fixed. For completeness:
+- IN-01 (case-sensitivity): The switch from `rglob("*.wav")` to `name.lower().endswith(".wav")` (line 343) actually resolves this as a side effect — the validator is now case-insensitive on all platforms, matching `.WAV`, `.Wav`, etc.
+- IN-02, IN-03, IN-04: No changes observed; these remain as documented info-tier notes.
 
 ---
 
-_Reviewed: 2026-07-10T06:42:01Z_
+_Reviewed: 2026-07-10T07:15:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
-_Depth: standard_
+_Depth: quick_
+_Iteration: 2 (re-review after fixes)_
