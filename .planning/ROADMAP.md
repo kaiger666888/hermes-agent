@@ -75,7 +75,7 @@ See archived `milestones/v14.0-ROADMAP.md` for full phase details. v14.0 left 6 
 |-------|------|--------|-----------|
 | 77 | 2/2 | Complete    | 2026-07-10 |
 | 78 | 2/2 | Complete    | 2026-07-10 |
-| 79 | IMG-09 Vision-Verify Calibration | Not started | - |
+| 79 | IMG-09 Vision-Verify Calibration | 1/2 | In progress |
 | 80 | DUB-03 Voice Sample Protocol | Not started | - |
 | 81 | XCUT-04b Cloud Engine Bootstrap | Not started | - |
 | 82 | XCUT-04c Cost Tracking + XCUT-05 Lineage Auto | Not started | - |
@@ -156,7 +156,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 79-01-PLAN.md — Calibration script + unit tests (IMG-09-CALIBRATE)
+- [x] 79-01-PLAN.md — Calibration script + unit tests (IMG-09-CALIBRATE)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
