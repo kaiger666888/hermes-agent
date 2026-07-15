@@ -32,7 +32,7 @@ stopped_at: Milestone complete (Phase 83 was final phase)
 Phase: 83
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-07-10
+Last activity: 2026-07-15 - Completed quick task 260715-wrs: Fix /model openrouter override bug (config-defined providers + truthy gate)
 
 ### Progress
 
@@ -173,6 +173,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 82]: XCUT-05-AUTO: Track B tools sourced from existing agent.yaml ground truth (plan interfaces block was stale for colorist/storyboard_designer/visual_executor — Rule 1 auto-fix)
 - [Phase 82]: XCUT-05-AUTO: TRACK_B_PANEL preserves non-expert agent peers (compliance_gate, production, prompt_injector, scene_builder) in collaboration graph; transform_track_b_one does NOT apply LEGACY_NAME_MAP canonicalization
 - [Phase 82]: XCUT-04c-CLI: reuses same MetricsBuffer JSONL as dreamina stats (single source of truth — no separate GLM log); --month filter applies pre-aggregation; legacy entries detected via input_tokens key presence
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260715-wrs | Fix /model openrouter override bug: _get_named_custom_provider bypasses providers: config for canonical names; _apply_session_model_override uses 'is not None' so empty strings clobber valid creds | 2026-07-15 | 4e0a25bca | [260715-wrs-fix-model-openrouter-override-bug-get-na](./quick/260715-wrs-fix-model-openrouter-override-bug-get-na/) |
 
 ### Blockers / Risks (v15.0)
 
