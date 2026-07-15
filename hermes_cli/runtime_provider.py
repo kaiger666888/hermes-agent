@@ -511,28 +511,25 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
     # valid built-in providers or aliases. Explicit menu keys like
     # ``custom:local`` always target the saved custom provider. Bare "custom"
     # is exempt from the shadow check — it is not a built-in to defer to.
+    #
+    # Bug 1 fix (config scan precedence): The new-style ``providers:`` dict is
+    # scanned BEFORE the canonical-provider short-circuit so that a user who
+    # defines ``providers.openrouter.api_key`` inline is honoured even though
+    # ``openrouter`` is a canonical built-in name. Previously the short-circuit
+    # at this point returned None before the dict scan ran, causing the user's
+    # inline key to be ignored and resolution to fall through to the env-var-
+    # only path (OPENROUTER_API_KEY). The legacy ``custom_providers:`` list is
+    # still scanned AFTER the canonical check, preserving the existing
+    # invariant that canonical names (``nous``, ``openrouter``, …) defer to
+    # the built-in when only a legacy list entry matches.
     if requested_norm == "auto":
         return None
-    if requested_norm != "custom" and not requested_norm.startswith("custom:"):
-        try:
-            canonical = auth_mod.resolve_provider(requested_norm)
-        except AuthError:
-            pass
-        else:
-            # A user-declared ``custom_providers`` entry whose name matches
-            # only an *alias* (``kimi`` → built-in ``kimi-coding``) is the
-            # user's intended target — alias rewriting would otherwise hijack
-            # the request.  We only defer to the built-in when the raw name is
-            # the canonical provider itself (``nous``, ``openrouter``, …) so
-            # accidentally shadowing a canonical provider still resolves to
-            # the built-in. See tests/hermes_cli/test_runtime_provider_resolution.py
-            # ``test_named_custom_provider_does_not_shadow_builtin_provider``.
-            if (canonical or "").strip().lower() == requested_norm:
-                return None
 
     config = load_config()
-    
-    # First check providers: dict (new-style user-defined providers)
+
+    # Scan the new-style ``providers:`` dict FIRST — a user's explicit entry
+    # wins over any canonical built-in name (``providers.openrouter`` → user
+    # key, not the built-in OPENROUTER_API_KEY env var path).
     providers = config.get("providers")
     if isinstance(providers, dict):
         for ep_name, entry in providers.items():
@@ -594,6 +591,26 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
                             result["api_mode"] = api_mode
                         _lift_max_output_tokens(entry, result)
                         return result
+
+    # Canonical-provider short-circuit: after the ``providers:`` dict scan
+    # found no match, defer canonical built-in names (``nous``,
+    # ``openrouter``, …) to the built-in. A user-declared ``custom_providers``
+    # entry whose name matches only an *alias* (``kimi`` → built-in
+    # ``kimi-coding``) is the user's intended target — alias rewriting would
+    # otherwise hijack the request.  We only defer to the built-in when the
+    # raw name is the canonical provider itself so accidentally shadowing a
+    # canonical provider via the legacy list still resolves to the built-in.
+    # See tests/hermes_cli/test_runtime_provider_resolution.py
+    # ``test_named_custom_provider_does_not_shadow_builtin_provider`` and
+    # ``test_named_custom_provider_skipped_for_canonical_built_in``.
+    if requested_norm != "custom" and not requested_norm.startswith("custom:"):
+        try:
+            canonical = auth_mod.resolve_provider(requested_norm)
+        except AuthError:
+            pass
+        else:
+            if (canonical or "").strip().lower() == requested_norm:
+                return None
 
     # Fall back to custom_providers: list (legacy format)
     custom_providers = config.get("custom_providers")

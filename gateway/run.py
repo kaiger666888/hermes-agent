@@ -12938,8 +12938,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         The gateway /model command stores per-session overrides in
         ``_session_model_overrides``.  These must take precedence over
         config.yaml defaults so the switched model is actually used for
-        subsequent messages.  Fields with ``None`` values are skipped so
-        partial overrides don't clobber valid config defaults.
+        subsequent messages.  Fields with falsy values (None, empty string)
+        are skipped so failed-resolution overrides do not clobber valid config
+        defaults; only truthy values override.
         """
         override = self._session_model_overrides.get(session_key)
         if not override:
@@ -12947,7 +12948,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         model = override.get("model", model)
         for key in ("provider", "api_key", "base_url", "api_mode"):
             val = override.get(key)
-            if val is not None:
+            if val:
                 runtime_kwargs[key] = val
         return model, runtime_kwargs
 

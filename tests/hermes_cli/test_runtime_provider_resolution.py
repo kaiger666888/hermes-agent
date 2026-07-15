@@ -1029,6 +1029,68 @@ def test_named_custom_provider_skipped_for_canonical_built_in(monkeypatch):
     assert entry is None
 
 
+def test_named_custom_provider_openrouter_wins_via_providers_dict(monkeypatch):
+    """Regression for Bug 1: when config.yaml has a ``providers.openrouter``
+    entry (new-style dict) with an inline ``api_key``, and the
+    ``OPENROUTER_API_KEY`` env var is UNSET, ``_get_named_custom_provider``
+    must return the config-defined entry — NOT None.
+
+    Previously the canonical-provider short-circuit (``resolve_provider(
+    'openrouter') == 'openrouter'``) returned None BEFORE the ``providers:``
+    dict scan ran, so the user's inline key was ignored and resolution fell
+    through to the env-var-only path. This caused ``/model nvidia/...:free``
+    in Telegram to break subsequent messages with
+    ``auth_unavailable: No LLM provider configured``.
+    """
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(
+        rp,
+        "load_config",
+        lambda: {
+            "providers": {
+                "openrouter": {
+                    "api": "https://openrouter.ai/api/v1",
+                    "api_key": "config-or-key-1234",
+                    "default_model": "nvidia/nemotron-nano-8b:free",
+                }
+            }
+        },
+    )
+
+    entry = rp._get_named_custom_provider("openrouter")
+
+    assert entry is not None
+    assert entry["api_key"] == "config-or-key-1234"
+    assert entry["base_url"] == "https://openrouter.ai/api/v1"
+
+
+def test_named_custom_provider_normalized_name_matches_providers_dict(monkeypatch):
+    """Defensive companion to the test above: verify the normalization path
+    still works after the fix relocation. An entry named ``open_router``
+    (underscore) should match a request for ``open_router`` after
+    ``_normalize_custom_provider_name`` normalizes both sides.
+    """
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(
+        rp,
+        "load_config",
+        lambda: {
+            "providers": {
+                "open_router": {
+                    "api": "https://openrouter.alt.example.com/v1",
+                    "api_key": "alt-or-key-5678",
+                }
+            }
+        },
+    )
+
+    entry = rp._get_named_custom_provider("open_router")
+
+    assert entry is not None
+    assert entry["api_key"] == "alt-or-key-5678"
+    assert entry["base_url"] == "https://openrouter.alt.example.com/v1"
+
+
 def test_explicit_openrouter_skips_openai_base_url(monkeypatch):
     """When the user explicitly requests openrouter, OPENAI_BASE_URL
     (which may point to a custom endpoint) must not override the

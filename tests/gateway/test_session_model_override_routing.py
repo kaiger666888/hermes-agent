@@ -261,3 +261,75 @@ fallback_providers:
     assert runtime_kwargs["base_url"] == "https://fallback.example/v1"
     assert runtime_kwargs["model"] == "fallback-model"
 
+
+def test_apply_session_model_override_empty_strings_do_not_clobber():
+    """Regression for Bug 2: when /model resolution fails upstream, the
+    session override dict carries ``api_key=""`` / ``base_url=""``. The
+    override loop must NOT clobber valid ``runtime_kwargs`` credentials with
+    these falsy values — only truthy values should override.
+
+    Previously the loop used ``if val is not None:`` which treats empty
+    string as a valid override, overwriting the real api_key/base_url and
+    causing ``auth_unavailable: No LLM provider configured``.
+    """
+    runner = _make_runner()
+    session_key = "agent:main:telegram:dm:12345"
+    runner._session_model_overrides[session_key] = {
+        "model": "nvidia/nemotron-nano-8b:free",
+        "provider": "openrouter",
+        "api_key": "",
+        "base_url": "",
+        "api_mode": "",
+    }
+    runtime_kwargs = {
+        "provider": "openai-codex",
+        "api_key": "real-key",
+        "base_url": "https://real.example.com/v1",
+        "api_mode": "chat_completions",
+    }
+
+    model, returned_kwargs = runner._apply_session_model_override(
+        session_key, "gpt-5.5", dict(runtime_kwargs)
+    )
+
+    # Model override applies (non-empty truthy value).
+    assert model == "nvidia/nemotron-nano-8b:free"
+    # Provider override applies (non-empty truthy value).
+    assert returned_kwargs["provider"] == "openrouter"
+    # Empty-string overrides do NOT clobber valid config credentials.
+    assert returned_kwargs["api_key"] == "real-key"
+    assert returned_kwargs["base_url"] == "https://real.example.com/v1"
+    assert returned_kwargs["api_mode"] == "chat_completions"
+
+
+def test_apply_session_model_override_truthy_values_still_clobber():
+    """Companion to the test above: non-empty override values must STILL
+    clobber runtime_kwargs. Guards against over-tightening the truthy gate
+    (e.g. accidentally skipping all overrides).
+    """
+    runner = _make_runner()
+    session_key = "agent:main:telegram:dm:67890"
+    runner._session_model_overrides[session_key] = {
+        "model": "nvidia/nemotron-nano-8b:free",
+        "provider": "openrouter",
+        "api_key": "override-key",
+        "base_url": "https://override.example.com/v1",
+        "api_mode": "codex_responses",
+    }
+    runtime_kwargs = {
+        "provider": "openai-codex",
+        "api_key": "real-key",
+        "base_url": "https://real.example.com/v1",
+        "api_mode": "chat_completions",
+    }
+
+    model, returned_kwargs = runner._apply_session_model_override(
+        session_key, "gpt-5.5", dict(runtime_kwargs)
+    )
+
+    assert model == "nvidia/nemotron-nano-8b:free"
+    assert returned_kwargs["provider"] == "openrouter"
+    assert returned_kwargs["api_key"] == "override-key"
+    assert returned_kwargs["base_url"] == "https://override.example.com/v1"
+    assert returned_kwargs["api_mode"] == "codex_responses"
+
