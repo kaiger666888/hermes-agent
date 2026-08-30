@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 import html as _html
 import re
 from datetime import datetime, timezone
@@ -470,6 +471,10 @@ class TelegramAdapter(BasePlatformAdapter):
         # While True, send() short-circuits to a failure so callers
         # (cron live-adapter branch) fall through to standalone delivery.
         self._send_path_degraded: bool = False
+        # Send-path pool recovery: monotonic timestamp of the last general-pool
+        # drain triggered by a PoolTimeout on send(). Coalesces concurrent sends
+        # so they don't all drain at once. See _drain_general_pool_coalesced.
+        self._last_general_pool_drain: float = 0.0
         # DM Topics: map of topic_name -> message_thread_id (populated at startup)
         self._dm_topics: Dict[str, int] = {}
         # Track forum chats where we've already registered bot commands
@@ -1456,6 +1461,41 @@ class TelegramAdapter(BasePlatformAdapter):
                     self.name, label, exc_info=True,
                 )
 
+    async def _drain_general_pool_coalesced(self) -> None:
+        """Send-path pool recovery: drain the general httpx pool when a PoolTimeout
+        shows it's wedged by half-closed proxy connections. Same failure mode
+        ``_drain_polling_connections`` handles, but triggered from the send path
+        — long-polling detects a dead proxy slowly, while sends pile up and
+        deadlock the general pool first, so the send path must be able to free
+        it itself. Coalesced (30s) so many concurrent sends hitting PoolTimeout
+        simultaneously don't all drain at once. Drains only the general pool
+        (``_request[1]``); the polling pool is owned by the reconnect ladder.
+        """
+        now = time.monotonic()
+        if now - self._last_general_pool_drain < 30.0:
+            return
+        self._last_general_pool_drain = now
+        if not (self._app and self._app.bot):
+            return
+        try:
+            # PTB 22.x: _request is a (get_updates, general) tuple; same private
+            # access as _drain_polling_connections — review if upgrading to PTB 23+.
+            general_req = self._app.bot._request[1]  # noqa: SLF001
+        except Exception:
+            return
+        try:
+            await general_req.shutdown()
+            await general_req.initialize()
+            logger.warning(
+                "[%s] General httpx pool drained after PoolTimeout on send path",
+                self.name,
+            )
+        except Exception:
+            logger.debug(
+                "[%s] General pool drain failed (non-fatal)",
+                self.name, exc_info=True,
+            )
+
     async def _handle_polling_network_error(self, error: Exception) -> None:
         """Reconnect polling after a transient network interruption.
 
@@ -2079,6 +2119,24 @@ class TelegramAdapter(BasePlatformAdapter):
                 "write_timeout": _env_float("HERMES_TELEGRAM_HTTP_WRITE_TIMEOUT", 20.0),
             }
 
+            # CLOSE-WAIT fd-exhaustion guard: PTB builds
+            # ``httpx.Limits(max_connections=connection_pool_size)`` with
+            # *unlimited* keepalive slots. Connections parked in the pool that
+            # mihomo (127.0.0.1:7890) has FINed linger as CLOSE-WAIT forever —
+            # httpcore only reaps expired keepalives lazily on reuse — so retry
+            # storms accumulate dead sockets until the process fd soft limit is
+            # hit (Errno 24 across every tool). Cap keepalive slots so
+            # storm-opened connections are closed on return instead of parked;
+            # ``max_connections`` keeps the full pool size for bursts. PTB
+            # merges ``httpx_kwargs`` last, so our limits override its own.
+            import httpx as _httpx
+
+            pool_limits = _httpx.Limits(
+                max_connections=request_kwargs["connection_pool_size"],
+                max_keepalive_connections=_env_int("HERMES_TELEGRAM_HTTP_MAX_KEEPALIVE", 32),
+                keepalive_expiry=_env_float("HERMES_TELEGRAM_HTTP_KEEPALIVE_EXPIRY", 15.0),
+            )
+
             disable_fallback = (os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"})
             fallback_ips = self._fallback_ips()
             if not fallback_ips:
@@ -2101,21 +2159,27 @@ class TelegramAdapter(BasePlatformAdapter):
                 # polling reconnect + bot API bootstrap/delete_webhook calls.
                 request = HTTPXRequest(
                     **request_kwargs,
-                    httpx_kwargs={"transport": TelegramFallbackTransport(fallback_ips)},
+                    httpx_kwargs={
+                        "transport": TelegramFallbackTransport(fallback_ips),
+                        "limits": pool_limits,
+                    },
                 )
                 get_updates_request = HTTPXRequest(
                     **request_kwargs,
-                    httpx_kwargs={"transport": TelegramFallbackTransport(fallback_ips)},
+                    httpx_kwargs={
+                        "transport": TelegramFallbackTransport(fallback_ips),
+                        "limits": pool_limits,
+                    },
                 )
             elif proxy_url:
                 logger.info("[%s] Proxy detected; passing explicitly to HTTPXRequest: %s", self.name, proxy_url)
-                request = HTTPXRequest(**request_kwargs, proxy=proxy_url)
-                get_updates_request = HTTPXRequest(**request_kwargs, proxy=proxy_url)
+                request = HTTPXRequest(**request_kwargs, proxy=proxy_url, httpx_kwargs={"limits": pool_limits})
+                get_updates_request = HTTPXRequest(**request_kwargs, proxy=proxy_url, httpx_kwargs={"limits": pool_limits})
             else:
                 if disable_fallback:
                     logger.info("[%s] Telegram fallback-IP transport disabled via env", self.name)
-                request = HTTPXRequest(**request_kwargs)
-                get_updates_request = HTTPXRequest(**request_kwargs)
+                request = HTTPXRequest(**request_kwargs, httpx_kwargs={"limits": pool_limits})
+                get_updates_request = HTTPXRequest(**request_kwargs, httpx_kwargs={"limits": pool_limits})
 
             builder = builder.request(request).get_updates_request(get_updates_request)
             self._app = builder.build()
@@ -2587,6 +2651,12 @@ class TelegramAdapter(BasePlatformAdapter):
                             and not self._looks_like_pool_timeout(send_err)
                         ):
                             raise
+                        if self._looks_like_pool_timeout(send_err):
+                            # Pool wedged by half-closed proxy connections (flaky
+                            # mihomo node) — drain the general pool instead of
+                            # blindly retrying into the same full pool and
+                            # deepening the deadlock. Coalesced; fire-and-forget.
+                            asyncio.create_task(self._drain_general_pool_coalesced())
                         if _send_attempt < 2:
                             wait = 2 ** _send_attempt
                             logger.warning("[%s] Network error on send (attempt %d/3), retrying in %ds: %s",

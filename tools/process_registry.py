@@ -51,6 +51,43 @@ from hermes_cli.config import get_hermes_home
 logger = logging.getLogger(__name__)
 
 
+# cgroup path under the user systemd manager's background.slice — a sibling of
+# app.slice (where hermes-gateway.service lives), so background-terminal memory
+# does NOT count against hermes-gateway's MemoryMax. Created on demand per
+# spawned process; cleaned up (best-effort) when the session finishes.
+_BG_CGROUP_BASE = "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/background.slice"
+
+
+def _enter_bg_cgroup(session_id: str) -> None:
+    """preexec_fn for spawn_local: move the background-terminal child into its
+    own cgroup under background.slice so heavy user tasks (e.g. hunyuan3d 8G,
+    dev servers) can't exhaust hermes-gateway's MemoryMax and wedge the event
+    loop via memory pressure. Falls back silently (stays in the gateway
+    cgroup) if cgroup creation fails — spawn must never block on this.
+    """
+    import os as _os
+    cg = f"{_BG_CGROUP_BASE}/hermes-bg-{session_id}"
+    try:
+        _os.makedirs(cg, exist_ok=True)
+        with open(f"{cg}/cgroup.procs", "w") as f:
+            f.write(str(_os.getpid()))
+    except OSError:
+        pass
+    _os.setsid()
+
+
+def _cleanup_bg_cgroup(session_id: str) -> None:
+    """Best-effort removal of the per-session cgroup once the process tree has
+    exited. Fails (and is ignored) if descendants still occupy it — those are
+    under background.slice anyway, so they can't drag down the gateway."""
+    import os as _os
+    cg = f"{_BG_CGROUP_BASE}/hermes-bg-{session_id}"
+    try:
+        _os.rmdir(cg)
+    except OSError:
+        pass
+
+
 # Checkpoint file for crash recovery (gateway only)
 CHECKPOINT_PATH = get_hermes_home() / "processes.json"
 
@@ -555,7 +592,7 @@ class ProcessRegistry:
                 pty_env = _sanitize_subprocess_env(os.environ, env_vars)
                 pty_env["PYTHONUNBUFFERED"] = "1"
                 pty_proc = _PtyProcessCls.spawn(
-                    [user_shell, "-lic", f"set +m; {command}"],
+                    [user_shell, "-lc", f"set +m; {command}"],
                     cwd=session.cwd,
                     env=pty_env,
                     dimensions=(30, 120),
@@ -598,7 +635,7 @@ class ProcessRegistry:
         _popen_kwargs = {"creationflags": windows_hide_flags()} if _IS_WINDOWS else {}
 
         proc = subprocess.Popen(
-            [user_shell, "-lic", f"set +m; {command}"],
+            [user_shell, "-lc", f"set +m; {command}"],
             text=True,
             cwd=session.cwd,
             env=bg_env,
@@ -607,7 +644,7 @@ class ProcessRegistry:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
-            preexec_fn=None if _IS_WINDOWS else os.setsid,
+            preexec_fn=None if _IS_WINDOWS else (lambda s=session.id: _enter_bg_cgroup(s)),
             **_popen_kwargs,
         )
 
@@ -887,6 +924,7 @@ class ProcessRegistry:
             self._finished[session.id] = session
         session._completion_event.set()
         self._write_checkpoint()
+        _cleanup_bg_cgroup(session.id)
 
         # Only enqueue completion notification on the FIRST move.  Without
         # this guard, kill_process() and the reader thread can both call
