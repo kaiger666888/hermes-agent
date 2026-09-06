@@ -335,6 +335,43 @@ def _wrap_markdown_tables(text: str) -> str:
     return '\n'.join(out)
 
 
+# Reconnect-ladder stage timeout: updater.stop()/start_polling() and the
+# polling-pool drain each get this long to finish. A wedged stage used to
+# suspend the reconnect coroutine forever (09-06 incident: counter frozen
+# at attempt 7, no further logs, fatal escalation at 10 never reached —
+# silent death while the process looked healthy); a hung stage now raises
+# into the retry path instead, so the ladder always advances — worst case
+# to the fatal process restart, which is the correct self-healing outcome.
+RECONNECT_STAGE_TIMEOUT = 30
+
+# A healthy getUpdates long-poll completes a request at least every ~70s
+# (server wait + HTTP timeouts). If the polling pool has had no completed
+# request for this long while Updater reports running=True, the long-poll
+# is wedged and the reconnect ladder must re-enter.
+POLL_STALE_SECONDS = 300
+
+
+class _TimestampedPollingRequest(HTTPXRequest):
+    """HTTPXRequest that records the monotonic time of each completed request.
+
+    Used ONLY for the get_updates pool. The polling watchdog needs to know
+    whether the long-poll loop is actually making progress:
+    ``Updater.running`` stays True and ``get_me`` (general pool) stays
+    healthy even when the long-poll task is wedged on a stale connection.
+    Probing getUpdates via the API is not an option — a second getUpdates
+    request 409-kills the gateway's own in-flight long-poll.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.last_request_completed: float = 0.0
+
+    async def do_request(self, *args: Any, **kwargs: Any) -> Any:
+        result = await super().do_request(*args, **kwargs)
+        self.last_request_completed = time.monotonic()
+        return result
+
+
 class TelegramAdapter(BasePlatformAdapter):
     """
     Telegram bot adapter.
@@ -1496,6 +1533,47 @@ class TelegramAdapter(BasePlatformAdapter):
                 self.name, exc_info=True,
             )
 
+    def _spawn_reconnect_task(self, coro: Any, what: str) -> Optional["asyncio.Future"]:
+        """Spawn a reconnect-ladder coroutine as a tracked background task.
+
+        All ladder (re-)entries must be spawned through here: a bare
+        ``ensure_future`` + ``add_done_callback(discard)`` silently swallows
+        any exception the coroutine raises, which can freeze the reconnect
+        ladder with no log trace. Returns the task so callers can keep a
+        reference (dedup guards), or None when the adapter is already fatal.
+        """
+        if self.has_fatal_error:
+            coro.close()
+            return None
+        task = asyncio.ensure_future(coro)
+        self._background_tasks.add(task)
+
+        def _log_reconnect_crash(t: "asyncio.Future") -> None:
+            self._background_tasks.discard(t)
+            if t.cancelled():
+                return
+            exc = t.exception()
+            if exc is not None:
+                logger.error(
+                    "[%s] Polling reconnect task (%s) crashed: %s",
+                    self.name, what, exc, exc_info=exc,
+                )
+
+        task.add_done_callback(_log_reconnect_crash)
+        return task
+
+    def _reset_polling_progress_baseline(self) -> None:
+        """Mark "now" as the polling pool's last-progress moment.
+
+        Called whenever polling (re)starts so the watchdog grants the fresh
+        long-poll a full POLL_STALE_SECONDS window — the timestamp may
+        otherwise predate the reconnect and read as immediately stale.
+        """
+        try:
+            self._app.bot._request[0].last_request_completed = time.monotonic()  # noqa: SLF001
+        except Exception:
+            pass
+
     async def _handle_polling_network_error(self, error: Exception) -> None:
         """Reconnect polling after a transient network interruption.
 
@@ -1536,19 +1614,56 @@ class TelegramAdapter(BasePlatformAdapter):
         )
         await asyncio.sleep(delay)
 
+        stop_timed_out = False
         try:
             if self._app and self._app.updater and self._app.updater.running:
-                await self._app.updater.stop()
+                await asyncio.wait_for(
+                    self._app.updater.stop(),
+                    timeout=RECONNECT_STAGE_TIMEOUT,
+                )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "[%s] Updater.stop() timed out after %ds during reconnect",
+                self.name, RECONNECT_STAGE_TIMEOUT,
+            )
+            stop_timed_out = True
         except Exception:
             pass
 
-        await self._drain_polling_connections()
+        if not stop_timed_out:
+            try:
+                await asyncio.wait_for(
+                    self._drain_polling_connections(),
+                    timeout=RECONNECT_STAGE_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "[%s] Polling pool drain timed out after %ds (non-fatal, continuing)",
+                    self.name, RECONNECT_STAGE_TIMEOUT,
+                )
+            except Exception:
+                logger.warning(
+                    "[%s] Polling pool drain failed (non-fatal, continuing)",
+                    self.name, exc_info=True,
+                )
 
         try:
-            await self._app.updater.start_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=False,
-                error_callback=self._polling_error_callback_ref,
+            if stop_timed_out:
+                # Never start_polling on top of a still-running wedged
+                # updater — two long-polls would 409 ping-pong. Raise into
+                # the retry path: the ladder keeps advancing and a
+                # persistent hang escalates to the fatal process restart,
+                # which kills the wedged task with the process.
+                raise RuntimeError(
+                    "updater.stop() timed out — polling left stopped for retry"
+                )
+            await asyncio.wait_for(
+                self._app.updater.start_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=False,
+                    error_callback=self._polling_error_callback_ref,
+                ),
+                timeout=RECONNECT_STAGE_TIMEOUT,
             )
             logger.info(
                 "[%s] Telegram polling resumed after network error (attempt %d)",
@@ -1560,67 +1675,95 @@ class TelegramAdapter(BasePlatformAdapter):
             # but the underlying long-poll task is wedged on a stale httpx
             # connection and never makes progress. No error_callback fires
             # in that state, so the reconnect ladder won't advance on its
-            # own. Schedule a deferred probe to detect the wedge and
-            # re-enter the ladder if needed.
-            if not self.has_fatal_error:
-                probe = asyncio.ensure_future(self._verify_polling_after_reconnect())
-                self._background_tasks.add(probe)
-                probe.add_done_callback(self._background_tasks.discard)
+            # own. The recurring watchdog below detects the wedge and
+            # re-enters this ladder when needed.
+            self._reset_polling_progress_baseline()
+            watchdog = getattr(self, "_polling_watchdog_task", None)
+            if watchdog is None or watchdog.done():
+                self._polling_watchdog_task = self._spawn_reconnect_task(
+                    self._verify_polling_after_reconnect(),
+                    "polling watchdog",
+                )
         except Exception as retry_err:
             logger.warning("[%s] Telegram polling reconnect failed: %s", self.name, retry_err)
             # start_polling failed — polling is dead and no further error
             # callbacks will fire, so schedule the next retry ourselves.
-            if not self.has_fatal_error:
-                task = asyncio.ensure_future(
-                    self._handle_polling_network_error(retry_err)
-                )
-                self._background_tasks.add(task)
-                task.add_done_callback(self._background_tasks.discard)
+            self._spawn_reconnect_task(
+                self._handle_polling_network_error(retry_err),
+                "polling reconnect retry",
+            )
 
     async def _verify_polling_after_reconnect(self) -> None:
-        """Heartbeat probe scheduled after a successful reconnect.
+        """Recurring polling watchdog.
 
         PTB's Updater can survive a botched stop()+start_polling() cycle
         with `running=True` but a wedged consumer task. No error callback
-        fires, so the reconnect ladder doesn't advance on its own. This
-        probe detects the wedge by:
+        fires, so the reconnect ladder doesn't advance on its own. The
+        watchdog detects that state every HEARTBEAT_PROBE_DELAY seconds:
 
-        1. Sleeping HEARTBEAT_PROBE_DELAY so a healthy long-poll has time
-           to complete at least one cycle.
-        2. Verifying `Updater.running` is still True.
-        3. Probing the bot endpoint with a tight asyncio timeout. A
-           wedged httpx pool fails this probe; a healthy one returns
-           well under the timeout.
+        1. Verifying `Updater.running` is still True.
+        2. Probing the bot endpoint (general pool) with a tight timeout.
+        3. Checking the polling pool's last completed request age (see
+           `_TimestampedPollingRequest`): a healthy long-poll completes a
+           cycle at least every ~70s, so anything older than
+           POLL_STALE_SECONDS means the long-poll is wedged. The API is
+           deliberately NOT probed with getUpdates — a second getUpdates
+           request 409-kills the gateway's own in-flight long-poll.
 
-        On any failure, re-enter the reconnect ladder so the existing
-        MAX_NETWORK_RETRIES path can ultimately escalate to fatal-error.
+        On any failure, re-enter the reconnect ladder (which resets the
+        staleness baseline on success) and keep watching. Exits once the
+        adapter goes fatal (the supervisor restart takes over).
         """
         HEARTBEAT_PROBE_DELAY = 60
         PROBE_TIMEOUT = 10
 
-        await asyncio.sleep(HEARTBEAT_PROBE_DELAY)
+        while not self.has_fatal_error:
+            await asyncio.sleep(HEARTBEAT_PROBE_DELAY)
 
-        if self.has_fatal_error:
-            return
-        if not (self._app and self._app.updater and self._app.updater.running):
-            logger.warning(
-                "[%s] Updater not running %ds after reconnect — treating as wedged",
-                self.name, HEARTBEAT_PROBE_DELAY,
-            )
-            await self._handle_polling_network_error(
-                RuntimeError("Updater not running after reconnect heartbeat")
-            )
-            return
+            if self.has_fatal_error:
+                return
+            if not (self._app and self._app.updater and self._app.updater.running):
+                logger.warning(
+                    "[%s] Updater not running during heartbeat — treating as wedged",
+                    self.name,
+                )
+                await self._handle_polling_network_error(
+                    RuntimeError("Updater not running (polling heartbeat)")
+                )
+                continue
 
-        try:
-            await asyncio.wait_for(self._app.bot.get_me(), PROBE_TIMEOUT)
+            try:
+                await asyncio.wait_for(self._app.bot.get_me(), PROBE_TIMEOUT)
+            except Exception as probe_err:
+                logger.warning(
+                    "[%s] Polling heartbeat probe failed: %s",
+                    self.name, probe_err,
+                )
+                await self._handle_polling_network_error(probe_err)
+                continue
             self._send_path_degraded = False
-        except Exception as probe_err:
-            logger.warning(
-                "[%s] Polling heartbeat probe failed %ds after reconnect: %s",
-                self.name, HEARTBEAT_PROBE_DELAY, probe_err,
-            )
-            await self._handle_polling_network_error(probe_err)
+
+            # get_me only exercises the general request pool — the long-poll
+            # lives on the separate get_updates pool, so a wedged polling
+            # pool sails through the get_me probe above. Check the polling
+            # pool's progress instead (zero API traffic).
+            try:
+                polling_req = self._app.bot._request[0]  # noqa: SLF001
+                last_done = polling_req.last_request_completed  # type: ignore[attr-defined]
+            except (AttributeError, IndexError, TypeError):
+                continue
+            idle_for = time.monotonic() - last_done
+            if idle_for > POLL_STALE_SECONDS:
+                logger.warning(
+                    "[%s] Polling pool idle %.0fs (>%ds) despite Updater.running=True "
+                    "— long-poll wedged; reconnecting",
+                    self.name, idle_for, POLL_STALE_SECONDS,
+                )
+                await self._handle_polling_network_error(
+                    RuntimeError(
+                        "long-poll wedged (no completed request for %.0fs)" % idle_for
+                    )
+                )
 
     async def _handle_polling_conflict(self, error: Exception) -> None:
         if self.has_fatal_error and self.fatal_error_code == "telegram_polling_conflict":
@@ -1662,26 +1805,61 @@ class TelegramAdapter(BasePlatformAdapter):
             # Stop the local updater cleanly before sleeping.  If it's already
             # stopped (e.g. PTB raised before updater.running was set) this is
             # a no-op.
+            stop_timed_out = False
             try:
                 if self._app and self._app.updater and self._app.updater.running:
-                    await self._app.updater.stop()
+                    await asyncio.wait_for(
+                        self._app.updater.stop(),
+                        timeout=RECONNECT_STAGE_TIMEOUT,
+                    )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "[%s] Updater.stop() timed out after %ds during conflict retry",
+                    self.name, RECONNECT_STAGE_TIMEOUT,
+                )
+                stop_timed_out = True
             except Exception:
                 pass
 
-            await asyncio.sleep(RETRY_DELAY)
-            await self._drain_polling_connections()
+            if not stop_timed_out:
+                await asyncio.sleep(RETRY_DELAY)
+                try:
+                    await asyncio.wait_for(
+                        self._drain_polling_connections(),
+                        timeout=RECONNECT_STAGE_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "[%s] Polling pool drain timed out after %ds (non-fatal, continuing)",
+                        self.name, RECONNECT_STAGE_TIMEOUT,
+                    )
+                except Exception:
+                    logger.warning(
+                        "[%s] Polling pool drain failed (non-fatal, continuing)",
+                        self.name, exc_info=True,
+                    )
 
             try:
-                await self._app.updater.start_polling(
-                    allowed_updates=Update.ALL_TYPES,
-                    drop_pending_updates=False,
-                    error_callback=self._polling_error_callback_ref,
+                if stop_timed_out:
+                    # Never start_polling on top of a still-running wedged
+                    # updater — raise into the retry path below instead.
+                    raise RuntimeError(
+                        "updater.stop() timed out — polling left stopped for retry"
+                    )
+                await asyncio.wait_for(
+                    self._app.updater.start_polling(
+                        allowed_updates=Update.ALL_TYPES,
+                        drop_pending_updates=False,
+                        error_callback=self._polling_error_callback_ref,
+                    ),
+                    timeout=RECONNECT_STAGE_TIMEOUT,
                 )
                 logger.info(
                     "[%s] Telegram polling resumed after conflict retry %d/%d",
                     self.name, self._polling_conflict_count, MAX_CONFLICT_RETRIES,
                 )
                 self._polling_conflict_count = 0  # reset counter on success
+                self._reset_polling_progress_baseline()
                 return
             except Exception as retry_err:
                 logger.warning(
@@ -1696,15 +1874,9 @@ class TelegramAdapter(BasePlatformAdapter):
                 # gateway process is alive and reports "connected" but
                 # no messages are received or sent.
                 if self._polling_conflict_count < MAX_CONFLICT_RETRIES:
-                    # We are inside a running coroutine, so the running loop is
-                    # guaranteed to exist. asyncio.get_event_loop() is deprecated
-                    # and raises "RuntimeError: There is no current event loop in
-                    # thread 'MainThread'" on Python 3.10+ when invoked from a
-                    # context without an attached loop (which can happen when PTB
-                    # dispatches this error callback). Use get_running_loop().
-                    loop = asyncio.get_running_loop()
-                    self._polling_error_task = loop.create_task(
-                        self._handle_polling_conflict(retry_err)
+                    self._polling_error_task = self._spawn_reconnect_task(
+                        self._handle_polling_conflict(retry_err),
+                        "telegram conflict retry",
                     )
                     return
                 # Fall through to fatal on the last retry.
@@ -2164,7 +2336,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         "limits": pool_limits,
                     },
                 )
-                get_updates_request = HTTPXRequest(
+                get_updates_request = _TimestampedPollingRequest(
                     **request_kwargs,
                     httpx_kwargs={
                         "transport": TelegramFallbackTransport(fallback_ips),
@@ -2174,12 +2346,12 @@ class TelegramAdapter(BasePlatformAdapter):
             elif proxy_url:
                 logger.info("[%s] Proxy detected; passing explicitly to HTTPXRequest: %s", self.name, proxy_url)
                 request = HTTPXRequest(**request_kwargs, proxy=proxy_url, httpx_kwargs={"limits": pool_limits})
-                get_updates_request = HTTPXRequest(**request_kwargs, proxy=proxy_url, httpx_kwargs={"limits": pool_limits})
+                get_updates_request = _TimestampedPollingRequest(**request_kwargs, proxy=proxy_url, httpx_kwargs={"limits": pool_limits})
             else:
                 if disable_fallback:
                     logger.info("[%s] Telegram fallback-IP transport disabled via env", self.name)
                 request = HTTPXRequest(**request_kwargs, httpx_kwargs={"limits": pool_limits})
-                get_updates_request = HTTPXRequest(**request_kwargs, httpx_kwargs={"limits": pool_limits})
+                get_updates_request = _TimestampedPollingRequest(**request_kwargs, httpx_kwargs={"limits": pool_limits})
 
             builder = builder.request(request).get_updates_request(get_updates_request)
             self._app = builder.build()
@@ -2288,10 +2460,16 @@ class TelegramAdapter(BasePlatformAdapter):
                     if self._polling_error_task and not self._polling_error_task.done():
                         return
                     if self._looks_like_polling_conflict(error):
-                        self._polling_error_task = loop.create_task(self._handle_polling_conflict(error))
+                        self._polling_error_task = self._spawn_reconnect_task(
+                            self._handle_polling_conflict(error),
+                            "telegram conflict ladder",
+                        )
                     elif self._looks_like_network_error(error):
                         logger.warning("[%s] Telegram network error, scheduling reconnect: %s", self.name, error)
-                        self._polling_error_task = loop.create_task(self._handle_polling_network_error(error))
+                        self._polling_error_task = self._spawn_reconnect_task(
+                            self._handle_polling_network_error(error),
+                            "telegram network ladder",
+                        )
                     else:
                         logger.error("[%s] Telegram polling error: %s", self.name, error, exc_info=True)
 
@@ -2303,6 +2481,16 @@ class TelegramAdapter(BasePlatformAdapter):
                     drop_pending_updates=True,
                     error_callback=_polling_error_callback,
                 )
+                # Start the recurring polling watchdog (running=True but
+                # wedged long-poll detection) and grant it a fresh
+                # staleness baseline.
+                self._reset_polling_progress_baseline()
+                watchdog = getattr(self, "_polling_watchdog_task", None)
+                if watchdog is None or watchdog.done():
+                    self._polling_watchdog_task = self._spawn_reconnect_task(
+                        self._verify_polling_after_reconnect(),
+                        "polling watchdog",
+                    )
             
             # Register bot commands so Telegram shows a hint menu when users type /
             # List is derived from the central COMMAND_REGISTRY — adding a new
