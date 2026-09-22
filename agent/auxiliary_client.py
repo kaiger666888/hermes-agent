@@ -554,7 +554,8 @@ def _to_openai_base_url(base_url: str) -> str:
         # ZAI (open.bigmodel.cn) uses /api/anthropic for Anthropic wire
         # but /api/paas/v4 for OpenAI wire — the generic /v1 rewrite is wrong.
         if "open.bigmodel.cn" in url or "bigmodel" in url:
-            rewritten = url[: -len("/anthropic")] + "/paas/v4"
+            # 2026-09-22 Kai 令: 严禁按量 /api/paas/v4 —— 重写目标改为 coding plan 端点
+            rewritten = url[: -len("/anthropic")] + "/coding/paas/v4"
             logger.debug("Auxiliary client: rewrote ZAI base URL %s → %s", url, rewritten)
             return rewritten
         rewritten = url[: -len("/anthropic")] + "/v1"
@@ -4439,8 +4440,8 @@ def resolve_vision_provider_client(
     # while the OpenAI wire handles it correctly.
     if requested == "zai" and not resolved_base_url:
         zai_openai_urls = [
-            "https://open.bigmodel.cn/api/paas/v4",
-            "https://api.z.ai/api/paas/v4",
+            "https://open.bigmodel.cn/api/coding/paas/v4",
+            "https://api.z.ai/api/coding/paas/v4",
         ]
         for _zai_url in zai_openai_urls:
             client, final_model = _get_cached_client(
