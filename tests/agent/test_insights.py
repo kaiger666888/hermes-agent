@@ -252,7 +252,7 @@ class TestInsightsEmpty:
         engine = InsightsEngine(db)
         report = engine.generate(days=30)
         text = engine.format_gateway(report)
-        assert "No sessions found" in text
+        assert "没有会话记录" in text
 
 
 # =========================================================================
@@ -447,21 +447,21 @@ class TestTerminalFormatting:
         report = engine.generate(days=30)
         text = engine.format_terminal(report)
 
-        assert "Hermes Insights" in text
-        assert "Overview" in text
-        assert "Models Used" in text
-        assert "Top Tools" in text
-        assert "Top Skills" in text
-        assert "Activity Patterns" in text
-        assert "Notable Sessions" in text
+        assert "Hermes 用量洞察" in text
+        assert "总览" in text
+        assert "模型分布" in text
+        assert "高频工具" in text
+        assert "高频技能" in text
+        assert "活动规律" in text
+        assert "重点会话" in text
 
     def test_terminal_format_shows_tokens(self, populated_db):
         engine = InsightsEngine(populated_db)
         report = engine.generate(days=30)
         text = engine.format_terminal(report)
 
-        assert "Input tokens" in text
-        assert "Output tokens" in text
+        assert "输入" in text
+        assert "输出" in text
         # Cost and cache metrics are intentionally hidden (pricing was unreliable).
         assert "Est. cost" not in text
         assert "Cache read" not in text
@@ -473,7 +473,7 @@ class TestTerminalFormatting:
         text = engine.format_terminal(report)
 
         # Multi-platform, so Platforms section should show
-        assert "Platforms" in text
+        assert "平台分布" in text
         assert "cli" in text
         assert "telegram" in text
 
@@ -529,8 +529,8 @@ class TestGatewayFormatting:
         report = engine.generate(days=30)
         text = engine.format_gateway(report)
 
-        assert "Models" in text
-        assert "sessions" in text
+        assert "模型分布" in text
+        assert "会话" in text
 
 
 # =========================================================================

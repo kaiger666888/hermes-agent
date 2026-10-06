@@ -81,6 +81,59 @@ def _bar_chart(values: List[int], max_width: int = 20) -> List[str]:
     return ["█" * max(1, int(v / peak * max_width)) if v > 0 else "" for v in values]
 
 
+def _fmt_num(n) -> str:
+    """Humanize large numbers: 7.44B / 505.25M / 36.1K / 942."""
+    n = float(n or 0)
+    for div, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if abs(n) >= div:
+            return f"{n / div:.2f}".rstrip("0").rstrip(".") + suffix
+    return str(int(n)) if n == int(n) else f"{n:.1f}"
+
+
+def _share_bar(pct: float, width: int = 10) -> str:
+    """Block-character share bar: ▓▓▓▓▓░░░░░."""
+    pct = max(0.0, min(100.0, pct or 0.0))
+    filled = round(pct / 100 * width)
+    if pct > 0 and filled == 0:
+        filled = 1
+    return "▓" * filled + "░" * (width - filled)
+
+
+def _disp_width(s: str) -> int:
+    """Terminal display width: CJK/fullwidth chars and emoji count as 2 columns."""
+    import unicodedata
+    w = 0
+    for ch in s:
+        if unicodedata.east_asian_width(ch) in "WF" or ord(ch) >= 0x1F300:
+            w += 2
+        else:
+            w += 1
+    return w
+
+
+def _pad_to(s: str, width: int) -> str:
+    return s + " " * max(0, width - _disp_width(s))
+
+
+def _fmt_num(n) -> str:
+    """Humanize large numbers: 7.44B / 505.25M / 36.1K / 942."""
+    n = float(n or 0)
+    for div, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if abs(n) >= div:
+            return f"{n / div:.2f}".rstrip("0").rstrip(".") + suffix
+    return str(int(n)) if n == int(n) else f"{n:.1f}"
+
+
+def _sparkline(values) -> str:
+    """Mini histogram: ▁▂▃▄▅▆▇█ (for 24h activity)."""
+    values = list(values or [])
+    if not values or max(values) <= 0:
+        return ""
+    blocks = "▁▂▃▄▅▆▇█"
+    peak = max(values)
+    return "".join(blocks[min(7, int(v / peak * 7.999))] for v in values)
+
+
 class InsightsEngine:
     """
     Analyzes session history and produces usage insights.
@@ -715,207 +768,361 @@ class InsightsEngine:
     # =========================================================================
 
     def format_terminal(self, report: Dict) -> str:
-        """Format the insights report for terminal display (CLI)."""
+        """Format the insights report for terminal display (CLI).
+
+        Pretty variant: box title, dim rules, colored section headers and
+        share bars when stdout is a TTY; graceful plain-text fallback when
+        piped (hermes insights | grep ... keeps working).
+        """
         if report.get("empty"):
             days = report.get("days", 30)
             src = f" (source: {report['source_filter']})" if report.get("source_filter") else ""
             return f"  No sessions found in the last {days} days{src}."
+
+        # ── Color plumbing (TTY-only; plain fallback when piped) ──
+        try:
+            import sys as _sys
+            import shutil as _shutil
+            use_color = _sys.stdout.isatty()
+            term_width = _shutil.get_terminal_size().columns if use_color else 80
+        except Exception:
+            use_color, term_width = False, 80
+
+        def c(code: str, text: str) -> str:
+            return f"\033[{code}m{text}\033[0m" if use_color else text
+
+        dim = lambda s: c("2", s)           # noqa: E731
+        bold = lambda s: c("1", s)          # noqa: E731
+        cyan = lambda s: c("36", s)         # noqa: E731
+        green = lambda s: c("32", s)        # noqa: E731
+        yellow = lambda s: c("33", s)       # noqa: E731
+        magenta = lambda s: c("35", s)      # noqa: E731
+        blue = lambda s: c("34", s)         # noqa: E731
+
+        def rule(label: str) -> str:
+            inner = f" {label} "
+            pad = max(2, 56 - len(inner))
+            return "  " + dim("─" * 2) + dim(inner) + dim("─" * pad)
+
+        def bar_row(name: str, count: int, peak: int, total: int, width: int) -> str:
+            pct = count / total * 100 if total else 0
+            filled = round(count / peak * width) if peak else 0
+            filled = max(1, min(width, filled)) if count > 0 else 0
+            bar = "█" * filled + dim("░" * (width - filled))
+            bar_color = green if pct >= 20 else (cyan if pct >= 5 else blue)
+            return f"  {name:<24} {bar_color(bar)} {count:>8,} {dim(f'{pct:>5.1f}%')}"
 
         lines = []
         o = report["overview"]
         days = report["days"]
         src_filter = report.get("source_filter")
 
-        # Header
+        # Header (display-width aware centering for CJK)
         lines.append("")
-        lines.append("  ╔══════════════════════════════════════════════════════════╗")
-        lines.append("  ║                    📊 Hermes Insights                    ║")
-        period_label = f"Last {days} days"
+        period_label = f"近 {days} 天"
         if src_filter:
-            period_label += f" ({src_filter})"
-        padding = 58 - len(period_label) - 2
-        left_pad = padding // 2
-        right_pad = padding - left_pad
-        lines.append(f"  ║{' ' * left_pad} {period_label} {' ' * right_pad}║")
-        lines.append("  ╚══════════════════════════════════════════════════════════╝")
-        lines.append("")
+            period_label += f" · {src_filter}"
+        inner_w = 56
+        title = "📊 Hermes 用量洞察"
+        t_pad = max(0, (inner_w - _disp_width(title)) // 2)
+        p_pad = max(0, (inner_w - _disp_width(period_label)) // 2)
+        lines.append("  ╭" + "─" * inner_w + "╮")
+        lines.append("  │" + " " * t_pad + title + " " * (inner_w - t_pad - _disp_width(title)) + "│")
+        lines.append("  │" + " " * p_pad + dim(period_label) + " " * (inner_w - p_pad - _disp_width(period_label)) + "│")
+        lines.append("  ╰" + "─" * inner_w + "╯")
 
         # Date range
         if o.get("date_range_start") and o.get("date_range_end"):
-            start_str = datetime.fromtimestamp(o["date_range_start"]).strftime("%b %d, %Y")
-            end_str = datetime.fromtimestamp(o["date_range_end"]).strftime("%b %d, %Y")
-            lines.append(f"  Period: {start_str} — {end_str}")
+            start_str = datetime.fromtimestamp(o["date_range_start"]).strftime("%m-%d")
+            end_str = datetime.fromtimestamp(o["date_range_end"]).strftime("%m-%d")
             lines.append("")
+            lines.append(f"  {dim('统计周期:')} {start_str} → {end_str}")
 
-        # Overview
-        lines.append("  📋 Overview")
-        lines.append("  " + "─" * 56)
-        lines.append(f"  Sessions:          {o['total_sessions']:<12}  Messages:        {o['total_messages']:,}")
-        lines.append(f"  Tool calls:        {o['total_tool_calls']:<12,}  User messages:   {o['user_messages']:,}")
-        lines.append(f"  Input tokens:      {o['total_input_tokens']:<12,}  Output tokens:   {o['total_output_tokens']:,}")
-        lines.append(f"  Total tokens:      {o['total_tokens']:,}")
+        # Overview — compact 2-column key figures
+        lines.append("")
+        lines.append(bold("  📋 总览"))
+        lines.append(rule("概览"))
+        v_sess, v_msg, v_calls, v_user = (
+            f"{o['total_sessions']:,}", f"{o['total_messages']:,}",
+            f"{o['total_tool_calls']:,}", f"{o['user_messages']:,}",
+        )
+        lines.append(
+            f"  会话 {bold(v_sess)}   消息 {bold(v_msg)}   "
+            f"工具调用 {bold(v_calls)}   用户消息 {bold(v_user)}"
+        )
+        v_tok = _fmt_num(o["total_tokens"])
+        v_in = _fmt_num(o["total_input_tokens"])
+        v_out = _fmt_num(o["total_output_tokens"])
+        lines.append(
+            f"  Tokens {bold(v_tok)} {dim('(' + format(o['total_tokens'], ',') + ')')}   "
+            f"输入 {bold(v_in)}   输出 {bold(v_out)}"
+        )
+        if o.get("total_cache_read_tokens"):
+            cache_pct = o["total_cache_read_tokens"] / o["total_tokens"] * 100 if o["total_tokens"] else 0
+            lines.append(
+                f"  缓存读取 {bold(_fmt_num(o['total_cache_read_tokens']))} {dim(f'{cache_pct:.0f}%')}"
+            )
         if o["total_hours"] > 0:
-            lines.append(f"  Active time:       ~{format_duration_compact(o['total_hours'] * 3600):<11}  Avg session:     ~{format_duration_compact(o['avg_session_duration'])}")
-        lines.append(f"  Avg msgs/session:  {o['avg_messages_per_session']:.1f}")
+            lines.append(
+                f"  活跃时长 ~{bold(format_duration_compact(o['total_hours'] * 3600))}   "
+                f"平均会话 ~{bold(format_duration_compact(o['avg_session_duration']))}   "
+                f"均 {o['avg_messages_per_session']:.1f} 条/会话"
+            )
         lines.append("")
 
         # Model breakdown
         if report["models"]:
-            lines.append("  🤖 Models Used")
-            lines.append("  " + "─" * 56)
-            lines.append(f"  {'Model':<30} {'Sessions':>8} {'Tokens':>12}")
+            lines.append(bold("  🤖 模型分布"))
+            lines.append(rule("模型"))
+            total_m = sum(m["total_tokens"] for m in report["models"]) or 1
             for m in report["models"]:
-                model_name = m["model"][:28]
-                lines.append(f"  {model_name:<30} {m['sessions']:>8} {m['total_tokens']:>12,}")
+                pct = m["total_tokens"] / total_m * 100
+                marker = green("●") if m.get("has_pricing") else yellow("○")
+                cost_str = ""
+                if m.get("has_pricing") and m.get("cost"):
+                    cost_str = "  " + dim("~$" + format(m["cost"], ".2f"))
+                tok_disp = _fmt_num(m["total_tokens"])
+                lines.append(
+                    f"  {marker} {m['model'][:28]:<28} {m['sessions']:>5} 会话  "
+                    f"{tok_disp:>9} tok {dim(f'{pct:.0f}%')}{cost_str}"
+                )
             lines.append("")
 
         # Platform breakdown
         if len(report["platforms"]) > 1 or (report["platforms"] and report["platforms"][0]["platform"] != "cli"):
-            lines.append("  📱 Platforms")
-            lines.append("  " + "─" * 56)
-            lines.append(f"  {'Platform':<14} {'Sessions':>8} {'Messages':>10} {'Tokens':>14}")
+            lines.append(bold("  📱 平台分布"))
+            lines.append(rule("平台"))
+            plat_total = sum(p["total_tokens"] for p in report["platforms"]) or 1
+            plat_peak = max(p["total_tokens"] for p in report["platforms"]) or 1
+            plat_width = min(24, max(10, term_width - 66))
             for p in report["platforms"]:
-                lines.append(f"  {p['platform']:<14} {p['sessions']:>8} {p['messages']:>10,} {p['total_tokens']:>14,}")
+                row = bar_row(p["platform"][:24], p["total_tokens"], plat_peak, plat_total, plat_width)
+                tok_human = _fmt_num(p["total_tokens"]).rjust(8)
+                # swap the raw comma count from bar_row for the humanized form
+                raw = f"{p['total_tokens']:>8,}"
+                row = row.replace(raw, tok_human) if raw in row else row
+                lines.append(row + dim(f"  {p['sessions']} 会话 · {p['messages']:,} 消息"))
             lines.append("")
 
         # Tool usage
         if report["tools"]:
-            lines.append("  🔧 Top Tools")
-            lines.append("  " + "─" * 56)
-            lines.append(f"  {'Tool':<28} {'Calls':>8} {'%':>8}")
-            for t in report["tools"][:15]:  # Top 15
-                lines.append(f"  {t['tool']:<28} {t['count']:>8,} {t['percentage']:>7.1f}%")
-            if len(report["tools"]) > 15:
-                lines.append(f"  ... and {len(report['tools']) - 15} more tools")
+            lines.append(bold("  🔧 高频工具"))
+            lines.append(rule("工具"))
+            tools = report["tools"][:12]
+            peak = max(t["count"] for t in tools) or 1
+            for t in tools:
+                lines.append(bar_row(t["tool"][:24], t["count"], peak, o["total_tool_calls"] or 1, 16))
+            if len(report["tools"]) > 12:
+                lines.append(dim(f"  … 另有 {len(report['tools']) - 12} 个工具"))
             lines.append("")
 
         # Skill usage
         skills = report.get("skills", {})
         top_skills = skills.get("top_skills", [])
         if top_skills:
-            lines.append("  🧠 Top Skills")
-            lines.append("  " + "─" * 56)
-            lines.append(f"  {'Skill':<28} {'Loads':>7} {'Edits':>7} {'Last used':>11}")
+            lines.append(bold("  🧠 高频技能"))
+            lines.append(rule("技能"))
             for skill in top_skills[:10]:
                 last_used = "—"
                 if skill.get("last_used_at"):
-                    last_used = datetime.fromtimestamp(skill["last_used_at"]).strftime("%b %d")
+                    last_used = datetime.fromtimestamp(skill["last_used_at"]).strftime("%m-%d")
+                loads_disp = format(skill["view_count"], ",")
+                edits_disp = format(skill["manage_count"], ",")
                 lines.append(
-                    f"  {skill['skill'][:28]:<28} {skill['view_count']:>7,} {skill['manage_count']:>7,} {last_used:>11}"
+                    f"  {skill['skill'][:30]:<30} {cyan(loads_disp.rjust(5))} 加载  "
+                    f"{magenta(edits_disp.rjust(4))} 编辑  {dim(last_used)}"
                 )
             summary = skills.get("summary", {})
             lines.append(
-                f"  Distinct skills: {summary.get('distinct_skills_used', 0)}  "
-                f"Loads: {summary.get('total_skill_loads', 0):,}  "
-                f"Edits: {summary.get('total_skill_edits', 0):,}"
+                dim(
+                    f"  去重 {summary.get('distinct_skills_used', 0)} 个 · "
+                    f"加载 {summary.get('total_skill_loads', 0):,} · 编辑 {summary.get('total_skill_edits', 0):,}"
+                )
             )
             lines.append("")
 
         # Activity patterns
         act = report.get("activity", {})
         if act.get("by_day"):
-            lines.append("  📅 Activity Patterns")
-            lines.append("  " + "─" * 56)
-
-            # Day of week chart
+            lines.append(bold("  📅 活动规律"))
+            lines.append(rule("活动"))
             day_values = [d["count"] for d in act["by_day"]]
             bars = _bar_chart(day_values, max_width=15)
+            day_peak = max(day_values) or 1
             for i, d in enumerate(act["by_day"]):
                 bar = bars[i]
-                lines.append(f"  {d['day']}  {bar:<15} {d['count']}")
-
+                color = green if d["count"] >= day_peak * 0.8 else (blue if d["count"] > 0 else dim)
+                lines.append(f"  {d['day']}  {color(bar):<15} {d['count']}")
             lines.append("")
 
-            # Peak hours (show top 5 busiest hours)
-            busy_hours = sorted(act["by_hour"], key=lambda x: x["count"], reverse=True)
-            busy_hours = [h for h in busy_hours if h["count"] > 0][:5]
-            if busy_hours:
-                hour_strs = []
-                for h in busy_hours:
-                    hr = h["hour"]
-                    ampm = "AM" if hr < 12 else "PM"
-                    display_hr = hr % 12 or 12
-                    hour_strs.append(f"{display_hr}{ampm} ({h['count']})")
-                lines.append(f"  Peak hours: {', '.join(hour_strs)}")
+            # 24h sparkline
+            hour_counts = [h["count"] for h in act["by_hour"]]
+            spark = _sparkline(hour_counts)
+            if spark:
+                busiest = act.get("busiest_hour")
+                peak_hr = f"峰值 {busiest['hour']:02d}:00 ({busiest['count']})" if busiest else ""
+                lines.append(f"  24h {spark}  {dim(peak_hr)}")
+                lines.append("")
 
             if act.get("active_days"):
-                lines.append(f"  Active days: {act['active_days']}")
-            if act.get("max_streak") and act["max_streak"] > 1:
-                lines.append(f"  Best streak: {act['max_streak']} consecutive days")
+                streak = f" · 连续 {act['max_streak']} 天" if act.get("max_streak", 0) > 1 else ""
+                lines.append(f"  活跃天数 {act['active_days']}{streak}")
             lines.append("")
 
         # Notable sessions
         if report.get("top_sessions"):
-            lines.append("  🏆 Notable Sessions")
-            lines.append("  " + "─" * 56)
+            lines.append(bold("  🏆 重点会话"))
+            lines.append(rule("会话"))
+            label_map = {
+                "Longest session": "最长会话", "Most messages": "消息最多",
+                "Most tokens": "Tokens 最多", "Most tool calls": "工具调用最多",
+            }
             for ts in report["top_sessions"]:
-                lines.append(f"  {ts['label']:<20} {ts['value']:<18} ({ts['date']}, {ts['session_id']})")
+                zh_label = label_map.get(ts["label"], ts["label"])
+                meta = f"({ts['date']}, {ts['session_id']})"
+                lines.append(f"  {_pad_to(zh_label, 16)} {cyan(ts['value']):<18} {dim(meta)}")
             lines.append("")
 
         return "\n".join(lines)
 
     def format_gateway(self, report: Dict) -> str:
-        """Format the insights report for gateway/messaging (shorter)."""
+        """Format the insights report for gateway/messaging (Telegram Markdown).
+
+        Pretty variant: table rows, share bars, humanized token counts,
+        Chinese labels; degrades to plain text on non-Telegram gateways
+        (markdown tables degrade to readable bullet groups).
+        """
         if report.get("empty"):
             days = report.get("days", 30)
-            return f"No sessions found in the last {days} days."
+            return f"近 {days} 天没有会话记录。"
 
         lines = []
         o = report["overview"]
         days = report["days"]
+        src_filter = report.get("source_filter")
 
-        lines.append(f"📊 **Hermes Insights** — Last {days} days\n")
+        period = f"近 {days} 天"
+        if src_filter:
+            period += f" · {src_filter}"
+        lines.append(f"📊 **Hermes 用量洞察** — {period}\n")
 
-        # Overview
-        lines.append(f"**Sessions:** {o['total_sessions']} | **Messages:** {o['total_messages']:,} | **Tool calls:** {o['total_tool_calls']:,}")
-        lines.append(f"**Tokens:** {o['total_tokens']:,} (in: {o['total_input_tokens']:,} / out: {o['total_output_tokens']:,})")
+        # Overview key figures
+        period_span = ""
+        if o.get("date_range_start") and o.get("date_range_end"):
+            s = datetime.fromtimestamp(o["date_range_start"]).strftime("%m-%d")
+            e = datetime.fromtimestamp(o["date_range_end"]).strftime("%m-%d")
+            period_span = f"（{s} → {e}）"
+        lines.append(
+            f"**会话** {o['total_sessions']:,} ｜ **消息** {o['total_messages']:,} ｜ "
+            f"**工具调用** {o['total_tool_calls']:,} ｜ **用户消息** {o['user_messages']:,}"
+        )
+        tok_line = f"**Tokens** {_fmt_num(o['total_tokens'])}（{o['total_tokens']:,}）｜ 输入 {_fmt_num(o['total_input_tokens'])} ｜ 输出 {_fmt_num(o['total_output_tokens'])}"
+        if o.get("total_cache_read_tokens"):
+            cache_pct = o["total_cache_read_tokens"] / o["total_tokens"] * 100 if o["total_tokens"] else 0
+            tok_line += f" ｜ 缓存读取 {_fmt_num(o['total_cache_read_tokens'])}（{cache_pct:.0f}%）"
+        lines.append(tok_line)
         if o["total_hours"] > 0:
-            lines.append(f"**Active time:** ~{format_duration_compact(o['total_hours'] * 3600)} | **Avg session:** ~{format_duration_compact(o['avg_session_duration'])}")
+            lines.append(
+                f"**活跃时长** ~{format_duration_compact(o['total_hours'] * 3600)} ｜ "
+                f"**平均会话** ~{format_duration_compact(o['avg_session_duration'])} ｜ "
+                f"均 {o['avg_messages_per_session']:.1f} 条/会话"
+            )
+        if period_span:
+            lines.append(f"*统计周期* {period_span}")
         lines.append("")
 
-        # Models (top 5)
+        # Models table
         if report["models"]:
-            lines.append("**🤖 Models:**")
+            lines.append("**🤖 模型分布**\n")
+            lines.append("| 模型 | 会话 | Tokens |")
+            lines.append("|---|---:|---:|")
             for m in report["models"][:5]:
-                lines.append(f"  {m['model'][:25]} — {m['sessions']} sessions, {m['total_tokens']:,} tokens")
+                lines.append(f"| {m['model'][:26]} | {m['sessions']} | {_fmt_num(m['total_tokens'])} |")
             lines.append("")
 
-        # Platforms (if multi-platform)
-        if len(report["platforms"]) > 1:
-            lines.append("**📱 Platforms:**")
+        # Platforms with share bars
+        if len(report["platforms"]) > 1 or (report["platforms"] and report["platforms"][0]["platform"] != "cli"):
+            lines.append("**📱 平台分布**\n")
+            lines.append("| 平台 | 占比 | Tokens | 会话 |")
+            lines.append("|---|---|---:|---:|")
+            plat_total = sum(p["total_tokens"] for p in report["platforms"]) or 1
             for p in report["platforms"]:
-                lines.append(f"  {p['platform']} — {p['sessions']} sessions, {p['messages']:,} msgs")
-            lines.append("")
-
-        # Tools (top 8)
-        if report["tools"]:
-            lines.append("**🔧 Top Tools:**")
-            for t in report["tools"][:8]:
-                lines.append(f"  {t['tool']} — {t['count']:,} calls ({t['percentage']:.1f}%)")
-            lines.append("")
-
-        skills = report.get("skills", {})
-        if skills.get("top_skills"):
-            lines.append("**🧠 Top Skills:**")
-            for skill in skills["top_skills"][:5]:
-                suffix = ""
-                if skill.get("last_used_at"):
-                    suffix = f", last used {datetime.fromtimestamp(skill['last_used_at']).strftime('%b %d')}"
+                pct = p["total_tokens"] / plat_total * 100
                 lines.append(
-                    f"  {skill['skill']} — {skill['view_count']:,} loads, {skill['manage_count']:,} edits{suffix}"
+                    f"| {p['platform']} | `{_share_bar(pct)}` {pct:.0f}% | {_fmt_num(p['total_tokens'])} | {p['sessions']:,} |"
                 )
             lines.append("")
 
-        # Activity summary
+        # Tools with share bars
+        if report["tools"]:
+            lines.append("**🔧 高频工具**\n")
+            lines.append("| 工具 | 占比 | 调用 |")
+            lines.append("|---|---|---:|")
+            total_calls = sum(t["count"] for t in report["tools"]) or 1
+            for t in report["tools"][:10]:
+                pct = t["count"] / total_calls * 100
+                lines.append(f"| `{t['tool']}` | `{_share_bar(pct)}` {pct:.1f}% | {t['count']:,} |")
+            if len(report["tools"]) > 10:
+                lines.append(f"\n*… 另有 {len(report['tools']) - 10} 个工具*")
+            lines.append("")
+
+        # Skills table
+        skills = report.get("skills", {})
+        if skills.get("top_skills"):
+            lines.append("**🧠 高频技能**\n")
+            lines.append("| 技能 | 加载 | 编辑 | 最近 |")
+            lines.append("|---|---:|---:|---|")
+            for skill in skills["top_skills"][:8]:
+                last_used = "—"
+                if skill.get("last_used_at"):
+                    last_used = datetime.fromtimestamp(skill["last_used_at"]).strftime("%m-%d")
+                lines.append(
+                    f"| {skill['skill'][:24]} | {skill['view_count']:,} | {skill['manage_count']:,} | {last_used} |"
+                )
+            summary = skills.get("summary", {})
+            lines.append(
+                f"\n*去重 {summary.get('distinct_skills_used', 0)} 个 · 加载 {summary.get('total_skill_loads', 0):,} · 编辑 {summary.get('total_skill_edits', 0):,}*"
+            )
+            lines.append("")
+
+        # Activity
         act = report.get("activity", {})
-        if act.get("busiest_day") and act.get("busiest_hour"):
-            hr = act["busiest_hour"]["hour"]
-            ampm = "AM" if hr < 12 else "PM"
-            display_hr = hr % 12 or 12
-            lines.append(f"**📅 Busiest:** {act['busiest_day']['day']}s ({act['busiest_day']['count']} sessions), {display_hr}{ampm} ({act['busiest_hour']['count']} sessions)")
+        if act.get("by_day"):
+            day_values = [d["count"] for d in act["by_day"]]
+            day_peak = max(day_values) or 1
+            lines.append("**📅 活动规律**\n")
+            lines.append("| 星期 | 会话 | 峰值 |")
+            lines.append("|---|---:|---|")
+            day_names_zh = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+            peak_val = day_peak
+            for i, d in enumerate(act["by_day"]):
+                mark = " 🔥" if d["count"] == peak_val and peak_val > 0 else ""
+                lines.append(f"| {day_names_zh[i]} | {d['count']} | `{_share_bar(d['count'] / day_peak * 100)}`{mark} |")
+            lines.append("")
+            hour_counts = [h["count"] for h in act.get("by_hour", [])]
+            spark = _sparkline(hour_counts)
+            extra = []
+            busiest = act.get("busiest_hour")
+            if busiest and busiest.get("count"):
+                extra.append(f"峰值 {busiest['hour']:02d}:00（{busiest['count']} 会话）")
             if act.get("active_days"):
-                lines.append(f"**Active days:** {act['active_days']}", )
+                extra.append(f"活跃 {act['active_days']} 天")
             if act.get("max_streak", 0) > 1:
-                lines.append(f"**Best streak:** {act['max_streak']} consecutive days")
+                extra.append(f"连续 {act['max_streak']} 天")
+            if spark:
+                lines.append(f"`{spark}`" + (f" ｜ {' · '.join(extra)}" if extra else ""))
+                lines.append("")
+
+        # Notable sessions
+        if report.get("top_sessions"):
+            lines.append("**🏆 重点会话**\n")
+            label_map = {
+                "Longest session": "最长会话", "Most messages": "消息最多",
+                "Most tokens": "Tokens 最多", "Most tool calls": "工具调用最多",
+            }
+            for ts in report["top_sessions"]:
+                zh_label = label_map.get(ts["label"], ts["label"])
+                lines.append(f"- **{zh_label}** {ts['value']}（{ts['date']}）")
+            lines.append("")
 
         return "\n".join(lines)
