@@ -1,0 +1,6 @@
+name: platform_metrics
+version: "0.1.0"
+description: "platform metrics plugin — 5 platform API adapter stubs (douyin/kuaishou/weixin_video/xiaohongshu/bilibili) + FeedbackRecordExtension composition + formula tuning loop + hermes formula stats CLI (Phase 42 DATA ships schema in 42-01, adapters in 42-02, tuning_loop in 42-03, CLI+ref in 42-04)"
+author: kais-movie-agent
+kind: standalone
+provides_tools: []

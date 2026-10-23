@@ -1,0 +1,10 @@
+name: pipeline_state
+version: "0.1.0"
+description: "pipeline state plugin — checkpoint resume + asset bus V3 typed slots (Phase 33 implements PipelineStateStore + AssetBus + CreativeHistoryTracker)"
+author: kais-movie-agent
+kind: standalone
+provides_tools:
+  - pipeline_checkpoint_save
+  - pipeline_checkpoint_load
+  - asset_bus_read
+  - asset_bus_write

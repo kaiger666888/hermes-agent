@@ -1,0 +1,481 @@
+# gates.yaml — review gates registry, phase_id-keyed (Phase 8 / 08-01 FIX-01 refactor; additive as gates are wired).
+#
+# 2026-08-18 冗余审核体系 (KMC 视觉审核重构): 4 vision-review gates
+# (p09c_storyboard_board / p11a0_iframe_qc / p11a_preview_clips /
+# p11c_video_qc) are added IN LOCK-STEP with each phase's wiring — one
+# yaml entry + _GATE_PHASES member + trigger_gate_blocking call per node
+# task (the gate count check in gate_config.py bumps 11→12→13→14→15 with
+# each). cross_validate direction (a) forbids yaml entries for phases with
+# GATE_ID=None, so entries cannot land before the phase fires its gate.
+#
+# Reconciliation (Phase 8 / Issue 1): gates.yaml keys must match phases with
+# GATE_ID != None in PHASE_REGISTRY. Historical bugs fixed:
+#   - Deleted p08/p09 entries (those phases have GATE_ID=None)
+#   - p04 carries Gate 4 (shot-prep). Originally on p04, briefly moved to p05,
+#     then REVERTED to p04 on 2026-07-28 (DIALOGUE-REFORM removed p05 from the
+#     creative chain — see pipeline/phases/__init__.py PHASE_REGISTRY).
+#   - Added p07 entry (p07 has GATE_ID="scene-design", was missing)
+#   - Confirmed p06 entry (renamed gate_id to p06-gate under new schema)
+#
+# Loaded once at plugins.review_gates import time (D-34-02). Hot-reload is NOT
+# supported — restart the hermes-agent process to pick up changes. pyyaml is
+# the ONE third-party dep added in Phase 34 (already transitive via plugin
+# loader; no pyproject.toml change per D-34-03).
+#
+# Schema (Phase 8 / 08-01 — phase_id-keyed, no standalone gate_id field):
+#   <phase_id>:                       # KEY = phase_id (e.g. p01_hook_topic)
+#     phase: <phase_id>               # redundant echo for backward-compat callers
+#                                     # that read entry["phase"]; equals the key.
+#     asset_bus_slots_to_lock: list[str] — non-empty; runner freezes these
+#                                          slots for the episode under review
+#     reviewer_role: str | list[str]
+#       - Single reviewer → str
+#       - Multiple reviewers → list[str]; gate_config.to_gate_config()
+#         normalizes to a comma-joined string on the frozen GateConfig
+#         dataclass (Plan 34-01 field is typed as str)
+#     timeout_sec: int > 0            — total wall-clock budget per attempt
+#     callback_url: str | null
+#       - webhook-mode gates typically carry an absolute URL
+#       - blocking / polling gates leave null
+#     default_mode: blocking | webhook | polling
+#     retry_policy:
+#       max_retries: int > 0          — attempts beyond this raise
+#       backoff_sec: int > 0          — sleep between retry attempts
+#     blocking_policies:              # optional — automated evaluation rules
+#       auto_evaluate: bool           # if true, evaluate_gate() runs before HIL review
+#       rollback_target_default: str  # default rollback target when auto-block fires
+#       rules:                        # list of rule dicts; ANY rule fires → block
+#         - type: critical_count      # count-based threshold (e.g. P14 rule engine)
+#           field: critical_count     # dotted path into evaluate_gate()'s data dict
+#           threshold: 0              # int
+#           operator: gt              # gt | gte | eq | lt | lte
+#         - type: score_floor         # minimum score (e.g. P14 overall_score)
+#           field: overall_score
+#           min: 60                   # number
+#         - type: pass_ratio          # QC pass ratio (e.g. P11a qwen-eye)
+#           field: consistent_count   # numerator field in data dict
+#           total_field: checked_count # denominator field in data dict
+#           min_ratio: 0.5            # 0.0–1.0
+#         - type: field_present       # required field must be truthy
+#           field: some_mandatory_slot
+#
+# Gate ID derivation (Phase 8): gate_id is NO LONGER stored in the YAML.
+# derive_gate_id(phase_id) extracts the leading p\d+[a-z0-9]* token (full
+# sub-phase id) and appends "-gate" (e.g. p01_hook_topic → p01-gate,
+# p11a0_iframe_qc → p11a0-gate; 2026-08-18 full-token derivation — the
+# legacy "p11-gate" alias for p11b_final_render lives in
+# gate_config._LEGACY_GATE_ID_TO_PHASE_ID). For redline sub-keys like
+# p13_delivery_redline_emotion, the _redline_* suffix is stripped before
+# deriving (→ p13-gate). The derived gate_id is the canonical SSoT identifier
+# at runtime; the gates.yaml key is the canonical SSoT for config lookup.
+#
+# Source of truth: .planning/phases/08-layer-0-1/08-01-PLAN.md (FIX-01/A5)
+# Cross-ref: kais-movie-agent/SKILL.md V8.6 gate column (steps 1/2/3/6/11 etc).
+version: 2
+gates:
+  # --- Gate 1: topic (after p01_hook_topic) -------------------------------
+  p01_hook_topic:
+    phase: p01_hook_topic
+    asset_bus_slots_to_lock:
+      - hook-topic
+      - outline             # forward lock — outline cannot mutate under review
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 2: outline (after p02_outline) --------------------------------
+  # ICA M1 (2026-08-25): creative-contracts 追加锁定 —— 契约清单在 Gate 2
+  # 由 operator 逐条确认（提取失真由人兜底），审核期间不得变异。
+  p02_outline:
+    phase: p02_outline
+    asset_bus_slots_to_lock:
+      - outline
+      - creative-contracts
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 3: script (after p03_script_audit) ----------------------------
+  # Two reviewers — list form, normalized to comma-joined string on GateConfig.
+  p03_script_audit:
+    phase: p03_script_audit
+    asset_bus_slots_to_lock:
+      - spatio-temporal-script
+      - temp-dialogue
+    reviewer_role:
+      - script_auditor
+      - compliance_gate
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
+
+  # --- Gate 4: shot-prep / character-readiness (after p04_character_design) -
+  # DIALOGUE-REFORM (2026-07-28): p05_pain_discovery was REMOVED from the
+  # creative chain (P04 → P06 direct). Gate 4 returns to its ORIGINAL home on
+  # p04_character_design — it had been moved FROM p04 TO p05 (old comment
+  # below), and that move is now reverted. It locks p04's own outputs
+  # (character-bible + character-assets): the operator confirms the character
+  # bible + asset library (L1-L4 anchors) before the heavy visual pipeline
+  # (P06+) begins. reviewer_role = the drawers (character_designer +
+  # visual_executor), matching the original shot-prep semantics.
+  p04_character_design:
+    phase: p04_character_design
+    asset_bus_slots_to_lock:
+      - character-bible
+      - character-assets
+    reviewer_role:
+      - character_designer
+      - visual_executor
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 5: spatio-temporal (after p06_spatio_temporal_script) ---------
+  p06_spatio_temporal_script:
+    phase: p06_spatio_temporal_script
+    asset_bus_slots_to_lock:
+      - spatio-temporal-script
+      - temp-dialogue
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 6: scene-design (after p07_scene_generation) ------------------
+  # Phase 8 / 08-01 reconciliation: added (was missing — p07 has GATE_ID
+  # "scene-design" but no gates.yaml entry). Threshold 0.7 + scene-design
+  # reviewer per plan.
+  p07_scene_generation:
+    phase: p07_scene_generation
+    asset_bus_slots_to_lock:
+      - scene-images
+      - geometry-bed
+    reviewer_role: creative_source
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 7: render (after p11b_final_render) ----------------------------
+  # webhook mode — non-blocking submit, resumed via HMAC-signed callback
+  # (review_platform.verify_callback, Phase 32). Single retry (long render).
+  p11b_final_render:
+    phase: p11b_final_render
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: editor
+    timeout_sec: 14400
+    callback_url: null              # wired at runtime by runner_hooks (Phase 34-03)
+    default_mode: webhook
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 1800
+
+  # --- Gate 8: delivery (after p13_delivery) ------------------------------
+  # Two reviewers — list form. Terminal gate before episode release.
+  p13_delivery:
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+      - master-mp4
+    reviewer_role:
+      - compliance_marketing
+      - editor
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
+
+  # =========================================================================
+  # Phase 40 Plan 02 (GATE-04): 3 redline gates appended additively.
+  # These fire AFTER gate 8 (delivery) passes, as the final scan
+  # before master.mp4 release. They are auto-resolved by
+  # runner_hooks.auto_detect_and_resolve() via the Plan-01 DETECTOR_REGISTRY
+  # — no manual gate_resolve needed. The 8 V8.6 gates above are byte-
+  # preserved (zero behavior change to the HIL path).
+  #
+  # Phase 8 / 08-01: stored under p13_delivery_redline_* sub-keys so they
+  # share the p13_delivery base phase but are distinguishable in the
+  # phase_id-keyed schema. derive_gate_id() strips the _redline_* suffix
+  # → all 3 derive to "p13-gate" (same as the main p13_delivery entry).
+  # =========================================================================
+
+  # --- Gate 9: redline R1 — emotion desensitization -----------------------
+  p13_delivery_redline_emotion:
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+      - master-mp4
+    reviewer_role: redline_scanner
+    timeout_sec: 60          # auto-detect is sub-second; short budget
+    callback_url: null
+    default_mode: blocking   # runner_hooks auto-resolves, no webhook needed
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
+
+  # --- Gate 10: redline R3 — no cold open ----------------------------------
+  p13_delivery_redline_no_cold_open:
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: redline_scanner
+    timeout_sec: 60
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
+
+  # --- Gate 11: redline R4 — unfinished ending -----------------------------
+  p13_delivery_redline_unfinished:
+    phase: p13_delivery
+    asset_bus_slots_to_lock:
+      - final-shots
+    reviewer_role: redline_scanner
+    timeout_sec: 60
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 1
+      backoff_sec: 60
+
+  # =========================================================================
+  # 2026-08-18 冗余审核体系 (KMC 视觉审核重构): vision-review gates appended
+  # in lock-step with each node's wiring (one yaml entry + _GATE_PHASES member
+  # + trigger_gate_blocking call per node task). Policy: every vision-QC'd
+  # asset node runs qwen-eye as a HARD gate first (no GLM fallback, no skip),
+  # then a MANDATORY blocking human review.
+  # =========================================================================
+
+  # --- Gate 12: storyboard board review (after p09c_storyboard_board) ------
+  # qwen-eye sheet QC must pass (or be waived at this gate) before human sign-off.
+  p09c_storyboard_board:
+    phase: p09c_storyboard_board
+    asset_bus_slots_to_lock:
+      - storyboard-board
+      - storyboard-qc
+    reviewer_role: visual_executor
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 13: iframe variant selection (after p11a0_iframe_qc) -----------
+  # qwen-eye ranks frame variants; operator confirms the finalists / picks one
+  # (chosen_variant_id "<sid>:<frame_type>:v<N>") / waives best-fails.
+  p11a0_iframe_qc:
+    phase: p11a0_iframe_qc
+    asset_bus_slots_to_lock:
+      - iframe-qc
+    reviewer_role: visual_executor
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 14: preview clip selection (after p11a_preview_clips) ----------
+  # Per-shot preview variants ranked by qwen-eye consistency; operator confirms
+  # the selection (selected_clips). reject → rollback p11a to re-render.
+  p11a_preview_clips:
+    phase: p11a_preview_clips
+    asset_bus_slots_to_lock:
+      - rapid-preview-clips
+      - preview-qc
+    reviewer_role: visual_executor
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+    blocking_policies:
+      auto_evaluate: true
+      rollback_target_default: p11a_preview_clips
+      rules:
+        # Auto-block when zero variants pass qwen-eye (all flagged/error):
+        # no value in sending a zero-pass slate to human review.
+        - type: pass_ratio
+          field: consistent_count
+          total_field: checked_count
+          min_ratio: 0.01
+          # < 1% pass = effectively zero pass → auto-block (operator can
+          # contest / waive, but default is fail-closed).
+
+  # --- Gate 15: rendered-shot review (after p11c_video_qc) -----------------
+  # The MANDATORY human gate for video shots (fires AFTER qwen-eye video QC;
+  # the legacy p11b webhook gate stays as an early async tripwire). approve =
+  # waive listed failed shots (failed-shots slot gets waived flags); reject =
+  # rollback to p11b_final_render to re-render ONLY the failed shots.
+  p11c_video_qc:
+    phase: p11c_video_qc
+    asset_bus_slots_to_lock:
+      - video-qc
+      - failed-shots
+    reviewer_role: editor
+    timeout_sec: 14400
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
+
+  # --- Gate 16: TTS voice audit (after p10c_voice_audit) -------------------
+  # 2026-08-19 冗余审核体系·音频: qwen-ear transcription fidelity must pass
+  # (or be waived here) before P11 render consumes the voice clips. approve =
+  # waive listed failed clips (waived flags written back to voice-audit);
+  # reject = rollback to p10_voice to regenerate the failing dialogue clips.
+  p10c_voice_audit:
+    phase: p10c_voice_audit
+    asset_bus_slots_to_lock:
+      - voice-audit
+    reviewer_role: editor
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 17: post-delivery quality audit (after p14_quality_audit) -------
+  # 2026-08-25 T2: P14 automated gate with blocking_policies-driven
+  # auto-evaluation. Rule engine + LLM holistic audit findings feed
+  # evaluate_gate() which auto-blocks on critical_count > 0 or
+  # overall_score < 60. Human review remains the fallback path if
+  # auto-evaluation passes but operator wants a second look.
+  # Rollback target is content-aware: content-level criticals → P11b
+  # (re-render), technical-level → P13 (ffmpeg fix). The default in
+  # blocking_policies is P11b (deep rollback covers both categories).
+  p14_quality_audit:
+    phase: p14_quality_audit
+    asset_bus_slots_to_lock:
+      - quality-audit
+      - master-mp4
+    reviewer_role: script_auditor
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+    blocking_policies:
+      auto_evaluate: true
+      rollback_target_default: p11b_final_render
+      rules:
+        # M4 T2: critical findings → auto-block. v2 下 critical_count 来源于
+        # auditor findings 按 severity 映射（裁决2 数据源规范化）；legacy 行为
+        # 仅作兼容保留。
+        - type: critical_count
+          field: critical_count
+          threshold: 0
+          operator: gt
+        - type: score_floor
+          field: overall_score
+          min: 60
+        # M4 T3: 未解决 stigma → auto-block。operator 可通过 review-outcomes
+        # overrides 逐条豁免（按 stigma_id 匹配），豁免项计入 overrides_applied。
+        - type: stigma_unresolved
+          field: stigmas
+          min_severity: warning
+
+  # =========================================================================
+  # NC-VAR-01 (2026-08-26 B1 骨架): narration_comic 变体 DAG 的两道 HIL 门。
+  # gate_id 经 derive_gate_id 派生（nc01 → "nc01-gate"，nc08 → "nc08-gate"）。
+  # cross_validate 的 union 语义：gates.yaml 必须恰好覆盖 drama ∪ nc 全部
+  # 带门 phase —— 与所选变体无关的不变量（drama 单独跑时同样成立）。
+  # 运行期真正触发哪些门仍由当前 active registry（resolve_registry）决定。
+  # =========================================================================
+
+  # --- Gate 18 (NC-1): narration review (after nc01_narration) --------------
+  # 解说词（hook 结构/句级切分/时长预算）由 operator 审过后才进画格链。
+  # reviewer_role=script：解说词是文字产物，归 script 审查角色。
+  nc01_narration:
+    phase: nc01_narration
+    asset_bus_slots_to_lock:
+      - narration
+    reviewer_role: script
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 19 (NC-8): final review (after nc08_qc_delivery) ----------------
+  # 解说漫终审门：交付包（成片+narration+srt+封面）放行前的最后一道人工
+  # 审。仿 p13_delivery 终审形态（双倍预算/3 次重试）。
+  nc08_qc_delivery:
+    phase: nc08_qc_delivery
+    asset_bus_slots_to_lock:
+      - delivery
+    reviewer_role: release
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
+
+  # =========================================================================
+  # MV-VAR (2026-10-15): MV 变体 DAG 的两道 HIL 门（mv-variant-dag/DESIGN.md
+  # §5.5）。gate_id 经 derive_gate_id 派生（mv01 → "mv01-gate"，mv03 →
+  # "mv03-gate"）。union 语义同上：gates.yaml 必须恰好覆盖 drama ∪ nc ∪ mv
+  # 全部带门 phase；运行期真正触发哪些门仍由当前 active registry 决定。
+  # =========================================================================
+
+  # --- Gate 20 (MV-1): song intake review (after mv01_song_intake) -----------
+  # 渲外歌曲包结构化产物人工审：段落轴/歌词轴覆盖完整、beat_grid 置信（降
+  # 级即强制人工核 0.5x/2x 档）、电平（削波/整段数字静音）、许可（商用红
+  # 线须 Kai 拍板）。文字/结构产物归 script 审查角色（沿 nc01 先例）。
+  mv01_song_intake:
+    phase: mv01_song_intake
+    asset_bus_slots_to_lock:
+      - song-package
+    reviewer_role: script
+    timeout_sec: 3600
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 2
+      backoff_sec: 300
+
+  # --- Gate 21 (MV-3): music-anchored shot breakdown review ------------------
+  # MV 核心创作决策的人工审：cut 落拍率（music_anchor 与 beat_grid 对齐比
+  # 例）、段落-镜组映射、歌词行覆盖、时长窗口、镜头多样性。剪辑节奏审归
+  # editor 角色（drama editor 先例）。双倍预算/3 次重试仿 nc08 终审形态。
+  mv03_music_shot_breakdown:
+    phase: mv03_music_shot_breakdown
+    asset_bus_slots_to_lock:
+      - shot-list
+    reviewer_role: editor
+    timeout_sec: 7200
+    callback_url: null
+    default_mode: blocking
+    retry_policy:
+      max_retries: 3
+      backoff_sec: 600
