@@ -187,7 +187,7 @@ _REGISTRY_ROWS: tuple[Any, ...] = (
         inference_base_url=DEFAULT_COPILOT_ACP_BASE_URL, base_url_env_var="COPILOT_ACP_BASE_URL"),
     ("gemini", "Google AI Studio", "https://generativelanguage.googleapis.com/v1beta",
      ("GOOGLE_API_KEY", "GEMINI_API_KEY"), "GEMINI_BASE_URL"),
-    ("zai", "Z.AI / GLM", "https://api.z.ai/api/paas/v4",
+    ("zai", "Z.AI / GLM", "https://api.z.ai/api/coding/paas/v4",
      ("GLM_API_KEY", "ZAI_API_KEY", "Z_AI_API_KEY"), "GLM_BASE_URL"),
     # Legacy platform.moonshot.ai keys use this endpoint (OpenAI-compat); sk-kimi- (Kimi Code)
     # keys are auto-redirected to api.kimi.com/coding by _resolve_kimi_base_url().

@@ -39,8 +39,8 @@ def _resolve_kimi_base_url(api_key: str, default_url: str, env_override: str) ->
 _ZAI_CODING_PROBE_MODELS = ["glm-5.3", "glm-5.3-flash", "glm-5.2", "glm-5.1", "glm-5v-turbo", "glm-4.7"]
 ZAI_ENDPOINTS = [
     # (id, base_url, probe_models, label)
-    ("global",        "https://api.z.ai/api/paas/v4",        ["glm-5"],   "Global"),
-    ("cn",            "https://open.bigmodel.cn/api/paas/v4", ["glm-5"],   "China"),
+    ("global",        "https://api.z.ai/api/coding/paas/v4",        ["glm-5"],   "Global"),
+    ("cn",            "https://open.bigmodel.cn/api/coding/paas/v4", ["glm-5"],   "China"),
     ("coding-global", "https://api.z.ai/api/coding/paas/v4",  _ZAI_CODING_PROBE_MODELS, "Global (Coding Plan)"),
     ("coding-cn",     "https://open.bigmodel.cn/api/coding/paas/v4", _ZAI_CODING_PROBE_MODELS, "China (Coding Plan)"),
 ]
